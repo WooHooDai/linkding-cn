@@ -22,6 +22,7 @@ from bookmarks.models import (
 from bookmarks.services.wayback import generate_fallback_webarchive_url
 from bookmarks.type_defs import HttpRequest
 from bookmarks.views import access
+from pypinyin import pinyin, Style
 
 CJK_RE = re.compile(r"[\u4e00-\u9fff]+")
 
@@ -257,12 +258,13 @@ class SharedBookmarkListContext(BookmarkListContext):
 
 
 class TagGroup:
-    def __init__(self, char: str):
+    def __init__(self, char: str, is_cjk: bool = False):
         self.tags = []
-        self.char = char
+        self.char = char  # Group header letter
+        self.is_cjk = is_cjk  # Is this a Chinese (CJK) group
 
     def __repr__(self):
-        return f"<{self.char} TagGroup>"
+        return f"<{self.char}{' CJK' if self.is_cjk else ''} TagGroup>"
 
     @staticmethod
     def create_tag_groups(mode: str, tags: Set[Tag]):
@@ -275,29 +277,57 @@ class TagGroup:
 
     @staticmethod
     def _create_tag_groups_alphabetical(tags: Set[Tag]):
-        # Ensure groups, as well as tags within groups, are ordered alphabetically
-        sorted_tags = sorted(tags, key=lambda x: str.lower(x.name))
-        group = None
-        groups = []
-        cjk_used = False
-        cjk_group = TagGroup("Ideographic")
+        def is_cjk(tag_name):
+            return CJK_RE.match(tag_name[0]) is not None
 
-        # Group tags that start with a different character than the previous one
-        for tag in sorted_tags:
-            tag_char = tag.name[0].lower()
-            if CJK_RE.match(tag_char):
-                cjk_used = True
-                cjk_group.tags.append(tag)
-            elif not group or group.char != tag_char:
-                group = TagGroup(tag_char)
-                groups.append(group)
-                group.tags.append(tag)
+        def get_pinyin_initials(tag_name):
+            py = pinyin(tag_name, style=Style.FIRST_LETTER)
+            return ''.join([item[0].lower() if item and item[0] else char for item, char in zip(py, tag_name)])
+
+        def get_cjk_group_char(tag_name):
+            # Get the first letter of the pinyin(Chinese phonetic notation) for the first character
+            first_char = tag_name[0]
+            py = pinyin(first_char, style=Style.FIRST_LETTER)
+            if py and py[0] and py[0][0]:
+                return py[0][0].upper()
             else:
-                group.tags.append(tag)
+                return first_char.upper()
 
-        if cjk_used:
-            groups.append(cjk_group)
-        return groups
+        def get_eng_group_char(tag_name):
+            return tag_name[0].upper()
+
+        # Split tags into English and Chinese (CJK)
+        eng_tags = [tag for tag in tags if not is_cjk(tag.name)]
+        cjk_tags = [tag for tag in tags if is_cjk(tag.name)]
+
+        # Group English tags by first letter
+        eng_group_map = {}
+        for tag in eng_tags:
+            group_char = get_eng_group_char(tag.name)
+            if group_char not in eng_group_map:
+                eng_group_map[group_char] = []
+            eng_group_map[group_char].append(tag)
+        eng_groups = []
+        for group_char in sorted(eng_group_map.keys()):
+            group = TagGroup(group_char, is_cjk=False)
+            group.tags = sorted(eng_group_map[group_char], key=lambda x: x.name.lower())
+            eng_groups.append(group)
+
+        # Group Chinese tags by pinyin initial
+        cjk_group_map = {}
+        for tag in cjk_tags:
+            group_char = get_cjk_group_char(tag.name)
+            if group_char not in cjk_group_map:
+                cjk_group_map[group_char] = []
+            cjk_group_map[group_char].append(tag)
+        cjk_groups = []
+        for group_char in sorted(cjk_group_map.keys()):
+            group = TagGroup(group_char, is_cjk=True)
+            group.tags = sorted(cjk_group_map[group_char], key=lambda x: get_pinyin_initials(x.name))
+            cjk_groups.append(group)
+
+        # English groups first, then Chinese groups
+        return eng_groups + cjk_groups
 
     @staticmethod
     def _create_tag_groups_disabled(tags: Set[Tag]):

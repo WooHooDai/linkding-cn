@@ -53,3 +53,4 @@ sqlparse==0.5.1
     #   django-debug-toolbar
 typing-extensions==4.12.2
     # via pyee
+pypinyin>=0.48.0

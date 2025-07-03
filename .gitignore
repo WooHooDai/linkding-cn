@@ -196,3 +196,6 @@ typings/
 /chromium-profile
 # direnv
 /.direnv
+
+# 辅助文档
+PROJECT.md
