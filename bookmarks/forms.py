@@ -1,7 +1,7 @@
 from django import forms
 from django.forms.utils import ErrorList
 
-from bookmarks.models import Bookmark, build_tag_string
+from bookmarks.models import Bookmark, build_tag_string, BookmarkBundle
 from bookmarks.validators import BookmarkURLValidator
 from bookmarks.type_defs import HttpRequest
 from bookmarks.services.bookmarks import create_bookmark, update_bookmark
@@ -100,3 +100,9 @@ def convert_tag_string(tag_string: str):
     # Tag strings coming from inputs are space-separated, however services.bookmarks functions expect comma-separated
     # strings
     return tag_string.replace(" ", ",")
+
+
+class BookmarkBundleForm(forms.ModelForm):
+    class Meta:
+        model = BookmarkBundle
+        fields = ["name", "search", "any_tags", "all_tags", "excluded_tags", "show_count"]

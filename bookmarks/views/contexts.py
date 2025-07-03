@@ -501,6 +501,16 @@ class BundlesContext:
         self.bundles = (
             BookmarkBundle.objects.filter(owner=self.user).order_by("order").all()
         )
+        # 为每个 bundle 统计书签数量
+        for bundle in self.bundles:
+            # 使用 BookmarkSearch 和 ActiveBookmarksContext 获取 bundle 对应的书签 QuerySet
+            if getattr(bundle, 'show_count', True):
+                search = BookmarkSearch(bundle=bundle)
+                from bookmarks.views.contexts import ActiveBookmarksContext
+                queryset = ActiveBookmarksContext(request).get_bookmark_query_set(search)
+                bundle.bookmarks_total = queryset.count()
+            else:
+                bundle.bookmarks_total = None
         self.is_empty = len(self.bundles) == 0
 
         selected_bundle_id = (

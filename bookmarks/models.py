@@ -168,6 +168,7 @@ class BookmarkBundle(models.Model):
     date_created = models.DateTimeField(auto_now_add=True, null=False)
     date_modified = models.DateTimeField(auto_now=True, null=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    show_count = models.BooleanField(default=True, verbose_name="显示标签数")
 
     def __str__(self):
         return self.name
@@ -176,7 +177,7 @@ class BookmarkBundle(models.Model):
 class BookmarkBundleForm(forms.ModelForm):
     class Meta:
         model = BookmarkBundle
-        fields = ["name", "search", "any_tags", "all_tags", "excluded_tags"]
+        fields = ["name", "search", "any_tags", "all_tags", "excluded_tags", "show_count"]
 
 
 class BookmarkSearch:

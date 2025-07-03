@@ -15,7 +15,10 @@
     <ul class="bundle-menu">
       {% for bundle in bundles.bundles %}
         <li class="bundle-menu-item {% if bundle.id == bundles.selected_bundle.id %}selected{% endif %}">
-          <a href="?bundle={{ bundle.id }}">{{ bundle.name }}</a>
+          <a href="?bundle={{ bundle.id }}">
+            {{ bundle.name }}
+            {% if bundle.bookmarks_total is not None %}<span class="count">({{ bundle.bookmarks_total }})</span>{% endif %}
+          </a>
         </li>
       {% endfor %}
     </ul>

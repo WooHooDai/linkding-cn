@@ -47,6 +47,16 @@
   </div>
 </div>
 
+<div class="form-group">
+  <label class="form-switch">
+    {{ form.show_count }}
+    <i class="form-icon"></i> 显示标签数
+  </label>
+  <div class="form-input-hint">
+    是否在侧边栏显示该分组下的书签数量。
+  </div>
+</div>
+
 <div class="form-footer d-flex mt-4">
   <input type="submit" name="save" value="保存" class="btn btn-primary btn-wide">
   <a href="{% url 'linkding:bundles.index' %}" class="btn btn-wide ml-auto">取消</a>
