@@ -8,7 +8,7 @@
 
 {% block content %}
   <main class="bundles-page" aria-labelledby="main-heading">
-    <h1 id="main-heading">Bundles</h1>
+    <h1 id="main-heading">过滤器</h1>
 
     {% include 'shared/messages.html' %}
 
@@ -34,9 +34,9 @@
                 <span class="truncate">{{ bundle.name }}</span>
               </div>
               <div class="list-item-actions">
-                <a class="btn btn-link" href="{% url 'linkding:bundles.edit' bundle.id %}">Edit</a>
+                <a class="btn btn-link" href="{% url 'linkding:bundles.edit' bundle.id %}">编辑</a>
                 <button ld-confirm-button type="submit" name="remove_bundle" value="{{ bundle.id }}"
-                        class="btn btn-link">Remove
+                        class="btn btn-link">删除
                 </button>
               </div>
             </div>
@@ -47,13 +47,13 @@
       </form>
     {% else %}
       <div class="empty">
-        <p class="empty-title h5">You have no bundles yet</p>
-        <p class="empty-subtitle">Create your first bundle to get started</p>
+        <p class="empty-title h5">你还没有过滤器</p>
+        <p class="empty-subtitle">尝试创建一个过滤器吧</p>
       </div>
     {% endif %}
 
     <div class="mt-4">
-      <a href="{% url 'linkding:bundles.new' %}" class="btn btn-primary">Add new bundle</a>
+      <a href="{% url 'linkding:bundles.new' %}" class="btn btn-primary">新增过滤器</a>
     </div>
   </main>
 

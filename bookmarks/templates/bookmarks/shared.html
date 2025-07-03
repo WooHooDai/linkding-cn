@@ -10,7 +10,7 @@
     {# Bookmark list #}
     <main class="main col-2" aria-labelledby="main-heading">
       <div class="section-header">
-        <h1 id="main-heading">Shared bookmarks</h1>
+        <h1 id="main-heading">已分享</h1>
         <div class="header-controls">
           {% bookmark_search bookmark_list.search mode='shared' %}
           <button ld-filter-drawer-trigger class="btn ml-2">Filters</button>
@@ -31,7 +31,7 @@
     <div class="side-panel col-1 hide-md">
       <section aria-labelledby="user-heading">
         <div class="section-header">
-          <h2 id="user-heading">User</h2>
+          <h2 id="user-heading">用户</h2>
         </div>
         <div>
           {% user_select bookmark_list.search users %}

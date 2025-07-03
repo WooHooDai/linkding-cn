@@ -22,23 +22,23 @@
     </div>
   </div>
   <div class="form-group" ld-tag-autocomplete>
-    <label for="{{ form.tag_string.id_for_label }}" class="form-label">Tags</label>
+    <label for="{{ form.tag_string.id_for_label }}" class="form-label">标签</label>
     {{ form.tag_string|form_field:"help"|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
     <div id="{{ form.tag_string.auto_id }}_help" class="form-input-hint">
-      Enter any number of tags separated by space and <strong>without</strong> the hash (#).
-      If a tag does not exist it will be automatically created.
+      多个标签用空格隔开，<strong>不需要</strong>(#).
+      如果标签不存在，它会被自动创建。
     </div>
     <div class="form-input-hint auto-tags"></div>
     {{ form.tag_string.errors }}
   </div>
   <div class="form-group">
     <div class="d-flex justify-between align-baseline">
-      <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
+      <label for="{{ form.title.id_for_label }}" class="form-label">标题</label>
       <div class="flex">
-        <button id="refresh-button" class="btn btn-link suffix-button" type="button">Refresh from website</button>
+        <button id="refresh-button" class="btn btn-link suffix-button" type="button">重新获取</button>
         <button ld-clear-button data-for="{{ form.title.id_for_label }}"
                 class="ml-2 btn btn-link suffix-button clear-button"
-                type="button">Clear
+                type="button">清空
         </button>
       </div>
     </div>
@@ -47,10 +47,10 @@
   </div>
   <div class="form-group">
     <div class="d-flex justify-between align-baseline">
-      <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+      <label for="{{ form.description.id_for_label }}" class="form-label">描述</label>
       <button ld-clear-button data-for="{{ form.description.id_for_label }}"
               class="btn btn-link suffix-button clear-button"
-              type="button">Clear
+              type="button">清空
       </button>
     </div>
     {{ form.description|add_class:"form-input"|attr:"rows:3" }}
@@ -59,12 +59,12 @@
   <div class="form-group">
     <details class="notes"{% if form.has_notes %} open{% endif %}>
       <summary>
-        <span class="form-label d-inline-block">Notes</span>
+        <span class="form-label d-inline-block">笔记</span>
       </summary>
       <label for="{{ form.notes.id_for_label }}" class="text-assistive">Notes</label>
       {{ form.notes|form_field:"help"|add_class:"form-input"|attr:"rows:8" }}
       <div id="{{ form.notes.auto_id }}_help" class="form-input-hint">
-        Additional notes, supports Markdown.
+        额外的笔记，支持 Markdown 格式。
       </div>
     </details>
     {{ form.notes.errors }}
@@ -73,10 +73,10 @@
     <div class="form-checkbox">
       {{ form.unread|form_field:"help" }}
       <i class="form-icon"></i>
-      <label for="{{ form.unread.id_for_label }}">Mark as unread</label>
+      <label for="{{ form.unread.id_for_label }}">标为未读</label>
     </div>
     <div id="{{ form.unread.auto_id }}_help" class="form-input-hint">
-      Unread bookmarks can be filtered for, and marked as read after you had a chance to look at them.
+      未读书签可以被过滤，并可在你读后标记为已读。
     </div>
   </div>
   {% if request.user_profile.enable_sharing %}
@@ -84,13 +84,13 @@
       <div class="form-checkbox">
         {{ form.shared|form_field:"help" }}
         <i class="form-icon"></i>
-        <label for="{{ form.shared.id_for_label }}">Share</label>
+        <label for="{{ form.shared.id_for_label }}">分享</label>
       </div>
       <div id="{{ form.shared.auto_id }}_help" class="form-input-hint">
         {% if request.user_profile.enable_public_sharing %}
-          Share this bookmark with other registered users and anonymous users.
+          分享给其他注册用户和匿名用户。
         {% else %}
-          Share this bookmark with other registered users.
+          分享给其他注册用户。
         {% endif %}
       </div>
     </div>
@@ -98,11 +98,11 @@
   <div class="divider"></div>
   <div class="form-group d-flex justify-between">
     {% if form.is_auto_close %}
-      <input type="submit" value="Save and close" class="btn btn-primary btn-wide">
+      <input type="submit" value="保存并关闭" class="btn btn-primary btn-wide">
     {% else %}
-      <input type="submit" value="Save" class="btn btn-primary btn btn-primary btn-wide">
+      <input type="submit" value="保存" class="btn btn-primary btn btn-primary btn-wide">
     {% endif %}
-    <a href="{{ return_url }}" class="btn">Cancel</a>
+    <a href="{{ return_url }}" class="btn">取消</a>
   </div>
   <script type="application/javascript">
     /**

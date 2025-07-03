@@ -24,13 +24,13 @@ def unique(elements, key):
 
 
 weekday_names = {
-    1: "Monday",
-    2: "Tuesday",
-    3: "Wednesday",
-    4: "Thursday",
-    5: "Friday",
-    6: "Saturday",
-    7: "Sunday",
+    1: "周一",
+    2: "周二",
+    3: "周三",
+    4: "周四",
+    5: "周五",
+    6: "周六",
+    7: "周日",
 }
 
 
@@ -47,9 +47,9 @@ def humanize_absolute_date(
     if is_older_than_a_week:
         return formats.date_format(value, "SHORT_DATE_FORMAT")
     elif value.day == now.day:
-        return "Today"
+        return "今天"
     elif value.day == yesterday.day:
-        return "Yesterday"
+        return "昨天"
     else:
         return weekday_names[value.isoweekday()]
 
@@ -62,17 +62,17 @@ def humanize_relative_date(
     delta = relativedelta(now, value)
 
     if delta.years > 0:
-        return f"{delta.years} year{pluralize(delta.years)} ago"
+        return f"{delta.years} 年前"
     elif delta.months > 0:
-        return f"{delta.months} month{pluralize(delta.months)} ago"
+        return f"{delta.months} 月前"
     elif delta.weeks > 0:
-        return f"{delta.weeks} week{pluralize(delta.weeks)} ago"
+        return f"{delta.weeks} 周前"
     else:
         yesterday = now - relativedelta(days=1)
         if value.day == now.day:
-            return "Today"
+            return "今天"
         elif value.day == yesterday.day:
-            return "Yesterday"
+            return "昨天"
         else:
             return weekday_names[value.isoweekday()]
 

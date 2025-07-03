@@ -303,20 +303,20 @@ class BookmarkSearch:
 
 class BookmarkSearchForm(forms.Form):
     SORT_CHOICES = [
-        (BookmarkSearch.SORT_ADDED_ASC, "Added ↑"),
-        (BookmarkSearch.SORT_ADDED_DESC, "Added ↓"),
-        (BookmarkSearch.SORT_TITLE_ASC, "Title ↑"),
-        (BookmarkSearch.SORT_TITLE_DESC, "Title ↓"),
+        (BookmarkSearch.SORT_ADDED_ASC, "添加时间 ↑"),
+        (BookmarkSearch.SORT_ADDED_DESC, "添加时间 ↓"),
+        (BookmarkSearch.SORT_TITLE_ASC, "标题 ↑"),
+        (BookmarkSearch.SORT_TITLE_DESC, "标题 ↓"),
     ]
     FILTER_SHARED_CHOICES = [
-        (BookmarkSearch.FILTER_SHARED_OFF, "Off"),
-        (BookmarkSearch.FILTER_SHARED_SHARED, "Shared"),
-        (BookmarkSearch.FILTER_SHARED_UNSHARED, "Unshared"),
+        (BookmarkSearch.FILTER_SHARED_OFF, "关闭"),
+        (BookmarkSearch.FILTER_SHARED_SHARED, "已分享"),
+        (BookmarkSearch.FILTER_SHARED_UNSHARED, "未分享"),
     ]
     FILTER_UNREAD_CHOICES = [
-        (BookmarkSearch.FILTER_UNREAD_OFF, "Off"),
-        (BookmarkSearch.FILTER_UNREAD_YES, "Unread"),
-        (BookmarkSearch.FILTER_UNREAD_NO, "Read"),
+        (BookmarkSearch.FILTER_UNREAD_OFF, "关闭"),
+        (BookmarkSearch.FILTER_UNREAD_YES, "未读"),
+        (BookmarkSearch.FILTER_UNREAD_NO, "已读"),
     ]
 
     q = forms.CharField()
@@ -341,7 +341,7 @@ class BookmarkSearchForm(forms.Form):
         # set choices for user field if users are provided
         if users:
             user_choices = [(user.username, user.username) for user in users]
-            user_choices.insert(0, ("", "Everyone"))
+            user_choices.insert(0, ("", "所有人"))
             self.fields["user"].choices = user_choices
 
         for param in search.params:
