@@ -2,15 +2,15 @@
 {% htmlmin %}
   {# Basic menu list #}
   <div class="hide-md">
-    <a href="{% url 'linkding:bookmarks.new' %}" class="btn btn-primary mr-2">新增书签</a>
+    <a href="{% url 'linkding:bookmarks.new' %}" class="btn btn-primary mr-2">新增</a>
+    <div class="btn btn-link">
+      <a href="{% url 'linkding:bookmarks.index' %}" class="menu-link">全部</a>
+    </div>
     <div ld-dropdown class="dropdown">
       <button class="btn btn-link dropdown-toggle" tabindex="0">
-        书签列表
+        分类
       </button>
       <ul class="menu" role="list" tabindex="-1">
-        <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.index' %}" class="menu-link">未归档</a>
-        </li>
         <li class="menu-item">
           <a href="{% url 'linkding:bookmarks.archived' %}" class="menu-link">已归档</a>
         </li>
@@ -43,12 +43,15 @@
             <a href="{% url 'admin:index' %}" class="menu-link" data-turbo="false">管理后台</a>
           </li>
         {% endif %}
+        <li class="menu-item">
+          <form class="d-inline" action="{% url 'logout' %}" method="post" data-turbo="false">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-link menu-link">退出登录</button>
+          </form>
+        </li>
       </ul>
     </div>
-    <form class="d-inline" action="{% url 'logout' %}" method="post" data-turbo="false">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-link">退出登录</button>
-    </form>
+
   </div>
   {# Menu drop-down for smaller devices #}
   <div class="show-md">
