@@ -71,39 +71,39 @@
       <!-- menu component -->
       <ul class="menu" role="list" tabindex="-1">
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.index' %}" class="menu-link">Bookmarks</a>
+          <a href="{% url 'linkding:bookmarks.index' %}" class="menu-link">书签列表</a>
         </li>
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.archived' %}" class="menu-link">Archived bookmarks</a>
+          <a href="{% url 'linkding:bookmarks.archived' %}" class="menu-link">已归档</a>
         </li>
         {% if request.user_profile.enable_sharing %}
           <li class="menu-item">
-            <a href="{% url 'linkding:bookmarks.shared' %}" class="menu-link">Shared bookmarks</a>
+            <a href="{% url 'linkding:bookmarks.shared' %}" class="menu-link">已分享</a>
           </li>
         {% endif %}
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.index' %}?unread=yes" class="menu-link">Unread</a>
+          <a href="{% url 'linkding:bookmarks.index' %}?unread=yes" class="menu-link">未读</a>
         </li>
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.index' %}?q=!untagged" class="menu-link">Untagged</a>
+          <a href="{% url 'linkding:bookmarks.index' %}?q=!untagged" class="menu-link">无标签</a>
         </li>
         <div class="divider"></div>
         <li class="menu-item">
-          <a href="{% url 'linkding:settings.general' %}" class="menu-link">Settings</a>
+          <a href="{% url 'linkding:settings.general' %}" class="menu-link">通用设置</a>
         </li>
         <li class="menu-item">
-          <a href="{% url 'linkding:settings.integrations' %}" class="menu-link">Integrations</a>
+          <a href="{% url 'linkding:settings.integrations' %}" class="menu-link">集成</a>
         </li>
         {% if request.user.is_superuser %}
           <li class="menu-item">
-            <a href="{% url 'admin:index' %}" class="menu-link" data-turbo="false">Admin</a>
+            <a href="{% url 'admin:index' %}" class="menu-link" data-turbo="false">管理</a>
           </li>
         {% endif %}
         <div class="divider"></div>
         <li class="menu-item">
           <form class="d-inline" action="{% url 'logout' %}" method="post" data-turbo="false">
             {% csrf_token %}
-            <button type="submit" class="btn btn-link menu-link">Logout</button>
+            <button type="submit" class="btn btn-link menu-link">退出登录</button>
           </form>
         </li>
       </ul>

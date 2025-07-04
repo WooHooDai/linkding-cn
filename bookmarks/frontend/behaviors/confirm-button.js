@@ -45,7 +45,7 @@ class ConfirmButtonBehavior extends Behavior {
 
     const cancelButton = document.createElement(this.element.nodeName);
     cancelButton.type = "button";
-    cancelButton.innerText = question ? "No" : "Cancel";
+    cancelButton.innerText = question ? "否" : "取消";
     cancelButton.className = `${buttonClasses} mr-1`;
     cancelButton.addEventListener("click", this.reset.bind(this));
 
@@ -53,7 +53,7 @@ class ConfirmButtonBehavior extends Behavior {
     confirmButton.type = this.element.type;
     confirmButton.name = this.element.name;
     confirmButton.value = this.element.value;
-    confirmButton.innerText = question ? "Yes" : "Confirm";
+    confirmButton.innerText = question ? "是" : "确认";
     confirmButton.className = buttonClasses;
     confirmButton.addEventListener("click", this.reset.bind(this));
 

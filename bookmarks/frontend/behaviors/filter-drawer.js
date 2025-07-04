@@ -23,7 +23,7 @@ class FilterDrawerTriggerBehavior extends Behavior {
       <div class="modal-overlay"></div>
       <div class="modal-container" role="dialog" aria-modal="true">
         <div class="modal-header">
-          <h2>Filters</h2>
+          <h2>筛选</h2>
           <button class="close" aria-label="Close dialog">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
                  stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
