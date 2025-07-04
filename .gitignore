@@ -199,3 +199,6 @@ typings/
 
 # 辅助文档
 PROJECT.md
+.DS_Store
+**/.DS_Store
+.vscode
