@@ -94,12 +94,12 @@
                   {% endif %}
                   {% if bookmark_list.show_archive_action %}
                     {% if bookmark_item.is_archived %}
-                      <button type="submit" name="unarchive" value="{{ bookmark_item.id }}"
+                      <button ld-confirm-button type="submit" name="unarchive" value="{{ bookmark_item.id }}"
                               class="btn btn-link btn-sm">还原
                       </button>
                     {% else %}
-                      <button type="submit" name="archive" value="{{ bookmark_item.id }}"
-                              class="btn btn-link btn-sm">归档
+                      <button ld-confirm-button type="submit" name="archive" value="{{ bookmark_item.id }}"
+                      class="btn btn-link btn-sm">归档
                       </button>
                     {% endif %}
                   {% endif %}
