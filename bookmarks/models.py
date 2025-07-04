@@ -365,47 +365,47 @@ class UserProfile(models.Model):
     THEME_LIGHT = "light"
     THEME_DARK = "dark"
     THEME_CHOICES = [
-        (THEME_AUTO, "Auto"),
-        (THEME_LIGHT, "Light"),
-        (THEME_DARK, "Dark"),
+        (THEME_AUTO, "自动"),
+        (THEME_LIGHT, "亮色"),
+        (THEME_DARK, "暗色"),
     ]
     BOOKMARK_DATE_DISPLAY_RELATIVE = "relative"
     BOOKMARK_DATE_DISPLAY_ABSOLUTE = "absolute"
     BOOKMARK_DATE_DISPLAY_HIDDEN = "hidden"
     BOOKMARK_DATE_DISPLAY_CHOICES = [
-        (BOOKMARK_DATE_DISPLAY_RELATIVE, "Relative"),
-        (BOOKMARK_DATE_DISPLAY_ABSOLUTE, "Absolute"),
-        (BOOKMARK_DATE_DISPLAY_HIDDEN, "Hidden"),
+        (BOOKMARK_DATE_DISPLAY_RELATIVE, "相对"),
+        (BOOKMARK_DATE_DISPLAY_ABSOLUTE, "绝对"),
+        (BOOKMARK_DATE_DISPLAY_HIDDEN, "隐藏"),
     ]
     BOOKMARK_DESCRIPTION_DISPLAY_INLINE = "inline"
     BOOKMARK_DESCRIPTION_DISPLAY_SEPARATE = "separate"
     BOOKMARK_DESCRIPTION_DISPLAY_CHOICES = [
-        (BOOKMARK_DESCRIPTION_DISPLAY_INLINE, "Inline"),
-        (BOOKMARK_DESCRIPTION_DISPLAY_SEPARATE, "Separate"),
+        (BOOKMARK_DESCRIPTION_DISPLAY_INLINE, "行内"),
+        (BOOKMARK_DESCRIPTION_DISPLAY_SEPARATE, "分行"),
     ]
     BOOKMARK_LINK_TARGET_BLANK = "_blank"
     BOOKMARK_LINK_TARGET_SELF = "_self"
     BOOKMARK_LINK_TARGET_CHOICES = [
-        (BOOKMARK_LINK_TARGET_BLANK, "New page"),
-        (BOOKMARK_LINK_TARGET_SELF, "Same page"),
+        (BOOKMARK_LINK_TARGET_BLANK, "新页面"),
+        (BOOKMARK_LINK_TARGET_SELF, "当前页面"),
     ]
     WEB_ARCHIVE_INTEGRATION_DISABLED = "disabled"
     WEB_ARCHIVE_INTEGRATION_ENABLED = "enabled"
     WEB_ARCHIVE_INTEGRATION_CHOICES = [
-        (WEB_ARCHIVE_INTEGRATION_DISABLED, "Disabled"),
-        (WEB_ARCHIVE_INTEGRATION_ENABLED, "Enabled"),
+        (WEB_ARCHIVE_INTEGRATION_DISABLED, "禁用"),
+        (WEB_ARCHIVE_INTEGRATION_ENABLED, "启用"),
     ]
     TAG_SEARCH_STRICT = "strict"
     TAG_SEARCH_LAX = "lax"
     TAG_SEARCH_CHOICES = [
-        (TAG_SEARCH_STRICT, "Strict"),
-        (TAG_SEARCH_LAX, "Lax"),
+        (TAG_SEARCH_STRICT, "严格 Strict"),
+        (TAG_SEARCH_LAX, "宽松 Lax"),
     ]
     TAG_GROUPING_ALPHABETICAL = "alphabetical"
     TAG_GROUPING_DISABLED = "disabled"
     TAG_GROUPING_CHOICES = [
-        (TAG_GROUPING_ALPHABETICAL, "Alphabetical"),
-        (TAG_GROUPING_DISABLED, "Disabled"),
+        (TAG_GROUPING_ALPHABETICAL, "首字母"),
+        (TAG_GROUPING_DISABLED, "禁用"),
     ]
     user = models.OneToOneField(User, related_name="profile", on_delete=models.CASCADE)
     theme = models.CharField(
@@ -565,8 +565,8 @@ class GlobalSettings(models.Model):
     LANDING_PAGE_LOGIN = "login"
     LANDING_PAGE_SHARED_BOOKMARKS = "shared_bookmarks"
     LANDING_PAGE_CHOICES = [
-        (LANDING_PAGE_LOGIN, "Login"),
-        (LANDING_PAGE_SHARED_BOOKMARKS, "Shared Bookmarks"),
+        (LANDING_PAGE_LOGIN, "登录页"),
+        (LANDING_PAGE_SHARED_BOOKMARKS, "分享页"),
     ]
 
     landing_page = models.CharField(
@@ -601,4 +601,4 @@ class GlobalSettingsForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(GlobalSettingsForm, self).__init__(*args, **kwargs)
-        self.fields["guest_profile_user"].empty_label = "Standard profile"
+        self.fields["guest_profile_user"].empty_label = "标准用户资料"
