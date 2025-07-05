@@ -50,6 +50,7 @@
   display: flex;
   max-width: 300px;
   margin-left: auto;
+  position: relative; /* 添加相对定位作为菜单的定位父元素 */
 
   & form {
     width: 100%;
@@ -109,10 +110,22 @@
   /* Search option menu styles */
 
   & .dropdown {
+    position: static; /* 移除dropdown的相对定位，让菜单基于search-container定位 */
+    
     & .menu {
       padding: var(--unit-4);
       min-width: 250px;
       font-size: var(--font-size-sm);
+      position: absolute;
+      top: 100%;
+      left: auto;
+      right: 0;
+      
+      /* 当屏幕宽度大于426px时右对齐 */
+      @media (max-width: 426px) {
+        left: 0;
+        right: auto;
+      }
     }
 
     & .menu .actions {
