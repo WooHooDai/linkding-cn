@@ -1170,6 +1170,26 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         query = queries.query_bookmarks(self.user, self.profile, search)
         self.assertEqual(list(query), sorted_bookmarks)
 
+    def test_sort_by_random(self):
+        search = BookmarkSearch(sort=BookmarkSearch.SORT_RANDOM)
+
+        bookmarks = [
+            self.setup_bookmark(title="bookmark1"),
+            self.setup_bookmark(title="bookmark2"),
+            self.setup_bookmark(title="bookmark3"),
+            self.setup_bookmark(title="bookmark4"),
+            self.setup_bookmark(title="bookmark5"),
+        ]
+
+        query = queries.query_bookmarks(self.user, self.profile, search)
+        result_bookmarks = list(query)
+        
+        # 验证返回的书签数量正确
+        self.assertEqual(len(result_bookmarks), len(bookmarks))
+        
+        # 验证所有书签都被返回（内容相同，顺序可能不同）
+        self.assertCountEqual(result_bookmarks, bookmarks)
+
     def setup_title_sort_data(self):
         # lots of combinations to test effective title logic
         bookmarks = [

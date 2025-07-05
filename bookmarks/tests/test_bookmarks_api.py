@@ -221,6 +221,22 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
         )
         self.assertBookmarkListEqual(response.data["results"], bookmarks)
 
+    def test_list_bookmarks_should_respect_random_sort(self):
+        self.authenticate()
+        bookmarks = self.setup_numbered_bookmarks(5)
+
+        response = self.get(
+            reverse("linkding:bookmark-list") + "?sort=random",
+            expected_status_code=status.HTTP_200_OK,
+        )
+        result_bookmarks = response.data["results"]
+        
+        # 验证返回的书签数量正确
+        self.assertEqual(len(result_bookmarks), len(bookmarks))
+        
+        # 验证所有书签都被返回（内容相同，顺序可能不同）
+        self.assertCountEqual(result_bookmarks, bookmarks)
+
     def test_list_archived_bookmarks_does_not_return_unarchived_bookmarks(self):
         self.authenticate()
         self.setup_numbered_bookmarks(5)

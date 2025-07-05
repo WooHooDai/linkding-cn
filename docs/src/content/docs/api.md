@@ -33,6 +33,7 @@ List bookmarks.
 Parameters:
 
 - `q` - Filters results using a search phrase using the same logic as through the UI
+- `sort` - Sort order for results. Available options: `added_asc`, `added_desc`, `title_asc`, `title_desc`, `random`
 - `limit` - Limits the max. number of results. Default is `100`.
 - `offset` - Index from which to start returning results
 - `modified_since` - Filter results to only include bookmarks modified after the specified date (format: ISO 8601, e.g. "2025-01-01T00:00:00Z")

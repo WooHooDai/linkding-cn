@@ -16,6 +16,7 @@
         <div class="header-controls">
           {% bookmark_search bookmark_list.search %}
           {% include 'bookmarks/bulk_edit/toggle.html' %}
+          {% random_sort bookmark_list.search %}
           <button ld-filter-drawer-trigger class="btn ml-2">筛选</button>
         </div>
       </div>

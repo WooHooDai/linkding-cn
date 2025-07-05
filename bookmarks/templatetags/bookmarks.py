@@ -43,3 +43,10 @@ def user_select(context, search: BookmarkSearch, users: List[User]):
         "users": sorted_users,
         "form": form,
     }
+
+
+@register.inclusion_tag(
+    "bookmarks/random_sort.html", name="random_sort"
+)
+def random_sort(search):
+    return {"search": search}

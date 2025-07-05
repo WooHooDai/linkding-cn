@@ -13,6 +13,7 @@
         <h1 id="main-heading">已分享</h1>
         <div class="header-controls">
           {% bookmark_search bookmark_list.search mode='shared' %}
+          {% random_sort bookmark_list.search %}
           <button ld-filter-drawer-trigger class="btn ml-2">筛选</button>
         </div>
       </div>

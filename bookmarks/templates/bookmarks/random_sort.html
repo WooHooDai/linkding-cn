@@ -1,0 +1,29 @@
+<form id="random_sort_form" action="" method="post" style="display: inline;">
+  {% csrf_token %}
+  <input type="hidden" name="sort" value="random">
+  {% if search.q %}
+    <input type="hidden" name="q" value="{{ search.q }}">
+  {% endif %}
+  {% if search.user %}
+    <input type="hidden" name="user" value="{{ search.user }}">
+  {% endif %}
+  {% if search.bundle %}
+    <input type="hidden" name="bundle" value="{{ search.bundle.id }}">
+  {% endif %}
+  {% if search.shared != 'off' %}
+    <input type="hidden" name="shared" value="{{ search.shared }}">
+  {% endif %}
+  {% if search.unread != 'off' %}
+    <input type="hidden" name="unread" value="{{ search.unread }}">
+  {% endif %}
+  <button type="submit" class="btn ml-2" title="Random sort">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" stroke-width="2"
+         stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+      <path d="M18 4l3 3l-3 3"></path>
+      <path d="M18 20l3 -3l-3 -3"></path>
+      <path d="M3 7h3a5 5 0 0 1 5 5a5 5 0 0 1 -5 5h-3"></path>
+      <path d="M21 7h-3a5 5 0 0 0 -5 5a5 5 0 0 0 5 5h3"></path>
+    </svg>
+  </button>
+</form> 
