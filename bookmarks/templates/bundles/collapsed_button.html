@@ -1,0 +1,33 @@
+<button class="folder-toggle" aria-expanded="true" type="button" title="展开/折叠">
+  <svg class="icon" width="14" height="14" viewBox="0 0 20 20" fill="none">
+    <polyline points="6 8 10 12 14 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</button>
+
+<style>
+.folder-toggle {
+  background: none;
+  border: none;
+  padding: 0 4px;
+  margin-left: 4px;
+  cursor: pointer;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.2s;
+  color: #888;
+}
+.folder-toggle:hover, .folder-toggle:focus {
+  color: #333;
+  outline: none;
+}
+.folder-toggle .icon {
+  transition: transform 0.2s;
+}
+.folder-toggle[aria-expanded="false"] .icon {
+  transform: rotate(-90deg);
+}
+.folder-toggle[aria-expanded="true"] .icon {
+  transform: rotate(0deg);
+}
+</style> 

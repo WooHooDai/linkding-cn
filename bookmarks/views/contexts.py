@@ -513,6 +513,21 @@ class BundlesContext:
                 bundle.bookmarks_total = None
         self.is_empty = len(self.bundles) == 0
 
+        # 新增：为每个 folder bundle 增加 has_child 属性
+        bundles_list = list(self.bundles)
+        for i, bundle in enumerate(bundles_list):
+            if getattr(bundle, 'is_folder', False):
+                has_child = False
+                for next_bundle in bundles_list[i+1:]:
+                    if getattr(next_bundle, 'is_folder', False):
+                        break
+                    else:
+                        has_child = True
+                        break
+                bundle.has_child = has_child
+            else:
+                bundle.has_child = False
+
         selected_bundle_id = (
             int(request.GET.get("bundle")) if request.GET.get("bundle") else None
         )

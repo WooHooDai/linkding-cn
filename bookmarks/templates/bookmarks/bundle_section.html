@@ -12,13 +12,24 @@
         </svg>
       </a>
     </div>
-    <ul class="bundle-menu">
+    <ul class="bundle-menu" ld-bundle-menu>
       {% for bundle in bundles.bundles %}
-        <li class="bundle-menu-item {% if bundle.id == bundles.selected_bundle.id %}selected{% endif %}">
-          <a href="?bundle={{ bundle.id }}">
-            {{ bundle.name }}
-            {% if bundle.bookmarks_total is not None %}<span class="count">({{ bundle.bookmarks_total }})</span>{% endif %}
-          </a>
+        <li class="bundle-menu-item {% if bundle.id == bundles.selected_bundle.id %}selected{% endif %}"
+            data-bundle-id="{{ bundle.id }}"
+            data-folder="{{ bundle.is_folder|yesno:'true,false' }}">
+          <div class="bundle-content">
+            <a href="?bundle={{ bundle.id }}">
+              {{ bundle.name }}
+              {% if bundle.bookmarks_total is not None %}<span class="count">({{ bundle.bookmarks_total }})</span>{% endif %}
+            </a>
+          </div>
+          <div class="bundle-action">
+            {% if bundle.is_folder and bundle.has_child %}
+              {% include "bundles/collapsed_button.html" %}
+            {% else %}
+              <span class="folder-toggle-placeholder"></span>
+            {% endif %}
+          </div>
         </li>
       {% endfor %}
     </ul>

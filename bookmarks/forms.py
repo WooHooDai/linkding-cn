@@ -105,4 +105,4 @@ def convert_tag_string(tag_string: str):
 class BookmarkBundleForm(forms.ModelForm):
     class Meta:
         model = BookmarkBundle
-        fields = ["name", "search", "any_tags", "all_tags", "excluded_tags", "show_count"]
+        fields = ["name", "search", "any_tags", "all_tags", "excluded_tags", "show_count", "is_folder"]

@@ -397,6 +397,8 @@ li[ld-bookmark-item] {
   margin: 0 0 var(--unit-6);
 
   .bundle-menu-item {
+    display: flex;
+    align-items: center;
     margin: 0;
     margin-bottom: var(--unit-2);
   }
@@ -410,6 +412,33 @@ li[ld-bookmark-item] {
     background: var(--primary-color);
     color: var(--contrast-text-color);
   }
+
+  .bundle-menu-item:not([data-folder="true"]) {
+    padding-left: 1em;
+  }
+}
+
+.bundle-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.bundle-action {
+  flex: 0 0 22px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.folder-toggle,
+.folder-toggle-placeholder {
+  width: 22px;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.folder-toggle-placeholder {
+  visibility: hidden;
 }
 
 .tag-cloud {

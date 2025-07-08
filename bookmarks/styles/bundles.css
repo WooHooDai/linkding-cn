@@ -17,6 +17,10 @@
       visibility: hidden;
     }
   }
+
+  .item-list.bundles .list-item[data-folder="False"] .list-item-text {
+    padding-left: 1em;
+  }
 }
 
 .bundles-editor-page {
