@@ -1,5 +1,6 @@
 import time
 import random
+import datetime
 from typing import Optional
 
 from django.conf import settings
@@ -161,12 +162,26 @@ def _base_bookmarks_query(
         query_set = _filter_bundle(query_set, search.bundle)
 
     # 日期筛选逻辑
+    def _parse_date(value):
+        if isinstance(value, datetime.date):
+            return value
+        if isinstance(value, str) and value:
+            try:
+                return datetime.datetime.strptime(value, "%Y-%m-%d").date()
+            except Exception:
+                return None
+        return None
+
     if search.date_filter_type in ("added", "modified"):
         field = "date_added" if search.date_filter_type == "added" else "date_modified"
-        if search.date_filter_start:
-            query_set = query_set.filter(**{f"{field}__gte": search.date_filter_start})
-        if search.date_filter_end:
-            query_set = query_set.filter(**{f"{field}__lte": search.date_filter_end})
+        start = _parse_date(search.date_filter_start)
+        end = _parse_date(search.date_filter_end)
+        if start:
+            query_set = query_set.filter(**{f"{field}__gte": start})
+        if end:
+            if isinstance(end, datetime.date) and not isinstance(end, datetime.datetime):
+                end = end + datetime.timedelta(days=1)
+            query_set = query_set.filter(**{f"{field}__lt": end})
 
     # Sort
     if (
