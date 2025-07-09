@@ -39,19 +39,22 @@ def humanize_absolute_date(
 ):
     if not now:
         now = timezone.now()
-    delta = relativedelta(now, value)
-    yesterday = now - relativedelta(days=1)
+    # Convert to local time zone first
+    value_local = timezone.localtime(value)
+    now_local = timezone.localtime(now)
+    delta = relativedelta(now_local, value_local)
+    yesterday = now_local - relativedelta(days=1)
 
     is_older_than_a_week = delta.years > 0 or delta.months > 0 or delta.weeks > 0
 
     if is_older_than_a_week:
-        return formats.date_format(value, "SHORT_DATE_FORMAT")
-    elif value.day == now.day:
+        return formats.date_format(value_local, "SHORT_DATE_FORMAT")
+    elif value_local.day == now_local.day:
         return "今天"
-    elif value.day == yesterday.day:
+    elif value_local.day == yesterday.day:
         return "昨天"
     else:
-        return weekday_names[value.isoweekday()]
+        return weekday_names[value_local.isoweekday()]
 
 
 def humanize_relative_date(
@@ -59,7 +62,10 @@ def humanize_relative_date(
 ):
     if not now:
         now = timezone.now()
-    delta = relativedelta(now, value)
+    # Convert to local time zone first
+    value_local = timezone.localtime(value)
+    now_local = timezone.localtime(now)
+    delta = relativedelta(now_local, value_local)
 
     if delta.years > 0:
         return f"{delta.years} 年前"
@@ -68,13 +74,13 @@ def humanize_relative_date(
     elif delta.weeks > 0:
         return f"{delta.weeks} 周前"
     else:
-        yesterday = now - relativedelta(days=1)
-        if value.day == now.day:
+        yesterday = now_local - relativedelta(days=1)
+        if value_local.day == now_local.day:
             return "今天"
-        elif value.day == yesterday.day:
+        elif value_local.day == yesterday.day:
             return "昨天"
         else:
-            return weekday_names[value.isoweekday()]
+            return weekday_names[value_local.isoweekday()]
 
 
 def parse_timestamp(value: str):
