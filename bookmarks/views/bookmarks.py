@@ -1,4 +1,5 @@
 import urllib.parse
+import time
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -148,6 +149,11 @@ def search_action(request: HttpRequest):
         search = BookmarkSearch.from_request(request, request.POST)
         request.user_profile.search_preferences = search.preferences_dict
         request.user_profile.save()
+
+    # Handle random sort request
+    if "sort" in request.POST and request.POST["sort"] == "random":
+        new_seed = int(time.time())
+        request.session['random_sort_seed'] = new_seed
 
     # redirect to base url including new query params
     search = BookmarkSearch.from_request(

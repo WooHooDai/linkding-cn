@@ -1,11 +1,13 @@
+import time
+import random
 from typing import Optional
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.db.models import Q, QuerySet, Exists, OuterRef, Case, When, CharField
+from django.db.models import Q, QuerySet, Exists, OuterRef, Case, When, CharField, F, IntegerField
 from django.db.models.expressions import RawSQL
-from django.db.models.functions import Lower
+from django.db.models.functions import Lower, Mod
 
 from bookmarks.models import (
     Bookmark,
@@ -188,7 +190,17 @@ def _base_bookmarks_query(
     elif search.sort == BookmarkSearch.SORT_ADDED_ASC:
         query_set = query_set.order_by("date_added")
     elif search.sort == BookmarkSearch.SORT_RANDOM:
-        query_set = query_set.order_by("?")
+        # random sort with seed
+        seed = search.request.session.get('random_sort_seed', int(time.time()))
+        ids = list(query_set.values_list('id', flat=True))
+        rng = random.Random(seed)
+        shuffled = ids[:]
+        rng.shuffle(shuffled)
+        order = Case(
+            *[When(id=pk, then=pos) for pos, pk in enumerate(shuffled)],
+            output_field=IntegerField()
+        )
+        query_set = query_set.annotate(random_order=order).order_by('random_order')
     else:
         # Sort by date added, descending by default
         query_set = query_set.order_by("-date_added")
