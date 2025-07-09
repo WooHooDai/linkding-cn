@@ -18,10 +18,10 @@ def bookmark_search(context, search: BookmarkSearch, mode: str = ""):
     search_form = BookmarkSearchForm(search, editable_fields=["q"])
 
     if mode == "shared":
-        preferences_form = BookmarkSearchForm(search, editable_fields=["sort"])
+        preferences_form = BookmarkSearchForm(search, editable_fields=["sort", "date_filter_type", "date_filter_start", "date_filter_end"])
     else:
         preferences_form = BookmarkSearchForm(
-            search, editable_fields=["sort", "shared", "unread"]
+            search, editable_fields=["sort", "shared", "unread", "date_filter_type", "date_filter_start", "date_filter_end"]
         )
     return {
         "request": context["request"],

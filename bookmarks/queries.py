@@ -160,6 +160,14 @@ def _base_bookmarks_query(
     if search.bundle:
         query_set = _filter_bundle(query_set, search.bundle)
 
+    # 日期筛选逻辑
+    if search.date_filter_type in ("added", "modified"):
+        field = "date_added" if search.date_filter_type == "added" else "date_modified"
+        if search.date_filter_start:
+            query_set = query_set.filter(**{f"{field}__gte": search.date_filter_start})
+        if search.date_filter_end:
+            query_set = query_set.filter(**{f"{field}__lte": search.date_filter_end})
+
     # Sort
     if (
         search.sort == BookmarkSearch.SORT_TITLE_ASC

@@ -196,6 +196,11 @@ class BookmarkSearch:
     FILTER_UNREAD_YES = "yes"
     FILTER_UNREAD_NO = "no"
 
+    # 日期筛选类型常量与choices
+    FILTER_DATE_OFF = "off"
+    FILTER_DATE_ADDED = "added"
+    FILTER_DATE_MODIFIED = "modified"
+
     params = [
         "q",
         "user",
@@ -205,8 +210,11 @@ class BookmarkSearch:
         "unread",
         "modified_since",
         "added_since",
+        "date_filter_type",
+        "date_filter_start",
+        "date_filter_end",
     ]
-    preferences = ["sort", "shared", "unread"]
+    preferences = ["sort", "shared", "unread", "date_filter_type"]
     defaults = {
         "q": "",
         "user": "",
@@ -216,6 +224,9 @@ class BookmarkSearch:
         "unread": FILTER_UNREAD_OFF,
         "modified_since": None,
         "added_since": None,
+        "date_filter_type": FILTER_DATE_OFF,
+        "date_filter_start": None,
+        "date_filter_end": None,
     }
 
     def __init__(
@@ -228,6 +239,9 @@ class BookmarkSearch:
         unread: str = None,
         modified_since: str = None,
         added_since: str = None,
+        date_filter_type: str = None,
+        date_filter_start: str = None,
+        date_filter_end: str = None,
         preferences: dict = None,
         request: any = None,
     ):
@@ -244,6 +258,9 @@ class BookmarkSearch:
         self.unread = unread or self.defaults["unread"]
         self.modified_since = modified_since or self.defaults["modified_since"]
         self.added_since = added_since or self.defaults["added_since"]
+        self.date_filter_type = date_filter_type or self.defaults["date_filter_type"]
+        self.date_filter_start = date_filter_start or self.defaults["date_filter_start"]
+        self.date_filter_end = date_filter_end or self.defaults["date_filter_end"]
 
     def is_modified(self, param):
         value = self.__dict__[param]
@@ -322,6 +339,11 @@ class BookmarkSearchForm(forms.Form):
         (BookmarkSearch.FILTER_UNREAD_YES, "未读"),
         (BookmarkSearch.FILTER_UNREAD_NO, "已读"),
     ]
+    FILTER_DATE_CHOICES = [
+        (BookmarkSearch.FILTER_DATE_OFF, "关闭"),
+        (BookmarkSearch.FILTER_DATE_ADDED, "添加日"),
+        (BookmarkSearch.FILTER_DATE_MODIFIED, "修改日")
+    ]
 
     q = forms.CharField()
     user = forms.ChoiceField(required=False)
@@ -331,6 +353,9 @@ class BookmarkSearchForm(forms.Form):
     unread = forms.ChoiceField(choices=FILTER_UNREAD_CHOICES, widget=forms.RadioSelect)
     modified_since = forms.CharField(required=False)
     added_since = forms.CharField(required=False)
+    date_filter_type = forms.ChoiceField(choices=FILTER_DATE_CHOICES, widget=forms.RadioSelect)
+    date_filter_start = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    date_filter_end = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
 
     def __init__(
         self,

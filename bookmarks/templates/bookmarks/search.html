@@ -32,7 +32,7 @@
       </svg>
     </button>
     <div class="menu" tabindex="0">
-      <form id="search_preferences" action="" method="post">
+      <form id="search_preferences" ld-date-filter-fields action="" method="post">
         {% csrf_token %}
         {% if 'sort' in preferences_form.editable_fields %}
           <div class="form-group">
@@ -69,6 +69,33 @@
                 {{ radio.choice_label }}
               </label>
             {% endfor %}
+          </div>
+        {% endif %}
+        {% if 'date_filter_type' in preferences_form.editable_fields %}
+          <!-- 日期筛选相关表单项 -->
+          <div class="form-group radio-group" role="radiogroup" aria-labelledby="date-filter-type-label">
+            <label id="date-filter-type-label" class="form-label">日期筛选</label>
+            {% for radio in preferences_form.date_filter_type %}
+              <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
+                {{ radio.tag }}
+                <i class="form-icon"></i>
+                {{ radio.choice_label }}
+              </label>
+            {% endfor %}
+          </div>
+          <div id="date-range-fields">
+            <div class="form-group">
+              <div class="form-row-inline">
+                <label for="{{ preferences_form.date_filter_start.id_for_label }}" class="form-label-inline">开始日期</label>
+                {{ preferences_form.date_filter_start|add_class:"form-input" }}
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="form-row-inline">
+                <label for="{{ preferences_form.date_filter_end.id_for_label }}" class="form-label-inline">结束日期</label>
+                {{ preferences_form.date_filter_end|add_class:"form-input" }}
+              </div>
+            </div>
           </div>
         {% endif %}
         <div class="actions">

@@ -161,6 +161,18 @@
       }
     }
   }
+
+  /* 行内表单布局 */
+  .form-row-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .form-label-inline {
+    margin-bottom: 0;
+    white-space: nowrap;
+  }
 }
 
 /* Bookmark list */
