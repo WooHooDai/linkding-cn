@@ -1,12 +1,17 @@
+import json
 import logging
+import os
 from dataclasses import dataclass
 from functools import lru_cache
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
+import importlib.util
 import requests
 from bs4 import BeautifulSoup
 from charset_normalizer import from_bytes
+from django.conf import settings
 from django.utils import timezone
+from json.decoder import JSONDecodeError
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +32,79 @@ class WebsiteMetadata:
         }
 
 
+def get_domain(url: str) -> str:
+    return urlparse(url).netloc
+
+def search_config_for_domain(domain, domain_map):
+    if domain in domain_map:
+        return domain_map[domain]
+    for key in domain_map:
+        if key.startswith("*.") and domain.endswith(key[1:]):
+            return domain_map[key]
+    return None
+
+# 缓存规则设置与解析规则（function）
+_settings_cache = None
+_settings_mtime = None
+_loaders_module_cache = {}  # {loader_path: (module, mtime)}
+
+# 获取设置文件：若更新则重新读取，否则使用缓存
+def _load_settings(settings_path):
+    global _settings_cache, _settings_mtime
+    mtime = os.path.getmtime(settings_path)
+    if _settings_cache is None or _settings_mtime != mtime:
+        try:
+            with open(settings_path, "r", encoding="utf-8") as f:
+                _settings_cache = json.load(f)
+            _settings_mtime = mtime
+        except JSONDecodeError as e:
+            logger.error(f"settings.json 解析失败: {e}")
+            _settings_cache = "__JSON_ERROR__"
+            _settings_mtime = mtime
+    return _settings_cache
+
+# 获取自定义解析脚本：若更新则重新读取，否则使用缓存
+def _load_loader_module(loader_path):
+    mtime = os.path.getmtime(loader_path)
+    cache = _loaders_module_cache.get(loader_path)
+    if cache is None or cache[1] != mtime:
+        spec = importlib.util.spec_from_file_location("custom_loader", loader_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _loaders_module_cache[loader_path] = (module, mtime)
+    return _loaders_module_cache[loader_path][0]
+
+# 获取网站标题、描述、首图
+# TODO: 目前一旦用户有自定义字段，就会失去缓存，暂时没考虑好传递config dict时的缓存方案
 def load_website_metadata(url: str, ignore_cache: bool = False):
+    settings_path = settings.LD_CUSTOM_WEBSITE_LOADER_SETTINGS
+    domain = get_domain(url)
+    config = None
+    if os.path.exists(settings_path):
+        domain_map = _load_settings(settings_path)
+        if domain_map == "__JSON_ERROR__":
+            return WebsiteMetadata(
+                url=url,
+                title="【错误】settings.json 文件有误",
+                description="【错误】settings.json 解析失败，请检查文件格式",
+                preview_image=None,
+            )
+        # 使用支持通配符的查找
+        config = search_config_for_domain(domain, domain_map)
+        if config:
+            loader_file = config.get("loader")
+            if loader_file:
+                loader_path = os.path.join(os.path.dirname(settings_path), loader_file) if loader_file else None
+                if loader_path and os.path.exists(loader_path):
+                    module = _load_loader_module(loader_path)
+                    func = getattr(module, "_load_website_metadata")
+                    return func(url, config)
+            elif config:
+                return _load_website_metadata(url, config)
     if ignore_cache:
         return _load_website_metadata(url)
     return _load_website_metadata_cached(url)
+
 
 
 # Caching metadata avoids scraping again when saving bookmarks, in case the
@@ -40,7 +114,7 @@ def _load_website_metadata_cached(url: str):
     return _load_website_metadata(url)
 
 
-def _load_website_metadata(url: str):
+def _load_website_metadata(url: str, config: dict = None):
     title = None
     description = None
     preview_image = None
@@ -55,6 +129,13 @@ def _load_website_metadata(url: str):
 
         if soup.title and soup.title.string:
             title = soup.title.string.strip()
+        else:
+            title_tag = soup.find("meta", attrs={"property": "og:title"})
+            title = (
+                title_tag["content"].strip()
+                if title_tag and title_tag["content"]
+                else None
+            )
         description_tag = soup.find("meta", attrs={"name": "description"})
         description = (
             description_tag["content"].strip()
@@ -87,17 +168,19 @@ def _load_website_metadata(url: str):
         )
 
 
-CHUNK_SIZE = 50 * 1024
-MAX_CONTENT_LIMIT = 5000 * 1024
+def load_page(url: str, config: dict = None):
+    headers = build_request_headers(config)
+    timeout = config.get("timeout", 10) if config else 10
+    proxies = config.get("proxy") if config else None
 
+    CHUNK_SIZE = config.get("chunk_size", 50*1024) if config else 50*1024
+    MAX_CONTENT_LIMIT = config.get("max_content_limit", 5000*1024) if config else 5000*1024
 
-def load_page(url: str):
-    headers = fake_request_headers()
     size = 0
     content = None
     iteration = 0
     # Use with to ensure request gets closed even if it's only read partially
-    with requests.get(url, timeout=10, headers=headers, stream=True) as r:
+    with requests.get(url, timeout=timeout, headers=headers, proxies=proxies, stream=True) as r:
         for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
             size += len(chunk)
             iteration = iteration + 1
@@ -129,14 +212,14 @@ def load_page(url: str):
     return str(results.best())
 
 
-DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Safari/537.36"
-
-
-def fake_request_headers():
-    return {
+def build_request_headers(config: dict = None):
+    headers = {
         "Accept": "text/html,application/xhtml+xml,application/xml",
         "Accept-Encoding": "gzip, deflate",
         "Dnt": "1",
         "Upgrade-Insecure-Requests": "1",
-        "User-Agent": DEFAULT_USER_AGENT,
+        "User-Agent": settings.LD_DEFAULT_USER_AGENT,
     }
+    if config and config.get("headers"):
+        headers.update(config["headers"])
+    return headers

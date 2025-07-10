@@ -288,10 +288,14 @@ LD_PREVIEW_ALLOWED_EXTENSIONS = [
     ".webp",
 ]
 
+# Website loader / snapshot settings
+LD_DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0"
+LD_CUSTOM_WEBSITE_LOADER_SETTINGS = os.getenv("LD_CUSTOM_WEBSITE_LOADER_SETTINGS","data/website_loader/settings.json")
+
 # Asset / snapshot settings
 LD_ASSET_FOLDER = os.path.join(BASE_DIR, "data", "assets")
 
-LD_ENABLE_SNAPSHOTS = os.getenv("LD_ENABLE_SNAPSHOTS", False) in (
+LD_ENABLE_SNAPSHOTS = os.getenv("LD_ENABLE_SNAPSHOTS", True) in (
     True,
     "True",
     "true",
@@ -323,3 +327,5 @@ LD_SINGLEFILE_TIMEOUT_SEC = float(os.getenv("LD_SINGLEFILE_TIMEOUT_SEC", 120))
 # it turns out to be useful in the future.
 LD_MONOLITH_PATH = os.getenv("LD_MONOLITH_PATH", "monolith")
 LD_MONOLITH_OPTIONS = os.getenv("LD_MONOLITH_OPTIONS", "-a -v -s")
+
+LD_WEBSITE_METADATA_CUSTOM_RULES_DIR = os.getenv("LD_WEBSITE_METADATA_CUSTOM_RULES_DIR","data/rules/website_metadata_loader")
