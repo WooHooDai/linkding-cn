@@ -294,7 +294,6 @@ LD_CUSTOM_WEBSITE_LOADER_SETTINGS = os.getenv("LD_CUSTOM_WEBSITE_LOADER_SETTINGS
 
 # Asset / snapshot settings
 LD_ASSET_FOLDER = os.path.join(BASE_DIR, "data", "assets")
-
 LD_ENABLE_SNAPSHOTS = os.getenv("LD_ENABLE_SNAPSHOTS", True) in (
     True,
     "True",
@@ -319,7 +318,7 @@ LD_SINGLEFILE_UBLOCK_OPTIONS = os.getenv(
         ]
     ),
 )
-LD_SINGLEFILE_OPTIONS = os.getenv("LD_SINGLEFILE_OPTIONS", "")
+LD_SINGLEFILE_OPTIONS = os.getenv("LD_SINGLEFILE_OPTIONS", f'--user-agent="{LD_DEFAULT_USER_AGENT}"')
 LD_SINGLEFILE_TIMEOUT_SEC = float(os.getenv("LD_SINGLEFILE_TIMEOUT_SEC", 120))
 
 # Monolith isn't used at the moment, as the local snapshot implementation
@@ -327,7 +326,3 @@ LD_SINGLEFILE_TIMEOUT_SEC = float(os.getenv("LD_SINGLEFILE_TIMEOUT_SEC", 120))
 # it turns out to be useful in the future.
 LD_MONOLITH_PATH = os.getenv("LD_MONOLITH_PATH", "monolith")
 LD_MONOLITH_OPTIONS = os.getenv("LD_MONOLITH_OPTIONS", "-a -v -s")
-
-LD_WEBSITE_METADATA_CUSTOM_RULES_DIR = os.getenv("LD_WEBSITE_METADATA_CUSTOM_RULES_DIR","data/rules/website_metadata_loader")
-
-LD_DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Safari/537.36"
