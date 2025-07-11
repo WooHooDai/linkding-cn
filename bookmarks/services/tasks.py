@@ -14,7 +14,7 @@ from waybackpy.exceptions import WaybackError, TooManyRequestsError
 
 from bookmarks.models import Bookmark, BookmarkAsset, UserProfile
 from bookmarks.services import assets, favicon_loader, preview_image_loader
-from bookmarks.services.website_loader import DEFAULT_USER_AGENT, load_website_metadata
+from bookmarks.services.website_loader import load_website_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ def create_web_archive_snapshot(user: User, bookmark: Bookmark, force_update: bo
 def _create_snapshot(bookmark: Bookmark):
     logger.info(f"Create new snapshot for bookmark. url={bookmark.url}...")
     archive = waybackpy.WaybackMachineSaveAPI(
-        bookmark.url, DEFAULT_USER_AGENT, max_tries=1
+        bookmark.url, settings.LD_DEFAULT_USER_AGENT, max_tries=1
     )
     archive.save()
     bookmark.web_archive_snapshot_url = archive.archive_url

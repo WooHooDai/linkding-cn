@@ -329,3 +329,5 @@ LD_MONOLITH_PATH = os.getenv("LD_MONOLITH_PATH", "monolith")
 LD_MONOLITH_OPTIONS = os.getenv("LD_MONOLITH_OPTIONS", "-a -v -s")
 
 LD_WEBSITE_METADATA_CUSTOM_RULES_DIR = os.getenv("LD_WEBSITE_METADATA_CUSTOM_RULES_DIR","data/rules/website_metadata_loader")
+
+LD_DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Safari/537.36"
