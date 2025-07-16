@@ -5,6 +5,7 @@ import markdown
 from bleach_allowlist import markdown_tags, markdown_attrs
 from django import template
 from django.utils.safestring import mark_safe
+from urllib.parse import urlparse
 
 from bookmarks import utils
 from bookmarks.models import UserProfile
@@ -172,3 +173,11 @@ def form_field(field, modifier_string):
         append_attr(field.field.widget, "aria-invalid", "false")
 
     return field
+
+
+@register.filter
+def extract_domain(value):
+    try:
+        return urlparse(value).netloc
+    except Exception:
+        return ''

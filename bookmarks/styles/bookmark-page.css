@@ -260,7 +260,7 @@ li[ld-bookmark-item] {
     // padding-left: 22px;
   }
 
-  & .title a {
+  & .title .title-link {
     color: var(--bookmark-title-color);
     font-weight: var(--bookmark-title-weight);
     display: block;
@@ -268,6 +268,26 @@ li[ld-bookmark-item] {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  & .title .favicon-link {
+    display: inline-block;
+    vertical-align: middle;
+    width: 16px;
+    height: 16px;
+    
+    text-decoration: none;
+    border: none;
+    background: none;
+    padding: 0;
+    margin: 0;
+  }
+  & .title .favicon-link:visited,
+  & .title .favicon-link:active,
+  & .title .favicon-link:hover {
+    text-decoration: none;
+    border: none;
+    background: none;
   }
 
   & .title a[data-tooltip]:hover::after,
