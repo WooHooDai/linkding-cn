@@ -69,6 +69,7 @@ class BookmarkSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "notes",
+            "preview_image_remote_url",
             "web_archive_snapshot_url",
             "favicon_url",
             "preview_image_url",
@@ -97,6 +98,7 @@ class BookmarkSerializer(serializers.ModelSerializer):
     tag_names = TagListField(required=False)
     # Custom fields to generate URLs for favicon, preview image, and web archive snapshot
     favicon_url = serializers.SerializerMethodField()
+    preview_image_remote_url = serializers.URLField(required=False, allow_null=True)
     preview_image_url = serializers.SerializerMethodField()
     web_archive_snapshot_url = serializers.SerializerMethodField()
     # Add dummy website title and description fields for backwards compatibility but keep them empty

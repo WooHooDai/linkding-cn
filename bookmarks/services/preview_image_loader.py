@@ -6,6 +6,7 @@ from pathlib import Path
 
 import requests
 from django.conf import settings
+from bookmarks.models import Bookmark
 from bookmarks.services import website_loader
 
 logger = logging.getLogger(__name__)
@@ -23,15 +24,25 @@ def _get_image_path(preview_image_file: str) -> Path:
     return Path(os.path.join(settings.LD_PREVIEW_FOLDER, preview_image_file))
 
 
-def load_preview_image(url: str) -> str | None:
+def load_preview_image(url: str, bookmark: Bookmark = None) -> str | None:
     _ensure_preview_folder()
 
-    metadata = website_loader.load_website_metadata(url)
-    if not metadata.preview_image:
-        logger.debug(f"Could not find preview image in metadata: {url}")
-        return None
+    image_url = (
+        bookmark.preview_image_remote_url
+        if bookmark and bookmark.preview_image_remote_url
+        else None
+    )
 
-    image_url = metadata.preview_image
+    if image_url:
+        logger.debug(f"Exists preview image url: {image_url}")
+
+    if not image_url:
+        logger.debug("Not exists preview image url, request by load website metadata")
+        metadata = website_loader.load_website_metadata(url)
+        if not metadata.preview_image:
+            logger.debug(f"Could not find preview image in metadata: {url}")
+            return None
+        image_url = metadata.preview_image
 
     logger.debug(f"Loading preview image: {image_url}")
     with requests.get(image_url, stream=True) as response:

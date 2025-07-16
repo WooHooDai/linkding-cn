@@ -70,6 +70,9 @@
     {{ form.notes.errors }}
   </div>
   <div class="form-group">
+    {{ form.preview_image_remote_url.as_hidden }}
+  </div>
+  <div class="form-group">
     <div class="form-checkbox">
       {{ form.unread|form_field:"help" }}
       <i class="form-icon"></i>
@@ -115,6 +118,7 @@
       const descriptionInput = document.getElementById('{{ form.description.id_for_label }}');
       const notesDetails = document.querySelector('form details.notes');
       const notesInput = document.getElementById('{{ form.notes.id_for_label }}');
+      const previewImageRemoteUrlInput = document.getElementById('{{ form.preview_image_remote_url.id_for_label }}');
       const unreadCheckbox = document.getElementById('{{ form.unread.id_for_label }}');
       const sharedCheckbox = document.getElementById('{{ form.shared.id_for_label }}');
       const refreshButton = document.getElementById('refresh-button');
@@ -188,6 +192,9 @@
               if (!isDescriptionModified) {
                 updateInput(descriptionInput, metadata.description);
               }
+              if (metadata.preview_image && metadata.preview_image !== existingBookmark?.preview_image_remote_url) {
+                updateInput(previewImageRemoteUrlInput, metadata.preview_image);
+              }
             }
 
             // Preview auto tags
@@ -227,10 +234,12 @@
               titleInput.value = metadata.title;
               titleInput.classList.add("modified");
             }
-
             if (metadata.description && metadata.description !== existingBookmark?.description) {
               descriptionInput.value = metadata.description;
               descriptionInput.classList.add("modified");
+            }
+            if (metadata.preview_image && metadata.preview_image !== existingBookmark?.preview_image_remote_url) {
+              previewImageRemoteUrlInput.value = metadata.preview_image || '';
             }
           });
       }

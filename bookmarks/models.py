@@ -57,6 +57,7 @@ class Bookmark(models.Model):
     title = models.CharField(max_length=512, blank=True)
     description = models.TextField(blank=True)
     notes = models.TextField(blank=True)
+    preview_image_remote_url = models.URLField(max_length=2048, blank=True)
     # Obsolete field, kept to not remove column when generating migrations
     website_title = models.CharField(max_length=512, blank=True, null=True)
     # Obsolete field, kept to not remove column when generating migrations

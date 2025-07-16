@@ -195,7 +195,7 @@ def _load_preview_image_task(bookmark_id: int):
 
     logger.info(f"Load preview image for bookmark. url={bookmark.url}")
 
-    new_preview_image_file = preview_image_loader.load_preview_image(bookmark.url)
+    new_preview_image_file = preview_image_loader.load_preview_image(bookmark.url, bookmark)
 
     if new_preview_image_file != bookmark.preview_image_file:
         bookmark.preview_image_file = new_preview_image_file or ""

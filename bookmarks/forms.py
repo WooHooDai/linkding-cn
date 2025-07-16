@@ -31,6 +31,7 @@ class BookmarkForm(forms.ModelForm):
             "title",
             "description",
             "notes",
+            "preview_image_remote_url",
             "unread",
             "shared",
             "auto_close",
