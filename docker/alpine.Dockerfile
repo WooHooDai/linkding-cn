@@ -119,3 +119,7 @@ RUN mkdir -p chromium-profile &&  \
     chown -R www-data:www-data uBOLite.chromium.mv3
 # enable snapshot support
 ENV LD_ENABLE_SNAPSHOTS=True
+# 确保chromium可以运行
+# 参考[这个issue](https://github.com/hardkoded/puppeteer-sharp/issues/2633)
+ENV XDG_CONFIG_HOME=/tmp/.chromium
+ENV XDG_CACHE_HOME=/tmp/.chromium
