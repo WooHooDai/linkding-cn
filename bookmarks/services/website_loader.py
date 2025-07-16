@@ -151,7 +151,10 @@ def _load_website_metadata(url: str, config: dict = None):
                 else None
             )
 
-        image_tag = soup.find("meta", attrs={"property": "og:image"})
+        image_tag = (
+            soup.find("meta", attrs={"property": "og:image"}) 
+            or soup.find("meta", attrs={"name": "og:image"})
+        )
         preview_image = image_tag["content"].strip() if image_tag else None
         if (
             preview_image
