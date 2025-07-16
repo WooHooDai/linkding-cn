@@ -5,11 +5,13 @@ Django
 django-registration
 django-widget-tweaks
 djangorestframework
+drissionpage
 huey
 Markdown
 mozilla-django-oidc
 psycopg2-binary
 python-dateutil
+pypinyin
 requests
 supervisor
 uWSGI
