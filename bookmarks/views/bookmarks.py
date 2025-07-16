@@ -203,7 +203,7 @@ def edit(request: HttpRequest, bookmark_id: int):
             return HttpResponseRedirect(return_url)
 
     status = 422 if request.method == "POST" and not form.is_valid() else 200
-    context = {"form": form, "bookmark_id": bookmark_id, "return_url": return_url}
+    context = {"form": form, "bookmark_id": bookmark_id, "return_url": return_url, "preview_image_file": bookmark.preview_image_file}
 
     return render(request, "bookmarks/edit.html", context, status=status)
 
