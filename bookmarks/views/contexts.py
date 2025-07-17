@@ -147,6 +147,7 @@ class BookmarkItem:
                     bookmark.url, bookmark.date_added
                 )
         self.favicon_file = bookmark.favicon_file
+        self.preview_image_remote_url = bookmark.preview_image_remote_url
         self.preview_image_file = bookmark.preview_image_file
         self.is_archived = bookmark.is_archived
         self.unread = bookmark.unread

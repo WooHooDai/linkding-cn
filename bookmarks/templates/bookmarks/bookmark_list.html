@@ -155,6 +155,8 @@
           {% if bookmark_list.show_preview_images %}
             {% if bookmark_item.preview_image_file %}
               <img class="preview-image" src="{% static bookmark_item.preview_image_file %}" loading="lazy"/>
+            {% elif bookmark_item.preview_image_remote_url %}
+              <img class="preview-image" src="{{ bookmark_item.preview_image_remote_url }}" loading="lazy"/>
             {% else %}
               <div class="preview-image placeholder">
                 <div class="img"/>
