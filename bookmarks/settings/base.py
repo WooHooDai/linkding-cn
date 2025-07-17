@@ -285,7 +285,7 @@ LD_PREVIEW_ALLOWED_EXTENSIONS = [
     ".png",
     ".gif",
     ".svg",
-    ".webp",
+    ".webp"
 ]
 
 # Website loader / snapshot settings

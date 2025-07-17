@@ -69,6 +69,7 @@ def load_preview_image(url: str, bookmark: Bookmark = None) -> str | None:
 
         content_type = response.headers["Content-Type"].split(";", 1)[0]
         file_extension = mimetypes.guess_extension(content_type)
+        print("File extension for preview image: ",file_extension)
 
         if file_extension not in settings.LD_PREVIEW_ALLOWED_EXTENSIONS:
             logger.debug(
