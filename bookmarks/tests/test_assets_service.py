@@ -21,7 +21,7 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
 
         self.html_content = "<html><body><h1>Hello, World!</h1></body></html>"
         self.mock_singlefile_create_snapshot_patcher = mock.patch(
-            "bookmarks.services.singlefile.create_snapshot",
+            "bookmarks.services.snapshot_processor.create_snapshot",
         )
         self.mock_singlefile_create_snapshot = (
             self.mock_singlefile_create_snapshot_patcher.start()

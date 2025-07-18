@@ -1,4 +1,7 @@
+import importlib
+import json
 import logging
+import os
 import re
 import unicodedata
 import urllib.parse
@@ -145,3 +148,53 @@ def generate_username(email, claims):
     else:
         username = email
     return unicodedata.normalize("NFKC", username)[:150]
+
+
+def get_domain(url: str) -> str:
+    return urllib.parse.urlparse(url).netloc
+
+def search_config_for_domain(domain, domain_map):
+    if domain in domain_map:
+        return domain_map[domain]
+    for key in domain_map:
+        if key.startswith("*.") and domain.endswith(key[1:]):
+            return domain_map[key]
+    return None
+
+def load_settings(path, cache):
+    cache = {} if cache is None else cache
+    try:
+        mtime = os.path.getmtime(path)
+    except (OSError, FileNotFoundError):
+        cache["cache"] = None
+        cache["mtime"] = None
+        return cache["cache"]
+    cache_settings = cache.get("cache")
+    cache_mtime = cache.get("mtime")
+    if cache_settings is None or cache_mtime != mtime:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                cache["cache"] = json.load(f)
+            cache["mtime"] = mtime
+        except json.JSONDecodeError:
+            cache["cache"] = "__JSON_ERROR__"
+            cache["mtime"] = mtime
+        except (OSError, FileNotFoundError):
+            cache["cache"] = None
+            cache["mtime"] = None
+    return cache.get("cache")
+
+
+def load_module(path, cache):
+    cache = {} if cache is None else cache
+    try:
+        mtime = os.path.getmtime(path)
+    except (OSError, FileNotFoundError):
+        return None
+    spec = cache.get(path)
+    if spec is None or spec[1] != mtime:
+        spec = importlib.util.spec_from_file_location("custom_module", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        cache[path] = (module, mtime)
+    return cache[path][0]

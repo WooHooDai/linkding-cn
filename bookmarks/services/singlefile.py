@@ -14,14 +14,32 @@ class SingleFileError(Exception):
 logger = logging.getLogger(__name__)
 
 
-def create_snapshot(url: str, filepath: str):
+def get_custom_options(config: dict):
+    if config:
+        custom_options = config.get("singlefile_args")
+    else:
+        return []
+    
+    if isinstance(custom_options, str):
+        # 字符串：直接拆分
+        return shlex.split(custom_options)
+    elif isinstance(custom_options, list):
+        # 数组：先join再split，这样配置文件可以将参数项和参数值写入一个元素
+        return shlex.split(shlex.join(custom_options))
+    else:
+        return []
+
+
+def create_snapshot(url: str, filepath: str, config: dict = None):
     singlefile_path = settings.LD_SINGLEFILE_PATH
 
-    # parse options to list of arguments
+    # 解析参数
     ublock_options = shlex.split(settings.LD_SINGLEFILE_UBLOCK_OPTIONS)
-    custom_options = shlex.split(settings.LD_SINGLEFILE_OPTIONS)
-    # concat lists
-    args = [singlefile_path] + ublock_options + custom_options + [url, filepath]
+    global_options = shlex.split(settings.LD_SINGLEFILE_OPTIONS)
+    custom_options = get_custom_options(config)
+
+    # 拼接最终参数
+    args = [singlefile_path] + ublock_options + global_options + custom_options + [url, filepath]
     try:
         # Use start_new_session=True to create a new process group
         process = subprocess.Popen(args, start_new_session=True)

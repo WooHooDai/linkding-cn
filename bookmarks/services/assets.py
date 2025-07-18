@@ -8,7 +8,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.utils import timezone, formats
 
 from bookmarks.models import Bookmark, BookmarkAsset
-from bookmarks.services import singlefile
+from bookmarks.services import snapshot_processor
 
 MAX_ASSET_FILENAME_LENGTH = 192
 
@@ -34,7 +34,7 @@ def create_snapshot(asset: BookmarkAsset):
         # Create snapshot into temporary file
         temp_filename = _generate_asset_filename(asset, asset.bookmark.url, "tmp")
         temp_filepath = os.path.join(settings.LD_ASSET_FOLDER, temp_filename)
-        singlefile.create_snapshot(asset.bookmark.url, temp_filepath)
+        snapshot_processor.create_snapshot(asset.bookmark.url, temp_filepath)
 
         # Store as gzip in asset folder
         filename = _generate_asset_filename(asset, asset.bookmark.url, "html.gz")

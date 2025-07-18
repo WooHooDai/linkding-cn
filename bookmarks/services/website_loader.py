@@ -3,11 +3,12 @@ import logging
 import os
 from dataclasses import dataclass
 from functools import lru_cache
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 import importlib.util
 import requests
 from bs4 import BeautifulSoup
+from bookmarks.utils import get_domain, load_module, search_config_for_domain, load_settings
 from charset_normalizer import from_bytes
 from django.conf import settings
 from django.utils import timezone
@@ -32,47 +33,11 @@ class WebsiteMetadata:
         }
 
 
-def get_domain(url: str) -> str:
-    return urlparse(url).netloc
 
-def search_config_for_domain(domain, domain_map):
-    if domain in domain_map:
-        return domain_map[domain]
-    for key in domain_map:
-        if key.startswith("*.") and domain.endswith(key[1:]):
-            return domain_map[key]
-    return None
 
 # 缓存规则设置与解析规则（function）
 _settings_cache = None
-_settings_mtime = None
 _loaders_module_cache = {}  # {loader_path: (module, mtime)}
-
-# 获取设置文件：若更新则重新读取，否则使用缓存
-def _load_settings(settings_path):
-    global _settings_cache, _settings_mtime
-    mtime = os.path.getmtime(settings_path)
-    if _settings_cache is None or _settings_mtime != mtime:
-        try:
-            with open(settings_path, "r", encoding="utf-8") as f:
-                _settings_cache = json.load(f)
-            _settings_mtime = mtime
-        except JSONDecodeError as e:
-            logger.error(f"settings.json 解析失败: {e}")
-            _settings_cache = "__JSON_ERROR__"
-            _settings_mtime = mtime
-    return _settings_cache
-
-# 获取自定义解析脚本：若更新则重新读取，否则使用缓存
-def _load_loader_module(loader_path):
-    mtime = os.path.getmtime(loader_path)
-    cache = _loaders_module_cache.get(loader_path)
-    if cache is None or cache[1] != mtime:
-        spec = importlib.util.spec_from_file_location("custom_loader", loader_path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        _loaders_module_cache[loader_path] = (module, mtime)
-    return _loaders_module_cache[loader_path][0]
 
 # 获取网站标题、描述、首图
 # TODO: 目前一旦用户有自定义字段，就会失去缓存，暂时没考虑好传递config dict时的缓存方案
@@ -81,7 +46,7 @@ def load_website_metadata(url: str, ignore_cache: bool = False):
     domain = get_domain(url)
     config = None
     if os.path.exists(settings_path):
-        domain_map = _load_settings(settings_path)
+        domain_map = load_settings(settings_path,_settings_cache)
         if domain_map == "__JSON_ERROR__":
             return WebsiteMetadata(
                 url=url,
@@ -96,7 +61,7 @@ def load_website_metadata(url: str, ignore_cache: bool = False):
             if loader_file:
                 loader_path = os.path.join(os.path.dirname(settings_path), loader_file) if loader_file else None
                 if loader_path and os.path.exists(loader_path):
-                    module = _load_loader_module(loader_path)
+                    module = load_module(loader_path, _loaders_module_cache)
                     func = getattr(module, "_load_website_metadata")
                     return func(url, config)
             elif config:
