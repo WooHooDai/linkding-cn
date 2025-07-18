@@ -38,8 +38,9 @@ def create_snapshot(url: str, filepath: str, config: dict = None):
     global_options = shlex.split(settings.LD_SINGLEFILE_OPTIONS)
     custom_options = get_custom_options(config)
 
-    # 拼接最终参数
-    args = [singlefile_path] + ublock_options + global_options + custom_options + [url, filepath]
+    # 参数优先级：custom_options > global_options
+    options = custom_options or global_options
+    args = [singlefile_path] + ublock_options + options + [url, filepath]
     try:
         # Use start_new_session=True to create a new process group
         process = subprocess.Popen(args, start_new_session=True)
