@@ -291,6 +291,7 @@ LD_PREVIEW_ALLOWED_EXTENSIONS = [
 # Website loader / snapshot settings
 LD_DEFAULT_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0"
 LD_CUSTOM_WEBSITE_LOADER_SETTINGS = os.getenv("LD_CUSTOM_WEBSITE_LOADER_SETTINGS","data/website_loader/settings.json")
+LD_CUSTOM_SNAPSHOT_PROCESSOR_SETTINGS = os.getenv("LD_CUSTOM_SNAPSHOT_PROCESSOR_SETTINGS", "data/snapshot_processor/settings.json")
 
 # Asset / snapshot settings
 LD_ASSET_FOLDER = os.path.join(BASE_DIR, "data", "assets")
