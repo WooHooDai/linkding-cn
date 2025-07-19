@@ -504,3 +504,21 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         # Verify bookmark modified date is updated
         bookmark.refresh_from_db()
         self.assertGreater(bookmark.date_modified, initial_modified)
+
+    def test_rename_asset(self):
+        bookmark = self.setup_bookmark()
+        asset = self.setup_asset(bookmark=bookmark, display_name="old_name.txt")
+        old_modified = bookmark.date_modified
+
+        # 执行重命名
+        assets.rename_asset(asset, "new_name.txt")
+        asset.refresh_from_db()
+        bookmark.refresh_from_db()
+
+        self.assertEqual(asset.display_name, "new_name.txt")
+        self.assertGreater(bookmark.date_modified, old_modified)
+
+        # 空字符串不应修改
+        assets.rename_asset(asset, "   ")
+        asset.refresh_from_db()
+        self.assertEqual(asset.display_name, "new_name.txt")

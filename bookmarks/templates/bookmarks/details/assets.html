@@ -7,7 +7,7 @@
             {% include 'bookmarks/details/asset_icon.html' %}
           </div>
           <div class="list-item-text {{ asset.text_classes }}">
-          <span class="truncate">
+          <span class="truncate" data-display-name>
             {{ asset.display_name }}
             {% if asset.status == 'pending' %}(queued){% endif %}
             {% if asset.status == 'failure' %}(failed){% endif %}
@@ -21,6 +21,9 @@
               <a class="btn btn-link" href="{% url 'linkding:assets.view' asset.id %}" target="_blank">查看</a>
             {% endif %}
             {% if details.is_editable %}
+              <button ld-asset-rename type="button" name="rename_asset" value="{{ asset.id }}"  data-asset-id="{{ asset.id }}" class="btn btn-link">
+                重命名
+              </button>
               <button ld-confirm-button type="submit" name="remove_asset" value="{{ asset.id }}" class="btn btn-link">
                 移除
               </button>

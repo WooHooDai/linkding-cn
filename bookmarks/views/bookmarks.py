@@ -257,6 +257,12 @@ def remove_asset(request: HttpRequest, asset_id: int | str):
     asset_actions.remove_asset(asset)
 
 
+def rename_asset(request: HttpRequest, asset_id: int | str):
+    asset = access.asset_write(request, asset_id)
+    new_display_name = request.POST.get("new_display_name", "").strip()
+    asset_actions.rename_asset(asset, new_display_name)
+
+
 def update_state(request: HttpRequest, bookmark_id: int | str):
     bookmark = access.bookmark_write(request, bookmark_id)
     bookmark.is_archived = request.POST.get("is_archived") == "on"
@@ -332,6 +338,8 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
         return upload_asset(request, request.POST["upload_asset"])
     if "remove_asset" in request.POST:
         return remove_asset(request, request.POST["remove_asset"])
+    if "rename_asset" in request.POST:
+        return rename_asset(request, request.POST["rename_asset"])
 
     # State updates
     if "update_state" in request.POST:

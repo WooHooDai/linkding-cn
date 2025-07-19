@@ -51,5 +51,148 @@ class UploadButton extends Behavior {
   }
 }
 
+class AssetRename extends Behavior {
+  constructor(element) {
+    super(element);
+
+    this.assetId = element.dataset.assetId;
+    this.originalText = "";
+    this.displayNameSpan = null;
+
+    this.onClick = this.onClick.bind(this);
+    this.onKeyDown = this.onKeyDown.bind(this);
+
+    element.addEventListener("click", this.onClick);
+  }
+
+  destroy() {
+    setTimeout(() => this.reset(), 0);
+    this.element.removeEventListener("click", this.onClick);
+  }
+
+  onClick(event) {
+    event.preventDefault();
+    this.showConfirmation();
+    this.startEditing();
+  }
+
+  onKeyDown(event) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      this.reset();
+    }
+  }
+
+  startEditing() {
+    // 禁用其他重命名按钮
+    document.querySelectorAll('.btn[ld-asset-rename]').forEach(btn => {
+      if (btn !== this.element) {
+        btn.disabled = true;
+        btn.classList.add('btn-disabled');
+      }
+    });
+    // 找到快照名所在元素
+    const listItem = this.element.closest(".list-item");
+    this.displayNameSpan = listItem.querySelector("[data-display-name]");
+    if (!this.displayNameSpan) {
+      console.error("Snapshot's name was not found.");
+      return;
+    }
+
+    // 保存原始文本
+    this.originalText = this.displayNameSpan.textContent.trim();
+    
+    // 创建输入框
+    const input = document.createElement("input");
+    input.type = "text";
+    input.name = "new_display_name"
+    input.className = "form-input input-sm";
+    input.value = this.originalText;
+
+    this.input = input;
+    this.displayNameSpan.before(this.input);
+    this.displayNameSpan.style.display = "none";
+    
+    this.input.addEventListener("keydown", this.onKeyDown);
+    this.input.focus();
+    this.input.select();
+
+    const form = this.input.closest("form");
+    form.addEventListener("submit", (event) => {
+      const value = this.input.value.trim();
+      if (value==="") {
+        event.preventDefault();
+        this.showInputError(this.input, "名称不能为空！");
+        this.input.focus();
+      }
+    });
+  }
+
+  reset() {
+    if (this.container) {
+      this.container.remove();
+      this.container = null;
+    }
+    this.element.classList.remove("d-none");
+
+    if (this.displayNameSpan) {
+      this.displayNameSpan.style.display = "";
+      this.displayNameSpan = null;
+    }
+
+    // 恢复所有重命名按钮
+    document.querySelectorAll('.btn[ld-asset-rename]').forEach(btn => {
+      btn.disabled = false;
+      btn.classList.remove('btn-disabled');
+    });
+
+    if (this.input) {
+      this.clearInputError(this.input);
+      this.input.removeEventListener("keydown", this.onKeyDown);
+      this.input.remove();
+      this.input = null;
+    }
+  }
+
+  showConfirmation() {
+    const container = document.createElement("span");
+    container.className = "confirmation";
+
+    const buttonClasses = Array.from(this.element.classList.values())
+    .filter((cls) => cls.startsWith("btn"))
+    .join(" ");
+
+    const cancelButton = document.createElement(this.element.nodeName);
+    cancelButton.type = "button";
+    cancelButton.innerText = "取消"
+    cancelButton.className = `${buttonClasses} mr-1`;
+    cancelButton.addEventListener("click", this.reset.bind(this));
+
+    const confirmButton = document.createElement(this.element.nodeName);
+    confirmButton.type = "submit";
+    confirmButton.name = this.element.name;
+    confirmButton.value = this.element.value;
+    confirmButton.innerText = "确认";
+    confirmButton.className = buttonClasses;
+    
+    container.append(cancelButton, confirmButton);
+    this.container = container;
+    this.element.before(container);
+    this.element.classList.add("d-none");
+  }
+
+  showInputError(input, message) {
+    input.value = "";
+    input.placeholder = message;
+    input.classList.add('is-error');
+  }
+
+  clearInputError(input) {
+    input.placeholder = "";
+    input.classList.remove('is-error');
+  }
+}
+
 registerBehavior("ld-auto-submit", AutoSubmitBehavior);
 registerBehavior("ld-upload-button", UploadButton);
+registerBehavior("ld-asset-rename", AssetRename); 

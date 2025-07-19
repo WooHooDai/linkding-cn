@@ -155,6 +155,20 @@ def remove_asset(asset: BookmarkAsset):
     bookmark.save()
 
 
+def rename_asset(asset: BookmarkAsset, new_display_name: str):
+    if new_display_name.strip() == "":
+        return
+    asset.display_name = new_display_name.strip()
+    asset.save()
+
+    asset.bookmark.date_modified = timezone.now()
+    asset.bookmark.save()
+    
+    logger.info(
+        f"Successfully renamed asset. asset_id={asset.id} new_name={new_display_name}"
+    )
+
+
 def _generate_asset_filename(
     asset: BookmarkAsset, filename: str, extension: str
 ) -> str:
