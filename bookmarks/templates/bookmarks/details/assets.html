@@ -18,11 +18,11 @@
           </div>
           <div class="list-item-actions">
             {% if asset.file %}
-              <a class="btn btn-link" href="{% url 'linkding:assets.view' asset.id %}" target="_blank">View</a>
+              <a class="btn btn-link" href="{% url 'linkding:assets.view' asset.id %}" target="_blank">查看</a>
             {% endif %}
             {% if details.is_editable %}
               <button ld-confirm-button type="submit" name="remove_asset" value="{{ asset.id }}" class="btn btn-link">
-                Remove
+                移除
               </button>
             {% endif %}
           </div>
@@ -35,7 +35,7 @@
     <div class="assets-actions">
       {% if details.snapshots_enabled %}
         <button type="submit" name="create_html_snapshot" value="{{ details.bookmark.id }}" class="btn btn-sm"
-                {% if details.has_pending_assets %}disabled{% endif %}>Create HTML snapshot
+                {% if details.has_pending_assets %}disabled{% endif %}>生成HTML快照
         </button>
       {% endif %}
       {% if details.uploads_enabled %}

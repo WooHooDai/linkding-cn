@@ -8,86 +8,78 @@
 
 {% block content %}
   <main class="settings-page" aria-labelledby="main-heading">
-    <h1 id="main-heading">Integrations</h1>
-
-    <section aria-labelledby="browser-extension-heading">
-      <h2 id="browser-extension-heading">Browser Extension</h2>
-      <p>The browser extension allows you to quickly add new bookmarks without leaving the page that you are on. The
-        extension is available in the official extension stores for:</p>
-      <ul>
-        <li><a href="https://addons.mozilla.org/firefox/addon/linkding-extension/" target="_blank">Firefox</a></li>
-        <li><a href="https://chrome.google.com/webstore/detail/linkding-extension/beakmhbijpdhipnjhnclmhgjlddhidpe"
-               target="_blank">Chrome</a></li>
-      </ul>
-      <p>The extension is <a href="https://github.com/sissbruecker/linkding-extension" target="_blank">open source</a>
-        as well, which enables you to build and manually load it into any browser that supports Chrome extensions.</p>
-      <h2>Bookmarklet</h2>
-      <p>The bookmarklet is an alternative, cross-browser way to quickly add new bookmarks without opening the linkding
-        application first. Here's how it works:</p>
-      <ul>
-        <li>Drag the bookmarklet below into your browsers bookmark bar / toolbar</li>
-        <li>Open the website that you want to bookmark</li>
-        <li>Click the bookmarklet in your browsers toolbar</li>
-        <li>linkding opens in a new window or tab and allows you to add a bookmark for the site</li>
-        <li>After saving the bookmark the linkding window closes and you are back on your website</li>
-      </ul>
-      <p>Drag the following bookmarklet to your browser's toolbar:</p>
-      <a href="javascript: {% include 'bookmarks/bookmarklet.js' %}" data-turbo="false"
-         class="btn btn-primary">📎 Add bookmark</a>
-    </section>
+    <h1 id="main-heading">集成</h1>
 
     <section aria-labelledby="rest-api-heading">
       <h2 id="rest-api-heading">REST API</h2>
-      <p>The following token can be used to authenticate 3rd-party applications against the REST API:</p>
+      <p>下方令牌（token）可用于对第三方应用程序使用 REST API 的验证授权：</p>
       <div class="form-group">
         <div class="width-50 width-md-100">
           <input class="form-input" value="{{ api_token }}" readonly>
         </div>
       </div>
       <p>
-        <strong>Please treat this token as you would any other credential.</strong>
-        Any party with access to this token can access and manage all your bookmarks.
-        If you think that a token was compromised you can revoke (delete) it in the <a
-          target="_blank" href="{% url 'admin:authtoken_tokenproxy_changelist' %}">admin panel</a>.
-        After deleting the token, a new one will be generated when you reload this settings page.
+        <strong>请认真保管该令牌（token）。</strong>
+        持有该令牌可访问和管理你的全部书签。
+        当你认为令牌有泄漏风险时，你可在<a
+          target="_blank" href="{% url 'admin:authtoken_tokenproxy_changelist' %}">管理后台</a>删除它。
+          删除后，可刷新本页面，查看新生成的令牌。
       </p>
     </section>
 
     <section aria-labelledby="rss-feeds-heading">
-      <h2 id="rss-feeds-heading">RSS Feeds</h2>
-      <p>The following URLs provide RSS feeds for your bookmarks:</p>
+      <h2 id="rss-feeds-heading">RSS 订阅源</h2>
+      <p>下述链接可供订阅书签的RSS：</p>
       <ul style="list-style-position: outside;">
-        <li><a target="_blank" href="{{ all_feed_url }}">All bookmarks</a></li>
-        <li><a target="_blank" href="{{ unread_feed_url }}">Unread bookmarks</a></li>
-        <li><a target="_blank" href="{{ shared_feed_url }}">Shared bookmarks</a></li>
-        <li><a target="_blank" href="{{ public_shared_feed_url }}">Public shared bookmarks</a><br><span class="text-small text-secondary">The public shared feed does not contain an authentication token and can be shared with other people. Only shows shared bookmarks from users who have explicitly enabled public sharing.</span>
+        <li><a target="_blank" href="{{ all_feed_url }}">全部书签</a></li>
+        <li><a target="_blank" href="{{ unread_feed_url }}">未读书签</a></li>
+        <li><a target="_blank" href="{{ shared_feed_url }}">已分享书签</a></li>
+        <li><a target="_blank" href="{{ public_shared_feed_url }}">已公开分享书签</a><br><span class="text-small text-secondary">已公开分享书签可被分享，且只展示被明确允许分享的已分享书签。</span>
         </li>
       </ul>
       <p>
-        All URLs support the following URL parameters:
+        所有链接都支持如下 URL 参数：
       </p>
       <ul style="list-style-position: outside;">
-        <li>A <code>limit</code> parameter for specifying the maximum number of bookmarks to include in the feed. By
-          default, only the latest 100 matching bookmarks are included.
+        <li><code>limit</code>：指定订阅源包含书签数量的最大值，默认为100。
         </li>
-        <li>A <code>q</code> URL parameter for specifying a search query. You can get an example by doing a search in
-          the bookmarks view and then copying the parameter from the URL.
+        <li><code>q</code>：指定搜索关键词，你可在书签列表搜索后，从浏览器地址栏获得。
         </li>
-        <li>An <code>unread</code> parameter for filtering for unread or read bookmarks. Use <code>yes</code> for unread
-          bookmarks and <code>no</code> for read bookmarks.
+        <li><code>unread</code>：筛选未读或已读书签。<code>yes</code>代表未读，<code>no</code>代表已读
         </li>
-        <li>A <code>shared</code> parameter for filtering for shared or unshared bookmarks. Use <code>yes</code> for
-          shared bookmarks and <code>no</code> for unshared bookmarks.
+        <li><code>shared</code>：筛选已分享或未分享书签。<code>yes</code>代表已分享，<code>no</code>代表未分享。
         </li>
       </ul>
       <p>
-        <strong>Please note that these URLs include an authentication token that should be treated like any other
-          credential.</strong>
-        Any party with access to these URLs can read all your bookmarks.
-        If you think that a URL was compromised you can delete the feed token for your user in the <a
-          target="_blank" href="{% url 'admin:bookmarks_feedtoken_changelist' %}">admin panel</a>.
-        After deleting the feed token, new URLs will be generated when you reload this settings page.
+        <strong>注意这些链接包含了授权令牌（authentication token），请认真保管。</strong>
+        持有这些链接可访问你的全部书签。
+        当你认为链接有泄漏风险时，你可在<a
+        target="_blank" href="{% url 'admin:bookmarks_feedtoken_changelist' %}">管理后台</a>删除对应用户的阅读令牌（token）。
+        删除后，可刷新本页面，查看新生成的链接。
       </p>
+    </section>
+
+    <section aria-labelledby="browser-extension-heading">
+      <h2 id="browser-extension-heading">浏览器扩展</h2>
+      <p>浏览器扩展可以帮你快速添加当前页面为书签。扩展可以从如下官方扩展商店获取：</p>
+      <ul>
+        <li><a href="https://addons.mozilla.org/firefox/addon/linkding-extension/" target="_blank">Firefox</a></li>
+        <li><a href="https://chrome.google.com/webstore/detail/linkding-extension/beakmhbijpdhipnjhnclmhgjlddhidpe"
+               target="_blank">Chrome</a></li>
+      </ul>
+      <p>这个扩展是<a href="https://github.com/sissbruecker/linkding-extension" target="_blank">开源</a>的，可以自行构建并手动载入支持Chrome扩展的浏览器里。</p>
+      <h2>书签小程序（Bookmarklet）</h2>
+      <p>书签小程序是另一个快速添加当前页面为书签的方式，它是跨浏览器的。它的使用方式如下：</p>
+      <ul>
+        <li>将下面的书签小程序拖拽到浏览器的书签栏/工具栏</li>
+        <li>打开想添加为书签的网页</li>
+        <li>点击浏览器工具栏上你刚添加的书签小程序</li>
+        <li>linkding 会在新窗口或标签页打开新建书签页面</li>
+        <li>保存书签后，linkding 会自动关闭窗口返回网站</li>
+      </ul>
+      <p>将书签小程序拖拽到浏览器的工具栏：</p>
+      <a href="javascript: {% include 'bookmarks/bookmarklet.js' %}" data-turbo="false"
+         class="btn btn-primary">📎 添加书签小程序</a>
     </section>
   </main>
 {% endblock %}
