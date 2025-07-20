@@ -85,7 +85,7 @@ def _load_website_metadata(url: str, config: dict = None):
     preview_image = None
     try:
         start = timezone.now()
-        page_text = load_page(url)
+        page_text = load_page(url, config)
         end = timezone.now()
         logger.debug(f"Load duration: {end - start}")
 
