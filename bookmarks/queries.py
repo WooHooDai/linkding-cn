@@ -26,13 +26,13 @@ def query_bookmarks(
     profile: UserProfile,
     search: BookmarkSearch,
 ) -> QuerySet:
-    return _base_bookmarks_query(user, profile, search).filter(is_archived=False)
+    return _base_bookmarks_query(user, profile, search).filter(is_archived=False, is_deleted=False)
 
 
 def query_archived_bookmarks(
     user: User, profile: UserProfile, search: BookmarkSearch
 ) -> QuerySet:
-    return _base_bookmarks_query(user, profile, search).filter(is_archived=True)
+    return _base_bookmarks_query(user, profile, search).filter(is_archived=True, is_deleted=False)
 
 
 def query_shared_bookmarks(
@@ -41,11 +41,19 @@ def query_shared_bookmarks(
     search: BookmarkSearch,
     public_only: bool,
 ) -> QuerySet:
-    conditions = Q(shared=True) & Q(owner__profile__enable_sharing=True)
+    conditions = Q(shared=True) & Q(owner__profile__enable_sharing=True) & Q(is_deleted=False)
     if public_only:
         conditions = conditions & Q(owner__profile__enable_public_sharing=True)
 
     return _base_bookmarks_query(user, profile, search).filter(conditions)
+
+
+def query_trashed_bookmarks(
+    user: User,
+    profile: UserProfile,
+    search: BookmarkSearch,
+) -> QuerySet:
+    return _base_bookmarks_query(user, profile, search).filter(is_deleted=True)
 
 
 def _filter_bundle(query_set: QuerySet, bundle: BookmarkBundle) -> QuerySet:

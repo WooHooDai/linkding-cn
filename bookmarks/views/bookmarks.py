@@ -32,6 +32,7 @@ from bookmarks.services.bookmarks import (
     share_bookmarks,
     unshare_bookmarks,
     refresh_bookmarks_metadata,
+    trash_bookmarks,
 )
 from bookmarks.type_defs import HttpRequest
 from bookmarks.utils import get_safe_return_url
@@ -340,6 +341,8 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
         return remove_asset(request, request.POST["remove_asset"])
     if "rename_asset" in request.POST:
         return rename_asset(request, request.POST["rename_asset"])
+    if "trash" in request.POST:
+        return trash(request, request.POST["trash"])
 
     # State updates
     if "update_state" in request.POST:
@@ -382,8 +385,16 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
             return unshare_bookmarks(bookmark_ids, request.user)
         if "bulk_refresh" == bulk_action:
             return refresh_bookmarks_metadata(bookmark_ids, request.user)
+        if "bulk_trash" == bulk_action:
+            return trash_bookmarks(bookmark_ids, request.user)
 
 
 @login_required
 def close(request: HttpRequest):
     return render(request, "bookmarks/close.html")
+
+
+@login_required
+def trash(request: HttpRequest, bookmark_id: int | str):
+    bookmark = access.bookmark_write(request, bookmark_id)
+    trash_bookmarks([bookmark.id], bookmark.owner)

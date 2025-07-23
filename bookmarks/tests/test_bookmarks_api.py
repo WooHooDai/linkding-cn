@@ -1377,3 +1377,33 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
             format="multipart",
             expected_status_code=status.HTTP_403_FORBIDDEN,
         )
+
+    def test_trash_bookmark(self):
+        self.authenticate()
+        bookmark = self.setup_bookmark()
+        url = reverse("linkding:bookmark-trash", args=[bookmark.id])
+        response = self.post(url, expected_status_code=status.HTTP_204_NO_CONTENT)
+        bookmark.refresh_from_db()
+        self.assertTrue(bookmark.is_deleted)
+        # 不会出现在正常列表
+        list_url = reverse("linkding:bookmark-list")
+        response = self.get(list_url, expected_status_code=status.HTTP_200_OK)
+        self.assertNotIn(bookmark.id, [b["id"] for b in response.data["results"]])
+
+    def test_trash_bookmark_permission(self):
+        self.authenticate()
+        other_user = self.setup_user()
+        bookmark = self.setup_bookmark(user=other_user)
+        url = reverse("linkding:bookmark-trash", args=[bookmark.id])
+        self.post(url, expected_status_code=status.HTTP_404_NOT_FOUND)
+        bookmark.refresh_from_db()
+        self.assertFalse(bookmark.is_deleted)
+
+    def test_trash_bookmark_idempotent(self):
+        self.authenticate()
+        bookmark = self.setup_bookmark()
+        url = reverse("linkding:bookmark-trash", args=[bookmark.id])
+        self.post(url, expected_status_code=status.HTTP_204_NO_CONTENT)
+        self.post(url, expected_status_code=status.HTTP_204_NO_CONTENT)
+        bookmark.refresh_from_db()
+        self.assertTrue(bookmark.is_deleted)

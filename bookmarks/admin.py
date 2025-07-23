@@ -119,6 +119,7 @@ class AdminBookmark(admin.ModelAdmin):
     ordering = ("-date_added",)
     actions = [
         "delete_selected_bookmarks",
+        "trash_selected_bookmarks",
         "archive_selected_bookmarks",
         "unarchive_selected_bookmarks",
         "mark_as_read",
@@ -142,6 +143,22 @@ class AdminBookmark(admin.ModelAdmin):
             ngettext(
                 "%d bookmark was successfully deleted.",
                 "%d bookmarks were successfully deleted.",
+                bookmarks_count,
+            )
+            % bookmarks_count,
+            messages.SUCCESS,
+        )
+
+    def trash_selected_bookmarks(self, request, queryset: QuerySet):
+        bookmarks_count = queryset.count()
+        for bookmark in queryset:
+            bookmark.is_deleted = True
+            bookmark.save()
+        self.message_user(
+            request,
+            ngettext(
+                "%d bookmark was successfully moved to trash.",
+                "%d bookmarks were successfully moved to trash.",
                 bookmarks_count,
             )
             % bookmarks_count,

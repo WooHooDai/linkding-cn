@@ -22,6 +22,8 @@ from bookmarks.services.bookmarks import (
     unshare_bookmarks,
     enhance_with_website_metadata,
     refresh_bookmarks_metadata,
+    trash_bookmark,
+    trash_bookmarks,
 )
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 
@@ -974,3 +976,19 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
 
         self.assertEqual(self.mock_schedule_refresh_metadata.call_count, 3)
         self.assertEqual(self.mock_load_preview_image.call_count, 3)
+
+    def test_trash_bookmark(self):
+        bookmark = self.setup_bookmark()
+        self.assertFalse(bookmark.is_deleted)
+        trash_bookmark(bookmark)
+        bookmark.refresh_from_db()
+        self.assertTrue(bookmark.is_deleted)
+
+    def test_trash_bookmarks(self):
+        bookmark1 = self.setup_bookmark()
+        bookmark2 = self.setup_bookmark()
+        bookmark3 = self.setup_bookmark()
+        trash_bookmarks([bookmark1.id, bookmark2.id, bookmark3.id], self.get_or_create_test_user())
+        self.assertTrue(Bookmark.objects.get(id=bookmark1.id).is_deleted)
+        self.assertTrue(Bookmark.objects.get(id=bookmark2.id).is_deleted)
+        self.assertTrue(Bookmark.objects.get(id=bookmark3.id).is_deleted)

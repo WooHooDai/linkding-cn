@@ -103,6 +103,12 @@ class BookmarkViewSet(
         bookmarks.unarchive_bookmark(bookmark)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @action(methods=["post"], detail=True)
+    def trash(self, request, pk):
+        bookmark = self.get_object()
+        bookmarks.trash_bookmark(bookmark)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @action(methods=["get"], detail=False)
     def check(self, request: HttpRequest):
         url = request.GET.get("url")
