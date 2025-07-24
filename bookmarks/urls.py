@@ -32,7 +32,9 @@ urlpatterns = [
     path(
         "bookmarks/<int:bookmark_id>/edit", views.bookmarks.edit, name="bookmarks.edit"
     ),
-    path("bookmarks/<int:bookmark_id>/trash", views.bookmarks.trash, name="bookmarks.trash"),
+    path("bookmarks/<int:bookmark_id>/trash", views.bookmarks.trashed, name="bookmarks.trash"),
+    path("bookmarks/trash", views.bookmarks.trashed, name="bookmarks.trashed"),
+    path("bookmarks/trash/action", views.bookmarks.trashed_action, name="bookmarks.trashed.action"),
     # Assets
     path(
         "assets/<int:asset_id>",

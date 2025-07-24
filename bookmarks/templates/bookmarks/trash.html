@@ -3,8 +3,6 @@
 {% load shared %}
 {% load bookmarks %}
 
-{% block title %}Bookmarks - Linkding{% endblock %}
-
 {% block content %}
   <div ld-bulk-edit
        class="bookmarks-page grid columns-md-1 {% if bookmark_list.collapse_side_panel %}collapse-side-panel{% endif %}">
@@ -12,9 +10,9 @@
     {# Bookmark list #}
     <main class="main col-2" aria-labelledby="main-heading">
       <div class="section-header mb-0">
-        <h1 id="main-heading">书签列表({{ bookmark_list.bookmarks_total }})</h1>
+        <h1 id="main-heading">回收站({{ bookmark_list.bookmarks_total }})</h1>
         <div class="header-controls">
-          {% bookmark_search bookmark_list.search %}
+          {% bookmark_search bookmark_list.search mode='trash' %}
           {% include 'bookmarks/bulk_edit/toggle.html' %}
           {% random_sort bookmark_list.search %}
           <button ld-filter-drawer-trigger class="btn ml-2">筛选</button>
@@ -25,10 +23,10 @@
             action="{{ bookmark_list.action_url|safe }}"
             method="post" autocomplete="off">
         {% csrf_token %}
-        {% include 'bookmarks/bulk_edit/bar.html' with disable_actions='bulk_unarchive,bulk_restore,bulk_delete' %}
+        {% include 'bookmarks/bulk_edit/bar.html' with disable_actions='bulk_trash,bulk_archive,bulk_unarchive,bulk_read,bulk_unread,bulk_share,bulk_unshare,bulk_tag,bulk_untag,bulk_refresh' %}
 
         <div id="bookmark-list-container">
-          {% include 'bookmarks/bookmark_list.html' %}
+          {% include 'bookmarks/bookmark_list.html' with is_trash_page=True %}
         </div>
       </form>
     </main>
@@ -48,4 +46,4 @@
       {% include 'bookmarks/details/modal.html' %}
     {% endif %}
   </turbo-frame>
-{% endblock %}
+{% endblock %} 

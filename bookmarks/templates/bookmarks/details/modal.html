@@ -31,7 +31,7 @@
               {% csrf_token %}
               <input type="hidden" name="disable_turbo" value="true">
               <button ld-confirm-button class="btn btn-error btn-wide"
-                      type="submit" name="remove" value="{{ details.bookmark.id }}">
+                      type="submit" name="trash" value="{{ details.bookmark.id }}">
                 删除...
               </button>
             </form>

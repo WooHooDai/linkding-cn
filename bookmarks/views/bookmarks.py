@@ -32,7 +32,10 @@ from bookmarks.services.bookmarks import (
     share_bookmarks,
     unshare_bookmarks,
     refresh_bookmarks_metadata,
+    trash_bookmark,
     trash_bookmarks,
+    restore_bookmark,
+    restore_bookmarks,
 )
 from bookmarks.type_defs import HttpRequest
 from bookmarks.utils import get_safe_return_url
@@ -121,6 +124,33 @@ def shared(request: HttpRequest):
             "details": bookmark_details,
             "users": users,
             "rss_feed_url": reverse("linkding:feeds.public_shared"),
+        },
+    )
+
+@login_required
+def trashed(request: HttpRequest):
+    if request.method == "POST":
+        return search_action(request)
+
+    search = BookmarkSearch.from_request(
+        request, request.GET, request.user_profile.search_preferences
+    )
+    bookmark_list = contexts.TrashedBookmarkListContext(request, search)
+    bundles = contexts.BundlesContext(request)
+    tag_cloud = contexts.TrashedTagCloudContext(request, search)
+    bookmark_details = contexts.get_details_context(
+        request, contexts.TrashedBookmarkDetailsContext
+    )
+
+    return render_bookmarks_view(
+        request,
+        "bookmarks/trash.html",
+        {
+            "page_title": "回收站 - Linkding",
+            "bookmark_list": bookmark_list,
+            "bundles": bundles,
+            "tag_cloud": tag_cloud,
+            "details": bookmark_details,
         },
     )
 
@@ -213,6 +243,13 @@ def remove(request: HttpRequest, bookmark_id: int | str):
     bookmark = access.bookmark_write(request, bookmark_id)
     bookmark.delete()
 
+def trash(request: HttpRequest, bookmark_id: int | str):
+    bookmark = access.bookmark_write(request, bookmark_id)
+    trash_bookmark(bookmark)
+
+def restore(request: HttpRequest, bookmark_id: int | str):
+    bookmark = access.bookmark_write(request, bookmark_id)
+    restore_bookmark(bookmark)
 
 def archive(request: HttpRequest, bookmark_id: int | str):
     bookmark = access.bookmark_write(request, bookmark_id)
@@ -321,6 +358,23 @@ def shared_action(request: HttpRequest):
     return utils.redirect_with_query(request, reverse("linkding:bookmarks.shared"))
 
 
+@login_required
+def trashed_action(request: HttpRequest):
+    search = BookmarkSearch.from_request(
+        request, request.GET, request.user_profile.search_preferences
+    )
+    query = queries.query_trashed_bookmarks(request.user, request.user_profile, search)
+
+    response = handle_action(request, query)
+    if response:
+        return response
+
+    if turbo.accept(request):
+        return partials.trashed_bookmark_update(request)
+
+    return utils.redirect_with_query(request, reverse("linkding:bookmarks.trashed"))
+
+
 def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
     # Single bookmark actions
     if "archive" in request.POST:
@@ -343,6 +397,8 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
         return rename_asset(request, request.POST["rename_asset"])
     if "trash" in request.POST:
         return trash(request, request.POST["trash"])
+    if "restore" in request.POST:
+        return restore(request, request.POST["restore"])
 
     # State updates
     if "update_state" in request.POST:
@@ -387,14 +443,10 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
             return refresh_bookmarks_metadata(bookmark_ids, request.user)
         if "bulk_trash" == bulk_action:
             return trash_bookmarks(bookmark_ids, request.user)
+        if "bulk_restore" == bulk_action:
+            return restore_bookmarks(bookmark_ids, request.user)
 
 
 @login_required
 def close(request: HttpRequest):
     return render(request, "bookmarks/close.html")
-
-
-@login_required
-def trash(request: HttpRequest, bookmark_id: int | str):
-    bookmark = access.bookmark_write(request, bookmark_id)
-    trash_bookmarks([bookmark.id], bookmark.owner)

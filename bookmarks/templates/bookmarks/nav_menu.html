@@ -12,7 +12,10 @@
       </button>
       <ul class="menu" role="list" tabindex="-1">
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.archived' %}" class="menu-link">已归档</a>
+          <a href="{% url 'linkding:bookmarks.index' %}?unread=yes" class="menu-link">未读</a>
+        </li>
+        <li class="menu-item">
+          <a href="{% url 'linkding:bookmarks.index' %}?q=!untagged" class="menu-link">无标签</a>
         </li>
         {% if request.user_profile.enable_sharing %}
           <li class="menu-item">
@@ -20,10 +23,10 @@
           </li>
         {% endif %}
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.index' %}?unread=yes" class="menu-link">未读</a>
+          <a href="{% url 'linkding:bookmarks.archived' %}" class="menu-link">已归档</a>
         </li>
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.index' %}?q=!untagged" class="menu-link">无标签</a>
+          <a href="{% url 'linkding:bookmarks.trashed' %}" class="menu-link">回收站</a>
         </li>
       </ul>
     </div>
@@ -71,7 +74,13 @@
       <!-- menu component -->
       <ul class="menu" role="list" tabindex="-1">
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.index' %}" class="menu-link">书签列表</a>
+          <a href="{% url 'linkding:bookmarks.index' %}" class="menu-link">全部</a>
+        </li>
+        <li class="menu-item">
+          <a href="{% url 'linkding:bookmarks.index' %}?unread=yes" class="menu-link">未读</a>
+        </li>
+        <li class="menu-item">
+          <a href="{% url 'linkding:bookmarks.index' %}?q=!untagged" class="menu-link">无标签</a>
         </li>
         <li class="menu-item">
           <a href="{% url 'linkding:bookmarks.archived' %}" class="menu-link">已归档</a>
@@ -82,10 +91,7 @@
           </li>
         {% endif %}
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.index' %}?unread=yes" class="menu-link">未读</a>
-        </li>
-        <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.index' %}?q=!untagged" class="menu-link">无标签</a>
+          <a href="{% url 'linkding:bookmarks.trashed' %}" class="menu-link">回收站</a>
         </li>
         <div class="divider"></div>
         <li class="menu-item">

@@ -11,18 +11,40 @@
           <option value="bulk_archive">归档</option>
         {% endif %}
         {% if not 'bulk_unarchive' in disable_actions %}
-          <option value="bulk_unarchive">还原</option>
+          <option value="bulk_unarchive">取消归档</option>
         {% endif %}
-        <option value="bulk_delete">删除书签</option>
-        <option value="bulk_tag">新增标签</option>
-        <option value="bulk_untag">删除标签</option>
-        <option value="bulk_read">标为已读</option>
-        <option value="bulk_unread">标为未读</option>
+        {% if not 'bulk_trash' in disable_actions %}
+          <option value="bulk_trash">删除</option>
+        {% endif %}
+        {% if not 'bulk_restore' in disable_actions %}
+          <option value="bulk_restore">还原书签</option>
+        {% endif %}
+        {% if not 'bulk_delete' in disable_actions %}
+          <option value="bulk_delete">彻底删除</option>
+        {% endif %}
+        {% if not 'bulk_tag' in disable_actions %}
+          <option value="bulk_tag">新增标签</option>
+        {% endif %}
+        {% if not 'bulk_untag' in disable_actions %}
+          <option value="bulk_untag">删除标签</option>
+        {% endif %}
+        {% if not 'bulk_read' in disable_actions %}
+          <option value="bulk_read">标为已读</option>
+        {% endif %}
+        {% if not 'bulk_unread' in disable_actions %}
+          <option value="bulk_unread">标为未读</option>
+        {% endif %}
         {% if request.user_profile.enable_sharing %}
-          <option value="bulk_share">分享</option>
-          <option value="bulk_unshare">取消分享</option>
+          {% if not 'bulk_share' in disable_actions %}
+            <option value="bulk_share">分享</option>
+          {% endif %}
+          {% if not 'bulk_unshare' in disable_actions %}  
+            <option value="bulk_unshare">取消分享</option>
+          {% endif %}
         {% endif %}
-        <option value="bulk_refresh">重新抓取</option>
+        {% if not 'bulk_refresh' in disable_actions %}
+          <option value="bulk_refresh">重新抓取</option>
+        {% endif %}
       </select>
       <div class="tag-autocomplete d-none" ld-tag-autocomplete>
         <input name="bulk_tag_string" class="form-input input-sm" placeholder="标签名" variant="small">

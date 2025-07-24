@@ -48,3 +48,15 @@ def shared_bookmark_update(request):
         request, contexts.SharedBookmarkDetailsContext
     )
     return render_bookmark_update(request, bookmark_list, tag_cloud, details)
+
+
+def trashed_bookmark_update(request):
+    search = BookmarkSearch.from_request(
+        request, request.GET, request.user_profile.search_preferences
+    )
+    bookmark_list = contexts.TrashedBookmarkListContext(request, search)
+    tag_cloud = contexts.TrashedTagCloudContext(request, search)
+    details = contexts.get_details_context(
+        request, contexts.TrashedBookmarkDetailsContext
+    )
+    return render_bookmark_update(request, bookmark_list, tag_cloud, details)

@@ -91,13 +91,13 @@
                 {% endif %}
                 {% if bookmark_item.is_editable %}
                   {# Bookmark owner actions #}
-                  {% if bookmark_list.show_edit_action %}
+                  {% if bookmark_list.show_edit_action and not bookmark_list.is_trash_page %}
                     <a href="{% url 'linkding:bookmarks.edit' bookmark_item.id %}?return_url={{ bookmark_list.return_url|urlencode }}">编辑</a>
                   {% endif %}
-                  {% if bookmark_list.show_archive_action %}
+                  {% if bookmark_list.show_archive_action and not bookmark_list.is_trash_page %}
                     {% if bookmark_item.is_archived %}
                       <button ld-confirm-button type="submit" name="unarchive" value="{{ bookmark_item.id }}"
-                              class="btn btn-link btn-sm">还原
+                              class="btn btn-link btn-sm">取消归档
                       </button>
                     {% else %}
                       <button ld-confirm-button type="submit" name="archive" value="{{ bookmark_item.id }}"
@@ -105,10 +105,16 @@
                       </button>
                     {% endif %}
                   {% endif %}
-                  {% if bookmark_list.show_remove_action %}
+                  {% if bookmark_list.is_trash_page %}
+                    <button ld-confirm-button type="submit" name="restore" value="{{ bookmark_item.id }}"
+                            class="btn btn-link btn-sm">还原</button>
                     <button ld-confirm-button type="submit" name="remove" value="{{ bookmark_item.id }}"
-                            class="btn btn-link btn-sm">删除
-                    </button>
+                    class="btn btn-link btn-sm">彻底删除</button>
+                  {% else %}
+                    {% if bookmark_list.show_remove_action %}
+                      <button ld-confirm-button type="submit" name="trash" value="{{ bookmark_item.id }}"
+                      class="btn btn-link btn-sm">删除</button>
+                    {% endif %}
                   {% endif %}
                 {% else %}
                   {# Shared bookmark actions #}
@@ -122,7 +128,7 @@
                     {% if bookmark_item.show_mark_as_read %}
                       <button type="submit" name="mark_as_read" value="{{ bookmark_item.id }}"
                               class="btn btn-link btn-sm btn-icon"
-                              ld-confirm-button ld-confirm-icon="ld-icon-read" ld-confirm-question="Mark as read?">
+                              ld-confirm-button ld-confirm-icon="ld-icon-read" ld-confirm-question="取消未读?">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
                           <use xlink:href="#ld-icon-unread"></use>
                         </svg>

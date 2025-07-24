@@ -476,6 +476,34 @@ class SharedBookmarkDetailsContext(BookmarkDetailsContext):
     request_context = SharedBookmarksContext
 
 
+class TrashedBookmarksContext(RequestContext):
+    index_view = "linkding:bookmarks.trashed"
+    action_view = "linkding:bookmarks.trashed.action"
+
+    def get_bookmark_query_set(self, search: BookmarkSearch):
+        return queries.query_trashed_bookmarks(
+            self.request.user, self.request.user_profile, search
+        )
+
+    def get_tag_query_set(self, search: BookmarkSearch):
+        return queries.query_trashed_bookmark_tags(
+            self.request.user, self.request.user_profile, search
+        )
+
+class TrashedBookmarkListContext(BookmarkListContext):
+    request_context = TrashedBookmarksContext
+
+    def __init__(self, request: HttpRequest, search: BookmarkSearch):
+        super().__init__(request, search)
+        self.is_trash_page = True
+
+class TrashedTagCloudContext(TagCloudContext):
+    request_context = TrashedBookmarksContext
+
+class TrashedBookmarkDetailsContext(BookmarkDetailsContext):
+    request_context = TrashedBookmarksContext
+
+
 def get_details_context(
     request: HttpRequest, context_type
 ) -> BookmarkDetailsContext | None:

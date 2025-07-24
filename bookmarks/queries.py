@@ -271,6 +271,12 @@ def query_shared_bookmark_tags(
 
     return query_set.distinct()
 
+def query_trashed_bookmark_tags(
+    user: User, profile: UserProfile, search: BookmarkSearch
+):
+    bookmarks_query = query_trashed_bookmarks(user, profile, search)
+    query_set = Tag.objects.filter(bookmark__in=bookmarks_query)
+    return query_set.distinct()
 
 def query_shared_bookmark_users(
     profile: UserProfile, search: BookmarkSearch, public_only: bool
