@@ -2,7 +2,7 @@ from bookmarks.models import BookmarkSearch
 from bookmarks.views import contexts, turbo
 
 
-def render_bookmark_update(request, bookmark_list, tag_cloud, details):
+def render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles):
     return turbo.stream(
         request,
         "bookmarks/updates/bookmark_view_stream.html",
@@ -10,6 +10,7 @@ def render_bookmark_update(request, bookmark_list, tag_cloud, details):
             "bookmark_list": bookmark_list,
             "tag_cloud": tag_cloud,
             "details": details,
+            "bundles": bundles,
         },
     )
 
@@ -23,7 +24,8 @@ def active_bookmark_update(request):
     details = contexts.get_details_context(
         request, contexts.ActiveBookmarkDetailsContext
     )
-    return render_bookmark_update(request, bookmark_list, tag_cloud, details)
+    bundles = contexts.BundlesContext(request)
+    return render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles)
 
 
 def archived_bookmark_update(request):
@@ -35,7 +37,8 @@ def archived_bookmark_update(request):
     details = contexts.get_details_context(
         request, contexts.ArchivedBookmarkDetailsContext
     )
-    return render_bookmark_update(request, bookmark_list, tag_cloud, details)
+    bundles = contexts.BundlesContext(request)
+    return render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles)
 
 
 def shared_bookmark_update(request):
@@ -47,7 +50,8 @@ def shared_bookmark_update(request):
     details = contexts.get_details_context(
         request, contexts.SharedBookmarkDetailsContext
     )
-    return render_bookmark_update(request, bookmark_list, tag_cloud, details)
+    bundles = contexts.BundlesContext(request)
+    return render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles)
 
 
 def trashed_bookmark_update(request):
@@ -59,4 +63,5 @@ def trashed_bookmark_update(request):
     details = contexts.get_details_context(
         request, contexts.TrashedBookmarkDetailsContext
     )
-    return render_bookmark_update(request, bookmark_list, tag_cloud, details)
+    bundles = contexts.BundlesContext(request)
+    return render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles)

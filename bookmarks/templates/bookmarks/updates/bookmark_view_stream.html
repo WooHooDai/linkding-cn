@@ -12,6 +12,16 @@
   </template>
 </turbo-stream>
 
+<turbo-stream action="update" target="bookmark-list-total">
+  <template>({{ bookmark_list.bookmarks_total }})</template>
+</turbo-stream>
+
+{% for bundle in bundles.bundles %}
+  <turbo-stream action="update" target="bundle-total-{{ bundle.id }}">
+    <template>({{ bundle.bookmarks_total }})</template>
+  </turbo-stream>
+{% endfor %}
+
 <turbo-stream action="update" method="morph" target="details-modal">
   <template>
     {% if details %}

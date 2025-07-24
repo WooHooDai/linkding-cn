@@ -20,7 +20,7 @@
           <div class="bundle-content">
             <a href="?bundle={{ bundle.id }}">
               {{ bundle.name }}
-              {% if bundle.bookmarks_total is not None %}<span class="count">({{ bundle.bookmarks_total }})</span>{% endif %}
+              {% if bundle.bookmarks_total is not None %}<span class="count" id="bundle-total-{{ bundle.id }}">({{ bundle.bookmarks_total }})</span>{% endif %}
             </a>
           </div>
           <div class="bundle-action">
