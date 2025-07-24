@@ -112,3 +112,47 @@
     </div>
   </div>
 </div>
+
+<script>
+function setupDateInputs() {
+    // 结束日期逻辑
+    var endInput = document.getElementById('{{ preferences_form.date_filter_end.id_for_label }}');
+    function setEndDateIfEmpty() {
+        if (endInput && !endInput.value) {
+            var today = new Date();
+            var yyyy = today.getFullYear();
+            var mm = String(today.getMonth() + 1).padStart(2, '0');
+            var dd = String(today.getDate()).padStart(2, '0');
+            endInput.value = yyyy + '-' + mm + '-' + dd;
+        }
+    }
+    if (endInput) {
+        setEndDateIfEmpty();
+        endInput.addEventListener('input', setEndDateIfEmpty);
+        endInput.addEventListener('change', setEndDateIfEmpty);
+        endInput.addEventListener('focus', setEndDateIfEmpty);
+        endInput.addEventListener('blur', setEndDateIfEmpty);
+    }
+
+    // 开始日期默认本月第一天
+    var startInput = document.getElementById('{{ preferences_form.date_filter_start.id_for_label }}');
+    function setStartDateIfEmpty() {
+        if (startInput && !startInput.value) {
+            var today = new Date();
+            var yyyy = today.getFullYear();
+            var mm = String(today.getMonth() + 1).padStart(2, '0');
+            var firstDay = '01';
+            startInput.value = yyyy + '-' + mm + '-' + firstDay;
+        }
+    }
+    if (startInput) {
+        setStartDateIfEmpty();
+        startInput.addEventListener('input', setStartDateIfEmpty);
+        startInput.addEventListener('change', setStartDateIfEmpty);
+        startInput.addEventListener('focus', setStartDateIfEmpty);
+        startInput.addEventListener('blur', setStartDateIfEmpty);
+    }
+}
+document.addEventListener('DOMContentLoaded', setupDateInputs);
+document.addEventListener('turbo:load', setupDateInputs);
+</script>
