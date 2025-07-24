@@ -5,32 +5,7 @@
 <div class="bookmarks-form">
   {% csrf_token %}
   {{ form.auto_close|attr:"type:hidden" }}
-  <div class="form-group {% if form.url.errors %}has-error{% endif %}">
-    <label for="{{ form.url.id_for_label }}" class="form-label">URL</label>
-    <div class="has-icon-right">
-      {{ form.url|form_field:"validation"|add_class:"form-input"|attr:"autofocus" }}
-      <i class="form-icon loading"></i>
-    </div>
-    {% if form.url.errors %}
-      <div class="form-input-hint">
-        {{ form.url.errors }}
-      </div>
-    {% endif %}
-    <div class="form-input-hint bookmark-exists">
-      This URL is already bookmarked.
-      The form has been pre-filled with the existing bookmark, and saving the form will update the existing bookmark.
-    </div>
-  </div>
-  <div class="form-group" ld-tag-autocomplete>
-    <label for="{{ form.tag_string.id_for_label }}" class="form-label">标签</label>
-    {{ form.tag_string|form_field:"help"|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
-    <div id="{{ form.tag_string.auto_id }}_help" class="form-input-hint">
-      多个标签用空格隔开，<strong>不需要</strong>(#).
-      如果标签不存在，它会被自动创建。
-    </div>
-    <div class="form-input-hint auto-tags"></div>
-    {{ form.tag_string.errors }}
-  </div>
+  <!-- 标题 -->
   <div class="form-group">
     <div class="d-flex justify-between align-baseline">
       <label for="{{ form.title.id_for_label }}" class="form-label">标题</label>
@@ -45,16 +20,49 @@
     {{ form.title|add_class:"form-input"|attr:"autocomplete:off" }}
     {{ form.title.errors }}
   </div>
-  <div class="form-group">
-    <div class="d-flex justify-between align-baseline">
-      <label for="{{ form.description.id_for_label }}" class="form-label">描述</label>
-      <button ld-clear-button data-for="{{ form.description.id_for_label }}"
-              class="btn btn-link suffix-button clear-button"
-              type="button">清空
-      </button>
+
+  <!-- 标签 -->
+  <div class="form-group" ld-tag-autocomplete>
+    <label for="{{ form.tag_string.id_for_label }}" class="form-label">标签</label>
+    {{ form.tag_string|form_field:"help"|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
+    <div id="{{ form.tag_string.auto_id }}_help" class="form-input-hint">
+      多个标签用空格隔开，<strong>不需要</strong>(#).
+      如果标签不存在，它会被自动创建。
     </div>
-    {{ form.description|add_class:"form-input"|attr:"rows:3" }}
-    {{ form.description.errors }}
+    <div class="form-input-hint auto-tags"></div>
+    {{ form.tag_string.errors }}
+  </div>
+
+  <!-- URL -->
+  <div class="form-group {% if form.url.errors %}has-error{% endif %}">
+    <label for="{{ form.url.id_for_label }}" class="form-label">URL</label>
+    <div class="has-icon-right">
+      {{ form.url|form_field:"validation"|add_class:"form-input" }}
+      <i class="form-icon loading"></i>
+    </div>
+    {% if form.url.errors %}
+      <div class="form-input-hint">
+        {{ form.url.errors }}
+      </div>
+    {% endif %}
+    <div class="form-input-hint bookmark-exists">
+      This URL is already bookmarked.
+      The form has been pre-filled with the existing bookmark, and saving the form will update the existing bookmark.
+    </div>
+  </div>
+  <!-- 描述 -->
+  <div class="form-group">
+    <details class="description"{% if form.description.value %} open{% endif %}>
+      <summary>
+        <span class="form-label d-inline-block">描述</span>
+        <button ld-clear-button data-for="{{ form.description.id_for_label }}"
+                class="btn btn-link suffix-button clear-button"
+                type="button">清空
+        </button>
+      </summary>
+      {{ form.description|add_class:"form-input"|attr:"rows:3" }}
+      {{ form.description.errors }}
+    </details>
   </div>
   <div class="form-group">
     <details class="notes"{% if form.has_notes %} open{% endif %}>
