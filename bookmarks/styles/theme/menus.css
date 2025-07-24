@@ -41,6 +41,7 @@
     }
 
     & > a,
+    & > button.btn-link.menu-link,
     .btn.btn-link {
       border-radius: var(--menu-border-radius);
       color: var(--menu-item-color);
@@ -49,6 +50,8 @@
       margin: 0 calc(-1 * var(--unit-2));
       padding: var(--unit-1) var(--unit-2);
       text-decoration: none;
+      width: 100%;
+      text-align: left;
 
       &:focus,
       &:hover,
