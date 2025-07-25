@@ -167,7 +167,7 @@ class BookmarkItem:
         elif (
             profile.bookmark_date_display == UserProfile.BOOKMARK_DATE_DISPLAY_ABSOLUTE
         ):
-            self.display_date = utils.humanize_absolute_date(bookmark.date_added)
+            self.display_date = utils.humanize_absolute_date_short(bookmark.date_added)
 
         self.show_notes_button = bookmark.notes and not profile.permanent_notes
         self.show_mark_as_read = is_editable and bookmark.unread

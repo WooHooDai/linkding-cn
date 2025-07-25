@@ -85,6 +85,24 @@ def humanize_relative_date(
         else:
             return weekday_names[value_local.isoweekday()]
 
+def humanize_absolute_date_short(
+    value: datetime.datetime, now: Optional[datetime.datetime] = None
+):
+    if not now:
+        now = timezone.now()
+    value_local = timezone.localtime(value)
+    now_local = timezone.localtime(now)
+    yesterday = now_local - relativedelta(days=1)
+
+    if value_local.day == now_local.day:
+        return "今天"
+    elif value_local.day == yesterday.day:
+        return "昨天"
+    else:
+        if value_local.year == now_local.year:
+            return f"{value_local.month}/{value_local.day}"
+        else:
+            return f"{value_local.year}/{value_local.month}/{value_local.day}"
 
 def parse_timestamp(value: str):
     """

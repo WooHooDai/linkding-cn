@@ -111,6 +111,12 @@ def humanize_relative_date(value):
         return ""
     return utils.humanize_relative_date(value)
 
+@register.filter(name="humanize_absolute_date_short")
+def humanize_absolute_date_short(value):
+    if value in (None, ""):
+        return ""
+    return utils.humanize_absolute_date_short(value)
+
 
 @register.tag
 def htmlmin(parser, token):
