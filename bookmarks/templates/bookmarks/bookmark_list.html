@@ -92,7 +92,7 @@
                 {% if bookmark_item.is_editable %}
                   {# Bookmark owner actions #}
                   {% if bookmark_list.show_edit_action and not bookmark_list.is_trash_page %}
-                    <a href="{% url 'linkding:bookmarks.edit' bookmark_item.id %}?return_url={{ bookmark_list.return_url|urlencode }}">编辑</a>
+                    <a href="{% url 'linkding:bookmarks.edit' bookmark_item.id %}?return_url={{ bookmark_list.return_url|urlencode }}" class="edit-action">编辑</a>
                   {% endif %}
                   {% if bookmark_list.show_archive_action and not bookmark_list.is_trash_page %}
                     {% if bookmark_item.is_archived %}

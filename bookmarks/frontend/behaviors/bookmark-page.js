@@ -11,6 +11,13 @@ class BookmarkItem extends Behavior {
       this.notesToggle.addEventListener("click", this.onToggleNotes);
     }
 
+    // 记录滚动位置（点击编辑按钮时）
+    this.editAction = element.querySelector(".edit-action");
+    if (this.editAction) {
+      this.onEditClick = this.onEditClick.bind(this);
+      this.editAction.addEventListener("click", this.onEditClick);
+    }
+
     // Add tooltip to title if it is truncated
     const titleAnchor = element.querySelector(".title > a");
     const titleSpan = titleAnchor.querySelector("span");
@@ -25,12 +32,20 @@ class BookmarkItem extends Behavior {
     if (this.notesToggle) {
       this.notesToggle.removeEventListener("click", this.onToggleNotes);
     }
+    if (this.editAction) {
+      this.editAction.removeEventListener("click", this.onEditClick);
+    }
   }
 
   onToggleNotes(event) {
     event.preventDefault();
     event.stopPropagation();
     this.element.classList.toggle("show-notes");
+  }
+
+  onEditClick() {
+    localStorage.setItem('bookmarkListScrollPosition', window.scrollY);
+    localStorage.setItem('bookmarkListReturnUrl', window.location.pathname);
   }
 }
 
@@ -105,3 +120,25 @@ function bindBundleMenuBehaviors() {
 
 document.addEventListener("DOMContentLoaded", bindBundleMenuBehaviors);
 document.addEventListener("turbo:load", bindBundleMenuBehaviors);
+
+// 页面加载时恢复滚动位置
+// TODO：可以更细化记录与恢复位置的页面&时机
+function restoreBookmarkListScrollPosition() {
+  // 只在有书签列表主容器的页面恢复滚动
+  if (document.querySelector('.bookmark-list')) {
+    var scroll = localStorage.getItem('bookmarkListScrollPosition');
+    var returnUrl = localStorage.getItem('bookmarkListReturnUrl');
+    if (
+      scroll !== null &&
+      returnUrl !== null
+    ) {
+      if (window.location.pathname === returnUrl) {
+        window.scrollTo(0, parseInt(scroll, 10));
+      }
+      localStorage.removeItem('bookmarkListScrollPosition');
+      localStorage.removeItem('bookmarkListReturnUrl');
+    }
+  }
+}
+document.addEventListener('DOMContentLoaded', restoreBookmarkListScrollPosition);
+document.addEventListener('turbo:load', restoreBookmarkListScrollPosition);
