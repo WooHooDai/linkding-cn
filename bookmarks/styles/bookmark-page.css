@@ -388,6 +388,9 @@ li[ld-bookmark-item] {
         --btn-icon-color: var(--bookmark-actions-hover-color);
       }
     }
+    & > a[href^="/assets"] {
+      color: green;
+    }
   }
 }
 
