@@ -351,15 +351,15 @@ li[ld-bookmark-item] {
   & .actions,
   & .extra-actions {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     flex-wrap: wrap;
     column-gap: var(--unit-2);
   }
 
   @media (max-width: 600px) {
     & .extra-actions {
-      width: 100%;
-      margin-top: var(--unit-1);
+      /* width: 100%;
+      margin-top: var(--unit-1); */
     }
   }
 

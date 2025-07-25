@@ -80,7 +80,7 @@
                   <span>{{ bookmark_item.display_date }}</span>
                 {% endif %}
                 {% if not bookmark_list.is_preview %}
-                  <span>|</span>
+                  <span class="hide-sm">|</span>
                 {% endif %}
               {% endif %}
               {% if not bookmark_list.is_preview %}
@@ -128,11 +128,11 @@
                     {% if bookmark_item.show_mark_as_read %}
                       <button type="submit" name="mark_as_read" value="{{ bookmark_item.id }}"
                               class="btn btn-link btn-sm btn-icon"
-                              ld-confirm-button ld-confirm-icon="ld-icon-read" ld-confirm-question="取消未读?">
+                              ld-confirm-button ld-confirm-icon="ld-icon-read" ld-confirm-question="标为已读?">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
                           <use xlink:href="#ld-icon-unread"></use>
                         </svg>
-                        未读
+                        <!-- 未读 -->
                       </button>
                     {% endif %}
                     {% if bookmark_item.show_unshare %}
@@ -142,7 +142,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
                           <use xlink:href="#ld-icon-share"></use>
                         </svg>
-                        已分享
+                        <!-- 已分享 -->
                       </button>
                     {% endif %}
                     {% if bookmark_item.show_notes_button %}
@@ -150,7 +150,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
                           <use xlink:href="#ld-icon-note"></use>
                         </svg>
-                        笔记
+                        <!-- 笔记 -->
                       </button>
                     {% endif %}
                   </div>
