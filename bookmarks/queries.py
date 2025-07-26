@@ -97,17 +97,8 @@ def _filter_bundle(query_set: QuerySet, bundle: BookmarkBundle) -> QuerySet:
     return query_set
 
 
-def _base_bookmarks_query(
-    user: Optional[User],
-    profile: UserProfile,
-    search: BookmarkSearch,
-) -> QuerySet:
-    query_set = Bookmark.objects
-
-    # Filter for user
-    if user:
-        query_set = query_set.filter(owner=user)
-
+def _apply_filters(query_set: QuerySet, user: Optional[User], profile: UserProfile, search: BookmarkSearch) -> QuerySet:
+    """应用所有过滤条件到查询集"""
     # Filter by modified_since if provided
     if search.modified_since:
         try:
@@ -191,39 +182,29 @@ def _base_bookmarks_query(
                 end = end + datetime.timedelta(days=1)
             query_set = query_set.filter(**{f"{field}__lt": end})
 
-    # Sort
-    if (
-        search.sort == BookmarkSearch.SORT_TITLE_ASC
-        or search.sort == BookmarkSearch.SORT_TITLE_DESC
-    ):
-        # For the title, the resolved_title logic from the Bookmark entity needs
-        # to be replicated as there is no corresponding database field
-        query_set = query_set.annotate(
-            effective_title=Case(
-                When(Q(title__isnull=False) & ~Q(title__exact=""), then=Lower("title")),
-                default=Lower("url"),
-                output_field=CharField(),
-            )
-        )
+    return query_set
 
-        # For SQLite, if the ICU extension is loaded, use the custom collation
-        # loaded into the connection. This results in an improved sort order for
-        # unicode characters (umlauts, etc.)
-        if settings.USE_SQLITE and settings.USE_SQLITE_ICU_EXTENSION:
-            order_field = RawSQL("effective_title COLLATE ICU", ())
+
+def _base_bookmarks_query(
+    user: Optional[User],
+    profile: UserProfile,
+    search: BookmarkSearch,
+) -> QuerySet:
+    query_set = Bookmark.objects
+
+    # Filter for user
+    if user:
+        query_set = query_set.filter(owner=user)
+
+    # 对于随机排序，需要先进行排序，再进行其他过滤
+    if search.sort == BookmarkSearch.SORT_RANDOM:
+        base_query = query_set
+        # 生成随机排序
+        if search.request and hasattr(search.request, 'session'):
+            seed = search.request.session.get('random_sort_seed', int(time.time()))
         else:
-            order_field = "effective_title"
-
-        if search.sort == BookmarkSearch.SORT_TITLE_ASC:
-            query_set = query_set.order_by(order_field)
-        elif search.sort == BookmarkSearch.SORT_TITLE_DESC:
-            query_set = query_set.order_by(order_field).reverse()
-    elif search.sort == BookmarkSearch.SORT_ADDED_ASC:
-        query_set = query_set.order_by("date_added")
-    elif search.sort == BookmarkSearch.SORT_RANDOM:
-        # random sort with seed
-        seed = search.request.session.get('random_sort_seed', int(time.time()))
-        ids = list(query_set.values_list('id', flat=True))
+            seed = int(time.time())
+        ids = list(base_query.values_list('id', flat=True))
         rng = random.Random(seed)
         shuffled = ids[:]
         rng.shuffle(shuffled)
@@ -232,9 +213,46 @@ def _base_bookmarks_query(
             output_field=IntegerField()
         )
         query_set = query_set.annotate(random_order=order).order_by('random_order')
+        
+        # 然后进行其他过滤
+        query_set = _apply_filters(query_set, user, profile, search)
+
     else:
-        # Sort by date added, descending by default
-        query_set = query_set.order_by("-date_added")
+        # 对于非随机排序，保持原有的先过滤后排序逻辑
+        query_set = _apply_filters(query_set, user, profile, search)
+
+        # Sort
+        if (
+            search.sort == BookmarkSearch.SORT_TITLE_ASC
+            or search.sort == BookmarkSearch.SORT_TITLE_DESC
+        ):
+            # For the title, the resolved_title logic from the Bookmark entity needs
+            # to be replicated as there is no corresponding database field
+            query_set = query_set.annotate(
+                effective_title=Case(
+                    When(Q(title__isnull=False) & ~Q(title__exact=""), then=Lower("title")),
+                    default=Lower("url"),
+                    output_field=CharField(),
+                )
+            )
+
+            # For SQLite, if the ICU extension is loaded, use the custom collation
+            # loaded into the connection. This results in an improved sort order for
+            # unicode characters (umlauts, etc.)
+            if settings.USE_SQLITE and settings.USE_SQLITE_ICU_EXTENSION:
+                order_field = RawSQL("effective_title COLLATE ICU", ())
+            else:
+                order_field = "effective_title"
+
+            if search.sort == BookmarkSearch.SORT_TITLE_ASC:
+                query_set = query_set.order_by(order_field)
+            elif search.sort == BookmarkSearch.SORT_TITLE_DESC:
+                query_set = query_set.order_by(order_field).reverse()
+        elif search.sort == BookmarkSearch.SORT_ADDED_ASC:
+            query_set = query_set.order_by("date_added")
+        else:
+            # Sort by date added, descending by default
+            query_set = query_set.order_by("-date_added")
 
     return query_set
 
