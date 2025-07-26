@@ -162,12 +162,21 @@ class BookmarkItem:
 
         self.css_classes = " ".join(css_classes)
 
-        if profile.bookmark_date_display == UserProfile.BOOKMARK_DATE_DISPLAY_RELATIVE:
-            self.display_date = utils.humanize_relative_date(bookmark.date_added)
-        elif (
-            profile.bookmark_date_display == UserProfile.BOOKMARK_DATE_DISPLAY_ABSOLUTE
-        ):
-            self.display_date = utils.humanize_absolute_date_short(bookmark.date_added)
+        if not bookmark.is_deleted:
+            if profile.bookmark_date_display == UserProfile.BOOKMARK_DATE_DISPLAY_RELATIVE:
+                self.display_date = utils.humanize_relative_date(bookmark.date_added)
+            elif (
+                profile.bookmark_date_display == UserProfile.BOOKMARK_DATE_DISPLAY_ABSOLUTE
+            ):
+                self.display_date = utils.humanize_absolute_date_short(bookmark.date_added)
+        else:
+            # 若书签已被删除，则显示删除日期
+            if profile.bookmark_date_display == UserProfile.BOOKMARK_DATE_DISPLAY_RELATIVE:
+                self.display_date = utils.humanize_relative_date(bookmark.date_deleted)
+            elif (
+                profile.bookmark_date_display == UserProfile.BOOKMARK_DATE_DISPLAY_ABSOLUTE
+            ):
+                self.display_date = utils.humanize_absolute_date_short(bookmark.date_deleted)
 
         self.show_notes_button = bookmark.notes and not profile.permanent_notes
         self.show_mark_as_read = is_editable and bookmark.unread

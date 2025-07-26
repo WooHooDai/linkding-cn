@@ -24,6 +24,7 @@ from bookmarks.services.bookmarks import (
     refresh_bookmarks_metadata,
     trash_bookmark,
     trash_bookmarks,
+    restore_bookmarks,
 )
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 
@@ -992,3 +993,50 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
         self.assertTrue(Bookmark.objects.get(id=bookmark1.id).is_deleted)
         self.assertTrue(Bookmark.objects.get(id=bookmark2.id).is_deleted)
         self.assertTrue(Bookmark.objects.get(id=bookmark3.id).is_deleted)
+
+    def test_trash_bookmarks_sets_date_deleted(self):
+        bookmark1 = self.setup_bookmark()
+        bookmark2 = self.setup_bookmark()
+        
+        # 记录删除前的时间
+        before_trash = timezone.now()
+        
+        trash_bookmarks([bookmark1.id, bookmark2.id], self.get_or_create_test_user())
+        
+        # 记录删除后的时间
+        after_trash = timezone.now()
+        
+        bookmark1.refresh_from_db()
+        bookmark2.refresh_from_db()
+        
+        # 验证date_deleted字段被正确设置
+        self.assertIsNotNone(bookmark1.date_deleted)
+        self.assertIsNotNone(bookmark2.date_deleted)
+        self.assertGreaterEqual(bookmark1.date_deleted, before_trash)
+        self.assertLessEqual(bookmark1.date_deleted, after_trash)
+        self.assertGreaterEqual(bookmark2.date_deleted, before_trash)
+        self.assertLessEqual(bookmark2.date_deleted, after_trash)
+
+    def test_restore_bookmarks_clears_date_deleted(self):
+        bookmark1 = self.setup_bookmark()
+        bookmark2 = self.setup_bookmark()
+        
+        # 先删除书签
+        trash_bookmarks([bookmark1.id, bookmark2.id], self.get_or_create_test_user())
+        
+        # 验证date_deleted被设置
+        bookmark1.refresh_from_db()
+        bookmark2.refresh_from_db()
+        self.assertIsNotNone(bookmark1.date_deleted)
+        self.assertIsNotNone(bookmark2.date_deleted)
+        
+        # 还原书签
+        restore_bookmarks([bookmark1.id, bookmark2.id], self.get_or_create_test_user())
+        
+        # 验证date_deleted被清除
+        bookmark1.refresh_from_db()
+        bookmark2.refresh_from_db()
+        self.assertIsNone(bookmark1.date_deleted)
+        self.assertIsNone(bookmark2.date_deleted)
+        self.assertFalse(bookmark1.is_deleted)
+        self.assertFalse(bookmark2.is_deleted)

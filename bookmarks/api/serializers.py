@@ -79,6 +79,7 @@ class BookmarkSerializer(serializers.ModelSerializer):
             "tag_names",
             "date_added",
             "date_modified",
+            "date_deleted",
             "website_title",
             "website_description",
         ]
@@ -89,6 +90,7 @@ class BookmarkSerializer(serializers.ModelSerializer):
             "tag_names",
             "date_added",
             "date_modified",
+            "date_deleted",
             "website_title",
             "website_description",
         ]

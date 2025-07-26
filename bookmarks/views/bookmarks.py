@@ -132,8 +132,13 @@ def trashed(request: HttpRequest):
     if request.method == "POST":
         return search_action(request)
 
+    # 如果用户的回收站搜索偏好为空，设置默认的删除时间降序
+    if not request.user_profile.trash_search_preferences:
+        request.user_profile.trash_search_preferences = {"sort": BookmarkSearch.SORT_DELETED_DESC}
+        request.user_profile.save()
+
     search = BookmarkSearch.from_request(
-        request, request.GET, request.user_profile.search_preferences
+        request, request.GET, request.user_profile.trash_search_preferences
     )
     bookmark_list = contexts.TrashedBookmarkListContext(request, search)
     bundles = contexts.BundlesContext(request)
@@ -178,7 +183,15 @@ def search_action(request: HttpRequest):
         if not request.user.is_authenticated:
             return HttpResponseForbidden()
         search = BookmarkSearch.from_request(request, request.POST)
-        request.user_profile.search_preferences = search.preferences_dict
+        
+        # 根据当前页面路径决定保存到哪个偏好设置字段
+        if request.path.endswith('/trash') or request.path.endswith('/trash/'):
+            # 回收站页面，保存到trash_search_preferences
+            request.user_profile.trash_search_preferences = search.preferences_dict
+        else:
+            # 其他页面，保存到search_preferences
+            request.user_profile.search_preferences = search.preferences_dict
+        
         request.user_profile.save()
 
     # Handle random sort request
@@ -360,8 +373,13 @@ def shared_action(request: HttpRequest):
 
 @login_required
 def trashed_action(request: HttpRequest):
+    # 如果用户的回收站搜索偏好为空，设置默认的删除时间降序
+    if not request.user_profile.trash_search_preferences:
+        request.user_profile.trash_search_preferences = {"sort": BookmarkSearch.SORT_DELETED_DESC}
+        request.user_profile.save()
+
     search = BookmarkSearch.from_request(
-        request, request.GET, request.user_profile.search_preferences
+        request, request.GET, request.user_profile.trash_search_preferences
     )
     query = queries.query_trashed_bookmarks(request.user, request.user_profile, search)
 

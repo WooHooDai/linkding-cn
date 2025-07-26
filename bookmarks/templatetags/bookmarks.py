@@ -19,6 +19,21 @@ def bookmark_search(context, search: BookmarkSearch, mode: str = ""):
 
     if mode == "shared":
         preferences_form = BookmarkSearchForm(search, editable_fields=["sort", "date_filter_type", "date_filter_start", "date_filter_end"])
+    elif mode == "trash":
+        # 回收站页面使用标准表单创建方式
+        preferences_form = BookmarkSearchForm(
+            search, editable_fields=["sort", "shared", "unread", "date_filter_type", "date_filter_start", "date_filter_end"]
+        )
+        # 为回收站页面添加删除相关的排序选项
+        trash_sort_choices = [
+            (BookmarkSearch.SORT_DELETED_ASC, "删除时间 ↑"),
+            (BookmarkSearch.SORT_DELETED_DESC, "删除时间 ↓"),
+        ]
+        trash_date_filter_choices = [
+            (BookmarkSearch.FILTER_DATE_DELETED, "删除"),
+        ]
+        preferences_form.fields["sort"].choices = trash_sort_choices + preferences_form.fields["sort"].choices
+        preferences_form.fields["date_filter_type"].choices = preferences_form.fields["date_filter_type"].choices + trash_date_filter_choices
     else:
         preferences_form = BookmarkSearchForm(
             search, editable_fields=["sort", "shared", "unread", "date_filter_type", "date_filter_start", "date_filter_end"]

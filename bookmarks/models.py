@@ -72,6 +72,7 @@ class Bookmark(models.Model):
     date_added = models.DateTimeField()
     date_modified = models.DateTimeField()
     date_accessed = models.DateTimeField(blank=True, null=True)
+    date_deleted = models.DateTimeField(blank=True, null=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     tags = models.ManyToManyField(Tag)
     latest_snapshot = models.ForeignKey(
@@ -189,6 +190,8 @@ class BookmarkSearch:
     SORT_TITLE_ASC = "title_asc"
     SORT_TITLE_DESC = "title_desc"
     SORT_RANDOM = "random"
+    SORT_DELETED_ASC = "deleted_asc"
+    SORT_DELETED_DESC = "deleted_desc"
 
     FILTER_SHARED_OFF = "off"
     FILTER_SHARED_SHARED = "yes"
@@ -202,6 +205,7 @@ class BookmarkSearch:
     FILTER_DATE_OFF = "off"
     FILTER_DATE_ADDED = "added"
     FILTER_DATE_MODIFIED = "modified"
+    FILTER_DATE_DELETED = "deleted"
 
     params = [
         "q",
@@ -212,6 +216,7 @@ class BookmarkSearch:
         "unread",
         "modified_since",
         "added_since",
+        "deleted_since",
         "date_filter_type",
         "date_filter_start",
         "date_filter_end",
@@ -226,6 +231,7 @@ class BookmarkSearch:
         "unread": FILTER_UNREAD_OFF,
         "modified_since": None,
         "added_since": None,
+        "deleted_since": None,
         "date_filter_type": FILTER_DATE_OFF,
         "date_filter_start": None,
         "date_filter_end": None,
@@ -241,6 +247,7 @@ class BookmarkSearch:
         unread: str = None,
         modified_since: str = None,
         added_since: str = None,
+        deleted_since: str = None,
         date_filter_type: str = None,
         date_filter_start: str = None,
         date_filter_end: str = None,
@@ -260,6 +267,7 @@ class BookmarkSearch:
         self.unread = unread or self.defaults["unread"]
         self.modified_since = modified_since or self.defaults["modified_since"]
         self.added_since = added_since or self.defaults["added_since"]
+        self.deleted_since = deleted_since or self.defaults["deleted_since"]
         self.date_filter_type = date_filter_type or self.defaults["date_filter_type"]
         self.date_filter_start = date_filter_start or self.defaults["date_filter_start"]
         self.date_filter_end = date_filter_end or self.defaults["date_filter_end"]
@@ -343,8 +351,8 @@ class BookmarkSearchForm(forms.Form):
     ]
     FILTER_DATE_CHOICES = [
         (BookmarkSearch.FILTER_DATE_OFF, "关闭"),
-        (BookmarkSearch.FILTER_DATE_ADDED, "添加日"),
-        (BookmarkSearch.FILTER_DATE_MODIFIED, "修改日")
+        (BookmarkSearch.FILTER_DATE_ADDED, "添加"),
+        (BookmarkSearch.FILTER_DATE_MODIFIED, "修改")
     ]
 
     q = forms.CharField()
@@ -355,6 +363,7 @@ class BookmarkSearchForm(forms.Form):
     unread = forms.ChoiceField(choices=FILTER_UNREAD_CHOICES, widget=forms.RadioSelect)
     modified_since = forms.CharField(required=False)
     added_since = forms.CharField(required=False)
+    deleted_since = forms.CharField(required=False)
     date_filter_type = forms.ChoiceField(choices=FILTER_DATE_CHOICES, widget=forms.RadioSelect)
     date_filter_start = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
     date_filter_end = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
@@ -495,6 +504,7 @@ class UserProfile(models.Model):
     custom_css_hash = models.CharField(blank=True, null=False, max_length=32)
     auto_tagging_rules = models.TextField(blank=True, null=False)
     search_preferences = models.JSONField(default=dict, null=False)
+    trash_search_preferences = models.JSONField(default=dict, null=False)
     enable_automatic_html_snapshots = models.BooleanField(default=True, null=False)
     default_mark_unread = models.BooleanField(default=False, null=False)
     items_per_page = models.IntegerField(

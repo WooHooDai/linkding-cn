@@ -121,24 +121,24 @@ def delete_bookmarks(bookmark_ids: [Union[int, str]], current_user: User):
 
 def trash_bookmark(bookmark: Bookmark):
     bookmark.is_deleted = True
-    bookmark.date_modified = timezone.now()
+    bookmark.date_deleted = timezone.now()
     bookmark.save()
 
 def trash_bookmarks(bookmark_ids: [Union[int, str]], current_user: User):
     sanitized_bookmark_ids = _sanitize_id_list(bookmark_ids)
     Bookmark.objects.filter(owner=current_user, id__in=sanitized_bookmark_ids).update(
-        is_deleted=True, date_modified=timezone.now()
+        is_deleted=True, date_deleted=timezone.now()
     )
 
 def restore_bookmark(bookmark: Bookmark):
     bookmark.is_deleted = False
-    bookmark.date_modified = timezone.now()
+    bookmark.date_deleted = None
     bookmark.save()
 
 def restore_bookmarks(bookmark_ids: [Union[int, str]], current_user: User):
     sanitized_bookmark_ids = _sanitize_id_list(bookmark_ids)
     Bookmark.objects.filter(owner=current_user, id__in=sanitized_bookmark_ids).update(
-        is_deleted=False, date_modified=timezone.now()
+        is_deleted=False, date_deleted=None
     )
 
 def tag_bookmarks(bookmark_ids: [Union[int, str]], tag_string: str, current_user: User):

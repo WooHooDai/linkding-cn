@@ -96,6 +96,14 @@
         <span>{{ details.bookmark.date_added }}</span>
       </div>
     </section>
+    {% if details.bookmark.is_deleted and details.bookmark.date_deleted %}
+    <section class="date-deleted col-1">
+      <h3>删除时间</h3>
+      <div>
+        <span>{{ details.bookmark.date_deleted }}</span>
+      </div>
+    </section>
+    {% endif %}
     {% if details.bookmark.resolved_description %}
       <section class="description col-2">
         <h3>描述</h3>

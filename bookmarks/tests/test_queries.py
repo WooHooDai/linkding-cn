@@ -1571,3 +1571,228 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
             None, self.profile, BookmarkSearch(q="", bundle=bundle), False
         )
         self.assertQueryResult(query, [matching_bookmarks])
+
+    def test_sort_by_deleted_asc(self):
+        search = BookmarkSearch(sort=BookmarkSearch.SORT_DELETED_ASC)
+
+        # 创建已删除的书签
+        bookmark1 = self.setup_bookmark()
+        bookmark1.is_deleted = True
+        bookmark1.date_deleted = timezone.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+        bookmark1.save()
+
+        bookmark2 = self.setup_bookmark()
+        bookmark2.is_deleted = True
+        bookmark2.date_deleted = timezone.datetime(2021, 2, 1, tzinfo=datetime.timezone.utc)
+        bookmark2.save()
+
+        bookmark3 = self.setup_bookmark()
+        bookmark3.is_deleted = True
+        bookmark3.date_deleted = timezone.datetime(2022, 3, 1, tzinfo=datetime.timezone.utc)
+        bookmark3.save()
+
+        sorted_bookmarks = sorted([bookmark1, bookmark2, bookmark3], key=lambda b: b.date_deleted)
+
+        query = queries.query_trashed_bookmarks(self.user, self.profile, search)
+        self.assertEqual(list(query), sorted_bookmarks)
+
+    def test_sort_by_deleted_desc(self):
+        search = BookmarkSearch(sort=BookmarkSearch.SORT_DELETED_DESC)
+
+        # 创建已删除的书签
+        bookmark1 = self.setup_bookmark()
+        bookmark1.is_deleted = True
+        bookmark1.date_deleted = timezone.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+        bookmark1.save()
+
+        bookmark2 = self.setup_bookmark()
+        bookmark2.is_deleted = True
+        bookmark2.date_deleted = timezone.datetime(2021, 2, 1, tzinfo=datetime.timezone.utc)
+        bookmark2.save()
+
+        bookmark3 = self.setup_bookmark()
+        bookmark3.is_deleted = True
+        bookmark3.date_deleted = timezone.datetime(2022, 3, 1, tzinfo=datetime.timezone.utc)
+        bookmark3.save()
+
+        sorted_bookmarks = sorted([bookmark1, bookmark2, bookmark3], key=lambda b: b.date_deleted, reverse=True)
+
+        query = queries.query_trashed_bookmarks(self.user, self.profile, search)
+        self.assertEqual(list(query), sorted_bookmarks)
+
+    def test_query_trashed_bookmarks_filter_deleted_since(self):
+        # 创建已删除的书签
+        older_bookmark = self.setup_bookmark()
+        older_bookmark.is_deleted = True
+        older_bookmark.date_deleted = timezone.datetime(2025, 1, 1, tzinfo=datetime.timezone.utc)
+        older_bookmark.save()
+
+        recent_bookmark = self.setup_bookmark()
+        recent_bookmark.is_deleted = True
+        recent_bookmark.date_deleted = timezone.datetime(2025, 5, 15, tzinfo=datetime.timezone.utc)
+        recent_bookmark.save()
+
+        # 测试日期在两个书签之间
+        search = BookmarkSearch(deleted_since="2025-03-01T00:00:00Z")
+        query = queries.query_trashed_bookmarks(self.user, self.profile, search)
+        self.assertCountEqual(list(query), [recent_bookmark])
+
+        # 测试日期在两个书签之前
+        search = BookmarkSearch(deleted_since="2024-12-31T00:00:00Z")
+        query = queries.query_trashed_bookmarks(self.user, self.profile, search)
+        self.assertCountEqual(list(query), [older_bookmark, recent_bookmark])
+
+        # 测试日期在两个书签之后
+        search = BookmarkSearch(deleted_since="2025-05-16T00:00:00Z")
+        query = queries.query_trashed_bookmarks(self.user, self.profile, search)
+        self.assertCountEqual(list(query), [])
+
+        # 测试没有deleted_since - 应该返回所有已删除的书签
+        search = BookmarkSearch()
+        query = queries.query_trashed_bookmarks(self.user, self.profile, search)
+        self.assertCountEqual(list(query), [older_bookmark, recent_bookmark])
+
+        # 测试无效日期格式 - 应该被忽略
+        search = BookmarkSearch(deleted_since="invalid-date")
+        query = queries.query_trashed_bookmarks(self.user, self.profile, search)
+        self.assertCountEqual(list(query), [older_bookmark, recent_bookmark])
+
+    def test_query_trashed_bookmarks_filter_by_deleted_date_range(self):
+        # 创建已删除的书签
+        bookmark1 = self.setup_bookmark()
+        bookmark1.is_deleted = True
+        bookmark1.date_deleted = timezone.datetime(2025, 1, 15, tzinfo=datetime.timezone.utc)
+        bookmark1.save()
+
+        bookmark2 = self.setup_bookmark()
+        bookmark2.is_deleted = True
+        bookmark2.date_deleted = timezone.datetime(2025, 2, 15, tzinfo=datetime.timezone.utc)
+        bookmark2.save()
+
+        bookmark3 = self.setup_bookmark()
+        bookmark3.is_deleted = True
+        bookmark3.date_deleted = timezone.datetime(2025, 3, 15, tzinfo=datetime.timezone.utc)
+        bookmark3.save()
+
+        # 测试删除日期范围筛选
+        search = BookmarkSearch(
+            date_filter_type=BookmarkSearch.FILTER_DATE_DELETED,
+            date_filter_start="2025-02-01",
+            date_filter_end="2025-03-01"
+        )
+        query = queries.query_trashed_bookmarks(self.user, self.profile, search)
+        self.assertCountEqual(list(query), [bookmark2])
+
+    def test_create_trash_search_default_sort(self):
+        """测试回收站搜索默认按删除时间降序"""
+        # 创建已删除的书签
+        bookmark1 = self.setup_bookmark()
+        bookmark1.is_deleted = True
+        bookmark1.date_deleted = timezone.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+        bookmark1.save()
+
+        bookmark2 = self.setup_bookmark()
+        bookmark2.is_deleted = True
+        bookmark2.date_deleted = timezone.datetime(2021, 2, 1, tzinfo=datetime.timezone.utc)
+        bookmark2.save()
+
+        bookmark3 = self.setup_bookmark()
+        bookmark3.is_deleted = True
+        bookmark3.date_deleted = timezone.datetime(2022, 3, 1, tzinfo=datetime.timezone.utc)
+        bookmark3.save()
+
+        # 设置用户的回收站搜索偏好为空，模拟首次访问
+        self.profile.trash_search_preferences = {}
+        self.profile.save()
+
+        # 使用标准的from_request方式，不指定排序
+        search = BookmarkSearch.from_request(None, {}, self.profile.trash_search_preferences)
+        
+        # 验证默认排序是添加时间降序（BookmarkSearch的默认值）
+        self.assertEqual(search.sort, BookmarkSearch.SORT_ADDED_DESC)
+        
+        # 验证查询结果按添加时间降序排列
+        query = queries.query_trashed_bookmarks(self.user, self.profile, search)
+        expected_order = [bookmark3, bookmark2, bookmark1]  # 最新的添加时间在前
+        self.assertEqual(list(query), expected_order)
+
+    def test_trash_search_preferences(self):
+        """测试回收站搜索偏好设置"""
+        # 设置用户的回收站搜索偏好
+        self.profile.trash_search_preferences = {
+            "sort": BookmarkSearch.SORT_DELETED_ASC,
+            "shared": BookmarkSearch.FILTER_SHARED_SHARED,
+            "unread": BookmarkSearch.FILTER_UNREAD_YES
+        }
+        self.profile.save()
+
+        # 创建已删除的书签
+        bookmark1 = self.setup_bookmark()
+        bookmark1.is_deleted = True
+        bookmark1.date_deleted = timezone.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+        bookmark1.shared = True
+        bookmark1.unread = True
+        bookmark1.save()
+
+        bookmark2 = self.setup_bookmark()
+        bookmark2.is_deleted = True
+        bookmark2.date_deleted = timezone.datetime(2021, 2, 1, tzinfo=datetime.timezone.utc)
+        bookmark2.shared = True
+        bookmark2.unread = True
+        bookmark2.save()
+
+        bookmark3 = self.setup_bookmark()
+        bookmark3.is_deleted = True
+        bookmark3.date_deleted = timezone.datetime(2022, 3, 1, tzinfo=datetime.timezone.utc)
+        bookmark3.shared = True
+        bookmark3.unread = True
+        bookmark3.save()
+
+        # 使用标准的from_request方式
+        search = BookmarkSearch.from_request(None, {}, self.profile.trash_search_preferences)
+        
+        # 验证使用了用户的偏好设置
+        self.assertEqual(search.sort, BookmarkSearch.SORT_DELETED_ASC)
+        self.assertEqual(search.shared, BookmarkSearch.FILTER_SHARED_SHARED)
+        self.assertEqual(search.unread, BookmarkSearch.FILTER_UNREAD_YES)
+        
+        # 验证查询结果按删除时间升序排列
+        query = queries.query_trashed_bookmarks(self.user, self.profile, search)
+        expected_order = [bookmark1, bookmark2, bookmark3]  # 最早的删除时间在前
+        self.assertEqual(list(query), expected_order)
+
+    def test_bookmark_search_form_choices_for_different_modes(self):
+        """测试不同模式下搜索表单的选项"""
+        from bookmarks.templatetags.bookmarks import bookmark_search
+        from django.test import RequestFactory
+        
+        # 创建测试请求
+        factory = RequestFactory()
+        request = factory.get('/')
+        request.user = self.user
+        
+        # 创建搜索对象
+        search = BookmarkSearch()
+        
+        # 测试trash模式 - 应该包含删除相关选项
+        context = {'request': request}
+        result = bookmark_search(context, search, mode='trash')
+        preferences_form = result['preferences_form']
+        
+        sort_choices = [choice[0] for choice in preferences_form.fields['sort'].choices]
+        date_filter_choices = [choice[0] for choice in preferences_form.fields['date_filter_type'].choices]
+        
+        self.assertIn('deleted_asc', sort_choices)
+        self.assertIn('deleted_desc', sort_choices)
+        self.assertIn('deleted', date_filter_choices)
+        
+        # 测试非trash模式 - 应该不包含删除相关选项
+        result = bookmark_search(context, search, mode='')
+        preferences_form = result['preferences_form']
+        
+        sort_choices = [choice[0] for choice in preferences_form.fields['sort'].choices]
+        date_filter_choices = [choice[0] for choice in preferences_form.fields['date_filter_type'].choices]
+        
+        self.assertNotIn('deleted_asc', sort_choices)
+        self.assertNotIn('deleted_desc', sort_choices)
+        self.assertNotIn('deleted', date_filter_choices)

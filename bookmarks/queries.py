@@ -98,7 +98,6 @@ def _filter_bundle(query_set: QuerySet, bundle: BookmarkBundle) -> QuerySet:
 
 
 def _apply_filters(query_set: QuerySet, user: Optional[User], profile: UserProfile, search: BookmarkSearch) -> QuerySet:
-    """应用所有过滤条件到查询集"""
     # Filter by modified_since if provided
     if search.modified_since:
         try:
@@ -111,6 +110,14 @@ def _apply_filters(query_set: QuerySet, user: Optional[User], profile: UserProfi
     if search.added_since:
         try:
             query_set = query_set.filter(date_added__gt=search.added_since)
+        except ValidationError:
+            # If the date format is invalid, ignore the filter
+            pass
+
+    # Filter by deleted_since if provided
+    if search.deleted_since:
+        try:
+            query_set = query_set.filter(date_deleted__gt=search.deleted_since)
         except ValidationError:
             # If the date format is invalid, ignore the filter
             pass
@@ -171,8 +178,13 @@ def _apply_filters(query_set: QuerySet, user: Optional[User], profile: UserProfi
                 return None
         return None
 
-    if search.date_filter_type in ("added", "modified"):
-        field = "date_added" if search.date_filter_type == "added" else "date_modified"
+    if search.date_filter_type in ("added", "modified", "deleted"):
+        field_map = {
+            "added": "date_added",
+            "modified": "date_modified",
+            "deleted": "date_deleted"
+        }
+        field = field_map[search.date_filter_type]
         start = _parse_date(search.date_filter_start)
         end = _parse_date(search.date_filter_end)
         if start:
@@ -250,6 +262,12 @@ def _base_bookmarks_query(
                 query_set = query_set.order_by(order_field).reverse()
         elif search.sort == BookmarkSearch.SORT_ADDED_ASC:
             query_set = query_set.order_by("date_added")
+        elif search.sort == BookmarkSearch.SORT_ADDED_DESC:
+            query_set = query_set.order_by("-date_added")
+        elif search.sort == BookmarkSearch.SORT_DELETED_ASC:
+            query_set = query_set.order_by("date_deleted")
+        elif search.sort == BookmarkSearch.SORT_DELETED_DESC:
+            query_set = query_set.order_by("-date_deleted")
         else:
             # Sort by date added, descending by default
             query_set = query_set.order_by("-date_added")
