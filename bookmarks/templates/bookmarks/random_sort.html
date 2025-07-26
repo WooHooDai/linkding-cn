@@ -16,6 +16,15 @@
   {% if search.unread != 'off' %}
     <input type="hidden" name="unread" value="{{ search.unread }}">
   {% endif %}
+  {% if search.date_filter_type %}
+    <input type="hidden" name="date_filter_type" value="{{ search.date_filter_type }}">
+  {% endif %}
+  {% if search.date_filter_start %}
+    <input type="hidden" name="date_filter_start" value="{{ search.date_filter_start }}">
+  {% endif %}
+  {% if search.date_filter_end %}
+    <input type="hidden" name="date_filter_end" value="{{ search.date_filter_end }}">
+  {% endif %}
   <button type="submit" class="btn ml-2" title="Random sort">
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" stroke-width="2"
          stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
