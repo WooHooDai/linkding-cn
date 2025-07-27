@@ -182,8 +182,20 @@ def form_field(field, modifier_string):
 
 
 @register.filter
-def extract_domain(value):
+def extract_domain(value, user_profile=None):
     try:
-        return urlparse(value).netloc
-    except Exception:
-        return ''
+        netloc = urlparse(value).netloc
+        # 获取用户自定义规则
+        domain_roots = []
+        if user_profile and hasattr(user_profile, 'custom_domain_root') and user_profile.custom_domain_root:
+            domain_roots = [d.strip() for d in user_profile.custom_domain_root.splitlines() if d.strip()]
+        # 精确匹配
+        if netloc in domain_roots:
+            return netloc
+        # *.root 匹配
+        for root in domain_roots:
+            if netloc.endswith('.' + root):
+                return root
+        return netloc
+    except Exception as e:
+        return ""

@@ -502,6 +502,7 @@ class UserProfile(models.Model):
     permanent_notes = models.BooleanField(default=False, null=False)
     custom_css = models.TextField(blank=True, null=False)
     custom_css_hash = models.CharField(blank=True, null=False, max_length=32)
+    custom_domain_root = models.TextField(blank=True, null=False, default="")
     auto_tagging_rules = models.TextField(blank=True, null=False)
     search_preferences = models.JSONField(default=dict, null=False)
     trash_search_preferences = models.JSONField(default=dict, null=False)
@@ -549,6 +550,7 @@ class UserProfileForm(forms.ModelForm):
             "permanent_notes",
             "default_mark_unread",
             "custom_css",
+            "custom_domain_root",
             "auto_tagging_rules",
             "items_per_page",
             "sticky_pagination",
