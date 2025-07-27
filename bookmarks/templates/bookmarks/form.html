@@ -276,6 +276,7 @@
             if (metadata.description && metadata.description !== existingBookmark?.description) {
               descriptionInput.value = metadata.description;
               descriptionInput.classList.add("modified");
+              document.querySelector('details.description').open = !!metadata.description;
             }
             if (metadata.preview_image && metadata.preview_image !== existingBookmark?.preview_image_remote_url) {
               updateInput(previewImageRemoteUrlInput, metadata.preview_image);
