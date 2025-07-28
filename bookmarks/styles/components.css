@@ -24,12 +24,6 @@
   }
 }
 
-@media (max-width: 600px) {
-  .section-header {
-    flex-direction: column;
-  }
-}
-
 /* Confirm button component */
 span.confirmation {
   display: flex;

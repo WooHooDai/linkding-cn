@@ -51,20 +51,70 @@ class BookmarkItem extends Behavior {
 
 registerBehavior("ld-bookmark-item", BookmarkItem);
 
-// Toggle: BundleMenuItem
-class BundleMenuFolderToggle extends Behavior {
+// 折叠按钮：通用行为
+class CollapseButtonBehavior extends Behavior {
   constructor(element) {
     super(element);
+    // 支持通过 data-* 属性自定义
+    this.storageKey = element.dataset.toggleStorageKey;
+    this.targetSelector = element.dataset.toggleTargetSelector || '.section-content';
+    this.toggleBtn = element.querySelector('button');
+    this.content = element.querySelector(this.targetSelector);
     this.onClick = this.onClick.bind(this);
-    element.addEventListener("click", this.onClick);
-    this.restoreState();
+    if (this.toggleBtn) {
+      this.toggleBtn.addEventListener('click', this.onClick);
+      this.restoreState();
+    }
   }
 
   destroy() {
-    this.element.removeEventListener("click", this.onClick);
+    if (this.toggleBtn) {
+      this.toggleBtn.removeEventListener('click', this.onClick);
+    }
   }
 
-  onClick(e) {
+  onClick() {
+    if (!this.toggleBtn || !this.content) return;
+    const expanded = this.toggleBtn.getAttribute('aria-expanded') === 'true';
+    this.toggleBtn.setAttribute('aria-expanded', !expanded);
+    this.content.style.display = expanded ? 'none' : '';
+    this.setState(!expanded);
+  }
+
+  setState(expanded) {
+    if (this.storageKey) {
+      localStorage.setItem(this.storageKey, expanded ? 'true' : 'false');
+    }
+  }
+
+  restoreState() {
+    if (!this.toggleBtn || !this.content) return;
+    let expanded = true;
+    if (this.storageKey) {
+      expanded = localStorage.getItem(this.storageKey) !== 'false';
+    }
+    this.toggleBtn.setAttribute('aria-expanded', expanded);
+    this.content.style.display = expanded ? '' : 'none';
+  }
+}
+
+registerBehavior('ld-collapse-button', CollapseButtonBehavior);
+
+// 折叠按钮：Bundle动态绑定
+class BundleCollapseButton extends CollapseButtonBehavior {
+  constructor(element) {
+    super(element);
+    this.onBundleClick = this.onBundleClick.bind(this);
+    element.addEventListener("click", this.onBundleClick);
+    this.restoreBundleState();
+  }
+
+  destroy() {
+    super.destroy();
+    this.element.removeEventListener("click", this.onBundleClick);
+  }
+
+  onBundleClick(e) {
     const btn = e.target.closest('.folder-toggle');
     if (!btn) return;
     const folderItem = btn.closest('li');
@@ -89,7 +139,7 @@ class BundleMenuFolderToggle extends Behavior {
     localStorage.setItem('bundleFolderState', JSON.stringify(state));
   }
 
-  restoreState() {
+  restoreBundleState() {
     let state = {};
     try {
       state = JSON.parse(localStorage.getItem('bundleFolderState') || '{}');
@@ -110,7 +160,7 @@ class BundleMenuFolderToggle extends Behavior {
   }
 }
 
-registerBehavior('ld-bundle-menu', BundleMenuFolderToggle);
+registerBehavior('ld-bundle-menu', BundleCollapseButton);
 
 function bindBundleMenuBehaviors() {
   document.querySelectorAll("[ld-bundle-menu]").forEach((el) => {

@@ -1,8 +1,9 @@
-<section aria-labelledby="tags-heading">
+<section aria-labelledby="tags-heading" ld-collapse-button data-toggle-storage-key="tagSectionState" data-toggle-target-selector=".section-content">
   <div class="section-header">
     <h2 id="tags-heading">标签</h2>
+    {% include "bookmarks/collapsed_button.html" with toggle_class="section-toggle" %}
   </div>
-  <div id="tag-cloud-container">
+  <div id="tag-cloud-container" class="section-content">
     {% include 'bookmarks/tag_cloud.html' %}
   </div>
 </section>

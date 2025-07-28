@@ -1,11 +1,12 @@
-<button class="folder-toggle" aria-expanded="true" type="button" title="展开/折叠">
+{% with toggle_class=toggle_class|default:"folder-toggle" %}
+<button class="{{ toggle_class }}" aria-expanded="true" type="button" title="展开/折叠">
   <svg class="icon" width="14" height="14" viewBox="0 0 20 20" fill="none">
     <polyline points="6 8 10 12 14 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
 </button>
-
+{% endwith %}
 <style>
-.folder-toggle {
+.folder-toggle, .section-toggle {
   background: none;
   border: none;
   padding: 0 4px;
@@ -17,17 +18,20 @@
   transition: color 0.2s;
   color: #888;
 }
-.folder-toggle:hover, .folder-toggle:focus {
+.folder-toggle:hover, .folder-toggle:focus,
+.section-toggle:hover, .section-toggle:focus {
   color: #333;
   outline: none;
 }
-.folder-toggle .icon {
+.folder-toggle .icon, .section-toggle .icon {
   transition: transform 0.2s;
 }
-.folder-toggle[aria-expanded="false"] .icon {
+.folder-toggle[aria-expanded="false"] .icon,
+.section-toggle[aria-expanded="false"] .icon {
   transform: rotate(-90deg);
 }
-.folder-toggle[aria-expanded="true"] .icon {
+.folder-toggle[aria-expanded="true"] .icon,
+.section-toggle[aria-expanded="true"] .icon {
   transform: rotate(0deg);
 }
 </style> 

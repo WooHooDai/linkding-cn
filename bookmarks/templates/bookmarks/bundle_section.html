@@ -1,7 +1,8 @@
 {% if not request.user_profile.hide_bundles %}
-  <section aria-labelledby="bundles-heading">
+  <section aria-labelledby="bundles-heading" ld-collapse-button data-toggle-storage-key="bundleSectionState" data-toggle-target-selector=".section-content">
     <div class="section-header">
       <h2 id="bundles-heading">过滤器</h2>
+      {% include "bookmarks/collapsed_button.html" with toggle_class="section-toggle" %}
       <a href="{% url 'linkding:bundles.index' %}" class="btn ml-auto" aria-label="Manage bundles">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -12,26 +13,28 @@
         </svg>
       </a>
     </div>
-    <ul class="bundle-menu" ld-bundle-menu>
-      {% for bundle in bundles.bundles %}
-        <li class="bundle-menu-item {% if bundle.id == bundles.selected_bundle.id %}selected{% endif %}"
-            data-bundle-id="{{ bundle.id }}"
-            data-folder="{{ bundle.is_folder|yesno:'true,false' }}">
-          <div class="bundle-content">
-            <a href="?bundle={{ bundle.id }}">
-              {{ bundle.name }}
-              {% if bundle.bookmarks_total is not None %}<span class="count" id="bundle-total-{{ bundle.id }}">({{ bundle.bookmarks_total }})</span>{% endif %}
-            </a>
-          </div>
-          <div class="bundle-action">
-            {% if bundle.is_folder and bundle.has_child %}
-              {% include "bundles/collapsed_button.html" %}
-            {% else %}
-              <span class="folder-toggle-placeholder"></span>
-            {% endif %}
-          </div>
-        </li>
-      {% endfor %}
-    </ul>
+    <div class="section-content">
+      <ul class="bundle-menu" ld-bundle-menu>
+        {% for bundle in bundles.bundles %}
+          <li class="bundle-menu-item {% if bundle.id == bundles.selected_bundle.id %}selected{% endif %}"
+              data-bundle-id="{{ bundle.id }}"
+              data-folder="{{ bundle.is_folder|yesno:'true,false' }}">
+            <div class="bundle-content">
+              <a href="?bundle={{ bundle.id }}">
+                {{ bundle.name }}
+                {% if bundle.bookmarks_total is not None %}<span class="count" id="bundle-total-{{ bundle.id }}">({{ bundle.bookmarks_total }})</span>{% endif %}
+              </a>
+            </div>
+            <div class="bundle-action">
+              {% if bundle.is_folder and bundle.has_child %}
+                {% include "bookmarks/collapsed_button.html" %}
+              {% else %}
+                <span class="folder-toggle-placeholder"></span>
+              {% endif %}
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
   </section>
 {% endif %}
