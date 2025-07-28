@@ -27,7 +27,7 @@
   <label for="{{ form.any_tags.id_for_label }}" class="form-label">标签</label>
   {{ form.any_tags|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
   <div class="form-input-hint">
-    书签拥有任一书签即可匹配。
+    书签的标题、描述、笔记、url中，任意一个包含关键词即可匹配。
   </div>
 </div>
 
@@ -35,7 +35,7 @@
   <label for="{{ form.all_tags.id_for_label }}" class="form-label">必选标签</label>
   {{ form.all_tags|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
   <div class="form-input-hint">
-    书签拥有所有书签方可匹配。
+    书签拥有所有标签方可匹配。
   </div>
 </div>
 
