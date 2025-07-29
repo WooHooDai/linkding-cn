@@ -92,17 +92,20 @@ def humanize_absolute_date_short(
         now = timezone.now()
     value_local = timezone.localtime(value)
     now_local = timezone.localtime(now)
+    delta = relativedelta(now_local, value_local)
     yesterday = now_local - relativedelta(days=1)
 
-    if value_local.day == now_local.day:
-        return "今天"
-    elif value_local.day == yesterday.day:
-        return "昨天"
-    else:
+    is_older_than_yesterday = delta.years > 0 or delta.months > 0 or delta.weeks > 0 or delta.days > 1
+
+    if is_older_than_yesterday:
         if value_local.year == now_local.year:
             return f"{value_local.month}/{value_local.day}"
         else:
             return f"{value_local.year}/{value_local.month}/{value_local.day}"
+    elif value_local.day == now_local.day:
+        return "今天"
+    elif value_local.day == yesterday.day:
+        return "昨天"
 
 def parse_timestamp(value: str):
     """
