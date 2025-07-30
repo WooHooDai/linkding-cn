@@ -1676,7 +1676,7 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
 
         # 测试删除日期范围筛选
         search = BookmarkSearch(
-            date_filter_type=BookmarkSearch.FILTER_DATE_DELETED,
+            date_filter_by=BookmarkSearch.FILTER_DATE_BY_DELETED,
             date_filter_start="2025-02-01",
             date_filter_end="2025-03-01"
         )
@@ -1780,7 +1780,7 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         preferences_form = result['preferences_form']
         
         sort_choices = [choice[0] for choice in preferences_form.fields['sort'].choices]
-        date_filter_choices = [choice[0] for choice in preferences_form.fields['date_filter_type'].choices]
+        date_filter_choices = [choice[0] for choice in preferences_form.fields['date_filter_by'].choices]
         
         self.assertIn('deleted_asc', sort_choices)
         self.assertIn('deleted_desc', sort_choices)
@@ -1791,7 +1791,7 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         preferences_form = result['preferences_form']
         
         sort_choices = [choice[0] for choice in preferences_form.fields['sort'].choices]
-        date_filter_choices = [choice[0] for choice in preferences_form.fields['date_filter_type'].choices]
+        date_filter_choices = [choice[0] for choice in preferences_form.fields['date_filter_by'].choices]
         
         self.assertNotIn('deleted_asc', sort_choices)
         self.assertNotIn('deleted_desc', sort_choices)

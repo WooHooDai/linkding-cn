@@ -2,8 +2,12 @@ import binascii
 import hashlib
 import logging
 import os
+import re
+import calendar
 from functools import cached_property
 from typing import List
+from datetime import date, timedelta
+
 
 from django import forms
 from django.conf import settings
@@ -203,10 +207,12 @@ class BookmarkSearch:
 
     # 日期筛选类型常量与choices
     FILTER_DATE_OFF = "off"
-    FILTER_DATE_ADDED = "added"
-    FILTER_DATE_MODIFIED = "modified"
-    FILTER_DATE_DELETED = "deleted"
+    FILTER_DATE_BY_ADDED = "added"
+    FILTER_DATE_BY_MODIFIED = "modified"
+    FILTER_DATE_BY_DELETED = "deleted"
 
+    FILTER_DATE_TYPE_ABSOLUTE = "absolute"
+    FILTER_DATE_TYPE_RELATIVE = "relative"
     params = [
         "q",
         "user",
@@ -217,11 +223,13 @@ class BookmarkSearch:
         "modified_since",
         "added_since",
         "deleted_since",
+        "date_filter_by",
         "date_filter_type",
+        "date_filter_relative_string",
         "date_filter_start",
         "date_filter_end",
     ]
-    preferences = ["sort", "shared", "unread", "date_filter_type"]
+    preferences = ["sort", "shared", "unread", "date_filter_by", "date_filter_type", "date_filter_relative_string"]
     defaults = {
         "q": "",
         "user": "",
@@ -232,10 +240,55 @@ class BookmarkSearch:
         "modified_since": None,
         "added_since": None,
         "deleted_since": None,
-        "date_filter_type": FILTER_DATE_OFF,
+        "date_filter_by": FILTER_DATE_OFF,
+        "date_filter_type": FILTER_DATE_TYPE_ABSOLUTE,
+        "date_filter_relative_string": None,
         "date_filter_start": None,
         "date_filter_end": None,
     }
+
+    @staticmethod
+    def parse_relative_date_string(date_filter_relative_string):
+        today = date.today()
+        if date_filter_relative_string == "today":
+            return today, today
+        elif date_filter_relative_string == "yesterday":
+            yesterday = today - timedelta(days=1)
+            return yesterday, yesterday
+        elif date_filter_relative_string == "this_week":
+            days_since_monday = today.weekday() # weekday() 返回 0-6，0 是周一，6 是周日
+            monday = today - timedelta(days=days_since_monday)
+            sunday = monday + timedelta(days=6)
+            return monday, sunday
+        elif date_filter_relative_string == "this_month":
+            first_day = today.replace(day=1)
+            _, last_day_of_month = calendar.monthrange(today.year, today.month)
+            last_day = today.replace(day=last_day_of_month)
+            return first_day, last_day
+        elif date_filter_relative_string == "this_year":
+            first_day = today.replace(month=1, day=1)
+            last_day = today.replace(month=12, day=31)
+            return first_day, last_day
+        else:
+            m = re.match(r"last_(\d+)_(day|week|month|year)s?", date_filter_relative_string)
+            if m:
+                value, unit = int(m.group(1)), m.group(2)
+                if unit == "day":
+                    start = today - timedelta(days=value - 1)
+                    end = today
+                elif unit == "week":
+                    start = today - timedelta(days=value * 7 - 1)
+                    end = today
+                elif unit == "month":
+                    start = today - timedelta(days=value * 30 - 1)
+                    end = today
+                elif unit == "year":
+                    start = today - timedelta(days=value * 365 - 1)
+                    end = today
+                else:
+                    return None, None
+                return start, end
+            return None, None
 
     def __init__(
         self,
@@ -248,9 +301,11 @@ class BookmarkSearch:
         modified_since: str = None,
         added_since: str = None,
         deleted_since: str = None,
+        date_filter_by: str = None,
         date_filter_type: str = None,
-        date_filter_start: str = None,
-        date_filter_end: str = None,
+        date_filter_relative_string: str = None,
+        date_filter_start = None,
+        date_filter_end = None,
         preferences: dict = None,
         request: any = None,
     ):
@@ -268,9 +323,16 @@ class BookmarkSearch:
         self.modified_since = modified_since or self.defaults["modified_since"]
         self.added_since = added_since or self.defaults["added_since"]
         self.deleted_since = deleted_since or self.defaults["deleted_since"]
+        self.date_filter_by = date_filter_by or self.defaults["date_filter_by"]
         self.date_filter_type = date_filter_type or self.defaults["date_filter_type"]
+        self.date_filter_relative_string = date_filter_relative_string or self.defaults["date_filter_relative_string"]
         self.date_filter_start = date_filter_start or self.defaults["date_filter_start"]
         self.date_filter_end = date_filter_end or self.defaults["date_filter_end"]
+
+        if self.date_filter_type == self.FILTER_DATE_TYPE_RELATIVE and self.date_filter_relative_string:
+            self.date_filter_start, self.date_filter_end = self.parse_relative_date_string(self.date_filter_relative_string)
+            if self.date_filter_start is None or self.date_filter_end is None:
+                logger.warning(f"无法解析相对日期字符串: {self.date_filter_relative_string}")
 
     def is_modified(self, param):
         value = self.__dict__[param]
@@ -300,6 +362,10 @@ class BookmarkSearch:
     def query_params(self):
         query_params = {}
         for param in self.modified_params:
+            # 如果是相对日期筛选，隐藏绝对日期参数
+            if (self.date_filter_type == self.FILTER_DATE_TYPE_RELATIVE and 
+                param in ['date_filter_start', 'date_filter_end']):
+                continue
             value = self.__dict__[param]
             if isinstance(value, models.Model):
                 query_params[param] = value.id
@@ -349,10 +415,14 @@ class BookmarkSearchForm(forms.Form):
         (BookmarkSearch.FILTER_UNREAD_YES, "未读"),
         (BookmarkSearch.FILTER_UNREAD_NO, "已读"),
     ]
-    FILTER_DATE_CHOICES = [
+    FILTER_DATE_BY_CHOICES = [
         (BookmarkSearch.FILTER_DATE_OFF, "关闭"),
-        (BookmarkSearch.FILTER_DATE_ADDED, "添加"),
-        (BookmarkSearch.FILTER_DATE_MODIFIED, "修改")
+        (BookmarkSearch.FILTER_DATE_BY_ADDED, "添加"),
+        (BookmarkSearch.FILTER_DATE_BY_MODIFIED, "修改")
+    ]
+    FILTER_DATE_TYPE_CHOICES = [
+        (BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE, "绝对"),
+        (BookmarkSearch.FILTER_DATE_TYPE_RELATIVE, "相对")
     ]
 
     q = forms.CharField()
@@ -364,9 +434,11 @@ class BookmarkSearchForm(forms.Form):
     modified_since = forms.CharField(required=False)
     added_since = forms.CharField(required=False)
     deleted_since = forms.CharField(required=False)
-    date_filter_type = forms.ChoiceField(choices=FILTER_DATE_CHOICES, widget=forms.RadioSelect)
+    date_filter_by = forms.ChoiceField(choices=FILTER_DATE_BY_CHOICES, widget=forms.RadioSelect)
+    date_filter_type = forms.ChoiceField(choices=FILTER_DATE_TYPE_CHOICES, widget=forms.RadioSelect)
     date_filter_start = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
     date_filter_end = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    date_filter_relative_string = forms.CharField(required=False, widget=forms.HiddenInput())
 
     def __init__(
         self,

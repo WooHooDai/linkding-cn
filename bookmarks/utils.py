@@ -219,3 +219,14 @@ def load_module(path, cache):
         spec.loader.exec_module(module)
         cache[path] = (module, mtime)
     return cache[path][0]
+
+def parse_relative_date_string(date_filter_relative_string):
+    '''解析相对日期字符串，获取数值、单位，用于前端搜索筛选项显示'''
+    if not date_filter_relative_string:
+        return None, None
+    match = re.match(r'^last_(\d+)_(day|week|month|year)s?$', date_filter_relative_string)
+    if match:
+        value = match.group(1)
+        unit = match.group(2) + 's'
+        return value, unit
+    return None, None

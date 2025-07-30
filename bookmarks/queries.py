@@ -178,13 +178,13 @@ def _apply_filters(query_set: QuerySet, user: Optional[User], profile: UserProfi
                 return None
         return None
 
-    if search.date_filter_type in ("added", "modified", "deleted"):
+    if search.date_filter_by in ("added", "modified", "deleted"):
         field_map = {
             "added": "date_added",
             "modified": "date_modified",
             "deleted": "date_deleted"
         }
-        field = field_map[search.date_filter_type]
+        field = field_map[search.date_filter_by]
         start = _parse_date(search.date_filter_start)
         end = _parse_date(search.date_filter_end)
         if start:

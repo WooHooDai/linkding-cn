@@ -71,10 +71,20 @@
             {% endfor %}
           </div>
         {% endif %}
-        {% if 'date_filter_type' in preferences_form.editable_fields %}
+        {% if 'date_filter_by' in preferences_form.editable_fields %}
           <!-- 日期筛选相关表单项 -->
-          <div class="form-group radio-group" role="radiogroup" aria-labelledby="date-filter-type-label">
-            <label id="date-filter-type-label" class="form-label">日期筛选</label>
+          <div id="date-filter-by-group" class="form-group radio-group" role="radiogroup" aria-labelledby="date-filter-by-label">
+            <label id="date-filter-by-label" class="form-label">日期筛选</label>
+            {% for radio in preferences_form.date_filter_by %}
+              <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
+                {{ radio.tag }}
+                <i class="form-icon"></i>
+                {{ radio.choice_label }}
+              </label>
+            {% endfor %}
+          </div>
+          <div id="date-filter-type-fields" class="form-group radio-group" role="radiogroup" aria-labelledby="date-filter-type-label">
+            <label id="date-filter-type-label" class="form-label">筛选类型</label>
             {% for radio in preferences_form.date_filter_type %}
               <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
                 {{ radio.tag }}
@@ -83,17 +93,50 @@
               </label>
             {% endfor %}
           </div>
-          <div id="date-range-fields">
+          <div id="date-filter-absolute-fields">
             <div class="form-group">
               <div class="form-row-inline">
                 <label for="{{ preferences_form.date_filter_start.id_for_label }}" class="form-label-inline">开始日期</label>
-                {{ preferences_form.date_filter_start|add_class:"form-input" }}
+                {{ preferences_form.date_filter_start|add_class:"form-input input-sm" }}
               </div>
             </div>
             <div class="form-group">
               <div class="form-row-inline">
                 <label for="{{ preferences_form.date_filter_end.id_for_label }}" class="form-label-inline">结束日期</label>
-                {{ preferences_form.date_filter_end|add_class:"form-input" }}
+                {{ preferences_form.date_filter_end|add_class:"form-input input-sm" }}
+              </div>
+            </div>
+          </div>
+          <div id="date-filter-relative-fields" class="form-group">
+            <div id="date-filter-relative-preset-fields" class="radio-group">
+              <label class="form-radio form-inline">
+                <input type="radio" name="relative_filter_mode" value="preset"{% if not date_filter_relative_value %} checked{% endif %}>
+                <i class="form-icon"></i>
+                <span>预设</span>
+              </label>
+              <select name="date_filter_relative_preset" class="form-select select-sm">
+                <option value="yesterday"{% if preferences_form.date_filter_relative_string.value == 'yesterday' %} selected{% endif %}>昨天</option>
+                <option value="today"{% if preferences_form.date_filter_relative_string.value == 'today' %} selected{% endif %}>今天</option>
+                <option value="this_week"{% if preferences_form.date_filter_relative_string.value == 'this_week' %} selected{% endif %}>本周</option>
+                <option value="this_month"{% if preferences_form.date_filter_relative_string.value == 'this_month' %} selected{% endif %}>本月</option>
+                <option value="this_year"{% if preferences_form.date_filter_relative_string.value == 'this_year' %} selected{% endif %}>本年</option>
+              </select>
+            </div>
+            <div id="date-filter-relative-custom-fields" class="form-group">
+              <label class="form-radio form-inline">
+                <input type="radio" name="relative_filter_mode" value="custom"{% if date_filter_relative_value %} checked{% endif %}>
+                <i class="form-icon"></i>
+                <span>自定义</span>
+              </label>
+              <div class="form-row-inline">
+                <span>近</span>
+                <input type="number" name="date_filter_relative_value" class="form-input input-sm" min="1" value="{{ date_filter_relative_value|default:'' }}">
+                <select name="date_filter_relative_unit" class="form-select select-sm">
+                  <option value="days"{% if date_filter_relative_unit == 'days' %} selected{% endif %}>天</option>
+                  <option value="weeks"{% if date_filter_relative_unit == 'weeks' %} selected{% endif %}>周</option>
+                  <option value="months"{% if date_filter_relative_unit == 'months' %} selected{% endif %}>月</option>
+                  <option value="years"{% if date_filter_relative_unit == 'years' %} selected{% endif %}>年</option>
+                </select>
               </div>
             </div>
           </div>
@@ -112,47 +155,3 @@
     </div>
   </div>
 </div>
-
-<script>
-function setupDateInputs() {
-    // 结束日期逻辑
-    var endInput = document.getElementById('{{ preferences_form.date_filter_end.id_for_label }}');
-    function setEndDateIfEmpty() {
-        if (endInput && !endInput.value) {
-            var today = new Date();
-            var yyyy = today.getFullYear();
-            var mm = String(today.getMonth() + 1).padStart(2, '0');
-            var dd = String(today.getDate()).padStart(2, '0');
-            endInput.value = yyyy + '-' + mm + '-' + dd;
-        }
-    }
-    if (endInput) {
-        setEndDateIfEmpty();
-        endInput.addEventListener('input', setEndDateIfEmpty);
-        endInput.addEventListener('change', setEndDateIfEmpty);
-        endInput.addEventListener('focus', setEndDateIfEmpty);
-        endInput.addEventListener('blur', setEndDateIfEmpty);
-    }
-
-    // 开始日期默认本月第一天
-    var startInput = document.getElementById('{{ preferences_form.date_filter_start.id_for_label }}');
-    function setStartDateIfEmpty() {
-        if (startInput && !startInput.value) {
-            var today = new Date();
-            var yyyy = today.getFullYear();
-            var mm = String(today.getMonth() + 1).padStart(2, '0');
-            var firstDay = '01';
-            startInput.value = yyyy + '-' + mm + '-' + firstDay;
-        }
-    }
-    if (startInput) {
-        setStartDateIfEmpty();
-        startInput.addEventListener('input', setStartDateIfEmpty);
-        startInput.addEventListener('change', setStartDateIfEmpty);
-        startInput.addEventListener('focus', setStartDateIfEmpty);
-        startInput.addEventListener('blur', setStartDateIfEmpty);
-    }
-}
-document.addEventListener('DOMContentLoaded', setupDateInputs);
-document.addEventListener('turbo:load', setupDateInputs);
-</script>
