@@ -20,9 +20,9 @@
                 <i class="form-icon"></i>
               </label>
               {% if bookmark_item.favicon_file and bookmark_list.show_favicons %}
-                <a href="?q={{ bookmark_item.url|extract_domain:request.user_profile }}" class="favicon-link">
-                  <img class="favicon" src="{% static bookmark_item.favicon_file %}" alt="">
-                </a>
+              <a href="?q={{ bookmark_item.url|extract_domain:request.user_profile }}" class="favicon-link">
+                <img class="favicon" src="{% static bookmark_item.favicon_file %}" alt="">
+              </a>
               {% endif %}
               <a href="{{ bookmark_item.url }}" target="{{ bookmark_list.link_target }}" rel="noopener" class="title-link">
                 <span>{{ bookmark_item.title }}</span>

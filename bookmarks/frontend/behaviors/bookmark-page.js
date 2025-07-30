@@ -19,13 +19,17 @@ class BookmarkItem extends Behavior {
     }
 
     // Add tooltip to title if it is truncated
-    const titleAnchor = element.querySelector(".title > a");
-    const titleSpan = titleAnchor.querySelector("span");
-    requestAnimationFrame(() => {
-      if (titleSpan.offsetWidth > titleAnchor.offsetWidth) {
-        titleAnchor.dataset.tooltip = titleSpan.textContent;
+    const titleAnchor = element.querySelector(".title .title-link");
+    if (titleAnchor) {
+      const titleSpan = titleAnchor.querySelector("span");
+      if (titleSpan) {
+        requestAnimationFrame(() => {
+          if (titleSpan.offsetWidth > titleAnchor.offsetWidth) {
+            titleAnchor.dataset.tooltip = titleSpan.textContent;
+          }
+        });
       }
-    });
+    }
   }
 
   destroy() {
