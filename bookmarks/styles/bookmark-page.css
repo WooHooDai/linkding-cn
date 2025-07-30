@@ -42,6 +42,38 @@
       display: inline-block;
     }
   }
+
+
+  /* 侧边栏独立滚动 - 所有滚动条样式集中管理 */
+  .side-panel {
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+    overflow-x: hidden; /* 防止横向滚动 */
+    
+    /* 隐藏滚动条（透明）*/
+    scrollbar-color: transparent transparent; /* Chrome、Edge、Firefox */
+
+    /* Safari */
+    &::-webkit-scrollbar {
+      width: 8px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: transparent;
+    }
+    
+    /* 悬停时显示滚动条 */
+    &:hover {
+      scrollbar-color: var(--secondary-border-color) transparent;
+
+      &::-webkit-scrollbar {
+        width: 8px;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: var(--secondary-border-color);
+        border-radius: 4px;
+      }
+    }
+  }
 }
 
 /* Bookmark area header controls */
