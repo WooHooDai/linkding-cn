@@ -442,6 +442,15 @@ li[ld-bookmark-item] {
     background: var(--body-color);
     padding-bottom: var(--unit-h);
 
+    /* Edge浏览器使用fixed定位 */
+    &.edge {
+        position: fixed;
+        bottom: 0;
+        left: auto;
+        margin: 0;
+        z-index: 10;
+      }
+
     &:before {
       content: "";
       position: absolute;

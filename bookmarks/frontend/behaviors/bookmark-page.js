@@ -1,5 +1,37 @@
 import { Behavior, registerBehavior, applyBehaviors } from "./index";
 
+class BookmarkPagination extends Behavior {
+  constructor(element) {
+    super(element);
+
+    const isSticky = element.classList.contains('sticky');
+    const isEdge = (navigator.userAgent.indexOf("Edg/") !== -1);
+    if (isEdge && isSticky) {
+      element.classList.add('edge');
+      this.setWidth();
+      this.onResize = this.onResize.bind(this);
+      window.addEventListener('resize', this.onResize);
+    }
+  }
+
+  destroy() {
+    window.removeEventListener('resize', this.onResize);
+  }
+
+  onResize() {
+    this.setWidth();
+  }
+
+  setWidth() {
+    const bookmarkList = document.querySelector('.bookmark-list');
+    if (!bookmarkList) return;
+    const width = bookmarkList.offsetWidth;
+    this.element.style.width = `${width}px`;
+  }
+}
+
+registerBehavior("ld-pagination", BookmarkPagination);
+
 class BookmarkItem extends Behavior {
   constructor(element) {
     super(element);

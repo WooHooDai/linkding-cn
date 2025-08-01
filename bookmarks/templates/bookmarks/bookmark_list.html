@@ -173,7 +173,7 @@
       {% endfor %}
     </ul>
 
-    <div class="bookmark-pagination{% if request.user_profile.sticky_pagination %} sticky{% endif %}">
+    <div class="bookmark-pagination{% if request.user_profile.sticky_pagination %} sticky{% endif %}" ld-pagination>
       {% pagination bookmark_list.bookmarks_page %}
     </div>
   </section>
