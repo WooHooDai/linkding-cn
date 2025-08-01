@@ -196,3 +196,116 @@ function restoreBookmarkListScrollPosition() {
 }
 document.addEventListener('DOMContentLoaded', restoreBookmarkListScrollPosition);
 document.addEventListener('turbo:load', restoreBookmarkListScrollPosition);
+
+// 侧边栏sticky功能
+class SidePanel extends Behavior {
+  constructor(element) {
+    super(element);
+    
+    this.isSticky = false;
+    this.originalStyle = null;
+    this.scrollThrottle = null;
+    
+    this.onScroll = this.onScroll.bind(this);
+    this.onResize = this.onResize.bind(this);
+    
+    this.init();
+  }
+
+  init() {
+    // 移动端禁用
+    if (window.innerWidth <= 840) {
+      return;
+    }
+
+    this.originalStyle = {
+      'top': this.element.style.top,
+      'left': this.element.style.left,
+      'width': this.element.style.width,
+      'position': this.element.style.position,
+    }
+
+    window.addEventListener('scroll', this.onScroll, { passive: true });
+    window.addEventListener('resize', this.onResize, { passive: true });
+    
+    this.calculateStickyTrigger();
+    this.updateStickyState();
+  }
+
+  calculateStickyTrigger() {
+    // 临时移除可能存在的fixed定位，获取真实位置
+    const originalPosition = this.element.style.position;
+    this.element.style.position = '';
+    
+    // 获取侧边栏在正常文档流中的位置
+    const rect = this.element.getBoundingClientRect();
+    this.stickyTriggerY = rect.top + window.scrollY;
+    
+    // 恢复原始position
+    this.element.style.position = originalPosition;
+  }
+
+  updateStickyState() {
+    const scrollY = window.scrollY;
+    
+    // 当页面滚动超过侧边栏原始位置时启用sticky，否则恢复原始样式
+    if (scrollY > this.stickyTriggerY && !this.isSticky) {
+      this.enableSticky();
+    } else if (scrollY <= this.stickyTriggerY && this.isSticky) {
+      this.disableSticky();
+    }
+  }
+
+  destroy() {
+    this.resetStyles();
+    
+    window.removeEventListener('scroll', this.onScroll);
+    window.removeEventListener('resize', this.onResize);
+    
+    if (this.scrollThrottle) {
+      clearTimeout(this.scrollThrottle);
+    }
+  }
+
+  onScroll() {
+    // 使用节流优化性能, 约60fps
+    if (this.scrollThrottle) {
+      clearTimeout(this.scrollThrottle);
+    }
+    this.scrollThrottle = setTimeout(() => {
+      this.updateStickyState();
+    }, 16);
+  }
+
+  onResize() {
+    // 在移动端禁用sticky功能
+    if (window.innerWidth <= 840) {
+      this.resetStyles();
+      return;
+    }
+    this.calculateStickyTrigger();
+    this.updateStickyState();
+  }
+
+  enableSticky() {
+    this.isSticky = true;
+
+    const rect = this.element.getBoundingClientRect();
+    const parentRect = this.element.parentElement.getBoundingClientRect();
+    this.element.style.position = 'fixed';
+    this.element.style.top = '20px';
+    this.element.style.left = `${parentRect.left + parentRect.width - rect.width}px`; // 保持右侧对齐
+    this.element.style.width = `${rect.width}px`; // 保持原始宽度
+  }
+
+  disableSticky() {
+    this.isSticky = false;
+    this.resetStyles();
+  }
+
+  resetStyles() {
+    Object.assign(this.element.style, this.originalStyle);
+  }
+}
+
+registerBehavior("ld-side-panel", SidePanel);
