@@ -1,385 +1,194 @@
 import { Behavior, registerBehavior } from "./index";
 
-// 常量配置
-const CONFIG = {
-  SELECTORS: {
-    GROUPS: {
-      BY: '#date-filter-by-group',
-      TYPE: '#date-filter-type-fields',
-      ABSOLUTE: '#date-filter-absolute-fields',
-      RELATIVE: '#date-filter-relative-fields',
-      PRESET: '#date-filter-relative-preset-fields',
-      CUSTOM: '#date-filter-relative-custom-fields'
-    },
-    RADIOS: {
-      BY: 'input[name="date_filter_by"]',
-      TYPE: 'input[name="date_filter_type"]',
-      MODE: 'input[name="relative_filter_mode"]'
-    },
-    FIELDS: {
-      CUSTOM_VALUE: 'input[name="date_filter_relative_value"]',
-      CUSTOM_UNIT: 'select[name="date_filter_relative_unit"]',
-      PRESET: 'select[name="date_filter_relative_preset"]',
-      HIDDEN: 'input[name="date_filter_relative_string"]'
-    }
-  },
-  VALUES: {
-    BY: {
-      OFF: 'off'
-    },
-    TYPE: {
-      ABSOLUTE: 'absolute',
-      RELATIVE: 'relative'
-    },
-    MODE: {
-      PRESET: 'preset',
-      CUSTOM: 'custom'
-    }
-  },
-
-};
-
 class DateFilterFieldsBehavior extends Behavior {
   constructor(element) {
     super(element);
     this.initElements();
     this.bindEventHandlers();
     this.updateVisibility();
-    this.updateRelativeString();
-    this.initFromSavedDefaultValues();
   }
 
   initElements() {
+    // 获取所有需要控制显示/隐藏的字段组
     this.elements = {
       groups: {
-        by: this.element.querySelector(CONFIG.SELECTORS.GROUPS.BY),
-        type: this.element.querySelector(CONFIG.SELECTORS.GROUPS.TYPE),
-        absolute: this.element.querySelector(CONFIG.SELECTORS.GROUPS.ABSOLUTE),
-        relative: this.element.querySelector(CONFIG.SELECTORS.GROUPS.RELATIVE),
-        preset: this.element.querySelector(CONFIG.SELECTORS.GROUPS.PRESET),
-        custom: this.element.querySelector(CONFIG.SELECTORS.GROUPS.CUSTOM)
-      },
-      radios: {
-        by: this.element.querySelectorAll(CONFIG.SELECTORS.RADIOS.BY),
-        type: this.element.querySelectorAll(CONFIG.SELECTORS.RADIOS.TYPE),
-        mode: this.element.querySelectorAll(CONFIG.SELECTORS.RADIOS.MODE)
+        type: this.element.querySelector('#date-filter-type-fields'),
+        absolute: this.element.querySelector('#date-filter-absolute-fields'),
+        relative: this.element.querySelector('#date-filter-relative-fields'),
+        preset: this.element.querySelector('#date-filter-relative-preset-fields'),
+        custom: this.element.querySelector('#date-filter-relative-custom-fields')
       },
       fields: {
-        customValue: this.element.querySelector(CONFIG.SELECTORS.FIELDS.CUSTOM_VALUE),
-        customUnit: this.element.querySelector(CONFIG.SELECTORS.FIELDS.CUSTOM_UNIT),
-        preset: this.element.querySelector(CONFIG.SELECTORS.FIELDS.PRESET)
+        presetSelect: this.element.querySelector('select[name="date_filter_relative_preset"]'),
+        customValue: this.element.querySelector('input[name="date_filter_relative_value"]'),
+        customUnit: this.element.querySelector('select[name="date_filter_relative_unit"]'),
+        relativeString: this.element.querySelector('input[name="date_filter_relative_string"]')
       }
     };
-    
-    this.form = this.element.closest('form');
   }
 
   bindEventHandlers() {
-    this.bindRadioEvents();
-    this.bindFieldEvents();
-    if (this.form) {
-      this.form.addEventListener('submit', this.handleFormSubmit.bind(this));
-    }
-  }
-
-  bindRadioEvents() {
-    const { by, type, mode } = this.elements.radios;
-    by.forEach(radio => radio.addEventListener('change', () => this.updateVisibility()));
-    if (type.length) {
-      type.forEach(radio => radio.addEventListener('change', () => this.updateVisibility()));
-    }
-    if (mode.length) {
-      mode.forEach(radio => radio.addEventListener('change', () => this.updateVisibility()));
-    }
-  }
-
-  bindFieldEvents() {
-    const { customValue, customUnit, preset } = this.elements.fields;
-    
-    if (customValue) {
-      customValue.addEventListener('input', () => this.updateRelativeString());
-    }
-    
-    if (customUnit) {
-      customUnit.addEventListener('change', () => this.updateRelativeString());
-    }
-    
-    if (preset) {
-      preset.addEventListener('change', () => this.updateRelativeString());
-    }
-    
-    // 监听单选按钮变化，实时更新相对日期字符串
-    const modeRadios = this.element.querySelectorAll('input[name="relative_filter_mode"]');
-    modeRadios.forEach(radio => {
+    // 监听日期筛选方式变化
+    const byRadios = this.element.querySelectorAll('input[name="date_filter_by"]');
+    byRadios.forEach(radio => {
       radio.addEventListener('change', () => {
+        this.updateVisibility();
         this.updateRelativeString();
       });
     });
-  }
 
-  destroy() {
-    this.elements.radios.by.forEach(radio => 
-      radio.removeEventListener('change', () => this.updateVisibility())
-    );
-    this.elements.radios.type.forEach(radio => 
-      radio.removeEventListener('change', () => this.updateVisibility())
-    );
-    this.elements.radios.mode.forEach(radio => 
-      radio.removeEventListener('change', () => this.updateVisibility())
-    );
+    // 监听日期类型变化
+    const typeRadios = this.element.querySelectorAll('input[name="date_filter_type"]');
+    typeRadios.forEach(radio => {
+      radio.addEventListener('change', () => {
+        this.updateVisibility();
+        this.updateRelativeString();
+      });
+    });
 
-    const { customValue, customUnit, preset } = this.elements.fields;
-    if (customValue) {
-      customValue.removeEventListener('input', () => this.updateRelativeString());
-    }
-    if (customUnit) {
-      customUnit.removeEventListener('change', () => this.updateRelativeString());
-    }
-    if (preset) {
-      preset.removeEventListener('change', () => this.updateRelativeString());
+    // 监听相对日期模式变化
+    const modeRadios = this.element.querySelectorAll('input[name="relative_filter_mode"]');
+    this.updateRelativeString();
+    modeRadios.forEach(radio => {
+      radio.addEventListener('change', () => {
+        this.updateVisibility();
+        this.updateRelativeString();
+      });
+    });
+
+    // 监听预设选项变化
+    if (this.elements.fields.presetSelect) {
+      this.elements.fields.presetSelect.addEventListener('change', () => this.updateRelativeString());
     }
 
-    if (this.form) {
-      this.form.removeEventListener('submit', this.handleFormSubmit.bind(this));
+    // 监听自定义值变化
+    if (this.elements.fields.customValue) {
+      this.elements.fields.customValue.addEventListener('input', () => this.updateRelativeString());
+    }
+
+    // 监听自定义单位变化
+    if (this.elements.fields.customUnit) {
+      this.elements.fields.customUnit.addEventListener('change', () => this.updateRelativeString());
     }
   }
 
   // 获取选中的radio值
-  getSelectedValue(container, name) {
-    if (!container) return null;
-    const checked = container.querySelector(`input[name="${name}"]:checked`);
+  getSelectedValue(name) {
+    const checked = this.element.querySelector(`input[name="${name}"]:checked`);
     return checked ? checked.value : null;
   }
 
-  // 控制日期筛选项间的联动
+  // 更新字段显示/隐藏状态
   updateVisibility() {
-    const selectedBy = this.getSelectedValue(this.elements.groups.by, 'date_filter_by');
-    const selectedType = this.getSelectedValue(this.elements.groups.type, 'date_filter_type');
-    const selectedMode = this.getSelectedValue(this.elements.groups.relative, 'relative_filter_mode');
+    const selectedBy = this.getSelectedValue('date_filter_by');
+    const selectedType = this.getSelectedValue('date_filter_type');
+    const selectedMode = this.getSelectedValue('relative_filter_mode');
 
-    if (selectedBy === CONFIG.VALUES.BY.OFF) {
+    // 如果选择关闭，隐藏所有相关字段
+    if (selectedBy === 'off') {
       this.hideAllGroups();
-    } else {
-      this.showTypeGroup();
-      this.updateTypeVisibility(selectedType, selectedMode);
+      this.clearRelativeString();
+      return;
+    }
+
+    // 显示类型选择
+    if (this.elements.groups.type) {
+      this.elements.groups.type.style.display = '';
+    }
+
+    // 根据选择的类型显示对应字段
+    if (selectedType === 'absolute') {
+      this.elements.groups.absolute.style.display = '';
+      this.elements.groups.relative.style.display = 'none';
+      this.clearRelativeString();
+    } else if (selectedType === 'relative') {
+      this.elements.groups.absolute.style.display = 'none';
+      this.elements.groups.relative.style.display = '';
+      this.elements.groups.preset.style.display = '';
+      this.elements.groups.custom.style.display = '';
+
+      // 根据相对日期模式设置字段状态
+      this.setFieldsState({
+        preset: selectedMode === 'preset',
+        custom: selectedMode === 'custom'
+      });
     }
   }
 
   hideAllGroups() {
-    const { type, absolute, relative } = this.elements.groups;
-    if (type) type.style.display = 'none';
-    if (absolute) absolute.style.display = 'none';
-    if (relative) relative.style.display = 'none';
+    Object.values(this.elements.groups).forEach(group => {
+      if (group) group.style.display = 'none';
+    });
   }
 
-  showTypeGroup() {
-    if (this.elements.groups.type) {
-      this.elements.groups.type.style.display = '';
-    }
-  }
+  // 设置字段启用/禁用状态
+  setFieldsState({ preset, custom }) {
+    // 处理预设字段
+    const presetSelect = this.elements.groups.preset.querySelector('select');
+    if (presetSelect) presetSelect.disabled = !preset;
 
-  updateTypeVisibility(selectedType, selectedMode) {
-    const { absolute, relative } = this.elements.groups;
-    
-    if (selectedType === CONFIG.VALUES.TYPE.ABSOLUTE) {
-      if (absolute) absolute.style.display = '';
-      if (relative) relative.style.display = 'none';
-    } else if (selectedType === CONFIG.VALUES.TYPE.RELATIVE) {
-      if (absolute) absolute.style.display = 'none';
-      if (relative) relative.style.display = '';
-      this.updateRelativeModeVisibility(selectedMode);
-    }
-  }
-
-  updateRelativeModeVisibility(selectedMode) {
-    const { preset, custom } = this.elements.groups;
-    
-    if (preset) preset.style.display = '';
-    if (custom) custom.style.display = '';
-    
-    if (selectedMode === CONFIG.VALUES.MODE.PRESET) {
-      this.setFieldsDisabled({ preset: false, custom: true });
-    } else if (selectedMode === CONFIG.VALUES.MODE.CUSTOM) {
-      this.setFieldsDisabled({ preset: true, custom: false });
-    }
-  }
-
-  setFieldsDisabled({ preset, custom }) {
-    const { preset: presetField, customValue, customUnit } = this.elements.fields;
-    
-    if (presetField) presetField.disabled = preset;
-    if (customValue) customValue.disabled = custom;
-    if (customUnit) customUnit.disabled = custom;
+    // 处理自定义字段
+    const customInputs = [this.elements.fields.customValue, this.elements.fields.customUnit];
+    customInputs.forEach(input => {
+      if (input) input.disabled = !custom;
+    });
   }
 
   // 更新相对日期字符串
   updateRelativeString() {
-    const selectedBy = this.getSelectedValue(this.elements.groups.by, 'date_filter_by');
-    const selectedType = this.getSelectedValue(this.elements.groups.type, 'date_filter_type');
-    const selectedMode = this.getSelectedValue(this.elements.groups.relative, 'relative_filter_mode');
+    const selectedBy = this.getSelectedValue('date_filter_by');
+    const selectedType = this.getSelectedValue('date_filter_type');
+    const selectedMode = this.getSelectedValue('relative_filter_mode');
 
-    if (selectedBy === CONFIG.VALUES.BY.OFF || selectedType === CONFIG.VALUES.TYPE.ABSOLUTE) {
-      this.clearHiddenField();
+    if (selectedBy === 'off' || selectedType !== 'relative') {
+      this.clearRelativeString();
       return;
     }
 
-    if (selectedType === CONFIG.VALUES.TYPE.RELATIVE) {
-      if (selectedMode === CONFIG.VALUES.MODE.CUSTOM) {
-        this.updateCustomRelativeString();
+    if (selectedMode === 'preset') {
+      const presetValue = this.elements.fields.presetSelect.value;
+      if (presetValue) {
+        this.setRelativeString(presetValue);
+      }
+    } else if (selectedMode === 'custom') {
+      const value = this.elements.fields.customValue.value;
+      const unit = this.elements.fields.customUnit.value;
+      if (value && unit) {
+        this.setRelativeString(`last_${value}_${unit}`);
       } else {
-        this.updatePresetRelativeString();
+        this.clearRelativeString();
       }
     }
   }
 
-  updateCustomRelativeString() {
-    const { customValue, customUnit } = this.elements.fields;
-    
-    if (customValue && customUnit && customValue.value && customUnit.value) {
-      const value = customValue.value;
-      const unit = customUnit.value;
-      const relativeString = `last_${value}_${unit}`;
-      this.setHiddenField(relativeString);
-    } else {
-      this.clearHiddenField();
+  setRelativeString(value) {
+    if (this.elements.fields.relativeString) {
+      this.elements.fields.relativeString.value = value;
     }
   }
 
-  updatePresetRelativeString() {
-    const { preset } = this.elements.fields;
-    if (preset && preset.value) {
-      this.setHiddenField(preset.value);
-    } else {
-      this.setHiddenField('yesterday');
-    }
+  clearRelativeString() {
+    this.setRelativeString('');
   }
 
-  setHiddenField(value) {
-    let hiddenField = this.form.querySelector(CONFIG.SELECTORS.FIELDS.HIDDEN); 
-    if (!hiddenField) {
-      hiddenField = document.createElement('input');
-      hiddenField.type = 'hidden';
-      hiddenField.name = 'date_filter_relative_string';
-      this.form.appendChild(hiddenField);
-    }
-    
-    hiddenField.value = value;
-  }
+  destroy() {
+    const radios = this.element.querySelectorAll('input[type="radio"]');
+    radios.forEach(radio => {
+      radio.removeEventListener('change', () => this.updateVisibility());
+    });
 
-  clearHiddenField() {
-    const hiddenField = this.form.querySelector(CONFIG.SELECTORS.FIELDS.HIDDEN);
-    if (hiddenField) {
-      hiddenField.value = '';
-    }
-  }
-
-  // 表单提交处理
-  handleFormSubmit(event) {
-    const selectedBy = this.getSelectedValue(this.elements.groups.by, 'date_filter_by');
-    const selectedType = this.getSelectedValue(this.elements.groups.type, 'date_filter_type');
-    if (selectedBy === CONFIG.VALUES.BY.OFF) {
-      this.clearAllFields();
-    } else if (selectedType === CONFIG.VALUES.TYPE.ABSOLUTE) {
-      this.clearRelativeFields();
-    } else if (selectedType === CONFIG.VALUES.TYPE.RELATIVE) {
-      this.clearAbsoluteFields();
-      this.updateRelativeString();
-    }
-  }
-
-  clearAllFields() {
-    const fields = [
-      'date_filter_by',
-      'date_filter_type', 
-      'date_filter_start',
-      'date_filter_end',
-      'date_filter_relative_string'
-    ];
-    
-    fields.forEach(field => this.clearField(field));
-  }
-
-  clearRelativeFields() {
-    this.clearField('date_filter_relative_string');
-  }
-
-  clearAbsoluteFields() {
-    this.clearField('date_filter_start');
-    this.clearField('date_filter_end');
-  }
-
-  clearField(fieldName) {
-    const field = this.form.querySelector(`[name="${fieldName}"]`);
-    if (field) {
-      field.value = '';
-      field.disabled = false;
-    }
-  }
-
-  // 根据保存的值初始化表单字段
-  initFromSavedDefaultValues() {
-    const hiddenField = this.form.querySelector(CONFIG.SELECTORS.FIELDS.HIDDEN);
-    if (!hiddenField || !hiddenField.value) {
-      return;
+    if (this.elements.fields.presetSelect) {
+      this.elements.fields.presetSelect.removeEventListener('change', () => this.updateRelativeString());
     }
 
-    const relativeString = hiddenField.value;
-    
-    // 检查是否是预设值
-    const presetValues = ['today', 'yesterday', 'this_week', 'this_month', 'this_year'];
-    if (presetValues.includes(relativeString)) {
-      // 设置预设模式
-      const presetRadio = this.element.querySelector('input[name="relative_filter_mode"][value="preset"]');
-      if (presetRadio) {
-        presetRadio.checked = true;
-      }
-      
-      // 设置预设选择
-      const presetSelect = this.element.querySelector(CONFIG.SELECTORS.FIELDS.PRESET);
-      if (presetSelect) {
-        presetSelect.value = relativeString;
-      }
-    } else {
-      // 检查是否是自定义格式 (last_X_unit)
-      const match = relativeString.match(/^last_(\d+)_(day|week|month|year)s?$/);
-      if (match) {
-        const [, value, unit] = match;
-        
-        // 设置自定义模式
-        const customRadio = this.element.querySelector('input[name="relative_filter_mode"][value="custom"]');
-        if (customRadio) {
-          customRadio.checked = true;
-        }
-        
-        // 设置自定义值
-        const customValueField = this.element.querySelector(CONFIG.SELECTORS.FIELDS.CUSTOM_VALUE);
-        if (customValueField) {
-          customValueField.value = value;
-        }
-        
-        // 设置自定义单位
-        const customUnitField = this.element.querySelector(CONFIG.SELECTORS.FIELDS.CUSTOM_UNIT);
-        if (customUnitField) {
-          customUnitField.value = unit + 's'; // 添加复数形式
-        }
-      }
+    if (this.elements.fields.customValue) {
+      this.elements.fields.customValue.removeEventListener('input', () => this.updateRelativeString());
     }
-    
-    // 更新可见性和状态
-    this.updateVisibility();
-    
-    // 触发change事件以确保界面正确更新
-    const selectedMode = this.getSelectedValue(this.elements.groups.relative, 'relative_filter_mode');
-    if (selectedMode) {
-      this.updateRelativeModeVisibility(selectedMode);
-    }
-    
-    // 触发单选按钮的change事件以确保界面正确更新
-    const selectedRadio = this.element.querySelector('input[name="relative_filter_mode"]:checked');
-    if (selectedRadio) {
-      selectedRadio.dispatchEvent(new Event('change', { bubbles: true }));
+
+    if (this.elements.fields.customUnit) {
+      this.elements.fields.customUnit.removeEventListener('change', () => this.updateRelativeString());
     }
   }
 }
 
-registerBehavior('ld-date-filter-fields', DateFilterFieldsBehavior); 
+registerBehavior('ld-date-filter-fields', DateFilterFieldsBehavior);
