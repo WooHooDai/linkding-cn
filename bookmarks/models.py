@@ -329,6 +329,12 @@ class BookmarkSearch:
 
     def is_modified(self, param):
         value = self.__dict__[param]
+        
+        # 日期筛选类型为相对时，隐藏url参数中的开始日期、结束日期
+        if (self.date_filter_type == self.FILTER_DATE_TYPE_RELATIVE and 
+            param in ['date_filter_start', 'date_filter_end']):
+            return False
+            
         return value != self.defaults[param]
 
     @property
@@ -355,10 +361,6 @@ class BookmarkSearch:
     def query_params(self):
         query_params = {}
         for param in self.modified_params:
-            # 如果是相对日期筛选，隐藏绝对日期参数
-            if (self.date_filter_type == self.FILTER_DATE_TYPE_RELATIVE and 
-                param in ['date_filter_start', 'date_filter_end']):
-                continue
             value = self.__dict__[param]
             if isinstance(value, models.Model):
                 query_params[param] = value.id
@@ -431,7 +433,7 @@ class BookmarkSearchForm(forms.Form):
     date_filter_type = forms.ChoiceField(choices=FILTER_DATE_TYPE_CHOICES, widget=forms.RadioSelect)
     date_filter_start = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
     date_filter_end = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
-    date_filter_relative_string = forms.CharField(required=False, widget=forms.HiddenInput())
+    date_filter_relative_string = forms.CharField(required=False)
 
     def __init__(
         self,
