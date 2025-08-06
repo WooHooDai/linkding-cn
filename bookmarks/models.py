@@ -181,13 +181,6 @@ class BookmarkBundle(models.Model):
     def __str__(self):
         return self.name
 
-
-class BookmarkBundleForm(forms.ModelForm):
-    class Meta:
-        model = BookmarkBundle
-        fields = ["name", "search", "any_tags", "all_tags", "excluded_tags", "show_count", "is_folder"]
-
-
 class BookmarkSearch:
     SORT_ADDED_ASC = "added_asc"
     SORT_ADDED_DESC = "added_desc"

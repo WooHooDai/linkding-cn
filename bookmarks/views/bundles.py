@@ -4,7 +4,8 @@ from django.http import HttpRequest, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
-from bookmarks.models import BookmarkBundle, BookmarkBundleForm, BookmarkSearch
+from bookmarks.models import BookmarkBundle, BookmarkSearch
+from bookmarks.forms import BookmarkBundleForm
 from bookmarks.services import bundles
 from bookmarks.views import access
 from bookmarks.views.contexts import ActiveBookmarkListContext
