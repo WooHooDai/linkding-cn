@@ -22,6 +22,7 @@ from bookmarks.models import (
 from bookmarks.services.wayback import generate_fallback_webarchive_url
 from bookmarks.type_defs import HttpRequest
 from bookmarks.views import access
+
 from pypinyin import pinyin, Style
 
 CJK_RE = re.compile(r"[\u4e00-\u9fff]+")
@@ -543,8 +544,7 @@ class BundlesContext:
         for bundle in self.bundles:
             # 使用 BookmarkSearch 和 ActiveBookmarksContext 获取 bundle 对应的书签 QuerySet
             if getattr(bundle, 'show_count', True):
-                search = BookmarkSearch(bundle=bundle)
-                from bookmarks.views.contexts import ActiveBookmarksContext
+                search = bundle.search_object
                 queryset = ActiveBookmarksContext(request).get_bookmark_query_set(search)
                 bundle.bookmarks_total = queryset.count()
             else:

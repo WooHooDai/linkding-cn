@@ -67,6 +67,109 @@
   </div>
 </div>
 
+<!-- Search筛选项 -->
+<div class="form-group">
+  <label for="{{ form.sort.id_for_label }}" class="form-label">排序</label>
+  {{ form.sort|add_class:"form-select select-sm" }}
+</div>
+
+<div class="form-group radio-group" role="radiogroup" aria-labelledby="bundle-shared-label">
+  <label id="bundle-shared-label" class="form-label">分享筛选</label>
+  {% for radio in form.shared %}
+    <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
+      {{ radio.tag }}
+      <i class="form-icon"></i>
+      {{ radio.choice_label }}
+    </label>
+  {% endfor %}
+</div>
+
+<div class="form-group radio-group" role="radiogroup" aria-labelledby="bundle-unread-label">
+  <label id="bundle-unread-label" class="form-label">未读筛选</label>
+  {% for radio in form.unread %}
+    <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
+      {{ radio.tag }}
+      <i class="form-icon"></i>
+      {{ radio.choice_label }}
+    </label>
+  {% endfor %}
+</div>
+
+<!-- 日期筛选相关表单项 -->
+<div ld-date-filter-fields>
+  <div id="date-filter-by-group" class="form-group radio-group" role="radiogroup" aria-labelledby="date-filter-by-label">
+    <label id="date-filter-by-label" class="form-label">日期筛选</label>
+    {% for radio in form.date_filter_by %}
+      <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
+        {{ radio.tag }}
+        <i class="form-icon"></i>
+        {{ radio.choice_label }}
+      </label>
+    {% endfor %}
+  </div>
+
+  <div id="date-filter-type-fields" class="form-group radio-group" role="radiogroup" aria-labelledby="date-filter-type-label">
+    <label id="date-filter-type-label" class="form-label">筛选类型</label>
+    {% for radio in form.date_filter_type %}
+      <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
+        {{ radio.tag }}
+        <i class="form-icon"></i>
+        {{ radio.choice_label }}
+      </label>
+    {% endfor %}
+  </div>
+
+  <div id="date-filter-absolute-fields">
+    <div class="form-group">
+      <div class="form-row-inline">
+        <label for="{{ form.date_filter_start.id_for_label }}" class="form-label-inline">开始日期</label>
+        {{ form.date_filter_start|add_class:"form-input input-sm" }}
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-row-inline">
+        <label for="{{ form.date_filter_end.id_for_label }}" class="form-label-inline">结束日期</label>
+        {{ form.date_filter_end|add_class:"form-input input-sm" }}
+      </div>
+    </div>
+  </div>
+
+  <div id="date-filter-relative-fields" class="form-group">
+    <div id="date-filter-relative-preset-fields" class="radio-group">
+      <label class="form-radio form-inline">
+        <input type="radio" name="relative_filter_mode" value="preset"{% if not bundle_date_filter_relative_value %} checked{% endif %}>
+        <i class="form-icon"></i>
+        <span>预设</span>
+      </label>
+      <select name="date_filter_relative_preset" class="form-select select-sm">
+        <option value="yesterday"{% if form.date_filter_relative_string.value == 'yesterday' %} selected{% endif %}>昨天</option>
+        <option value="today"{% if form.date_filter_relative_string.value == 'today' %} selected{% endif %}>今天</option>
+        <option value="this_week"{% if form.date_filter_relative_string.value == 'this_week' %} selected{% endif %}>本周</option>
+        <option value="this_month"{% if form.date_filter_relative_string.value == 'this_month' %} selected{% endif %}>本月</option>
+        <option value="this_year"{% if form.date_filter_relative_string.value == 'this_year' %} selected{% endif %}>本年</option>
+      </select>
+    </div>
+    <div id="date-filter-relative-custom-fields" class="form-group">
+      <label class="form-radio form-inline">
+        <input type="radio" name="relative_filter_mode" value="custom"{% if bundle_date_filter_relative_value %} checked{% endif %}>
+        <i class="form-icon"></i>
+        <span>自定义</span>
+      </label>
+      <div class="form-row-inline">
+        <span>近</span>
+        <input type="number" name="date_filter_relative_value" class="form-input input-sm" min="1" value="{{ bundle_date_filter_relative_value|default:'' }}">
+        <select name="date_filter_relative_unit" class="form-select select-sm">
+          <option value="days"{% if bundle_date_filter_relative_unit == 'days' %} selected{% endif %}>天</option>
+          <option value="weeks"{% if bundle_date_filter_relative_unit == 'weeks' %} selected{% endif %}>周</option>
+          <option value="months"{% if bundle_date_filter_relative_unit == 'months' %} selected{% endif %}>月</option>
+          <option value="years"{% if bundle_date_filter_relative_unit == 'years' %} selected{% endif %}>年</option>
+        </select>
+      </div>
+    </div>
+    <input type="hidden" name="date_filter_relative_string" value="{{ form.date_filter_relative_string.value|default:'' }}">
+  </div>
+</div>
+
 <div class="form-footer d-flex mt-4">
   <input type="submit" name="save" value="保存" class="btn btn-primary btn-wide">
   <a href="{% url 'linkding:bundles.index' %}" class="btn btn-wide ml-auto">取消</a>
@@ -92,13 +195,37 @@
 
         const baseUrl = previewLink.href.split('?')[0];
         const params = new URLSearchParams();
-        const inputs = bundleForm.querySelectorAll('input[type="text"]:not([name="csrfmiddlewaretoken"]), textarea, select');
+        const inputs = bundleForm.querySelectorAll('input[type="text"]:not([name="csrfmiddlewaretoken"]), textarea, select, input[type="date"], input[type="number"]');
 
         inputs.forEach(input => {
           if (input.name && input.value.trim()) {
             params.set(input.name, input.value.trim());
           }
         });
+
+        // 处理单选按钮
+        const radioGroups = bundleForm.querySelectorAll('input[type="radio"]:checked');
+        radioGroups.forEach(radio => {
+          if (radio.name && radio.value) {
+            params.set(radio.name, radio.value);
+          }
+        });
+
+        // 处理相对日期字符串
+        const relativeStringInput = bundleForm.querySelector('input[name="date_filter_relative_string"]');
+        if (relativeStringInput && relativeStringInput.value) {
+          params.set('date_filter_relative_string', relativeStringInput.value);
+        }
+
+        // 触发日期筛选字段的更新
+        const dateFilterBehavior = window.dateFilterBehavior;
+        if (dateFilterBehavior?.updateRelativeString) {
+          try {
+            dateFilterBehavior.updateRelativeString();
+          } catch (error) {
+            console.warn('Failed to update relative date string:', error);
+          }
+        }
 
         previewLink.href = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl;
         previewLink.click();

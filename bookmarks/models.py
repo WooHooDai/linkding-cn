@@ -6,7 +6,7 @@ import re
 import calendar
 from functools import cached_property
 from typing import List
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 
 from django import forms
@@ -177,9 +177,29 @@ class BookmarkBundle(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     show_count = models.BooleanField(default=True, verbose_name="显示标签数")
     is_folder = models.BooleanField(default=True)
+    search_params = models.JSONField(default=dict, blank=True, verbose_name="搜索参数")
 
     def __str__(self):
         return self.name
+
+    @property
+    def search_object(self):
+        """返回基于配置的BookmarkSearch对象"""
+        params = self.search_params.copy()
+        
+        # 反序列化：开始日期、结束日期字符串转date对象
+        for date_field in ['date_filter_start', 'date_filter_end']:
+            if date_field in params and params[date_field]:
+                try:
+                    if isinstance(params[date_field], str):
+                        params[date_field] = datetime.strptime(
+                            params[date_field], "%Y-%m-%d"
+                        ).date()
+                except (ValueError, TypeError):
+                    params.pop(date_field, None)
+        
+        return BookmarkSearch(bundle=self, **params)
+
 
 class BookmarkSearch:
     SORT_ADDED_ASC = "added_asc"
@@ -198,7 +218,6 @@ class BookmarkSearch:
     FILTER_UNREAD_YES = "yes"
     FILTER_UNREAD_NO = "no"
 
-    # 日期筛选类型常量与choices
     FILTER_DATE_OFF = "off"
     FILTER_DATE_BY_ADDED = "added"
     FILTER_DATE_BY_MODIFIED = "modified"
@@ -206,6 +225,7 @@ class BookmarkSearch:
 
     FILTER_DATE_TYPE_ABSOLUTE = "absolute"
     FILTER_DATE_TYPE_RELATIVE = "relative"
+    
     params = [
         "q",
         "user",
@@ -307,25 +327,52 @@ class BookmarkSearch:
         self.defaults = {**BookmarkSearch.defaults, **preferences}
         self.request = request
 
-        self.q = q or self.defaults["q"]
-        self.user = user or self.defaults["user"]
-        self.bundle = bundle or self.defaults["bundle"]
-        self.sort = sort or self.defaults["sort"]
-        self.shared = shared or self.defaults["shared"]
-        self.unread = unread or self.defaults["unread"]
-        self.modified_since = modified_since or self.defaults["modified_since"]
-        self.added_since = added_since or self.defaults["added_since"]
-        self.deleted_since = deleted_since or self.defaults["deleted_since"]
-        self.date_filter_by = date_filter_by or self.defaults["date_filter_by"]
-        self.date_filter_type = date_filter_type or self.defaults["date_filter_type"]
-        self.date_filter_relative_string = date_filter_relative_string or self.defaults["date_filter_relative_string"]
-        self.date_filter_start = date_filter_start or self.defaults["date_filter_start"]
-        self.date_filter_end = date_filter_end or self.defaults["date_filter_end"]
+        # 合并参数：user参数 > bundle参数 > default参数
+        user_params = {
+            'q': q, 'user': user, 'bundle': bundle, 'sort': sort, 'shared': shared,
+            'unread': unread, 'modified_since': modified_since, 'added_since': added_since,
+            'deleted_since': deleted_since, 'date_filter_by': date_filter_by,
+            'date_filter_type': date_filter_type, 'date_filter_relative_string': date_filter_relative_string,
+            'date_filter_start': date_filter_start, 'date_filter_end': date_filter_end
+        }
+        bundle_params = {}
+        if bundle:
+            bundle_params = bundle.search_params
+        for param in self.params:
+            user_value = user_params.get(param)
+            bundle_value = bundle_params.get(param)
+            default_value = self.defaults.get(param)
+            if param in user_params and user_params[param] is not None:
+                final_value = user_value
+            else:
+                final_value = bundle_value or default_value
+            setattr(self, param, final_value)
 
-        if self.date_filter_type == self.FILTER_DATE_TYPE_RELATIVE and self.date_filter_relative_string:
-            self.date_filter_start, self.date_filter_end = self.parse_relative_date_string(self.date_filter_relative_string)
-            if self.date_filter_start is None or self.date_filter_end is None:
-                logger.warning(f"无法解析相对日期字符串: {self.date_filter_relative_string}")
+    @property
+    def date_filter_start(self):
+        if (self.date_filter_type == self.FILTER_DATE_TYPE_RELATIVE and 
+            self.date_filter_relative_string):
+            start, _ = self.parse_relative_date_string(self.date_filter_relative_string)
+            if start:
+                return start
+        return self.__dict__.get('date_filter_start')
+
+    @property
+    def date_filter_end(self):
+        if (self.date_filter_type == self.FILTER_DATE_TYPE_RELATIVE and 
+            self.date_filter_relative_string):
+            _, end = self.parse_relative_date_string(self.date_filter_relative_string)
+            if end:
+                return end
+        return self.__dict__.get('date_filter_end')
+
+    @date_filter_start.setter
+    def date_filter_start(self, value):
+        self.__dict__['date_filter_start'] = value
+
+    @date_filter_end.setter
+    def date_filter_end(self, value):
+        self.__dict__['date_filter_end'] = value
 
     def is_modified(self, param):
         value = self.__dict__[param]
@@ -360,12 +407,45 @@ class BookmarkSearch:
     @property
     def query_params(self):
         query_params = {}
-        for param in self.modified_params:
-            value = self.__dict__[param]
-            if isinstance(value, models.Model):
-                query_params[param] = value.id
-            else:
-                query_params[param] = value
+
+        if self.bundle:
+            query_params["bundle"] = self.bundle.id
+            bundle_search_object = self.bundle.search_object
+
+            for param in self.params:
+                # 获取参数值，对于属性需要特殊处理
+                if param in ["date_filter_start", "date_filter_end"]:
+                    value = getattr(self, param)
+                    bundle_value = getattr(bundle_search_object, param)
+                else:
+                    value = self.__dict__[param]
+                    bundle_value = bundle_search_object.__dict__[param]
+
+                # 特殊处理日期相关参数
+                if param in ["date_filter_start", "date_filter_end"]:
+                    if self.date_filter_type == self.FILTER_DATE_TYPE_RELATIVE:
+                        continue
+                    elif self.date_filter_type == self.FILTER_DATE_TYPE_ABSOLUTE:
+                        bundle_start = bundle_search_object.date_filter_start
+                        bundle_end = bundle_search_object.date_filter_end
+                        if self.date_filter_start == bundle_start and self.date_filter_end == bundle_end:
+                            continue
+
+                if value is not None and value != "":
+                    if value != bundle_value:  # 用户参数与Bundle参数不同时url包含该参数
+                        if isinstance(value, models.Model):
+                            query_params[param] = value.id
+                        else:
+                            query_params[param] = value
+        else:
+            # 没有Bundle时，使用原逻辑（只包含modified_params）
+            for param in self.modified_params:
+                value = self.__dict__[param]
+                if isinstance(value, models.Model):
+                    query_params[param] = value.id
+                else:
+                    query_params[param] = value
+        
         return query_params
 
     @property
@@ -377,20 +457,30 @@ class BookmarkSearch:
     @staticmethod
     def from_request(request: any, query_dict: QueryDict, preferences: dict = None):
         initial_values = {}
+        bundle = None
+        
+        bundle_id = query_dict.get("bundle")
+        if bundle_id:
+            bundle = BookmarkBundle.objects.filter(
+                owner=request.user, pk=bundle_id
+            ).first()
+        
         for param in BookmarkSearch.params:
+            if param == "bundle":
+                continue
             value = query_dict.get(param)
             if value:
-                if param == "bundle":
-                    initial_values[param] = BookmarkBundle.objects.filter(
-                        owner=request.user, pk=value
-                    ).first()
-                else:
-                    initial_values[param] = value
-
-        return BookmarkSearch(
-            **initial_values, preferences=preferences, request=request
-        )
-
+                initial_values[param] = value
+        
+        if bundle:
+            search = bundle.search_object
+            for param, value in initial_values.items(): #合并用户参数
+                setattr(search, param, value)
+            return search
+        else:
+            return BookmarkSearch(
+                **initial_values, preferences=preferences, request=request
+            )
 
 class BookmarkSearchForm(forms.Form):
     SORT_CHOICES = [
@@ -453,7 +543,13 @@ class BookmarkSearchForm(forms.Form):
 
         for param in search.params:
             # set initial values for modified params
-            value = search.__dict__.get(param)
+            if param in ["date_filter_start", "date_filter_end"]:
+                value = getattr(search, param)
+                # date对象转为字符串，供 DateField 使用
+                value = value.isoformat() if hasattr(value, 'isoformat') else value
+            else:
+                value = search.__dict__.get(param)
+            
             if isinstance(value, models.Model):
                 self.fields[param].initial = value.id
             else:

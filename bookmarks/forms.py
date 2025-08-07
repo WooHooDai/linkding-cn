@@ -1,7 +1,7 @@
 from django import forms
 from django.forms.utils import ErrorList
 
-from bookmarks.models import Bookmark, build_tag_string, BookmarkBundle
+from bookmarks.models import Bookmark, build_tag_string, BookmarkBundle, BookmarkSearch, BookmarkSearchForm
 from bookmarks.validators import BookmarkURLValidator
 from bookmarks.type_defs import HttpRequest
 from bookmarks.services.bookmarks import create_bookmark, update_bookmark
@@ -104,6 +104,64 @@ def convert_tag_string(tag_string: str):
 
 
 class BookmarkBundleForm(forms.ModelForm):
+    # 添加Search筛选项字段
+    sort = forms.ChoiceField(choices=BookmarkSearchForm.SORT_CHOICES, label="排序", required=False)
+    shared = forms.ChoiceField(choices=BookmarkSearchForm.FILTER_SHARED_CHOICES, widget=forms.RadioSelect, label="分享筛选", required=False)
+    unread = forms.ChoiceField(choices=BookmarkSearchForm.FILTER_UNREAD_CHOICES, widget=forms.RadioSelect, label="未读筛选", required=False)
+    date_filter_by = forms.ChoiceField(choices=BookmarkSearchForm.FILTER_DATE_BY_CHOICES, widget=forms.RadioSelect, label="日期筛选", required=False)
+    date_filter_type = forms.ChoiceField(choices=BookmarkSearchForm.FILTER_DATE_TYPE_CHOICES, widget=forms.RadioSelect, label="日期筛选方式", required=False)
+    date_filter_start = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}), label="开始日期")
+    date_filter_end = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}), label="结束日期")
+    date_filter_relative_string = forms.CharField(required=False, label="相对日期字符串")
+    
     class Meta:
         model = BookmarkBundle
-        fields = ["name", "search", "any_tags", "all_tags", "excluded_tags", "show_count", "is_folder"]
+        fields = [
+            "name", "search", "any_tags", "all_tags", "excluded_tags", 
+            "show_count", "is_folder", "sort", "shared", "unread", 
+            "date_filter_by", "date_filter_type", "date_filter_start", 
+            "date_filter_end", "date_filter_relative_string"
+        ]
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # 为新创建的Bundle设置默认值
+        if not self.instance or not self.instance.pk:
+            defaults = BookmarkSearch.defaults
+            self.fields['sort'].initial = defaults.get('sort')
+            self.fields['shared'].initial = defaults.get('shared')
+            self.fields['unread'].initial = defaults.get('unread')
+            self.fields['date_filter_by'].initial = defaults.get('date_filter_by')
+            self.fields['date_filter_type'].initial = defaults.get('date_filter_type')
+        elif self.instance.search_params:
+            # 为已存在的Bundle设置保存的值
+            for field_name, value in self.instance.search_params.items():
+                if field_name in self.fields:
+                    self.fields[field_name].initial = value
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        search_params = {}
+        search_field_names = [
+            'sort', 'shared', 'unread', 'date_filter_by', 'date_filter_type',
+            'date_filter_start', 'date_filter_end', 'date_filter_relative_string'
+        ]
+        
+        for field_name in search_field_names:
+            if field_name in self.cleaned_data:
+                value = self.cleaned_data[field_name]
+                if value is not None and value != '':
+                    if field_name in ['date_filter_start', 'date_filter_end'] and value:
+                        search_params[field_name] = value.isoformat()
+                    else:
+                        search_params[field_name] = value
+                elif field_name in ['date_filter_by', 'date_filter_type']: # 日期筛选项若为空，使用默认值
+                    search_params[field_name] = value or BookmarkSearch.defaults.get(field_name)
+        
+        instance.search_params = search_params
+        
+        if commit:
+            instance.save()
+        return instance

@@ -47,6 +47,7 @@ class BookmarkBundleSerializer(serializers.ModelSerializer):
             "order",
             "date_created",
             "date_modified",
+            "search_params",
         ]
         read_only_fields = [
             "id",

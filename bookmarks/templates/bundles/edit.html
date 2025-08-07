@@ -9,14 +9,14 @@
 
 {% block content %}
   <div class="bundles-editor-page grid columns-md-1">
-    <main aria-labelledby="main-heading">
+    <main class="scrollbar" aria-labelledby="main-heading">
       <div class="section-header">
         <h1 id="main-heading">编辑过滤器</h1>
       </div>
 
       {% include 'shared/messages.html' %}
 
-      <form id="bundle-form" action="{% url 'linkding:bundles.edit' bundle.id %}" method="post" novalidate>
+      <form id="bundle-form" class="side-panel" action="{% url 'linkding:bundles.edit' bundle.id %}" method="post" novalidate>
         {% csrf_token %}
         {% include 'bundles/form.html' %}
       </form>

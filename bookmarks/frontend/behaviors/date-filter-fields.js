@@ -6,6 +6,8 @@ class DateFilterFieldsBehavior extends Behavior {
     this.initElements();
     this.bindEventHandlers();
     this.updateVisibility();
+    
+    window.dateFilterBehavior = this; // 添加实例到全局，供特定页面使用（如预览页面）
   }
 
   initElements() {

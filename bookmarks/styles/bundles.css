@@ -35,4 +35,34 @@
     background: var(--body-color);
     padding: var(--unit-3) 0;
   }
+
+  .radio-group {
+    & .form-label {
+      margin-bottom: var(--unit-1);
+    }
+
+    & .form-radio.form-inline {
+      margin: 0 var(--unit-2) 0 0;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      column-gap: var(--unit-1);
+    }
+
+    & .form-icon {
+      top: 0;
+      position: relative;
+    }
+  }
+  .form-group {
+    & .form-row-inline {
+      display: flex;
+      align-items: center;
+      gap: var(--unit-1);
+    }
+    .form-label-inline {
+      margin-bottom: 0;
+      white-space: nowrap;
+    }
+  }
 }

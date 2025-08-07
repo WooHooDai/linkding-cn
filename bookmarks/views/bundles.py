@@ -9,6 +9,7 @@ from bookmarks.forms import BookmarkBundleForm
 from bookmarks.services import bundles
 from bookmarks.views import access
 from bookmarks.views.contexts import ActiveBookmarkListContext
+from bookmarks.utils import parse_relative_date_string
 
 
 @login_required
@@ -55,7 +56,20 @@ def _handle_edit(request: HttpRequest, template: str, bundle: BookmarkBundle = N
 
     status = 422 if request.method == "POST" and not form.is_valid() else 200
     bookmark_list = _get_bookmark_list_preview(request, bundle)
-    context = {"form": form, "bundle": bundle, "bookmark_list": bookmark_list}
+    
+    # 解析相对日期字符串，用于前端显示
+    bundle_date_filter_relative_value = None
+    bundle_date_filter_relative_unit = None
+    if bundle and bundle.search_params and 'date_filter_relative_string' in bundle.search_params:
+        bundle_date_filter_relative_value, bundle_date_filter_relative_unit =   parse_relative_date_string(bundle.search_params['date_filter_relative_string'])
+    
+    context = {
+        "form": form, 
+        "bundle": bundle, 
+        "bookmark_list": bookmark_list,
+        "bundle_date_filter_relative_value": bundle_date_filter_relative_value,
+        "bundle_date_filter_relative_unit": bundle_date_filter_relative_unit,
+    }
 
     return render(request, template, context, status=status)
 
@@ -84,15 +98,38 @@ def _get_bookmark_list_preview(
 ):
     if request.method == "GET" and bundle:
         preview_bundle = bundle
+        search = preview_bundle.search_object
     else:
         form_data = (
             request.POST.copy() if request.method == "POST" else request.GET.copy()
         )
+
         form_data["name"] = "Preview Bundle"  # Set dummy name for form validation
+        _process_date_filter_fields(form_data) # 处理日期筛选字段
+        
         form = BookmarkBundleForm(form_data)
         preview_bundle = form.save(commit=False)
+        search = preview_bundle.search_object
 
-    search = BookmarkSearch(bundle=preview_bundle)
     bookmark_list = ActiveBookmarkListContext(request, search)
     bookmark_list.is_preview = True
     return bookmark_list
+
+def _process_date_filter_fields(form_data):
+    """处理日期筛选字段，生成相对日期字符串"""
+    form_data['date_filter_relative_string'] = ''
+
+    date_filter_by = form_data.get('date_filter_by')
+    date_filter_type = form_data.get('date_filter_type')
+    if date_filter_by == 'off' or date_filter_type != 'relative':
+        return
+
+    relative_filter_mode = form_data.get('relative_filter_mode')
+    if relative_filter_mode == 'preset':
+        preset_value = form_data.get('date_filter_relative_preset')
+        form_data['date_filter_relative_string'] = preset_value if preset_value else ''
+    if relative_filter_mode == 'custom':
+        value = form_data.get('date_filter_relative_value')
+        unit = form_data.get('date_filter_relative_unit')
+        unit = unit[:-1] if unit.endswith('s') else unit
+        form_data['date_filter_relative_string'] = f'last_{value}_{unit}' if value and unit else ''
