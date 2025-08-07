@@ -23,7 +23,7 @@ def create_snapshot_asset(bookmark: Bookmark) -> BookmarkAsset:
         asset_type=BookmarkAsset.TYPE_SNAPSHOT,
         date_created=date_created,
         content_type=BookmarkAsset.CONTENT_TYPE_HTML,
-        display_name=f"HTML snapshot from {timestamp}",
+        display_name=f"HTML快照 {timestamp}",
         status=BookmarkAsset.STATUS_PENDING,
     )
     return asset

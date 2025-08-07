@@ -2,7 +2,7 @@
 {% load widget_tweaks %}
 
 {% block head %}
-  {% with page_title="Login - Linkding" %}
+  {% with page_title="登录 - Linkding" %}
     {{ block.super }}
   {% endwith %}
 {% endblock %}
@@ -16,7 +16,7 @@
       {% csrf_token %}
       {% if form.errors %}
         <div class="form-group has-error">
-          <p class="form-input-hint">Your username and password didn't match. Please try again.</p>
+          <p class="form-input-hint">用户名和密码不匹配，请重试。</p>
         </div>
       {% endif %}
       <div class="form-group">

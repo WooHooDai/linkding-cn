@@ -61,7 +61,7 @@ def index(request: HttpRequest):
         request,
         "bookmarks/index.html",
         {
-            "page_title": "Bookmarks - Linkding",
+            "page_title": "书签列表 - Linkding",
             "bookmark_list": bookmark_list,
             "bundles": bundles,
             "tag_cloud": tag_cloud,
@@ -89,7 +89,7 @@ def archived(request: HttpRequest):
         request,
         "bookmarks/archive.html",
         {
-            "page_title": "Archived bookmarks - Linkding",
+            "page_title": "已归档书签 - Linkding",
             "bookmark_list": bookmark_list,
             "bundles": bundles,
             "tag_cloud": tag_cloud,
@@ -118,7 +118,7 @@ def shared(request: HttpRequest):
         request,
         "bookmarks/shared.html",
         {
-            "page_title": "Shared bookmarks - Linkding",
+            "page_title": "已分享书签 - Linkding",
             "bookmark_list": bookmark_list,
             "tag_cloud": tag_cloud,
             "details": bookmark_details,

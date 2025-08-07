@@ -74,13 +74,13 @@ def update(request: HttpRequest):
         if "update_global_settings" in request.POST:
             update_global_settings(request)
             messages.success(
-                request, "Global settings updated", "settings_success_message"
+                request, "全局设置已更新", "settings_success_message"
             )
         if "refresh_favicons" in request.POST:
             tasks.schedule_refresh_favicons(request.user)
             messages.success(
                 request,
-                "Scheduled favicon update. This may take a while...",
+                "favicon已安排更新，这需要花费一些时间。",
                 "settings_success_message",
             )
         if "create_missing_html_snapshots" in request.POST:
@@ -88,12 +88,12 @@ def update(request: HttpRequest):
             if count > 0:
                 messages.success(
                     request,
-                    f"Queued {count} missing snapshots. This may take a while...",
+                    f"【{count}】个缺失快照已加入队列，这需要花费一些时间。",
                     "settings_success_message",
                 )
             else:
                 messages.success(
-                    request, "No missing snapshots found.", "settings_success_message"
+                    request, "未发现缺失快照。", "settings_success_message"
                 )
 
     return HttpResponseRedirect(reverse("linkding:settings.general"))
@@ -107,7 +107,7 @@ def update_profile(request: HttpRequest):
     form = UserProfileForm(request.POST, instance=profile)
     if form.is_valid():
         form.save()
-        messages.success(request, "Profile updated", "settings_success_message")
+        messages.success(request, "个人资料已更新", "settings_success_message")
         # Load missing favicons if the feature was just enabled
         if profile.enable_favicons and not favicons_were_enabled:
             tasks.schedule_bookmarks_without_favicons(request.user)
