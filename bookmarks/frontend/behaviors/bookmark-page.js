@@ -10,12 +10,30 @@ class BookmarkPagination extends Behavior {
       element.classList.add('edge');
       this.setWidth();
       this.onResize = this.onResize.bind(this);
+      this.onScroll = this.onScroll.bind(this);
       window.addEventListener('resize', this.onResize);
+      window.addEventListener('scroll', this.onScroll, {  });
     }
   }
 
   destroy() {
     window.removeEventListener('resize', this.onResize);
+    window.removeEventListener('scroll', this.onScroll);
+  }
+
+  onScroll() {
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const windowHeight = window.innerHeight;
+    const documentHeight = document.documentElement.scrollHeight;
+    
+    // 当滚动到距离底部100px以内时移除edge类
+    if (scrollTop + windowHeight >= documentHeight - 100) {
+      this.element.classList.remove('edge');
+    } else {
+      if (!this.element.classList.contains('edge')) {
+        this.element.classList.add('edge');
+      }
+    }
   }
 
   onResize() {
