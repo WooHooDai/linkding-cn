@@ -46,8 +46,8 @@
       </div>
     {% endif %}
     <div class="form-input-hint bookmark-exists">
-      This URL is already bookmarked.
-      The form has been pre-filled with the existing bookmark, and saving the form will update the existing bookmark.
+      该URL书签已存在。
+      本页面将使用现有书签的信息填充，保存本页面将更新现有书签信息。
     </div>
   </div>
   <!-- 描述 -->
@@ -213,6 +213,7 @@
 
               bookmarkExistsHint.style['display'] = 'block';
               notesDetails.open = !!existingBookmark.notes;
+              document.querySelector('details.description').open = !!existingBookmark.description;
               updateInput(titleInput, existingBookmark.title);
               updateInput(descriptionInput, existingBookmark.description);
               updateInput(notesInput, existingBookmark.notes);
@@ -229,6 +230,7 @@
               }
               if (!isDescriptionModified) {
                 updateInput(descriptionInput, metadata.description);
+                document.querySelector('details.description').open = !!metadata.description;
               }
               if (metadata.preview_image && metadata.preview_image !== existingBookmark?.preview_image_remote_url) {
                 updateInput(previewImageRemoteUrlInput, metadata.preview_image);

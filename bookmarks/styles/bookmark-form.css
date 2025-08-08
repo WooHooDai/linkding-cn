@@ -42,8 +42,20 @@
     color: var(--success-color);
   }
 
-  & details.notes textarea {
+  & details.notes textarea,
+  & details.description textarea {
     box-sizing: border-box;
+  }
+
+  & details.description summary {
+    position: relative;
+  }
+
+  & details.description summary .clear-button {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
   }
 
   & details.preview-image-container {
