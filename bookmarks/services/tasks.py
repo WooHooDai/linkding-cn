@@ -125,14 +125,20 @@ def is_preview_feature_active(user: User) -> bool:
         user.profile.enable_preview_images and not settings.LD_DISABLE_BACKGROUND_TASKS
     )
 
+def update_bookmark_favicon(bookmark: Bookmark, new_favicon_file: str):
+    if new_favicon_file != bookmark.favicon_file:
+        bookmark.favicon_file = new_favicon_file
+        bookmark.save(update_fields=["favicon_file"])
+        logger.info(
+            f"Successfully updated favicon for bookmark. url={bookmark.url} icon={new_favicon_file}"
+        )
 
 def load_favicon(user: User, bookmark: Bookmark):
     if is_favicon_feature_active(user):
-        _load_favicon_task(bookmark.id)
+        _load_favicon(bookmark.id)
 
 
-@task()
-def _load_favicon_task(bookmark_id: int):
+def _load_favicon(bookmark_id: int):
     try:
         bookmark = Bookmark.objects.get(id=bookmark_id)
     except Bookmark.DoesNotExist:
@@ -140,14 +146,17 @@ def _load_favicon_task(bookmark_id: int):
 
     logger.info(f"Load favicon for bookmark. url={bookmark.url}")
 
-    new_favicon_file = favicon_loader.load_favicon(bookmark.url)
+    new_favicon_file = ""
+    if favicon_loader.is_favicon_file_exists(bookmark.url):
+        new_favicon_file = favicon_loader.load_favicon(bookmark.url)
+        update_bookmark_favicon(bookmark, new_favicon_file)
+    else:
+        _load_favicon_task(bookmark)
 
-    if new_favicon_file != bookmark.favicon_file:
-        bookmark.favicon_file = new_favicon_file
-        bookmark.save(update_fields=["favicon_file"])
-        logger.info(
-            f"Successfully updated favicon for bookmark. url={bookmark.url} icon={new_favicon_file}"
-        )
+@task()
+def _load_favicon_task(bookmark: Bookmark):
+    new_favicon_file = favicon_loader.load_favicon(bookmark.url)
+    update_bookmark_favicon(bookmark, new_favicon_file)
 
 
 def schedule_bookmarks_without_favicons(user: User):
@@ -162,8 +171,7 @@ def _schedule_bookmarks_without_favicons_task(user_id: int):
 
     # TODO: Implement bulk task creation
     for bookmark in bookmarks:
-        _load_favicon_task(bookmark.id)
-        pass
+        _load_favicon(bookmark.id)
 
 
 def schedule_refresh_favicons(user: User):
@@ -178,7 +186,7 @@ def _schedule_refresh_favicons_task(user_id: int):
 
     # TODO: Implement bulk task creation
     for bookmark in bookmarks:
-        _load_favicon_task(bookmark.id)
+        _load_favicon(bookmark.id)
 
 
 def load_preview_image(user: User, bookmark: Bookmark):

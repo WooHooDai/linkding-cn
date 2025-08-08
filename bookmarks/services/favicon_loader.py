@@ -81,3 +81,9 @@ def load_favicon(url: str) -> str:
         logger.debug(f"Saved favicon as: {favicon_path}")
 
     return favicon_file
+
+def is_favicon_file_exists(url: str) -> bool:
+    url_parameters = _get_url_parameters(url)
+    favicon_name = _url_to_filename(url_parameters["url"])
+    favicon_file = _check_existing_favicon(favicon_name)
+    return favicon_file is not None
