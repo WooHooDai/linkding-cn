@@ -303,5 +303,22 @@
         refreshButton.style['display'] = 'inline-block';
       }
     })();
+
+    // 输入框自动聚焦：新建书签页面聚焦URL输入框，编辑书签页面聚焦标签输入框
+    function focusInput() {
+      let input;
+      if (window.location.pathname === '/bookmarks/new') {
+        input = document.querySelector('input[name="url"]');
+      } else {
+        input = document.querySelector('input[name="tag_string"]');
+      }
+      if (input) {
+          setTimeout(function() {
+            input.focus();
+          }, 150);
+        }
+    }
+    document.addEventListener('turbo:render', focusInput);
+    document.addEventListener('turbo:load', focusInput);
   </script>
 </div>
