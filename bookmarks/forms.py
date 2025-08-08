@@ -126,19 +126,19 @@ class BookmarkBundleForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # 为新创建的Bundle设置默认值
-        if not self.instance or not self.instance.pk:
-            defaults = BookmarkSearch.defaults
-            self.fields['sort'].initial = defaults.get('sort')
-            self.fields['shared'].initial = defaults.get('shared')
-            self.fields['unread'].initial = defaults.get('unread')
-            self.fields['date_filter_by'].initial = defaults.get('date_filter_by')
-            self.fields['date_filter_type'].initial = defaults.get('date_filter_type')
-        elif self.instance.search_params:
-            # 为已存在的Bundle设置保存的值
-            for field_name, value in self.instance.search_params.items():
+        # 优先使用非空search_params
+        params = getattr(self.instance, 'search_params', None)
+        if params:
+            for field_name, value in params.items():
                 if field_name in self.fields:
                     self.fields[field_name].initial = value
+            return
+        
+        # 否则，使用默认值
+        defaults = BookmarkSearch.defaults
+        for field_name in ['sort', 'shared', 'unread', 'date_filter_by', 'date_filter_type']:
+            if field_name in self.fields:
+                self.fields[field_name].initial = defaults.get(field_name)
     
     def save(self, commit=True):
         instance = super().save(commit=False)
