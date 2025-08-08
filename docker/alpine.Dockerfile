@@ -2,11 +2,14 @@ FROM node:18-alpine AS node-build
 WORKDIR /etc/linkding
 # install build dependencies
 COPY rollup.config.mjs postcss.config.js package.json package-lock.json ./
-RUN npm ci
+# Disable npm cache and install dependencies
+RUN npm ci --no-cache
 # copy files needed for JS build
 COPY bookmarks/frontend ./bookmarks/frontend
 COPY bookmarks/styles ./bookmarks/styles
-# run build
+# Disable PostCSS cache and run build
+ENV POSTCSS_DISABLE_CACHE=true
+ENV NODE_ENV=production
 RUN npm run build
 
 
@@ -108,7 +111,11 @@ RUN apk add --no-cache curl jq unzip && \
 
 FROM linkding AS linkding-plus
 # install node, chromium
-RUN apk update && apk add nodejs npm chromium
+# Update package lists (this layer will be cached unless package lists change)
+RUN apk update
+# Install dependencies (this layer will be cached unless we change the packages)
+RUN apk add nodejs npm chromium && \
+    apk cache clean
 # install single-file from fork for now, which contains several hotfixes
 RUN npm install -g https://github.com/sissbruecker/single-file-cli/tarball/4c54b3bc704cfb3e96cec2d24854caca3df0b3b6
 # copy uBlock

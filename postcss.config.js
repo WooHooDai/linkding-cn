@@ -3,8 +3,13 @@ const postcssImport = require("postcss-import");
 const postcssNesting = require("postcss-nesting");
 
 module.exports = {
+  // Disable caching completely
+  cache: false,
   plugins: [
-    postcssImport,
+    postcssImport({
+      // Disable postcss-import cache
+      cache: false,
+    }),
     postcssNesting,
     cssnano({
       preset: [

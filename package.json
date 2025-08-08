@@ -6,8 +6,8 @@
   "scripts": {
     "build": "npm run build-js && npm run build-theme-light && npm run build-theme-dark",
     "build-js": "rollup -c",
-    "build-theme-light": "postcss -o bookmarks/static/theme-light.css bookmarks/styles/theme-light.css",
-    "build-theme-dark": "postcss -o bookmarks/static/theme-dark.css bookmarks/styles/theme-dark.css",
+    "build-theme-light": "POSTCSS_DISABLE_CACHE=true postcss -o bookmarks/static/theme-light.css bookmarks/styles/theme-light.css",
+    "build-theme-dark": "POSTCSS_DISABLE_CACHE=true postcss -o bookmarks/static/theme-dark.css bookmarks/styles/theme-dark.css",
     "dev": "rollup -c -w"
   },
   "repository": {
