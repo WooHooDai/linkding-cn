@@ -7,6 +7,7 @@ from urllib.parse import urljoin
 
 import importlib.util
 import requests
+from http.cookies import SimpleCookie
 from bs4 import BeautifulSoup
 from bookmarks.utils import get_domain, load_module, search_config_for_domain, load_settings
 from charset_normalizer import from_bytes
@@ -138,8 +139,10 @@ def _load_website_metadata(url: str, config: dict = None):
 
 def load_page(url: str, config: dict = None):
     headers = build_request_headers(config)
+    cookies = build_request_cookies(config)
     timeout = config.get("timeout", 10) if config else 10
     proxies = config.get("proxy") if config else None
+
 
     CHUNK_SIZE = config.get("chunk_size", 50*1024) if config else 50*1024
     MAX_CONTENT_LIMIT = config.get("max_content_limit", 5000*1024) if config else 5000*1024
@@ -148,7 +151,7 @@ def load_page(url: str, config: dict = None):
     content = None
     iteration = 0
     # Use with to ensure request gets closed even if it's only read partially
-    with requests.get(url, timeout=timeout, headers=headers, proxies=proxies, stream=True) as r:
+    with requests.get(url, timeout=timeout, headers=headers, cookies=cookies, proxies=proxies, stream=True) as r:
         for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
             size += len(chunk)
             iteration = iteration + 1
@@ -190,4 +193,19 @@ def build_request_headers(config: dict = None):
     }
     if config and config.get("headers"):
         headers.update(config["headers"])
+        if config.get("headers",{}).get("Cookie"): # 剔除Cookie
+            headers.pop("Cookie", None)
     return headers
+
+def build_request_cookies(config: dict = None) -> dict:
+    cookies = {}
+    cookies_str = config.get("headers",{}).get("Cookie") if config else None
+    if cookies_str:
+        try:
+            simple_cookie = SimpleCookie()
+            simple_cookie.load(cookies_str)
+            cookies = {key: value.value for key, value in cookies.items()}
+        except Exception as e:
+            logger.warning(f"Failed to parse cookies '{cookies_str}': {e}")
+            return cookies
+    return cookies
