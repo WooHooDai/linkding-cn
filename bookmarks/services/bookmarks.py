@@ -69,6 +69,10 @@ def update_bookmark(bookmark: Bookmark, tag_string, current_user: User):
     if has_url_changed:
         # Update web archive snapshot, if URL changed
         tasks.create_web_archive_snapshot(current_user, bookmark, True)
+    
+    is_deleted = original_bookmark.is_deleted
+    if is_deleted:
+        restore_bookmark(bookmark)
 
     return bookmark
 

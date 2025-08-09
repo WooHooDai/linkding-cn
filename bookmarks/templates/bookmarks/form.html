@@ -49,6 +49,10 @@
       该URL书签已存在。
       本页面将使用现有书签的信息填充，保存本页面将更新现有书签信息。
     </div>
+    <div class="form-input-hint bookmark-exists-deleted">
+      该URL书签已存在，但被移至回收站。
+      本页面将使用现有书签的信息填充，保存本页面将更新现有书签信息、并还原书签。
+    </div>
   </div>
   <!-- 描述 -->
   <div class="form-group">
@@ -149,6 +153,7 @@
       const sharedCheckbox = document.getElementById('{{ form.shared.id_for_label }}');
       const refreshButton = document.getElementById('refresh-button');
       const bookmarkExistsHint = document.querySelector('.form-input-hint.bookmark-exists');
+      const bookmarkExistsDeletedHint = document.querySelector('.form-input-hint.bookmark-exists-deleted');
       const editedBookmarkId = {{ form.instance.id|default:0 }};
       let isTitleModified = !!titleInput.value;
       let isDescriptionModified = !!descriptionInput.value;
@@ -202,7 +207,8 @@
 
             // Display hint if URL is already bookmarked
             const existingBookmark = data.bookmark;
-            bookmarkExistsHint.style['display'] = existingBookmark ? 'block' : 'none';
+            bookmarkExistsHint.style['display'] = 'none';
+            bookmarkExistsDeletedHint.style['display'] = 'none';
             refreshButton.style['display'] = existingBookmark ? 'inline-block' : 'none';
 
             // Prefill form with existing bookmark data
@@ -211,7 +217,11 @@
               // defer getting the input until we need it
               const tagsInput = document.getElementById('{{ form.tag_string.id_for_label }}');
 
-              bookmarkExistsHint.style['display'] = 'block';
+              // 判断现有书签是否被删除
+              const isBookmarkDeleted = existingBookmark.is_deleted;
+              bookmarkExistsHint.style['display'] = isBookmarkDeleted ? 'none' : 'block';
+              bookmarkExistsDeletedHint.style['display'] = isBookmarkDeleted ? 'block' : 'none';
+
               notesDetails.open = !!existingBookmark.notes;
               document.querySelector('details.description').open = !!existingBookmark.description;
               updateInput(titleInput, existingBookmark.title);

@@ -32,7 +32,8 @@
     background: var(--primary-color-shade);
   }
 
-  & .form-input-hint.bookmark-exists {
+  & .form-input-hint.bookmark-exists,
+  & .form-input-hint.bookmark-exists-deleted {
     display: none;
     color: var(--warning-color);
   }
