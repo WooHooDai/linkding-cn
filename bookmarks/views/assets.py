@@ -35,7 +35,9 @@ def view(request, asset_id: int):
     if 'charset' not in content_type.lower():
         content_type = f'{content_type}; charset=utf-8'
 
-    return HttpResponse(content, content_type=content_type)
+    response = HttpResponse(content, content_type=content_type)
+    response["Content-Disposition"] = f'inline; filename="{asset.download_name}"'
+    return response
 
 
 def read(request, asset_id: int):
