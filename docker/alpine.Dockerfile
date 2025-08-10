@@ -63,12 +63,12 @@ RUN set -x ; \
 WORKDIR /etc/linkding
 # copy python dependencies
 COPY --from=build-deps /opt/venv /opt/venv
-# copy output from node build
-COPY --from=node-build /etc/linkding/bookmarks/static bookmarks/static/
 # copy compiled icu extension
 COPY --from=compile-icu /etc/linkding/libicu.so libicu.so
-# copy application code
+# copy application code first
 COPY . .
+# then overwrite static assets with fresh build output
+COPY --from=node-build /etc/linkding/bookmarks/static bookmarks/static/
 # Activate virtual env
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH=/opt/venv/bin:$PATH
