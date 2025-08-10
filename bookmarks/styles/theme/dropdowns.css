@@ -9,7 +9,7 @@
     animation: fade-in 0.15s ease 1;
     display: none;
     left: 0;
-    max-height: 60vh;
+    max-height: 65vh;
     overflow-y: auto;
     position: absolute;
     top: 100%;
