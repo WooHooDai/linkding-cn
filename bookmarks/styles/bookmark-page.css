@@ -265,9 +265,6 @@ li[ld-bookmark-item] {
     font-weight: var(--bookmark-title-weight);
     display: block;
     width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   & .title .favicon-link {
@@ -291,7 +288,9 @@ li[ld-bookmark-item] {
   }
 
   & .title a[data-tooltip]:hover::after,
-  & .title a[data-tooltip]:focus::after {
+  & .title a[data-tooltip]:focus::after,
+  & .description .description-container[data-tooltip]:hover::after,
+  & .description .description-container[data-tooltip]:focus::after {
     content: attr(data-tooltip);
     position: absolute;
     z-index: 10;
@@ -313,7 +312,8 @@ li[ld-bookmark-item] {
   }
 
   @media (pointer: coarse) {
-    & .title a[data-tooltip]::after {
+    & .title a[data-tooltip]::after,
+    & .description .description-container[data-tooltip]::after {
       display: none;
     }
   }
@@ -331,6 +331,7 @@ li[ld-bookmark-item] {
   & .description {
     color: var(--bookmark-description-color);
     font-weight: var(--bookmark-description-weight);
+    position: relative;
   }
 
   & .description.separate {
@@ -391,6 +392,25 @@ li[ld-bookmark-item] {
       color: green;
     }
   }
+}
+
+/* 全局悬浮 tooltip：用于描述分行显示且溢出时，动态定位显示完整描述 */
+.ld-tooltip-floating {
+  position: fixed;
+  z-index: 10;
+  left: 0;
+  top: 100%;
+  width: max-content;
+  max-width: 100%;
+  background-color: #292f62;
+  color: #fff;
+  padding: var(--unit-1);
+  border-radius: var(--border-radius);
+  border: 1px solid #424a8c;
+  font-size: var(--font-size-sm);
+  white-space: normal;
+  pointer-events: none;
+  animation: 0.3s ease 0s appear;
 }
 
 .bookmark-pagination {

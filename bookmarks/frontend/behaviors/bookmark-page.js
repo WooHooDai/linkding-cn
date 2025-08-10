@@ -80,6 +80,43 @@ class BookmarkItem extends Behavior {
         });
       }
     }
+
+    // 如果描述被截断，就添加一个tooltip数据
+    const descriptionElement = element.querySelector(".description");
+    const descriptionContainer = element.querySelector(".description-container");
+    if (descriptionContainer) {
+      const descriptionText = descriptionContainer.querySelector(".description-text");
+      if (descriptionText) {
+        const isInline = descriptionElement.classList.contains("inline");
+        requestAnimationFrame(() => {
+          // 行内描述
+          if (isInline && descriptionText.offsetWidth > descriptionContainer.offsetWidth) {
+            descriptionContainer.dataset.tooltip = descriptionText.textContent;
+          // 分行描述（单行或多行）  
+          } else if (!isInline && descriptionContainer.scrollHeight > descriptionContainer.clientHeight) {
+            descriptionContainer.dataset.tooltip = descriptionText.textContent;
+          }
+        });
+
+        // 分行（多行截断）时，使用 JS 精确定位 tooltip 到“最后可见行”
+        if (!isInline) {
+          // 记录元素
+          this.descriptionElement = descriptionElement; 
+          this.descriptionContainer = descriptionContainer;
+          this.descriptionText = descriptionText;
+          // 绑定事件
+          this.onDescriptionEnter = (e) => this.showDescriptionTooltip(e);
+          this.onDescriptionLeave = () => this.hideDescriptionTooltip();
+          this.onDescriptionMove = () => this.repositionDescriptionTooltip();
+          descriptionContainer.addEventListener('mouseenter', this.onDescriptionEnter);
+          descriptionContainer.addEventListener('mouseleave', this.onDescriptionLeave);
+          descriptionContainer.addEventListener('focus', this.onDescriptionEnter, true);
+          descriptionContainer.addEventListener('blur', this.onDescriptionLeave, true);
+          window.addEventListener('resize', this.onDescriptionMove, { passive: true });
+          window.addEventListener('scroll', this.onDescriptionMove, { passive: true });
+        }
+      }
+    }
   }
 
   destroy() {
@@ -89,6 +126,17 @@ class BookmarkItem extends Behavior {
     if (this.editAction) {
       this.editAction.removeEventListener("click", this.onEditClick);
     }
+
+    // 清理描述 tooltip 的事件与元素
+    if (this.descriptionContainer) {
+      this.descriptionContainer.removeEventListener('mouseenter', this.onDescriptionEnter);
+      this.descriptionContainer.removeEventListener('mouseleave', this.onDescriptionLeave);
+      this.descriptionContainer.removeEventListener('focus', this.onDescriptionEnter, true);
+      this.descriptionContainer.removeEventListener('blur', this.onDescriptionLeave, true);
+      window.removeEventListener('resize', this.onDescriptionMove);
+      window.removeEventListener('scroll', this.onDescriptionMove);
+    }
+    this.hideDescriptionTooltip();
   }
 
   onToggleNotes(event) {
@@ -100,6 +148,80 @@ class BookmarkItem extends Behavior {
   onEditClick() {
     localStorage.setItem('bookmarkListScrollPosition', window.scrollY);
     localStorage.setItem('bookmarkListReturnUrl', window.location.pathname);
+  }
+
+  // 计算分行截断描述的“最后可见行”矩形
+  getLastVisibleLineRect() {
+    if (!this.descriptionElement || !this.descriptionText) return null;
+    const clipRect = this.descriptionElement.getBoundingClientRect();
+    const rectList = Array.from(this.descriptionText.getClientRects());
+    if (rectList.length === 0) return null;
+
+    // 过滤与可见区域相交的行框
+    const visibleRects = rectList.filter((r) => {
+      const verticallyVisible = r.top < clipRect.bottom - 0.5 && r.bottom > clipRect.top + 0.5;
+      const horizontallyVisible = r.left < clipRect.right - 0.5 && r.right > clipRect.left + 0.5;
+      return verticallyVisible && horizontallyVisible;
+    });
+    if (visibleRects.length === 0) return null;
+
+    // 取最靠下的一行
+    let last = visibleRects[0];
+    for (const r of visibleRects) {
+      if (r.bottom > last.bottom || (r.bottom === last.bottom && r.left > last.left)) {
+        last = r;
+      }
+    }
+    return { lastRect: last, clipRect };
+  }
+
+  // 展示 tooltip：对齐到“最后可见行”的左下角
+  showDescriptionTooltip() {
+    if (!this.descriptionContainer || !this.descriptionContainer.dataset.tooltip) return;
+    // 触屏设备不显示
+    if (window.matchMedia('(pointer: coarse)').matches) return;
+    // 未被截断不显示
+    if (this.descriptionContainer.scrollHeight <= this.descriptionContainer.clientHeight) return;
+
+    const calc = this.getLastVisibleLineRect();
+    if (!calc) return;
+
+    const { lastRect, clipRect } = calc;
+    const containerRect = this.descriptionContainer.getBoundingClientRect();
+    const tooltip = document.createElement('div');
+    tooltip.className = 'ld-tooltip-floating';
+    tooltip.textContent = this.descriptionContainer.dataset.tooltip || '';
+    document.body.appendChild(tooltip);
+    this.activeTooltip = tooltip;
+
+    // 初次定位
+    const viewportLeft = containerRect.left; // 左侧与 description-container 对齐
+    const viewportTop = lastRect.bottom;     // 纵向对齐到最后可见行底部
+    tooltip.style.left = `${viewportLeft}px`;
+    tooltip.style.top = `${viewportTop}px`;
+    tooltip.style.width = `${Math.floor(containerRect.width)}px`; // 宽度与 description-container 一致
+  }
+
+  // 重新计算位置（窗口尺寸变化等）
+  repositionDescriptionTooltip() {
+    if (!this.activeTooltip) return;
+    const calc = this.getLastVisibleLineRect();
+    if (!calc) return;
+    const { lastRect, clipRect } = calc;
+    const containerRect = this.descriptionContainer.getBoundingClientRect();
+    const viewportLeft = containerRect.left;
+    const viewportTop = lastRect.bottom;
+    this.activeTooltip.style.left = `${viewportLeft}px`;
+    this.activeTooltip.style.top = `${viewportTop}px`;
+    this.activeTooltip.style.width = `${Math.floor(containerRect.width)}px`;
+  }
+
+  // 隐藏并移除 tooltip
+  hideDescriptionTooltip() {
+    if (this.activeTooltip && this.activeTooltip.parentElement) {
+      this.activeTooltip.parentElement.removeChild(this.activeTooltip);
+    }
+    this.activeTooltip = null;
   }
 }
 

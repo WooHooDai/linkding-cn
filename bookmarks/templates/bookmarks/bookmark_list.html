@@ -24,7 +24,7 @@
                 <img class="favicon" src="{% static bookmark_item.favicon_file %}" alt="">
               </a>
               {% endif %}
-              <a href="{{ bookmark_item.url }}" target="{{ bookmark_list.link_target }}" rel="noopener" class="title-link">
+              <a href="{{ bookmark_item.url }}" target="{{ bookmark_list.link_target }}" rel="noopener" class="title-link truncate">
                 <span>{{ bookmark_item.title }}</span>
               </a>
             </div>
@@ -37,23 +37,29 @@
               </div>
             {% endif %}
             {% if bookmark_list.description_display == 'inline' %}
-              <div class="description inline truncate">
-                {% if bookmark_item.tag_names %}
-                  <span class="tags">
-                  {% for tag_name in bookmark_item.tag_names %}
-                    <a href="?{% add_tag_to_query tag_name %}">{{ tag_name|hash_tag }}</a>
-                  {% endfor %}
-                </span>
-                {% endif %}
-                {% if bookmark_item.tag_names and bookmark_item.description %} | {% endif %}
-                {% if bookmark_item.description %}
-                  <span>{{ bookmark_item.description }}</span>
-                {% endif %}
+              <div class="description inline">
+                <div class="description-container truncate">
+                  {% if bookmark_item.tag_names %}
+                    <span class="tags">
+                      {% for tag_name in bookmark_item.tag_names %}
+                        <a href="?{% add_tag_to_query tag_name %}">{{ tag_name|hash_tag }}</a>
+                      {% endfor %}
+                    </span>
+                  {% endif %}
+                  {% if bookmark_item.tag_names and bookmark_item.description %} | {% endif %}
+                  {% if bookmark_item.description %}
+                      <span class="description-text">{{ bookmark_item.description }}</span>
+                  {% endif %}
+                </div>
               </div>
             {% else %}
-              {% if bookmark_item.description %}
-                <div class="description separate">{{ bookmark_item.description }}</div>
-              {% endif %}
+              <div class="description separate">
+                <div class="description-container">
+                  {% if bookmark_item.description %}
+                    <span class="description-text">{{ bookmark_item.description }}</span>
+                  {% endif %}
+                </div>
+              </div>
               {% if bookmark_item.tag_names %}
                 <div class="tags">
                   {% for tag_name in bookmark_item.tag_names %}
