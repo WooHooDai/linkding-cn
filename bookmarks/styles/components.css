@@ -22,6 +22,10 @@
     flex: 1 1 0;
     display: flex;
   }
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+  }
 }
 
 /* Confirm button component */
