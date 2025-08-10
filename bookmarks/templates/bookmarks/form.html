@@ -242,10 +242,13 @@
                 updateInput(descriptionInput, metadata.description);
                 document.querySelector('details.description').open = !!metadata.description;
               }
+              // 更新预览图：如果有预览图则设置，如果没有则清空
               if (metadata.preview_image && metadata.preview_image !== existingBookmark?.preview_image_remote_url) {
                 updateInput(previewImageRemoteUrlInput, metadata.preview_image);
-                updatePreviewImageDisplay();
+              } else if (!metadata.preview_image) {
+                updateInput(previewImageRemoteUrlInput, '');
               }
+              updatePreviewImageDisplay();
             }
 
             // Preview auto tags
@@ -290,10 +293,13 @@
               descriptionInput.classList.add("modified");
               document.querySelector('details.description').open = !!metadata.description;
             }
+            // 更新预览图：如果有预览图则设置，如果没有则清空
             if (metadata.preview_image && metadata.preview_image !== existingBookmark?.preview_image_remote_url) {
               updateInput(previewImageRemoteUrlInput, metadata.preview_image);
-              updatePreviewImageDisplay();
+            } else if (!metadata.preview_image) {
+              updateInput(previewImageRemoteUrlInput, '');
             }
+            updatePreviewImageDisplay();
           });
       }
 
