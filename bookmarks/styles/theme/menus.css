@@ -17,7 +17,7 @@
   box-shadow: var(--menu-box-shadow);
   list-style: none;
   margin: 0;
-  min-width: var(--control-width-xs);
+  /* min-width: var(--control-width-xs); */
   transform: translateY(var(--layout-spacing-sm));
   z-index: var(--zindex-3);
 
@@ -28,7 +28,7 @@
 
   .menu-item {
     margin-top: 0;
-    padding: 0 var(--unit-4);
+    padding: 0 var(--unit-2);
     position: relative;
     text-decoration: none;
 
@@ -47,8 +47,8 @@
       color: var(--menu-item-color);
       background: var(--menu-item-bg-color);
       display: block;
-      margin: 0 calc(-1 * var(--unit-2));
-      padding: var(--unit-1) var(--unit-2);
+      margin: 0;
+      padding: var(--unit-1) var(--unit-4);
       text-decoration: none;
       width: 100%;
       text-align: left;

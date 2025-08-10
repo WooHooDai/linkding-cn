@@ -6,6 +6,7 @@ from django.urls import reverse
 
 from bookmarks.models import BookmarkBundle, BookmarkSearch
 from bookmarks.forms import BookmarkBundleForm
+from bookmarks.queries import parse_query_string
 from bookmarks.services import bundles
 from bookmarks.views import access
 from bookmarks.views.contexts import ActiveBookmarkListContext
@@ -39,7 +40,48 @@ def action(request: HttpRequest):
 
 def _handle_edit(request: HttpRequest, template: str, bundle: BookmarkBundle = None):
     form_data = request.POST if request.method == "POST" else None
-    form = BookmarkBundleForm(form_data, instance=bundle)
+    initial_data = {}
+    if bundle is None and request.method == "GET":
+        # Prefill from query parameters
+        query_param = request.GET.get("q")
+        if query_param:
+            parsed = parse_query_string(query_param)
+            if parsed["search_terms"]:
+                initial_data["search"] = " ".join(parsed["search_terms"])
+            if parsed["tag_names"]:
+                initial_data["all_tags"] = " ".join(parsed["tag_names"])
+            if parsed["unread"]:
+                initial_data["unread"] = BookmarkSearch.FILTER_UNREAD_YES
+
+        # Prefill sort
+        sort_param = request.GET.get("sort")
+        if sort_param:
+            initial_data["sort"] = sort_param
+
+        # Prefill shared
+        shared_param = request.GET.get("shared")
+        if shared_param:
+            initial_data["shared"] = shared_param
+            
+        # Prefill unread, potentially overriding !unread from query
+        unread_param = request.GET.get("unread")
+        if unread_param:
+            initial_data["unread"] = unread_param
+
+        # Prefill date filters
+        date_filter_fields = [
+            'date_filter_by', 'date_filter_type',
+            'date_filter_start', 'date_filter_end',
+            'date_filter_relative_preset', 'date_filter_relative_value',
+            'date_filter_relative_unit', 'relative_filter_mode'
+        ]
+        for field in date_filter_fields:
+            param_value = request.GET.get(field)
+            if param_value:
+                initial_data[field] = param_value
+            
+
+    form = BookmarkBundleForm(form_data, instance=bundle, initial=initial_data)
 
     if request.method == "POST":
         if form.is_valid():
@@ -55,7 +97,7 @@ def _handle_edit(request: HttpRequest, template: str, bundle: BookmarkBundle = N
             return HttpResponseRedirect(reverse("linkding:bundles.index"))
 
     status = 422 if request.method == "POST" and not form.is_valid() else 200
-    bookmark_list = _get_bookmark_list_preview(request, bundle)
+    bookmark_list = _get_bookmark_list_preview(request, bundle, initial_data)
     
     # 解析相对日期字符串，用于前端显示
     bundle_date_filter_relative_value = None
@@ -94,7 +136,9 @@ def preview(request: HttpRequest):
 
 
 def _get_bookmark_list_preview(
-    request: HttpRequest, bundle: BookmarkBundle | None = None
+    request: HttpRequest,
+    bundle: BookmarkBundle | None = None,
+    initial_data: dict = None,
 ):
     if request.method == "GET" and bundle:
         preview_bundle = bundle
@@ -103,6 +147,9 @@ def _get_bookmark_list_preview(
         form_data = (
             request.POST.copy() if request.method == "POST" else request.GET.copy()
         )
+        if initial_data:
+            for key, value in initial_data.items():
+                form_data[key] = value
 
         form_data["name"] = "Preview Bundle"  # Set dummy name for form validation
         _process_date_filter_fields(form_data) # 处理日期筛选字段

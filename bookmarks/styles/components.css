@@ -43,8 +43,10 @@
       margin-bottom: var(--unit-4);
     }
   }
+}
 
-  @media (max-width: 600px) {
+@media (max-width: 600px) {
+  .section-header:not(.no-wrap) {
     flex-direction: column;
   }
 }

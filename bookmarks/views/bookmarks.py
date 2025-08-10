@@ -52,6 +52,7 @@ def index(request: HttpRequest):
     search = BookmarkSearch.from_request(
         request, request.GET, request.user_profile.search_preferences
     )
+    create_bundle_query_string = _get_create_bundle_query_string(search)
     bookmark_list = contexts.ActiveBookmarkListContext(request, search)
     bundles = contexts.BundlesContext(request)
     tag_cloud = contexts.ActiveTagCloudContext(request, search)
@@ -68,6 +69,7 @@ def index(request: HttpRequest):
             "bundles": bundles,
             "tag_cloud": tag_cloud,
             "details": bookmark_details,
+            "create_bundle_query_string": create_bundle_query_string,
         },
     )
 
@@ -80,6 +82,7 @@ def archived(request: HttpRequest):
     search = BookmarkSearch.from_request(
         request, request.GET, request.user_profile.search_preferences
     )
+    create_bundle_query_string = _get_create_bundle_query_string(search)
     bookmark_list = contexts.ArchivedBookmarkListContext(request, search)
     bundles = contexts.BundlesContext(request)
     tag_cloud = contexts.ArchivedTagCloudContext(request, search)
@@ -96,6 +99,7 @@ def archived(request: HttpRequest):
             "bundles": bundles,
             "tag_cloud": tag_cloud,
             "details": bookmark_details,
+            "create_bundle_query_string": create_bundle_query_string,
         },
     )
 
@@ -107,6 +111,7 @@ def shared(request: HttpRequest):
     search = BookmarkSearch.from_request(
         request, request.GET, request.user_profile.search_preferences
     )
+    create_bundle_query_string = _get_create_bundle_query_string(search)
     bookmark_list = contexts.SharedBookmarkListContext(request, search)
     tag_cloud = contexts.SharedTagCloudContext(request, search)
     bookmark_details = contexts.get_details_context(
@@ -126,6 +131,7 @@ def shared(request: HttpRequest):
             "details": bookmark_details,
             "users": users,
             "rss_feed_url": reverse("linkding:feeds.public_shared"),
+            "create_bundle_query_string": create_bundle_query_string,
         },
     )
 
@@ -142,6 +148,7 @@ def trashed(request: HttpRequest):
     search = BookmarkSearch.from_request(
         request, request.GET, request.user_profile.trash_search_preferences
     )
+    create_bundle_query_string = _get_create_bundle_query_string(search)
     bookmark_list = contexts.TrashedBookmarkListContext(request, search)
     bundles = contexts.BundlesContext(request)
     tag_cloud = contexts.TrashedTagCloudContext(request, search)
@@ -158,6 +165,7 @@ def trashed(request: HttpRequest):
             "bundles": bundles,
             "tag_cloud": tag_cloud,
             "details": bookmark_details,
+            "create_bundle_query_string": create_bundle_query_string,
         },
     )
 
@@ -178,6 +186,29 @@ def render_bookmarks_view(request: HttpRequest, template_name, context):
         template_name,
         context,
     )
+
+
+def _get_create_bundle_query_string(search: BookmarkSearch) -> str:
+    """
+    Generates a URL query string for the 'create bundle' link.
+    This includes both explicit query parameters and default preferences.
+    """
+    params = search.query_params.copy()
+    ensure_params = ['sort', 'shared', 'unread', 'date_filter_by', 'date_filter_type', 'date_filter_relative_string']
+    
+    for param in ensure_params:
+        if param not in params:
+            value = getattr(search, param)
+            if value is not None and value != '':
+                params[param] = value
+                
+    if search.date_filter_type == 'absolute':
+        if 'date_filter_start' not in params and search.date_filter_start:
+            params['date_filter_start'] = search.date_filter_start.isoformat()
+        if 'date_filter_end' not in params and search.date_filter_end:
+            params['date_filter_end'] = search.date_filter_end.isoformat()
+            
+    return urllib.parse.urlencode(params)
 
 
 def search_action(request: HttpRequest):
