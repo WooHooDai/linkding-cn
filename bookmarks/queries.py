@@ -57,8 +57,11 @@ def query_trashed_bookmarks(
 
 
 def _filter_bundle(query_set: QuerySet, bundle: BookmarkBundle) -> QuerySet:
-    # Search terms
-    search_terms = parse_query_string(bundle.search)["search_terms"]
+    parsed = parse_query_string(bundle.search)
+    search_terms = parsed["search_terms"]
+    field_terms = parsed.get("field_terms", {})
+
+    # 在所有位置查找关键词 (title/description/notes/url)
     for term in search_terms:
         conditions = (
             Q(title__icontains=term)
@@ -67,6 +70,9 @@ def _filter_bundle(query_set: QuerySet, bundle: BookmarkBundle) -> QuerySet:
             | Q(url__icontains=term)
         )
         query_set = query_set.filter(conditions)
+
+    # 筛选field_term
+    query_set = _apply_field_terms_filters(query_set, field_terms)
 
     # Any tags - at least one tag must match
     any_tags = parse_tag_string(bundle.any_tags, " ")
@@ -122,7 +128,7 @@ def _apply_filters(query_set: QuerySet, user: Optional[User], profile: UserProfi
             # If the date format is invalid, ignore the filter
             pass
 
-    # Split query into search terms and tags
+    # Split query into search terms, tags and field-terms
     query = parse_query_string(search.q)
 
     # Filter for search terms and tags
@@ -140,6 +146,9 @@ def _apply_filters(query_set: QuerySet, user: Optional[User], profile: UserProfi
             )
 
         query_set = query_set.filter(conditions)
+
+    # 筛选field_term
+    query_set = _apply_field_terms_filters(query_set, query.get("field_terms", {}))
 
     for tag_name in query["tag_names"]:
         query_set = query_set.filter(tags__name__iexact=tag_name)
@@ -193,6 +202,53 @@ def _apply_filters(query_set: QuerySet, user: Optional[User], profile: UserProfi
             if isinstance(end, datetime.date) and not isinstance(end, datetime.datetime):
                 end = end + datetime.timedelta(days=1)
             query_set = query_set.filter(**{f"{field}__lt": end})
+
+    return query_set
+
+
+def _apply_field_terms_filters(query_set: QuerySet, field_terms: dict) -> QuerySet:
+    """筛选field_term.
+
+    支持的fields: title, desc, notes, url, domain
+    - title/desc/notes/url：包含
+    - domain：严格匹配http/https的host
+    """
+    if not field_terms:
+        return query_set
+
+    for term in field_terms.get("title", []):
+        query_set = query_set.filter(title__icontains=term)
+
+    for term in field_terms.get("desc", []):
+        query_set = query_set.filter(description__icontains=term)
+
+    for term in field_terms.get("notes", []):
+        query_set = query_set.filter(notes__icontains=term)
+
+    for term in field_terms.get("url", []):
+        query_set = query_set.filter(url__icontains=term)
+
+    for domain in field_terms.get("domain", []):
+        d = domain.strip().lower()
+        if not d:
+            continue
+        http_prefix = f"http://{d}"
+        https_prefix = f"https://{d}"
+        http_conditions = (
+            Q(url__iexact=http_prefix)
+            | Q(url__istartswith=http_prefix + "/")
+            | Q(url__istartswith=http_prefix + ":")
+            | Q(url__istartswith=http_prefix + "?")
+            | Q(url__istartswith=http_prefix + "#")
+        )
+        https_conditions = (
+            Q(url__iexact=https_prefix)
+            | Q(url__istartswith=https_prefix + "/")
+            | Q(url__istartswith=https_prefix + ":")
+            | Q(url__istartswith=https_prefix + "?")
+            | Q(url__istartswith=https_prefix + "#")
+        )
+        query_set = query_set.filter(http_conditions | https_conditions)
 
     return query_set
 
@@ -329,25 +385,228 @@ def get_user_tags(user: User):
 
 
 def parse_query_string(query_string):
-    # Sanitize query params
+    """解析查询字符串为不同组件.
+
+    语法说明:
+    - Field terms: 
+        - 以title|desc|notes|url|domain开头，后跟:和非转义的(，然后是内容，直到匹配的)
+        - 如果(被转义为\，则token被视为普通搜索项，如title:\(hello\) -> 搜索项'title:(hello)'
+        - 在(...)中允许空格。)可以被转义为\\)
+    - 保留的特性：#tag, !untagged, !unread
+    """
     if not query_string:
         query_string = ""
 
-    # Split query into search terms and tags
-    keywords = query_string.strip().split(" ")
-    keywords = [word for word in keywords if word]
+    tokens = _tokenize_query_string(query_string.strip())
+    return _parse_tokens(tokens)
 
-    search_terms = [word for word in keywords if word[0] != "#" and word[0] != "!"]
-    tag_names = [word[1:] for word in keywords if word[0] == "#"]
+
+def _tokenize_query_string(query_string):
+    """分词：将query_string拆分为tokens, 处理field_term和转义."""
+    if not query_string:
+        return []
+    
+    tokens = []
+    i = 0
+    
+    while i < len(query_string):
+        # 忽略前置空格
+        while i < len(query_string) and query_string[i].isspace():
+            i += 1
+        
+        if i >= len(query_string):
+            break
+        
+        # 检查是否为field_term，若是则进行提取
+        field_prefixes = ("title:", "desc:", "notes:", "url:", "domain:")
+        is_field_term = False
+        field_prefix = None
+        
+        for prefix in field_prefixes:
+            if query_string.startswith(prefix, i):
+                is_field_term = True
+                field_prefix = prefix
+                break
+        
+        if is_field_term:
+            token = _extract_field_token(query_string, i, field_prefix)
+            if token:
+                tokens.append(token)
+                i += len(token)
+                continue
+        
+        # 解析为普通token
+        token_start = i
+        while i < len(query_string) and not query_string[i].isspace():
+            i += 1
+        tokens.append(query_string[token_start:i])
+    
+    return tokens
+
+
+def _extract_field_token(query_string, start_pos, field_prefix):
+    """提取field_term."""
+    if not query_string.startswith(field_prefix, start_pos):
+        return None
+    
+    prefix_end = start_pos + len(field_prefix)
+    
+    # 检查是否跟着非转义 '('
+    if prefix_end >= len(query_string) or query_string[prefix_end] != '(':
+        return None
+    
+    # 查找闭合的 ')'
+    depth = 1
+    escaped = False
+    i = prefix_end + 1
+    
+    while i < len(query_string):
+        char = query_string[i]
+        
+        if escaped:
+            escaped = False
+            i += 1
+            continue
+        
+        if char == '\\':
+            escaped = True
+            i += 1
+            continue
+        
+        if char == '(':
+            depth += 1
+            i += 1
+            continue
+        
+        if char == ')':
+            depth -= 1
+            i += 1
+            if depth == 0:
+                return query_string[start_pos:i]
+            continue
+        
+        i += 1
+    
+    return None
+
+
+def _parse_tokens(tokens):
+    """解析tokens为搜索组件."""
+    search_terms = []
+    tag_names = []
+    field_terms = {
+        "title": [], "desc": [], "notes": [], "url": [], "domain": []
+    }
+    untagged = False
+    unread = False
+    
+    for token in tokens:
+        if token.startswith("#") and len(token) > 1:
+            tag_names.append(token[1:])
+        elif token == "!untagged":
+            untagged = True
+        elif token == "!unread":
+            unread = True
+        elif _is_field_term(token):
+            field_name, content = _extract_field_content(token)
+            if field_name and content:
+                field_terms[field_name].append(content)
+            else:
+                # Field term syntax was detected but parsing failed
+                # Treat as plain search term
+                unescaped_token = _unescape_token(token)
+                search_terms.append(unescaped_token)
+        else:
+            # Unescape parentheses for plain terms
+            unescaped_token = _unescape_token(token)
+            search_terms.append(unescaped_token)
+    
     tag_names = unique(tag_names, str.lower)
-
-    # Special search commands
-    untagged = "!untagged" in keywords
-    unread = "!unread" in keywords
-
+    
     return {
         "search_terms": search_terms,
         "tag_names": tag_names,
         "untagged": untagged,
         "unread": unread,
+        "field_terms": field_terms,
     }
+
+
+def _is_field_term(token):
+    """判断是否为field_term(如: title:(content))."""
+    field_prefixes = ("title:", "desc:", "notes:", "url:", "domain:")
+    return any(token.startswith(prefix) for prefix in field_prefixes)
+
+
+def _extract_field_content(token):
+    """提取字段名称和内容."""
+    field_prefixes = ("title:", "desc:", "notes:", "url:", "domain:")
+    
+    for prefix in field_prefixes:
+        if token.startswith(prefix):
+            field_name = prefix[:-1]  # Remove trailing ':'
+            content_part = token[len(prefix):]
+            
+            # Check if content starts with unescaped '('
+            # If it starts with '\(', it's escaped and should be treated as plain text
+            if content_part.startswith('\\('):
+                return None, None
+            
+            if not content_part.startswith('('):
+                return None, None
+            
+            # Extract content between parentheses
+            content = _extract_parenthesized_content(content_part)
+            if content is not None:
+                return field_name, content
+    
+    return None, None
+
+
+def _extract_parenthesized_content(text):
+    """提取括号内的内容."""
+    if not text.startswith('('):
+        return None
+    
+    content_start = 1
+    depth = 1
+    escaped = False
+    i = 1
+    
+    while i < len(text):
+        char = text[i]
+        
+        if escaped:
+            escaped = False
+            i += 1
+            continue
+        
+        if char == '\\':
+            escaped = True
+            i += 1
+            continue
+        
+        if char == '(':
+            # Do not allow nesting: treat as literal
+            depth += 1
+            i += 1
+            continue
+        
+        if char == ')':
+            depth -= 1
+            i += 1
+            if depth == 0:
+                content = text[content_start:i-1]
+                return _unescape_token(content)
+            continue
+        
+        i += 1
+    
+    return None
+
+
+def _unescape_token(token):
+    """处理转义."""
+    return (token.replace("\\(", "(")
+                 .replace("\\)", ")")
+                 .replace("\\\\", "\\"))
