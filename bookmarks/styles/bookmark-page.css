@@ -296,10 +296,9 @@ li[ld-bookmark-item] {
     position: absolute;
     z-index: 10;
     top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 0;
     width: max-content;
-    max-width: 90%;
+    max-width: 100%;
     height: fit-content;
     background-color: #292f62;
     color: #fff;
