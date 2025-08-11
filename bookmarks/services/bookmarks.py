@@ -238,6 +238,7 @@ def refresh_bookmarks_metadata(bookmark_ids: [Union[int, str]], current_user: Us
     for bookmark in owned_bookmarks:
         tasks.refresh_metadata(bookmark)
         tasks.load_preview_image(current_user, bookmark)
+        tasks.load_favicon(current_user, bookmark)
 
 
 def _merge_bookmark_data(from_bookmark: Bookmark, to_bookmark: Bookmark):
