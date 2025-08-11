@@ -79,13 +79,20 @@ def update_bookmark(bookmark: Bookmark, tag_string, current_user: User):
 
 def enhance_with_website_metadata(bookmark: Bookmark):
     metadata = website_loader.load_website_metadata(bookmark.url)
+    update_fields = []
+
     if not bookmark.title:
         bookmark.title = metadata.title or ""
+        update_fields.append("title")
 
     if not bookmark.description:
         bookmark.description = metadata.description or ""
+        update_fields.append("description")
 
-    bookmark.save()
+    if update_fields:
+        bookmark.date_modified = timezone.now()
+        update_fields.append("date_modified")
+        bookmark.save(update_fields=update_fields)
 
 
 def archive_bookmark(bookmark: Bookmark):
