@@ -183,6 +183,24 @@ def load_page(url: str, config: dict = None):
     return str(results.best())
 
 
+def load_full_page(url: str, config: dict = None):
+    """
+    下载完整的页面内容，用于阅读模式
+    """
+    headers = build_request_headers(config)
+    cookies = build_request_cookies(config)
+    timeout = config.get("timeout", 30) if config else 30
+    proxies = config.get("proxy") if config else None
+    
+    try:
+        response = requests.get(url, timeout=timeout, headers=headers, cookies=cookies, proxies=proxies)
+        response.raise_for_status()
+        return response.text
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to load page {url}: {e}")
+        raise e
+
+
 def build_request_headers(config: dict = None):
     headers = {
         "Accept": "text/html,application/xhtml+xml,application/xml",

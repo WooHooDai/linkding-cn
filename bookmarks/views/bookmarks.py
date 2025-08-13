@@ -18,7 +18,7 @@ from bookmarks.models import (
     Bookmark,
     BookmarkSearch,
 )
-from bookmarks.services import assets as asset_actions, tasks
+from bookmarks.services import assets as asset_actions, tasks, website_loader
 from bookmarks.services.bookmarks import (
     archive_bookmark,
     archive_bookmarks,
@@ -468,3 +468,20 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
 @login_required
 def close(request: HttpRequest):
     return render(request, "bookmarks/close.html")
+
+
+@login_required
+def read(request: HttpRequest, bookmark_id: int):
+    bookmark = access.bookmark_read(request, bookmark_id)
+    try:
+        content = website_loader.load_full_page(bookmark.url)
+    except Exception as e:
+        content = f"<html><body><p>无法加载页面内容：{str(e)}</p></body></html>"
+    
+    return render(
+        request,
+        "bookmarks/read.html",
+        {
+            "content": content,
+        },
+    )
