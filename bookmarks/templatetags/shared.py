@@ -195,7 +195,8 @@ def extract_domain(value, user_profile=None):
         # *.root 匹配
         for root in domain_roots:
             if netloc.endswith('.' + root):
-                return root
+                domain_str = f".{root} | {root}"
+                return domain_str
         return netloc
     except Exception as e:
         return ""
