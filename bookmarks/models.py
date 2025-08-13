@@ -674,6 +674,7 @@ class UserProfile(models.Model):
     items_per_page = models.IntegerField(
         null=False, default=30, validators=[MinValueValidator(10)]
     )
+    sticky_header_controls = models.BooleanField(default=False, null=False)
     sticky_pagination = models.BooleanField(default=False, null=False)
     collapse_side_panel = models.BooleanField(default=False, null=False)
     hide_bundles = models.BooleanField(default=False, null=False)
@@ -716,6 +717,7 @@ class UserProfileForm(forms.ModelForm):
             "custom_domain_root",
             "auto_tagging_rules",
             "items_per_page",
+            "sticky_header_controls",
             "sticky_pagination",
             "collapse_side_panel",
             "hide_bundles",

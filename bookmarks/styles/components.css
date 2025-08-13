@@ -29,6 +29,20 @@
   .header-controls {
     flex: 1 1 0;
     display: flex;
+    
+    &.sticky {
+      flex: 0 0 auto;
+      position: fixed;
+      top: 0;
+      margin: 0;
+      z-index: 10;
+      background: var(--body-color);
+      z-index: 9;
+      padding-top: var(--unit-2);
+      padding-bottom: var(--unit-2);
+      border-bottom: solid 1px var(--secondary-border-color);
+      margin-bottom: var(--unit-4);
+    }
   }
 
   @media (max-width: 600px) {

@@ -13,7 +13,7 @@
     <main class="main col-2" aria-labelledby="main-heading">
       <div class="section-header mb-0">
         <h1 id="main-heading">书签列表<span id="bookmark-list-total">({{ bookmark_list.bookmarks_total }})</span></h1>
-        <div class="header-controls">
+        <div class="header-controls" ld-header-controls data-sticky-on="{{ request.user_profile.sticky_header_controls|yesno:'true,false' }}">
           {% bookmark_search bookmark_list.search %}
           {% include 'bookmarks/bulk_edit/toggle.html' %}
           {% random_sort bookmark_list.search %}

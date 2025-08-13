@@ -50,6 +50,72 @@ class BookmarkPagination extends Behavior {
 
 registerBehavior("ld-pagination", BookmarkPagination);
 
+class HeaderControls extends Behavior {
+  constructor(element) {
+    super(element);
+
+    // 搜索栏粘性吸顶
+    const isStickyOn = element.dataset.stickyOn === 'true' || element.classList.contains('sticky-on');
+    if (!isStickyOn) return;
+
+    this.onScroll = this.onScroll.bind(this);
+    this.onResize = this.onResize.bind(this);
+    window.addEventListener('scroll', this.onScroll, { passive: true });
+    window.addEventListener('resize', this.onResize, { passive: true });
+    this.updateStickyState(); // 初始化状态
+  }
+
+  destroy() {
+    window.removeEventListener('scroll', this.onScroll);
+    window.removeEventListener('resize', this.onResize);
+  }
+
+  onScroll() {
+    this.updateStickyState();
+  }
+
+  onResize() {
+    this.updateStickyState();
+  }
+
+  openSticky() {
+    this.element.classList.add('sticky');
+
+    // 与 .section-header 容器对齐并不超出宽度
+    const sectionHeader = this.element.closest('.section-header');
+    if (!sectionHeader) return;
+    const r = sectionHeader.getBoundingClientRect();
+    this.element.style.left = `${r.left}px`;
+    this.element.style.width = `${r.width}px`;
+  }
+
+  closeSticky() {
+    this.element.classList.remove('sticky');
+    this.element.style.left = '';
+    this.element.style.width = '';
+  }
+
+  updateStickyState() {
+    const sectionHeader = this.element.closest('.section-header');
+    if (!sectionHeader) return;
+    const rect = sectionHeader.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    const isInViewport = rect.top < viewportHeight && rect.bottom > (rect.bottom-rect.top);
+
+    if (isInViewport) {
+      if (this.element.classList.contains('sticky')) {
+        this.closeSticky();
+      }
+    } else {
+      if (!this.element.classList.contains('sticky')) {
+        this.openSticky();
+      }
+    }
+  }
+}
+
+registerBehavior('ld-header-controls', HeaderControls);
+
 class BookmarkItem extends Behavior {
   constructor(element) {
     super(element);

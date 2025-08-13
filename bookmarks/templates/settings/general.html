@@ -118,6 +118,15 @@
           </div>
         </div>
         <div class="form-group">
+          <label for="{{ form.sticky_header_controls.id_for_label }}" class="form-checkbox">
+            {{ form.sticky_header_controls }}
+            <i class="form-icon"></i> 粘性搜索栏
+          </label>
+          <div class="form-input-hint">
+            勾选启用，搜索栏将固定在屏幕顶部显示，而无需到页面顶部操作。
+          </div>
+        </div>
+        <div class="form-group">
           <label for="{{ form.sticky_pagination.id_for_label }}" class="form-checkbox">
             {{ form.sticky_pagination }}
             <i class="form-icon"></i> 粘性分页
