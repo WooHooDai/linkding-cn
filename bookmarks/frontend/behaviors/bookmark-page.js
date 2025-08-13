@@ -68,53 +68,72 @@ class BookmarkItem extends Behavior {
       this.editAction.addEventListener("click", this.onEditClick);
     }
 
-    // Add tooltip to title if it is truncated
-    const titleAnchor = element.querySelector(".title .title-link");
-    if (titleAnchor) {
-      const titleSpan = titleAnchor.querySelector("span");
+    // 标题浮窗：当标题被截断时显示完整标题
+    const titleElement = element.querySelector(".title");
+    if (titleElement) {
+      this.titleElement = titleElement;
+      this.titleElement = titleElement;
+      const titleSpan = titleElement.querySelector("span");
       if (titleSpan) {
         requestAnimationFrame(() => {
-          if (titleSpan.offsetWidth > titleAnchor.offsetWidth) {
-            titleAnchor.dataset.tooltip = titleSpan.textContent;
+          if (titleSpan.offsetWidth > titleElement.offsetWidth) {
+            titleElement.dataset.tooltip = titleSpan.textContent;
           }
         });
       }
+
+      this.showTitleTooltip = () => {this.showFloatTooltip(this.titleElement)};
+      this.hideTitleTooltip = () => this.hideFloatTooltip(this.titleElement);
+
+      this.clickTimer = null;
+      const DOUBLE_CLICK_DELAY = 300;
+      if (window.matchMedia('(pointer: coarse)').matches) {
+        // TODO: 移动端尚未确定标题浮窗交互方式
+      }
+      if (!window.matchMedia('(pointer: coarse)').matches) {
+        // 移动端不添加鼠标事件，否则mouseleave会被触发，产生干扰
+        titleElement.addEventListener('mouseenter', this.showTitleTooltip, { passive: true });
+        titleElement.addEventListener('mouseleave', this.hideTitleTooltip, { passive: true });
+      }
+      titleElement.addEventListener('focus', this.showTitleTooltip, { passive: true });
+      titleElement.addEventListener('blur', this.hideTitleTooltip, { passive: true });
     }
 
-    // 如果描述被截断，就添加一个tooltip数据
+    // 描述浮窗：当描述被截断时显示完整描述
     const descriptionElement = element.querySelector(".description");
     const descriptionContainer = element.querySelector(".description-container");
-    if (descriptionContainer) {
-      const descriptionText = descriptionContainer.querySelector(".description-text");
-      if (descriptionText) {
-        const isInline = descriptionElement.classList.contains("inline");
+    const descriptionText = descriptionContainer?.querySelector(".description-text");
+    const isDescriptionInline = descriptionElement?.classList.contains("inline");
+    this.descriptionElement = descriptionElement; 
+    this.descriptionContainer = descriptionContainer;
+    this.descriptionText = descriptionText;
+    this.isDescriptionInline = isDescriptionInline;
+
+    if (this.descriptionContainer) {
+      if (this.descriptionText) {
         requestAnimationFrame(() => {
           // 行内描述
-          if (isInline && descriptionText.offsetWidth > descriptionContainer.offsetWidth) {
-            descriptionContainer.dataset.tooltip = descriptionText.textContent;
+          if (isDescriptionInline && this.descriptionText.offsetWidth > this.descriptionContainer.offsetWidth) {
+            this.descriptionContainer.dataset.tooltip = this.descriptionText.textContent;
           // 分行描述（单行或多行）  
-          } else if (!isInline && descriptionContainer.scrollHeight > descriptionContainer.clientHeight) {
-            descriptionContainer.dataset.tooltip = descriptionText.textContent;
+          } else if (!isDescriptionInline && this.descriptionContainer.scrollHeight > this.descriptionContainer.clientHeight) {
+            this.descriptionContainer.dataset.tooltip = this.descriptionText.textContent;
           }
         });
-
-        // 分行（多行截断）时，使用 JS 精确定位 tooltip 到“最后可见行”
-        if (!isInline) {
-          // 记录元素
-          this.descriptionElement = descriptionElement; 
-          this.descriptionContainer = descriptionContainer;
-          this.descriptionText = descriptionText;
-          // 绑定事件
-          this.onDescriptionEnter = (e) => this.showDescriptionTooltip(e);
-          this.onDescriptionLeave = () => this.hideDescriptionTooltip();
-          this.onDescriptionMove = () => this.repositionDescriptionTooltip();
-          descriptionContainer.addEventListener('mouseenter', this.onDescriptionEnter);
-          descriptionContainer.addEventListener('mouseleave', this.onDescriptionLeave);
-          descriptionContainer.addEventListener('focus', this.onDescriptionEnter, true);
-          descriptionContainer.addEventListener('blur', this.onDescriptionLeave, true);
-          window.addEventListener('resize', this.onDescriptionMove, { passive: true });
-          window.addEventListener('scroll', this.onDescriptionMove, { passive: true });
-        }
+      }
+      // 绑定事件
+      this.showDescriptionTooltip = () => this.showFloatTooltip(this.descriptionContainer);
+      this.hideDescriptionTooltip = () => this.hideFloatTooltip(this.descriptionContainer);
+      this.descriptionContainer.addEventListener('focus', this.showDescriptionTooltip, { passive: true });
+      this.descriptionContainer.addEventListener('blur', this.hideDescriptionTooltip, { passive: true });
+      if (window.matchMedia('(pointer: coarse)').matches) {
+        // 电脑端不添加click事件，否则影响在浮窗内选取文字
+        this.descriptionContainer.addEventListener('click', this.showDescriptionTooltip, { passive: true });
+      }
+      if (!window.matchMedia('(pointer: coarse)').matches) {
+        // 移动端不添加鼠标事件，否则mouseleave会被触发，产生干扰
+        this.descriptionContainer.addEventListener('mouseenter', this.showDescriptionTooltip, { passive: true });
+        this.descriptionContainer.addEventListener('mouseleave', this.hideDescriptionTooltip, { passive: true });
       }
     }
   }
@@ -127,16 +146,22 @@ class BookmarkItem extends Behavior {
       this.editAction.removeEventListener("click", this.onEditClick);
     }
 
-    // 清理描述 tooltip 的事件与元素
-    if (this.descriptionContainer) {
-      this.descriptionContainer.removeEventListener('mouseenter', this.onDescriptionEnter);
-      this.descriptionContainer.removeEventListener('mouseleave', this.onDescriptionLeave);
-      this.descriptionContainer.removeEventListener('focus', this.onDescriptionEnter, true);
-      this.descriptionContainer.removeEventListener('blur', this.onDescriptionLeave, true);
-      window.removeEventListener('resize', this.onDescriptionMove);
-      window.removeEventListener('scroll', this.onDescriptionMove);
+    // 清理浮窗事件
+    if (this.titleElement) {
+      this.titleElement.removeEventListener('mouseenter', this.showTitleTooltip);
+      this.titleElement.removeEventListener('mouseleave', this.hideTitleTooltip);
+      this.titleElement.removeEventListener('touchstart', this.showTitleTooltip);
+      this.titleElement.removeEventListener('touchend', this.hideTitleTooltip);
+      this.titleElement.removeEventListener('focus', this.showTitleTooltip);
+      this.titleElement.removeEventListener('blur', this.hideTitleTooltip);
     }
-    this.hideDescriptionTooltip();
+    if (this.descriptionContainer) {
+      this.descriptionContainer.removeEventListener('mouseenter', this.showDescriptionTooltip);
+      this.descriptionContainer.removeEventListener('mouseleave', this.hideDescriptionTooltip);
+      this.descriptionContainer.removeEventListener('focus', this.showDescriptionTooltip);
+      this.descriptionContainer.removeEventListener('blur', this.hideDescriptionTooltip);
+      this.descriptionContainer.removeEventListener('click', this.showDescriptionTooltip);
+    }
   }
 
   onToggleNotes(event) {
@@ -150,78 +175,32 @@ class BookmarkItem extends Behavior {
     localStorage.setItem('bookmarkListReturnUrl', window.location.pathname);
   }
 
-  // 计算分行截断描述的“最后可见行”矩形
-  getLastVisibleLineRect() {
-    if (!this.descriptionElement || !this.descriptionText) return null;
-    const clipRect = this.descriptionElement.getBoundingClientRect();
-    const rectList = Array.from(this.descriptionText.getClientRects());
-    if (rectList.length === 0) return null;
+  showFloatTooltip(targetEl) {
+    if (!targetEl || !targetEl.dataset.tooltip) return;
 
-    // 过滤与可见区域相交的行框
-    const visibleRects = rectList.filter((r) => {
-      const verticallyVisible = r.top < clipRect.bottom - 0.5 && r.bottom > clipRect.top + 0.5;
-      const horizontallyVisible = r.left < clipRect.right - 0.5 && r.right > clipRect.left + 0.5;
-      return verticallyVisible && horizontallyVisible;
-    });
-    if (visibleRects.length === 0) return null;
-
-    // 取最靠下的一行
-    let last = visibleRects[0];
-    for (const r of visibleRects) {
-      if (r.bottom > last.bottom || (r.bottom === last.bottom && r.left > last.left)) {
-        last = r;
-      }
+    // 如果浮窗已存在，则显示
+    let tooltip = targetEl.querySelector('.float-tooltip');
+    if (tooltip) {
+      tooltip.style.display = tooltip.style.display === 'none' ? 'block' : 'none';
+      return;
     }
-    return { lastRect: last, clipRect };
+
+    // 否则创建浮窗
+    tooltip = document.createElement('div');
+    tooltip.className = 'float-tooltip';
+    tooltip.textContent = targetEl.dataset.tooltip;
+    targetEl.appendChild(tooltip);
   }
 
-  // 展示 tooltip：对齐到“最后可见行”的左下角
-  showDescriptionTooltip() {
-    if (!this.descriptionContainer || !this.descriptionContainer.dataset.tooltip) return;
-    // 触屏设备不显示
-    if (window.matchMedia('(pointer: coarse)').matches) return;
-    // 未被截断不显示
-    if (this.descriptionContainer.scrollHeight <= this.descriptionContainer.clientHeight) return;
-
-    const calc = this.getLastVisibleLineRect();
-    if (!calc) return;
-
-    const { lastRect, clipRect } = calc;
-    const containerRect = this.descriptionContainer.getBoundingClientRect();
-    const tooltip = document.createElement('div');
-    tooltip.className = 'ld-tooltip-floating';
-    tooltip.textContent = this.descriptionContainer.dataset.tooltip || '';
-    document.body.appendChild(tooltip);
-    this.activeTooltip = tooltip;
-
-    // 初次定位
-    const viewportLeft = containerRect.left; // 左侧与 description-container 对齐
-    const viewportTop = lastRect.bottom;     // 纵向对齐到最后可见行底部
-    tooltip.style.left = `${viewportLeft}px`;
-    tooltip.style.top = `${viewportTop}px`;
-    tooltip.style.width = `${Math.floor(containerRect.width)}px`; // 宽度与 description-container 一致
-  }
-
-  // 重新计算位置（窗口尺寸变化等）
-  repositionDescriptionTooltip() {
-    if (!this.activeTooltip) return;
-    const calc = this.getLastVisibleLineRect();
-    if (!calc) return;
-    const { lastRect, clipRect } = calc;
-    const containerRect = this.descriptionContainer.getBoundingClientRect();
-    const viewportLeft = containerRect.left;
-    const viewportTop = lastRect.bottom;
-    this.activeTooltip.style.left = `${viewportLeft}px`;
-    this.activeTooltip.style.top = `${viewportTop}px`;
-    this.activeTooltip.style.width = `${Math.floor(containerRect.width)}px`;
-  }
-
-  // 隐藏并移除 tooltip
-  hideDescriptionTooltip() {
-    if (this.activeTooltip && this.activeTooltip.parentElement) {
-      this.activeTooltip.parentElement.removeChild(this.activeTooltip);
+  hideFloatTooltip(targetEl) {
+    const tooltip = targetEl.querySelector('.float-tooltip');
+    if (tooltip) {
+      tooltip.style.display = 'none';
     }
-    this.activeTooltip = null;
+  }
+
+  showDescriptionFloatTooltip() {
+    this.showFloatTooltip(this.descriptionContainer);
   }
 }
 

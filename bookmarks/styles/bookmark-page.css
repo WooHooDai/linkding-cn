@@ -287,37 +287,6 @@ li[ld-bookmark-item] {
     background: none;
   }
 
-  & .title a[data-tooltip]:hover::after,
-  & .title a[data-tooltip]:focus::after,
-  & .description .description-container[data-tooltip]:hover::after,
-  & .description .description-container[data-tooltip]:focus::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    z-index: 10;
-    top: 100%;
-    left: 0;
-    width: max-content;
-    max-width: 100%;
-    height: fit-content;
-    background-color: #292f62;
-    color: #fff;
-    padding: var(--unit-1);
-    border-radius: var(--border-radius);
-    border: 1px solid #424a8c;
-    font-size: var(--font-size-sm);
-    font-style: normal;
-    white-space: normal;
-    pointer-events: none;
-    animation: 0.3s ease 0s appear;
-  }
-
-  @media (pointer: coarse) {
-    & .title a[data-tooltip]::after,
-    & .description .description-container[data-tooltip]::after {
-      display: none;
-    }
-  }
-
   &.unread .title a {
     font-style: italic;
   }
@@ -334,11 +303,37 @@ li[ld-bookmark-item] {
     position: relative;
   }
 
-  & .description.separate {
+  & .description .separate{
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: var(--ld-bookmark-description-max-lines, 1);
     overflow: hidden;
+  }
+
+  & .float-tooltip {
+    content: attr(data-tooltip);
+    position: absolute;
+    z-index: 10;
+    left: 0;
+    top: 100%;
+    width: max-content;
+    max-width: 100%;
+    background-color: #292f62;
+    color: #fff;
+    padding: var(--unit-1);
+    border-radius: var(--border-radius);
+    border: 1px solid #424a8c;
+    font-size: var(--font-size-sm);
+    font-style: normal;
+    white-space: normal;
+    pointer-events: none; /* 默认鼠标穿透 */
+    animation: 0.3s ease 0s appear;
+  }
+
+  @media (pointer: coarse) {
+    & .float-tooltip {
+      pointer-events: auto; /* 移动端靠点击交互，禁止穿透 */
+    }
   }
 
   & .tags {
@@ -392,25 +387,6 @@ li[ld-bookmark-item] {
       color: green;
     }
   }
-}
-
-/* 全局悬浮 tooltip：用于描述分行显示且溢出时，动态定位显示完整描述 */
-.ld-tooltip-floating {
-  position: fixed;
-  z-index: 10;
-  left: 0;
-  top: 100%;
-  width: max-content;
-  max-width: 100%;
-  background-color: #292f62;
-  color: #fff;
-  padding: var(--unit-1);
-  border-radius: var(--border-radius);
-  border: 1px solid #424a8c;
-  font-size: var(--font-size-sm);
-  white-space: normal;
-  pointer-events: none;
-  animation: 0.3s ease 0s appear;
 }
 
 .bookmark-pagination {
