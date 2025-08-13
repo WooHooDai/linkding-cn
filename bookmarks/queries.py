@@ -228,27 +228,84 @@ def _apply_field_terms_filters(query_set: QuerySet, field_terms: dict) -> QueryS
     for term in field_terms.get("url", []):
         query_set = query_set.filter(url__icontains=term)
 
-    for domain in field_terms.get("domain", []):
-        d = domain.strip().lower()
-        if not d:
-            continue
-        http_prefix = f"http://{d}"
-        https_prefix = f"https://{d}"
-        http_conditions = (
-            Q(url__iexact=http_prefix)
-            | Q(url__istartswith=http_prefix + "/")
-            | Q(url__istartswith=http_prefix + ":")
-            | Q(url__istartswith=http_prefix + "?")
-            | Q(url__istartswith=http_prefix + "#")
-        )
-        https_conditions = (
-            Q(url__iexact=https_prefix)
-            | Q(url__istartswith=https_prefix + "/")
-            | Q(url__istartswith=https_prefix + ":")
-            | Q(url__istartswith=https_prefix + "?")
-            | Q(url__istartswith=https_prefix + "#")
-        )
-        query_set = query_set.filter(http_conditions | https_conditions)
+    domain_terms = field_terms.get("domain", [])
+    if domain_terms:
+        combined_domains_condition = Q()
+
+        for raw_group in domain_terms:
+            # 或语法：使用`|`连接多个域名，如 domain:(v2ex.com | x.com)
+            parts = [p.strip().lower() for p in raw_group.split('|')]
+            parts = [p for p in parts if p]
+            if not parts:
+                continue
+
+            group_condition = Q()
+            for part in parts:
+                if part.startswith('.'):
+                    # 子域名匹配：domain:(.a.com) 匹配 *.a.com，不包含 a.com 本身
+                    base = part[1:]
+                    if not base:
+                        continue
+                    http_sub = (
+                        Q(url__istartswith="http://")
+                        & (
+                            Q(url__icontains=f".{base}/")
+                            | Q(url__icontains=f".{base}:")
+                            | Q(url__icontains=f".{base}?")
+                            | Q(url__icontains=f".{base}#")
+                            | Q(url__iendswith=f".{base}")
+                        )
+                        & ~(
+                            Q(url__iexact=f"http://{base}")
+                            | Q(url__istartswith=f"http://{base}/")
+                            | Q(url__istartswith=f"http://{base}:")
+                            | Q(url__istartswith=f"http://{base}?")
+                            | Q(url__istartswith=f"http://{base}#")
+                        )
+                    )
+                    https_sub = (
+                        Q(url__istartswith="https://")
+                        & (
+                            Q(url__icontains=f".{base}/")
+                            | Q(url__icontains=f".{base}:")
+                            | Q(url__icontains=f".{base}?")
+                            | Q(url__icontains=f".{base}#")
+                            | Q(url__iendswith=f".{base}")
+                        )
+                        & ~(
+                            Q(url__iexact=f"https://{base}")
+                            | Q(url__istartswith=f"https://{base}/")
+                            | Q(url__istartswith=f"https://{base}:")
+                            | Q(url__istartswith=f"https://{base}?")
+                            | Q(url__istartswith=f"https://{base}#")
+                        )
+                    )
+                    group_condition |= (http_sub | https_sub)
+                else:
+                    # 精确域名匹配
+                    http_prefix = f"http://{part}"
+                    https_prefix = f"https://{part}"
+                    http_exact = (
+                        Q(url__iexact=http_prefix)
+                        | Q(url__istartswith=http_prefix + "/")
+                        | Q(url__istartswith=http_prefix + ":")
+                        | Q(url__istartswith=http_prefix + "?")
+                        | Q(url__istartswith=http_prefix + "#")
+                    )
+                    https_exact = (
+                        Q(url__iexact=https_prefix)
+                        | Q(url__istartswith=https_prefix + "/")
+                        | Q(url__istartswith=https_prefix + ":")
+                        | Q(url__istartswith=https_prefix + "?")
+                        | Q(url__istartswith=https_prefix + "#")
+                    )
+                    group_condition |= (http_exact | https_exact)
+
+            # AND 逻辑连接多个 domain:(...) 分组
+            combined_domains_condition &= group_condition if combined_domains_condition else group_condition
+
+        if combined_domains_condition:
+            query_set = query_set.filter(combined_domains_condition)
 
     return query_set
 
