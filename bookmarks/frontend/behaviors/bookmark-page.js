@@ -142,7 +142,9 @@ class BookmarkItem extends Behavior {
       const titleSpan = titleElement.querySelector("span");
       if (titleSpan) {
         requestAnimationFrame(() => {
-          if (titleSpan.offsetWidth > titleElement.offsetWidth) {
+          let availableWidth = titleElement.offsetWidth;
+          availableWidth -= 24;  // 减去favicon宽度16px + 8px间距
+          if (titleSpan.offsetWidth > availableWidth) {
             titleElement.dataset.tooltip = titleSpan.textContent;
           }
         });
@@ -151,8 +153,6 @@ class BookmarkItem extends Behavior {
       this.showTitleTooltip = () => {this.showFloatTooltip(this.titleElement)};
       this.hideTitleTooltip = () => this.hideFloatTooltip(this.titleElement);
 
-      this.clickTimer = null;
-      const DOUBLE_CLICK_DELAY = 300;
       if (window.matchMedia('(pointer: coarse)').matches) {
         // TODO: 移动端尚未确定标题浮窗交互方式
       }
@@ -179,8 +179,22 @@ class BookmarkItem extends Behavior {
       if (this.descriptionText) {
         requestAnimationFrame(() => {
           // 行内描述
-          if (isDescriptionInline && this.descriptionText.offsetWidth > this.descriptionContainer.offsetWidth) {
-            this.descriptionContainer.dataset.tooltip = this.descriptionText.textContent;
+          if (isDescriptionInline) {
+            // 获取标签元素
+            const tagsElement = this.descriptionContainer.querySelector('.tags');
+            let availableWidth = this.descriptionContainer.offsetWidth;
+            availableWidth -= 7;  // 减去分隔符宽度(" | ")
+            if (tagsElement) {  // 减去标签占用的宽度
+              availableWidth -= tagsElement.offsetWidth;
+            }
+            if (window.matchMedia('(pointer: coarse)').matches) {
+              if (availableWidth <= 0) { // 移动端交互形式为点击，若标签已占据全部空间，则不显示浮窗
+                return;
+              }
+            }
+            if (this.descriptionText && this.descriptionText.offsetWidth > availableWidth) {
+              this.descriptionContainer.dataset.tooltip = this.descriptionText.textContent;
+            }
           // 分行描述（单行或多行）  
           } else if (!isDescriptionInline && this.descriptionContainer.scrollHeight > this.descriptionContainer.clientHeight) {
             this.descriptionContainer.dataset.tooltip = this.descriptionText.textContent;
