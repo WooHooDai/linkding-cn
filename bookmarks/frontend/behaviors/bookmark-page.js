@@ -4,47 +4,75 @@ class BookmarkPagination extends Behavior {
   constructor(element) {
     super(element);
 
-    const isSticky = element.classList.contains('sticky');
-    const isEdge = (navigator.userAgent.indexOf("Edg/") !== -1);
-    if (isEdge && isSticky) {
-      element.classList.add('edge');
-      this.setWidth();
-      this.onResize = this.onResize.bind(this);
-      this.onScroll = this.onScroll.bind(this);
-      window.addEventListener('resize', this.onResize);
-      window.addEventListener('scroll', this.onScroll, {  });
-    }
+    const isStickyOn = element.dataset.stickyOn === 'true';
+    if (!isStickyOn) return;
+
+    this.scroller = document.querySelector('.body-container');
+    this.container = document.querySelector('#bookmark-list-container');
+    this.isOnResize = false;
+    this.onScroll = this.onScroll.bind(this);
+    this.onResize = this.onResize.bind(this);
+    this.scroller.addEventListener('scroll', this.onScroll, { passive: true });
+    window.addEventListener('resize', this.onResize, { passive: true });
+
+    this.updateStickyState();
   }
 
   destroy() {
+    if (this.scroller) {
+      this.scroller.removeEventListener('scroll', this.onScroll);
+    }
     window.removeEventListener('resize', this.onResize);
-    window.removeEventListener('scroll', this.onScroll);
   }
 
   onScroll() {
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const windowHeight = window.innerHeight;
-    const documentHeight = document.documentElement.scrollHeight;
-    
-    // 当滚动到距离底部100px以内时移除edge类
-    if (scrollTop + windowHeight >= documentHeight - 100) {
-      this.element.classList.remove('edge');
-    } else {
-      if (!this.element.classList.contains('edge')) {
-        this.element.classList.add('edge');
-      }
-    }
+    this.updateStickyState();
   }
 
   onResize() {
-    this.setWidth();
+    this.isOnResize = true;
+    this.updateStickyState();
   }
 
-  setWidth() {
-    const bookmarkList = document.querySelector('.bookmark-list');
-    if (!bookmarkList) return;
-    const width = bookmarkList.offsetWidth;
-    this.element.style.width = `${width}px`;
+  openSticky() {
+    this.element.classList.add('sticky');
+  }
+
+  closeSticky() {
+    this.element.classList.remove('sticky');
+    this.element.style.width = '';
+  }
+
+  setSticky() {
+    if (!this.container) return;
+    const r = this.container.getBoundingClientRect();
+    this.element.style.width = `${r.width}px`;
+  }
+
+  updateStickyState() {
+    const isStickyOpen = this.element.classList.contains('sticky');
+    const isNearBottom = (this.scroller.scrollTop + this.scroller.clientHeight >= this.scroller.scrollHeight - 100);
+
+    // 接近底部，关闭Sticky
+    if(isNearBottom) {
+      if(isStickyOpen) {
+        this.closeSticky();
+      }
+      return;
+    }
+
+    // 若在调整窗口大小，则重新计算Sticky宽度
+    if(this.isOnResize) {
+      this.isOnResize = false;
+      this.setSticky();
+      return;
+    }
+
+    // 开启Sticky
+    if(!isStickyOpen) {
+      this.setSticky();
+      this.openSticky();
+    }
   }
 }
 
@@ -55,14 +83,18 @@ class HeaderControls extends Behavior {
     super(element);
 
     // 搜索栏粘性吸顶
-    const isStickyOn = element.dataset.stickyOn === 'true' || element.classList.contains('sticky-on');
+    const isStickyOn = element.dataset.stickyOn === 'true';
     if (!isStickyOn) return;
 
+    this.scroller = document.querySelector('.body-container') || window;
+    this.container = document.querySelector('.main');
+    this.isOnResize = false;
     this.onScroll = this.onScroll.bind(this);
     this.onResize = this.onResize.bind(this);
     window.addEventListener('scroll', this.onScroll, { passive: true });
     window.addEventListener('resize', this.onResize, { passive: true });
-    this.updateStickyState(); // 初始化状态
+
+    this.updateStickyState();
   }
 
   destroy() {
@@ -75,41 +107,48 @@ class HeaderControls extends Behavior {
   }
 
   onResize() {
+    this.isOnResize = true;
     this.updateStickyState();
   }
 
   openSticky() {
     this.element.classList.add('sticky');
-
-    // 与 .section-header 容器对齐并不超出宽度
-    const sectionHeader = this.element.closest('.section-header');
-    if (!sectionHeader) return;
-    const r = sectionHeader.getBoundingClientRect();
-    this.element.style.left = `${r.left}px`;
-    this.element.style.width = `${r.width}px`;
   }
 
   closeSticky() {
     this.element.classList.remove('sticky');
-    this.element.style.left = '';
     this.element.style.width = '';
   }
 
-  updateStickyState() {
-    const sectionHeader = this.element.closest('.section-header');
-    if (!sectionHeader) return;
-    const rect = sectionHeader.getBoundingClientRect();
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-    const isInViewport = rect.top < viewportHeight && rect.bottom > (rect.bottom-rect.top);
+  setSticky() {
+    if (!this.container) return;
+    const rect = this.container.getBoundingClientRect();
+    this.element.style.width = `${rect.width}px`;
+  }
 
-    if (isInViewport) {
-      if (this.element.classList.contains('sticky')) {
+  updateStickyState() {
+    const isStickyOpen = this.element.classList.contains('sticky');
+    const isNearTop = this.scroller.scrollTop < 100;
+
+    // 接近顶部，关闭Sticky
+    if(isNearTop) {
+      if(isStickyOpen) {
         this.closeSticky();
       }
-    } else {
-      if (!this.element.classList.contains('sticky')) {
-        this.openSticky();
-      }
+      return;
+    }
+
+    // 若在调整窗口大小，则重新计算Sticky宽度
+    if(this.isOnResize) {
+      this.isOnResize = false;
+      this.setSticky();
+      return;
+    }
+
+    // 开启Sticky
+    if(!isStickyOpen) {
+      this.setSticky();
+      this.openSticky();
     }
   }
 }
@@ -433,110 +472,90 @@ class SidePanel extends Behavior {
   constructor(element) {
     super(element);
     
-    this.isSticky = false;
-    this.originalStyle = null;
-    this.scrollThrottle = null;
+    const isStickyOn = true;
+    if (!isStickyOn) return;
     
+    this.scroller = document.querySelector('.body-container');
+    this.isOnResize = false;
     this.onScroll = this.onScroll.bind(this);
     this.onResize = this.onResize.bind(this);
-    
-    this.init();
-  }
 
-  init() {
-    // 移动端禁用
-    if (window.innerWidth <= 840) {
-      return;
-    }
-
-    this.originalStyle = {
-      'top': this.element.style.top,
-      'left': this.element.style.left,
-      'width': this.element.style.width,
-      'position': this.element.style.position,
-    }
-
-    window.addEventListener('scroll', this.onScroll, { passive: true });
+    this.scroller.addEventListener('scroll', this.onScroll, { passive: true });
     window.addEventListener('resize', this.onResize, { passive: true });
-    
-    this.calculateStickyTrigger();
+
     this.updateStickyState();
-  }
-
-  calculateStickyTrigger() {
-    // 临时移除可能存在的fixed定位，获取真实位置
-    const originalPosition = this.element.style.position;
-    this.element.style.position = '';
-    
-    // 获取侧边栏在正常文档流中的位置
-    const rect = this.element.getBoundingClientRect();
-    this.stickyTriggerY = rect.top + window.scrollY;
-    
-    // 恢复原始position
-    this.element.style.position = originalPosition;
-  }
-
-  updateStickyState() {
-    const scrollY = window.scrollY;
-    
-    // 当页面滚动超过侧边栏原始位置时启用sticky，否则恢复原始样式
-    if (scrollY > this.stickyTriggerY && !this.isSticky) {
-      this.enableSticky();
-    } else if (scrollY <= this.stickyTriggerY && this.isSticky) {
-      this.disableSticky();
-    }
   }
 
   destroy() {
-    this.resetStyles();
-    
-    window.removeEventListener('scroll', this.onScroll);
-    window.removeEventListener('resize', this.onResize);
-    
-    if (this.scrollThrottle) {
-      clearTimeout(this.scrollThrottle);
+    if (this.scroller) {
+      this.scroller.removeEventListener('scroll', this.onScroll);
     }
+    window.removeEventListener('resize', this.onResize);
   }
 
   onScroll() {
-    // 使用节流优化性能, 约60fps
-    if (this.scrollThrottle) {
-      clearTimeout(this.scrollThrottle);
-    }
-    this.scrollThrottle = setTimeout(() => {
-      this.updateStickyState();
-    }, 16);
-  }
-
-  onResize() {
-    // 在移动端禁用sticky功能
-    if (window.innerWidth <= 840) {
-      this.resetStyles();
-      return;
-    }
-    this.calculateStickyTrigger();
     this.updateStickyState();
   }
 
-  enableSticky() {
-    this.isSticky = true;
+  onResize() {
+    this.isOnResize = true;
+    this.updateStickyState();
+  }
 
+  openSticky() {
+    this.element.classList.add('sticky');
+  }
+
+  closeSticky() {
+    this.element.classList.remove('sticky');
+    this.element.style.left = '';
+    this.element.style.width = '';
+  }
+
+  setSticky() {
     const rect = this.element.getBoundingClientRect();
     const parentRect = this.element.parentElement.getBoundingClientRect();
-    this.element.style.position = 'fixed';
-    this.element.style.top = '20px';
-    this.element.style.left = `${parentRect.left + parentRect.width - rect.width}px`; // 保持右侧对齐
-    this.element.style.width = `${rect.width}px`; // 保持原始宽度
+    this.element.style.left = `${parentRect.left + parentRect.width - rect.width}px`;
+    this.element.style.width = `${rect.width}px`;
   }
 
-  disableSticky() {
-    this.isSticky = false;
-    this.resetStyles();
-  }
+  updateStickyState() {
+    const isStickyOpen = this.element.classList.contains('sticky');
+    const scrollY = this.scroller.scrollTop;
 
-  resetStyles() {
-    Object.assign(this.element.style, this.originalStyle);
+    // 屏幕宽度不足不启用
+    if(window.innerWidth <= 840) {
+      if(isStickyOpen) {
+        this.closeSticky();
+      }
+      return;
+    }
+
+    // 滚动位置不足，关闭Sticky
+    if(scrollY <= 100) {
+      if(isStickyOpen) {
+        this.closeSticky();
+      }
+      return;
+    }
+
+    // 若在调整窗口大小，则重新计算Sticky位置
+    if(this.isOnResize) {
+      this.isOnResize = false;
+      this.closeSticky();
+      this.setSticky();
+      this.openSticky();
+      return;
+    }
+
+    // 滚动位置超过100px时，开启Sticky
+    if(!isStickyOpen) {
+      this.setSticky();
+      this.openSticky();
+    }
+    
   }
 }
 
 registerBehavior("ld-side-panel", SidePanel);
+

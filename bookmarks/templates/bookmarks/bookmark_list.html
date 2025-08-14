@@ -179,7 +179,7 @@
       {% endfor %}
     </ul>
 
-    <div class="bookmark-pagination{% if request.user_profile.sticky_pagination %} sticky{% endif %}" ld-pagination>
+    <div class="bookmark-pagination" ld-pagination data-sticky-on="{{ request.user_profile.sticky_pagination|yesno:'true,false' }}">
       {% pagination bookmark_list.bookmarks_page %}
     </div>
   </section>

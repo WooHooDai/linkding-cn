@@ -391,6 +391,7 @@ li[ld-bookmark-item] {
 
 .bookmark-pagination {
   margin-top: var(--unit-4);
+  border-top: solid 1px var(--secondary-border-color);
 
   /* Remove left padding from first pagination link */
 
@@ -399,20 +400,14 @@ li[ld-bookmark-item] {
   }
 
   &.sticky {
-    position: sticky;
+    position: fixed;
     bottom: 0;
+    left: auto;
+    margin: 0;
+    z-index: 10;
     border-top: solid 1px var(--secondary-border-color);
     background: var(--body-color);
     padding-bottom: var(--unit-h);
-
-    /* Edge浏览器使用fixed定位 */
-    &.edge {
-        position: fixed;
-        bottom: 0;
-        left: auto;
-        margin: 0;
-        z-index: 10;
-      }
 
     &:before {
       content: "";
