@@ -13,7 +13,7 @@
         <div id="bookmark-total">
             <h1 id="main-heading">归档书签<span id="bookmark-list-total">({{ bookmark_list.bookmarks_total }})</span></h1>
         </div>
-        <div class="header-controls">
+        <div class="header-controls" ld-header-controls data-sticky-on="{{ request.user_profile.sticky_header_controls|yesno:'true,false' }}">
           {% bookmark_search bookmark_list.search mode='archived' %}
           {% include 'bookmarks/bulk_edit/toggle.html' %}
           {% random_sort bookmark_list.search %}
@@ -34,7 +34,7 @@
     </main>
 
     {# Filters #}
-    <div class="side-panel col-1 hide-md" ld-side-panel>
+    <div class="scrollbar side-panel col-1 hide-md" data-sticky-on="{{ request.user_profile.sticky_side_panel|yesno:'true,false' }}" ld-side-panel>
       {% include 'bookmarks/bundle_section.html' %}
       {% include 'bookmarks/tag_section.html' %}
     </div>
