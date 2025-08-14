@@ -663,3 +663,21 @@ ul.bookmark-list {
     }
   }
 }
+
+.side-panel {
+  max-height: 80vh;
+  &.sticky {
+    position: fixed;
+    top: 0;
+    z-index: 10;
+    background: var(--body-color);
+    padding-top: var(--unit-2);
+    padding-bottom: var(--unit-2);
+    margin-bottom: var(--unit-4);
+    overflow-y: auto;
+    
+    & .section-title {
+      height: var(--control-size);
+    }
+  }
+}

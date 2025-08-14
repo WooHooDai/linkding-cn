@@ -9,9 +9,9 @@
   padding-bottom: var(--unit-2);
   margin-bottom: var(--unit-4);
 
-  .section-title {
-    display: inline-flex;
-    align-items: center;
+  & .section-title {
+    display: flex;
+    height: var(--control-size-lg);
     gap: var(--unit-2);
     white-space: nowrap;
     width: 100%;
