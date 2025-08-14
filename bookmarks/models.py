@@ -676,6 +676,7 @@ class UserProfile(models.Model):
     )
     sticky_header_controls = models.BooleanField(default=False, null=False)
     sticky_pagination = models.BooleanField(default=False, null=False)
+    sticky_side_panel = models.BooleanField(default=False, null=False)
     collapse_side_panel = models.BooleanField(default=False, null=False)
     hide_bundles = models.BooleanField(default=False, null=False)
 
@@ -719,6 +720,7 @@ class UserProfileForm(forms.ModelForm):
             "items_per_page",
             "sticky_header_controls",
             "sticky_pagination",
+            "sticky_side_panel",
             "collapse_side_panel",
             "hide_bundles",
         ]

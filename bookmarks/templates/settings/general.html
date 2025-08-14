@@ -136,6 +136,16 @@
           </div>
         </div>
         <div class="form-group">
+          <label for="{{ form.sticky_side_panel.id_for_label }}" class="form-checkbox">
+            {{ form.sticky_side_panel }}
+            <i class="form-icon"></i> 侧边栏跟随
+          </label>
+          <div class="form-input-hint">
+            勾选启用，屏幕宽度足够时侧边栏将跟随屏幕滚动，而无需到页面顶部操作。
+            若侧边栏被折叠，则该选项将自动关闭。
+          </div>
+        </div>
+        <div class="form-group">
           <label for="{{ form.collapse_side_panel.id_for_label }}" class="form-checkbox">
             {{ form.collapse_side_panel }}
             <i class="form-icon"></i> 折叠侧边栏
@@ -442,6 +452,21 @@ reddit.com/r/Music music reddit</pre>
 
       updateBookmarkDescriptionMaxLines();
       bookmarkDescriptionDisplay.addEventListener("change", updateBookmarkDescriptionMaxLines);
+
+      const collapseSidePanel = document.getElementById("{{ form.collapse_side_panel.id_for_label }}");
+      const stickySidePanel = document.getElementById("{{ form.sticky_side_panel.id_for_label }}");
+      // Automatically disable the sticky side panel if the side panel is collapsed
+      function updateStickySidePanel() {
+        if (collapseSidePanel.checked) {
+          stickySidePanel.disabled = true;
+          stickySidePanel.checked = false;
+        } else {
+          stickySidePanel.disabled = false;
+        }
+      }
+
+      updateStickySidePanel();
+      collapseSidePanel.addEventListener("change", updateStickySidePanel);
     })();
   </script>
 

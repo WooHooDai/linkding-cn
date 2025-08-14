@@ -472,7 +472,7 @@ class SidePanel extends Behavior {
   constructor(element) {
     super(element);
     
-    const isStickyOn = true;
+    const isStickyOn = element.dataset.stickyOn === 'true';
     if (!isStickyOn) return;
     
     this.scroller = document.querySelector('.body-container');
