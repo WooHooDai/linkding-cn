@@ -95,3 +95,17 @@
   flex-direction: column;
   gap: var(--unit-6);
 }
+
+.bookmark-title {
+  word-break: break-word;
+  max-height: calc(1.5em * 5); /* 5行的高度 */
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* 隐藏滚动条 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.bookmark-title::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
