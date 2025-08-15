@@ -540,12 +540,24 @@ class BundlesContext:
         self.bundles = (
             BookmarkBundle.objects.filter(owner=self.user).order_by("order").all()
         )
+        
+        # 根据当前页面类型选择合适的上下文类
+        current_path = request.path
+        if current_path.endswith('/trash') or current_path.endswith('/trashed'):
+            context_class = TrashedBookmarksContext # 回收站
+        elif current_path.endswith('/archived'):
+            context_class = ArchivedBookmarksContext # 归档
+        elif current_path.endswith('/shared'):
+            context_class = SharedBookmarksContext # 分享
+        else:
+            context_class = ActiveBookmarksContext # 正常
+        
         # 为每个 bundle 统计书签数量
         for bundle in self.bundles:
-            # 使用 BookmarkSearch 和 ActiveBookmarksContext 获取 bundle 对应的书签 QuerySet
             if getattr(bundle, 'show_count', True):
                 search = bundle.search_object
-                queryset = ActiveBookmarksContext(request).get_bookmark_query_set(search)
+                context = context_class(request)
+                queryset = context.get_bookmark_query_set(search)
                 bundle.bookmarks_total = queryset.count()
             else:
                 bundle.bookmarks_total = None
