@@ -185,6 +185,10 @@ ul.bookmark-list {
   line-height: 1.1rem;
 }
 
+#bookmark-list-container {
+  margin-top: var(--unit-4);
+}
+
 @keyframes appear {
   0% {
     opacity: 0;
@@ -545,7 +549,6 @@ ul.bookmark-list {
     margin-top: -1px;
     /* margin-left: calc(-1 * var(--bulk-edit-bar-offset)); */
     margin-left: -8px;
-    margin-bottom: var(--unit-4);
     max-height: 0;
     overflow: hidden;
     transition: max-height var(--bulk-edit-transition-duration);
