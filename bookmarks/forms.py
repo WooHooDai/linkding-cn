@@ -108,6 +108,7 @@ class BookmarkBundleForm(forms.ModelForm):
     sort = forms.ChoiceField(choices=BookmarkSearchForm.SORT_CHOICES, label="排序", required=False)
     shared = forms.ChoiceField(choices=BookmarkSearchForm.FILTER_SHARED_CHOICES, widget=forms.RadioSelect, label="分享筛选", required=False)
     unread = forms.ChoiceField(choices=BookmarkSearchForm.FILTER_UNREAD_CHOICES, widget=forms.RadioSelect, label="未读筛选", required=False)
+    tagged = forms.ChoiceField(choices=BookmarkSearchForm.FILTER_TAGGED_CHOICES, widget=forms.RadioSelect, label="标签筛选", required=False)
     date_filter_by = forms.ChoiceField(choices=BookmarkSearchForm.FILTER_DATE_BY_CHOICES, widget=forms.RadioSelect, label="日期筛选", required=False)
     date_filter_type = forms.ChoiceField(choices=BookmarkSearchForm.FILTER_DATE_TYPE_CHOICES, widget=forms.RadioSelect, label="日期筛选方式", required=False)
     date_filter_start = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}), label="开始日期")
@@ -118,7 +119,7 @@ class BookmarkBundleForm(forms.ModelForm):
         model = BookmarkBundle
         fields = [
             "name", "search", "any_tags", "all_tags", "excluded_tags", 
-            "show_count", "is_folder", "sort", "shared", "unread", 
+            "show_count", "is_folder", "sort", "shared", "unread", "tagged",
             "date_filter_by", "date_filter_type", "date_filter_start", 
             "date_filter_end", "date_filter_relative_string"
         ]
@@ -136,7 +137,7 @@ class BookmarkBundleForm(forms.ModelForm):
         
         # 否则，使用默认值
         defaults = BookmarkSearch.defaults
-        for field_name in ['sort', 'shared', 'unread', 'date_filter_by', 'date_filter_type']:
+        for field_name in ['sort', 'shared', 'unread', 'tagged', 'date_filter_by', 'date_filter_type']:
             if field_name in self.fields:
                 self.fields[field_name].initial = defaults.get(field_name)
     
@@ -145,7 +146,7 @@ class BookmarkBundleForm(forms.ModelForm):
 
         search_params = {}
         search_field_names = [
-            'sort', 'shared', 'unread', 'date_filter_by', 'date_filter_type',
+            'sort', 'shared', 'unread', 'tagged', 'date_filter_by', 'date_filter_type',
             'date_filter_start', 'date_filter_end', 'date_filter_relative_string'
         ]
         

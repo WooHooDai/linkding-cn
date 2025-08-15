@@ -1572,6 +1572,91 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         )
         self.assertQueryResult(query, [matching_bookmarks])
 
+    def test_query_bookmarks_with_bundle_tagged_filter(self):
+        # 创建有标签和无标签的书签
+        tag1 = self.setup_tag(name="tag1")
+        tag2 = self.setup_tag(name="tag2")
+        
+        tagged_bookmarks = [
+            self.setup_bookmark(tags=[tag1]),
+            self.setup_bookmark(tags=[tag2]),
+            self.setup_bookmark(tags=[tag1, tag2]),
+        ]
+        
+        untagged_bookmarks = [
+            self.setup_bookmark(),
+            self.setup_bookmark(),
+        ]
+
+        # 测试 bundle 的 tagged 筛选 - 有标签
+        bundle = self.setup_bundle()
+        bundle.search_params = {"tagged": BookmarkSearch.FILTER_TAGGED_TAGGED}
+        bundle.save()
+        
+        search = BookmarkSearch(q="", bundle=bundle)
+        query = queries.query_bookmarks(self.user, self.profile, search)
+        self.assertQueryResult(query, [tagged_bookmarks])
+
+        # 测试 bundle 的 tagged 筛选 - 无标签
+        bundle.search_params = {"tagged": BookmarkSearch.FILTER_TAGGED_UNTAGGED}
+        bundle.save()
+        
+        search = BookmarkSearch(q="", bundle=bundle)
+        query = queries.query_bookmarks(self.user, self.profile, search)
+        self.assertQueryResult(query, [untagged_bookmarks])
+
+        # 测试 bundle 的 tagged 筛选 - 关闭（默认）
+        bundle.search_params = {"tagged": BookmarkSearch.FILTER_TAGGED_OFF}
+        bundle.save()
+        
+        search = BookmarkSearch(q="", bundle=bundle)
+        query = queries.query_bookmarks(self.user, self.profile, search)
+        self.assertQueryResult(query, [tagged_bookmarks + untagged_bookmarks])
+
+    def test_query_bookmarks_with_bundle_tagged_filter_and_other_filters(self):
+        # 创建有标签和无标签的书签，部分设为未读
+        tag1 = self.setup_tag(name="tag1")
+        
+        tagged_unread_bookmarks = [
+            self.setup_bookmark(tags=[tag1], unread=True),
+            self.setup_bookmark(tags=[tag1], unread=True),
+        ]
+        
+        tagged_read_bookmarks = [
+            self.setup_bookmark(tags=[tag1], unread=False),
+        ]
+        
+        untagged_unread_bookmarks = [
+            self.setup_bookmark(unread=True),
+        ]
+        
+        untagged_read_bookmarks = [
+            self.setup_bookmark(unread=False),
+        ]
+
+        # 测试 bundle 的 tagged 筛选与未读筛选组合 - 有标签且未读
+        bundle = self.setup_bundle()
+        bundle.search_params = {
+            "tagged": BookmarkSearch.FILTER_TAGGED_TAGGED,
+            "unread": BookmarkSearch.FILTER_UNREAD_YES
+        }
+        bundle.save()
+        
+        search = BookmarkSearch(q="", bundle=bundle)
+        query = queries.query_bookmarks(self.user, self.profile, search)
+        self.assertQueryResult(query, [tagged_unread_bookmarks])
+
+        # 测试 bundle 的 tagged 筛选与未读筛选组合 - 无标签且已读
+        bundle.search_params = {
+            "tagged": BookmarkSearch.FILTER_TAGGED_UNTAGGED,
+            "unread": BookmarkSearch.FILTER_UNREAD_NO
+        }
+        bundle.save()
+        
+        search = BookmarkSearch(q="", bundle=bundle)
+        query = queries.query_bookmarks(self.user, self.profile, search)
+        self.assertQueryResult(query, [untagged_read_bookmarks])
+
     def test_sort_by_deleted_asc(self):
         search = BookmarkSearch(sort=BookmarkSearch.SORT_DELETED_ASC)
 

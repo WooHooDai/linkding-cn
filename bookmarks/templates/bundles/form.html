@@ -95,6 +95,17 @@
   {% endfor %}
 </div>
 
+<div class="form-group radio-group" role="radiogroup" aria-labelledby="bundle-tagged-label">
+  <label id="bundle-tagged-label" class="form-label">标签筛选</label>
+  {% for radio in form.tagged %}
+    <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
+      {{ radio.tag }}
+      <i class="form-icon"></i>
+      {{ radio.choice_label }}
+    </label>
+  {% endfor %}
+</div>
+
 <!-- 日期筛选相关表单项 -->
 <div ld-date-filter-fields>
   <div id="date-filter-by-group" class="form-group radio-group" role="radiogroup" aria-labelledby="date-filter-by-label">
