@@ -172,6 +172,12 @@ def _apply_filters(query_set: QuerySet, user: Optional[User], profile: UserProfi
     elif search.shared == BookmarkSearch.FILTER_SHARED_UNSHARED:
         query_set = query_set.filter(shared=False)
 
+    # Tagged filter
+    if search.tagged == BookmarkSearch.FILTER_TAGGED_TAGGED:
+        query_set = query_set.filter(tags__isnull=False).distinct()
+    elif search.tagged == BookmarkSearch.FILTER_TAGGED_UNTAGGED:
+        query_set = query_set.filter(tags__isnull=True)
+
     # Filter by bundle
     if search.bundle:
         query_set = _filter_bundle(query_set, search.bundle)

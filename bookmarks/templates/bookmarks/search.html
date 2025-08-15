@@ -8,7 +8,8 @@
            data-mode="{{ mode }}"
            data-user="{{ search.user }}"
            data-shared="{{ search.shared }}"
-           data-unread="{{ search.unread }}">
+           data-unread="{{ search.unread }}"
+           data-tagged="{{ search.tagged }}">
     <input type="submit" value="Search" class="d-none">
     {% for hidden_field in search_form.hidden_fields %}
       {{ hidden_field }}
@@ -63,6 +64,21 @@
               未读筛选
             </label>
             {% for radio in preferences_form.unread %}
+              <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
+                {{ radio.tag }}
+                <i class="form-icon"></i>
+                {{ radio.choice_label }}
+              </label>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% if 'tagged' in preferences_form.editable_fields %}
+          <div class="form-group radio-group" role="radiogroup" aria-labelledby="search-tagged-label">
+            <label id="search-tagged-label"
+                   class="form-label{% if 'tagged' in search.modified_params %} text-bold{% endif %}">
+              标签筛选
+            </label>
+            {% for radio in preferences_form.tagged %}
               <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
                 {{ radio.tag }}
                 <i class="form-icon"></i>

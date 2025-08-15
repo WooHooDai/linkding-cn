@@ -24,6 +24,7 @@ class SearchAutocomplete extends Behavior {
           user: input.dataset.user,
           shared: input.dataset.shared,
           unread: input.dataset.unread,
+          tagged: input.dataset.tagged,
         },
       },
     });

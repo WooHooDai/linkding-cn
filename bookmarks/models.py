@@ -218,6 +218,10 @@ class BookmarkSearch:
     FILTER_UNREAD_YES = "yes"
     FILTER_UNREAD_NO = "no"
 
+    FILTER_TAGGED_OFF = "off"
+    FILTER_TAGGED_TAGGED = "yes"
+    FILTER_TAGGED_UNTAGGED = "no"
+
     FILTER_DATE_OFF = "off"
     FILTER_DATE_BY_ADDED = "added"
     FILTER_DATE_BY_MODIFIED = "modified"
@@ -233,6 +237,7 @@ class BookmarkSearch:
         "sort",
         "shared",
         "unread",
+        "tagged",
         "modified_since",
         "added_since",
         "deleted_since",
@@ -242,7 +247,7 @@ class BookmarkSearch:
         "date_filter_start",
         "date_filter_end",
     ]
-    preferences = ["sort", "shared", "unread", "date_filter_by", "date_filter_type", "date_filter_relative_string"]
+    preferences = ["sort", "shared", "unread", "tagged", "date_filter_by", "date_filter_type", "date_filter_relative_string"]
     defaults = {
         "q": "",
         "user": "",
@@ -250,6 +255,7 @@ class BookmarkSearch:
         "sort": SORT_ADDED_DESC,
         "shared": FILTER_SHARED_OFF,
         "unread": FILTER_UNREAD_OFF,
+        "tagged": FILTER_TAGGED_OFF,
         "modified_since": None,
         "added_since": None,
         "deleted_since": None,
@@ -311,6 +317,7 @@ class BookmarkSearch:
         sort: str = None,
         shared: str = None,
         unread: str = None,
+        tagged: str = None,
         modified_since: str = None,
         added_since: str = None,
         deleted_since: str = None,
@@ -330,7 +337,7 @@ class BookmarkSearch:
         # 合并参数：user参数 > bundle参数 > default参数
         user_params = {
             'q': q, 'user': user, 'bundle': bundle, 'sort': sort, 'shared': shared,
-            'unread': unread, 'modified_since': modified_since, 'added_since': added_since,
+            'unread': unread, 'tagged': tagged, 'modified_since': modified_since, 'added_since': added_since,
             'deleted_since': deleted_since, 'date_filter_by': date_filter_by,
             'date_filter_type': date_filter_type, 'date_filter_relative_string': date_filter_relative_string,
             'date_filter_start': date_filter_start, 'date_filter_end': date_filter_end
@@ -500,6 +507,11 @@ class BookmarkSearchForm(forms.Form):
         (BookmarkSearch.FILTER_UNREAD_YES, "未读"),
         (BookmarkSearch.FILTER_UNREAD_NO, "已读"),
     ]
+    FILTER_TAGGED_CHOICES = [
+        (BookmarkSearch.FILTER_TAGGED_OFF, "关闭"),
+        (BookmarkSearch.FILTER_TAGGED_TAGGED, "有标签"),
+        (BookmarkSearch.FILTER_TAGGED_UNTAGGED, "无标签"),
+    ]
     FILTER_DATE_BY_CHOICES = [
         (BookmarkSearch.FILTER_DATE_OFF, "关闭"),
         (BookmarkSearch.FILTER_DATE_BY_ADDED, "添加"),
@@ -516,6 +528,7 @@ class BookmarkSearchForm(forms.Form):
     sort = forms.ChoiceField(choices=SORT_CHOICES)
     shared = forms.ChoiceField(choices=FILTER_SHARED_CHOICES, widget=forms.RadioSelect)
     unread = forms.ChoiceField(choices=FILTER_UNREAD_CHOICES, widget=forms.RadioSelect)
+    tagged = forms.ChoiceField(choices=FILTER_TAGGED_CHOICES, widget=forms.RadioSelect)
     modified_since = forms.CharField(required=False)
     added_since = forms.CharField(required=False)
     deleted_since = forms.CharField(required=False)

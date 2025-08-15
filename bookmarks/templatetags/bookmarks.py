@@ -23,7 +23,7 @@ def bookmark_search(context, search: BookmarkSearch, mode: str = ""):
         preferences_form = BookmarkSearchForm(search, editable_fields=["sort", "date_filter_by", "date_filter_type", "date_filter_start", "date_filter_end", "date_filter_relative_string"])
     elif mode == "trash":
         preferences_form = BookmarkSearchForm(
-            search, editable_fields=["sort", "shared", "unread", "date_filter_by", "date_filter_type", "date_filter_start", "date_filter_end", "date_filter_relative_string"]
+            search, editable_fields=["sort", "shared", "unread", "tagged", "date_filter_by", "date_filter_type", "date_filter_start", "date_filter_end", "date_filter_relative_string"]
         )
         trash_sort_choices = [
             (BookmarkSearch.SORT_DELETED_ASC, "删除时间 ↑"),
@@ -36,7 +36,7 @@ def bookmark_search(context, search: BookmarkSearch, mode: str = ""):
         preferences_form.fields["date_filter_by"].choices = preferences_form.fields["date_filter_by"].choices + trash_date_filter_choices
     else:
         preferences_form = BookmarkSearchForm(
-            search, editable_fields=["sort", "shared", "unread", "date_filter_by", "date_filter_type", "date_filter_start", "date_filter_end", "date_filter_relative_string"]
+            search, editable_fields=["sort", "shared", "unread", "tagged", "date_filter_by", "date_filter_type", "date_filter_start", "date_filter_end", "date_filter_relative_string"]
         )
     
     # 解析相对日期字符串，用于前端显示

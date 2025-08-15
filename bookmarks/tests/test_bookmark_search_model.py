@@ -22,6 +22,7 @@ class BookmarkSearchModelTest(TestCase, BookmarkFactoryMixin):
         self.assertEqual(search.sort, BookmarkSearch.SORT_ADDED_DESC)
         self.assertEqual(search.shared, BookmarkSearch.FILTER_SHARED_OFF)
         self.assertEqual(search.unread, BookmarkSearch.FILTER_UNREAD_OFF)
+        self.assertEqual(search.tagged, BookmarkSearch.FILTER_TAGGED_OFF)
 
         # some params
         query_dict = QueryDict("q=search query&user=user123")
@@ -32,12 +33,13 @@ class BookmarkSearchModelTest(TestCase, BookmarkFactoryMixin):
         self.assertEqual(bookmark_search.sort, BookmarkSearch.SORT_ADDED_DESC)
         self.assertEqual(search.shared, BookmarkSearch.FILTER_SHARED_OFF)
         self.assertEqual(search.unread, BookmarkSearch.FILTER_UNREAD_OFF)
+        self.assertEqual(search.tagged, BookmarkSearch.FILTER_TAGGED_OFF)
 
         # all params
         bundle = self.setup_bundle()
         request = MockRequest(self.get_or_create_test_user())
         query_dict = QueryDict(
-            f"q=search query&sort=title_asc&user=user123&bundle={bundle.id}&shared=yes&unread=yes"
+            f"q=search query&sort=title_asc&user=user123&bundle={bundle.id}&shared=yes&unread=yes&tagged=yes"
         )
 
         search = BookmarkSearch.from_request(request, query_dict)
@@ -47,11 +49,13 @@ class BookmarkSearchModelTest(TestCase, BookmarkFactoryMixin):
         self.assertEqual(search.sort, BookmarkSearch.SORT_TITLE_ASC)
         self.assertEqual(search.shared, BookmarkSearch.FILTER_SHARED_SHARED)
         self.assertEqual(search.unread, BookmarkSearch.FILTER_UNREAD_YES)
+        self.assertEqual(search.tagged, BookmarkSearch.FILTER_TAGGED_TAGGED)
 
         # respects preferences
         preferences = {
             "sort": BookmarkSearch.SORT_TITLE_ASC,
             "unread": BookmarkSearch.FILTER_UNREAD_YES,
+            "tagged": BookmarkSearch.FILTER_TAGGED_TAGGED,
         }
         query_dict = QueryDict("q=search query")
 
@@ -61,14 +65,16 @@ class BookmarkSearchModelTest(TestCase, BookmarkFactoryMixin):
         self.assertEqual(search.sort, BookmarkSearch.SORT_TITLE_ASC)
         self.assertEqual(search.shared, BookmarkSearch.FILTER_SHARED_OFF)
         self.assertEqual(search.unread, BookmarkSearch.FILTER_UNREAD_YES)
+        self.assertEqual(search.tagged, BookmarkSearch.FILTER_TAGGED_TAGGED)
 
         # query overrides preferences
         preferences = {
             "sort": BookmarkSearch.SORT_TITLE_ASC,
             "shared": BookmarkSearch.FILTER_SHARED_SHARED,
             "unread": BookmarkSearch.FILTER_UNREAD_YES,
+            "tagged": BookmarkSearch.FILTER_TAGGED_TAGGED,
         }
-        query_dict = QueryDict("sort=title_desc&shared=no&unread=off")
+        query_dict = QueryDict("sort=title_desc&shared=no&unread=off&tagged=no")
 
         search = BookmarkSearch.from_request(None, query_dict, preferences)
         self.assertEqual(search.q, "")
@@ -76,6 +82,7 @@ class BookmarkSearchModelTest(TestCase, BookmarkFactoryMixin):
         self.assertEqual(search.sort, BookmarkSearch.SORT_TITLE_DESC)
         self.assertEqual(search.shared, BookmarkSearch.FILTER_SHARED_UNSHARED)
         self.assertEqual(search.unread, BookmarkSearch.FILTER_UNREAD_OFF)
+        self.assertEqual(search.tagged, BookmarkSearch.FILTER_TAGGED_UNTAGGED)
 
     def test_from_request_ignores_invalid_bundle_param(self):
         self.setup_bundle()
@@ -100,7 +107,7 @@ class BookmarkSearchModelTest(TestCase, BookmarkFactoryMixin):
 
         # params are default values
         search = BookmarkSearch(
-            q="", sort=BookmarkSearch.SORT_ADDED_DESC, user="", bundle=None, shared=""
+            q="", sort=BookmarkSearch.SORT_ADDED_DESC, user="", bundle=None, shared=BookmarkSearch.FILTER_SHARED_OFF
         )
         self.assertEqual(search.query_params, {})
 
@@ -182,7 +189,7 @@ class BookmarkSearchModelTest(TestCase, BookmarkFactoryMixin):
 
         # params are default values
         bookmark_search = BookmarkSearch(
-            q="", sort=BookmarkSearch.SORT_ADDED_DESC, user="", shared=""
+            q="", sort=BookmarkSearch.SORT_ADDED_DESC, user="", shared=BookmarkSearch.FILTER_SHARED_OFF
         )
         modified_params = bookmark_search.modified_params
         self.assertEqual(len(modified_params), 0)
@@ -253,7 +260,7 @@ class BookmarkSearchModelTest(TestCase, BookmarkFactoryMixin):
 
         # params are default values
         bookmark_search = BookmarkSearch(
-            q="", sort=BookmarkSearch.SORT_ADDED_DESC, user="", shared=""
+            q="", sort=BookmarkSearch.SORT_ADDED_DESC, user="", shared=BookmarkSearch.FILTER_SHARED_OFF
         )
         self.assertFalse(bookmark_search.has_modifications)
 
@@ -272,6 +279,10 @@ class BookmarkSearchModelTest(TestCase, BookmarkFactoryMixin):
                 "sort": BookmarkSearch.SORT_ADDED_DESC,
                 "shared": BookmarkSearch.FILTER_SHARED_OFF,
                 "unread": BookmarkSearch.FILTER_UNREAD_OFF,
+                "tagged": BookmarkSearch.FILTER_TAGGED_OFF,
+                "date_filter_by": BookmarkSearch.FILTER_DATE_OFF,
+                "date_filter_type": BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE,
+                "date_filter_relative_string": None,
             },
         )
 
@@ -285,6 +296,10 @@ class BookmarkSearchModelTest(TestCase, BookmarkFactoryMixin):
                 "sort": BookmarkSearch.SORT_TITLE_DESC,
                 "shared": BookmarkSearch.FILTER_SHARED_OFF,
                 "unread": BookmarkSearch.FILTER_UNREAD_YES,
+                "tagged": BookmarkSearch.FILTER_TAGGED_OFF,
+                "date_filter_by": BookmarkSearch.FILTER_DATE_OFF,
+                "date_filter_type": BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE,
+                "date_filter_relative_string": None,
             },
         )
 
@@ -299,5 +314,9 @@ class BookmarkSearchModelTest(TestCase, BookmarkFactoryMixin):
                 "sort": BookmarkSearch.SORT_ADDED_DESC,
                 "shared": BookmarkSearch.FILTER_SHARED_OFF,
                 "unread": BookmarkSearch.FILTER_UNREAD_OFF,
+                "tagged": BookmarkSearch.FILTER_TAGGED_OFF,
+                "date_filter_by": BookmarkSearch.FILTER_DATE_OFF,
+                "date_filter_type": BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE,
+                "date_filter_relative_string": None,
             },
         )
