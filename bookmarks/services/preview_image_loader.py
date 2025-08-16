@@ -45,7 +45,9 @@ def load_preview_image(url: str, bookmark: Bookmark = None) -> str | None:
         image_url = metadata.preview_image
 
     logger.debug(f"Loading preview image: {image_url}")
-    with requests.get(image_url, stream=True) as response:
+
+    headers = { "Referer": url }
+    with requests.get(image_url, headers=headers, stream=True) as response:
         if response.status_code < 200 or response.status_code >= 300:
             logger.debug(
                 f"Bad response status code for preview image: {image_url} status_code={response.status_code}"
