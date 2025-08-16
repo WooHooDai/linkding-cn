@@ -117,11 +117,19 @@ def _load_website_metadata(url: str, config: dict = None):
                 else None
             )
 
-        image_tag = (
+        # 获取预览图，依次查找如下标签：meta；link
+        image_tag_meta = (
             soup.find("meta", attrs={"property": "og:image"}) 
             or soup.find("meta", attrs={"name": "og:image"})
         )
-        preview_image = image_tag["content"].strip() if image_tag else None
+        image_tag_link = soup.find("link", attrs={"rel": "preload", "as": "image"})
+
+        preview_image = None
+        if image_tag_meta:
+            preview_image = image_tag_meta["content"].strip()
+        elif image_tag_link:
+            preview_image = image_tag_link["href"].strip()
+
         if (
             preview_image
             and not preview_image.startswith("http://")
