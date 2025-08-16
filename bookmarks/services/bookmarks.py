@@ -89,6 +89,10 @@ def enhance_with_website_metadata(bookmark: Bookmark):
         bookmark.description = metadata.description or ""
         update_fields.append("description")
 
+    if not bookmark.preview_image_remote_url and metadata.preview_image:
+        bookmark.preview_image_remote_url = metadata.preview_image
+        update_fields.append("preview_image_remote_url")
+
     if update_fields:
         bookmark.date_modified = timezone.now()
         update_fields.append("date_modified")

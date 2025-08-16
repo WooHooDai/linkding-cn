@@ -253,6 +253,8 @@ def _refresh_metadata_task(bookmark_id: int):
         bookmark.title = metadata.title
     if metadata.description:
         bookmark.description = metadata.description
+    if metadata.preview_image:
+        bookmark.preview_image_remote_url = metadata.preview_image
     bookmark.date_modified = timezone.now()
 
     bookmark.save()

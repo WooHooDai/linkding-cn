@@ -81,27 +81,29 @@
     </details>
     {{ form.notes.errors }}
   </div>
-  <div class="form-group">
-    {{ form.preview_image_remote_url.as_hidden }}
-    <details class="preview-image"{% if form.preview_image_remote_url.value %} open{% endif %}>
-      <summary>
-        <span class="form-label d-inline-block">预览图</span>
-      </summary>
-      <div class="preview-image-container">
-        {% if preview_image_file %}
-          <img id="preview-image-img"
-               class="preview-image"
-               src="{% static preview_image_file %}"
-               alt="预览图" />
-        {% else %}
-          <img id="preview-image-img"
-               class="preview-image"
-               src="{{ form.preview_image_remote_url.value }}"
-               alt="预览图" />
-        {% endif %}
-      </div>
-    </details>
-  </div>
+  {% if request.user_profile.enable_preview_images %}
+    <div class="form-group">
+      {{ form.preview_image_remote_url.as_hidden }}
+      <details class="preview-image"{% if form.preview_image_remote_url.value %} open{% endif %}>
+        <summary>
+          <span class="form-label d-inline-block">预览图</span>
+        </summary>
+        <div class="preview-image-container">
+          {% if preview_image_file %}
+            <img id="preview-image-img"
+                class="preview-image"
+                src="{% static preview_image_file %}"
+                alt="预览图" />
+          {% else %}
+            <img id="preview-image-img"
+                class="preview-image"
+                src="{{ form.preview_image_remote_url.value }}"
+                alt="预览图" />
+          {% endif %}
+        </div>
+      </details>
+    </div>
+  {% endif %}
   <div class="form-group">
     <div class="form-checkbox">
       {{ form.unread|form_field:"help" }}

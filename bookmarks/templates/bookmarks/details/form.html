@@ -117,10 +117,14 @@
         <div class="markdown">{% markdown details.bookmark.notes %}</div>
       </section>
     {% endif %}
-    {% if details.bookmark.preview_image_file %}
+    {% if request.user_profile.enable_preview_images %}
       <section class="preview-image col-2">
         <h3>预览图</h3>
-        <img src="{% static details.bookmark.preview_image_file %}" alt=""/>
+        {% if details.bookmark.preview_image_file %}
+          <img src="{% static details.bookmark.preview_image_file %}" alt=""/>
+        {% elif details.bookmark.preview_image_remote_url %}
+          <img src="{{ details.bookmark.preview_image_remote_url }}" alt=""/>
+        {% endif %}
       </section>
     {% endif %}
   </div>
