@@ -9,6 +9,26 @@
   --bulk-actions-bg-color: var(--gray-50);
 }
 
+/* 页面滚动容器设置 */
+body {
+  overflow: hidden;
+  height: 100vh;
+  margin-left: 0;
+  margin-right: 0;
+  padding: 0;
+}
+
+.body-container {
+  scrollbar-gutter: stable;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  @media (pointer: coarse) {
+    scrollbar-gutter: initial;
+  }
+}
+
 /* Bookmark page grid */
 .bookmarks-page {
   &.grid {

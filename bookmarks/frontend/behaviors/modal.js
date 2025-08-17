@@ -39,8 +39,9 @@ export class ModalBehavior extends Behavior {
     document
       .querySelectorAll("body > *:not(.modals)")
       .forEach((el) => el.setAttribute("inert", ""));
-    // Lock scroll on the body
-    document.body.classList.add("scroll-lock");
+    // Lock scroll on the body container
+    const bodyContainer = document.querySelector('.body-container');
+    bodyContainer.classList.add("scroll-lock");
   }
 
   clearInert() {
@@ -48,8 +49,9 @@ export class ModalBehavior extends Behavior {
     document
       .querySelectorAll("body > *")
       .forEach((el) => el.removeAttribute("inert"));
-    // Remove scroll lock from the body
-    document.body.classList.remove("scroll-lock");
+    // Remove scroll lock from the body container
+    const bodyContainer = document.querySelector('.body-container');
+    bodyContainer.classList.remove("scroll-lock");
   }
 
   onKeyDown(event) {

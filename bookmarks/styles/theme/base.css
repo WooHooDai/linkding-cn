@@ -12,17 +12,6 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Reserve space for vert. scrollbar to avoid layout shifting when scrollbars are added */
-html {
-  scrollbar-gutter: stable;
-}
-
-@media (pointer: coarse) {
-  html {
-    scrollbar-gutter: initial;
-  }
-}
-
 body {
   background: var(--body-color);
   color: var(--text-color);
