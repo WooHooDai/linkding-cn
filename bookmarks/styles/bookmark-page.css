@@ -411,12 +411,6 @@ li[ld-bookmark-item] {
   margin-top: var(--unit-4);
   border-top: solid 1px var(--secondary-border-color);
 
-  /* Remove left padding from first pagination link */
-
-  & .page-item:first-child a {
-    padding-left: 0;
-  }
-
   &.sticky {
     position: fixed;
     bottom: 0;

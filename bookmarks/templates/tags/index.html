@@ -1,0 +1,125 @@
+{% extends "bookmarks/layout.html" %}
+{% load shared %}
+{% load pagination %}
+
+{% block head %}
+  {% with page_title="标签 - Linkding" %}
+    {{ block.super }}
+  {% endwith %}
+{% endblock %}
+
+{% block content %}
+  <div class="tags-page crud-page">
+    <main aria-labelledby="main-heading">
+      <div class="crud-header">
+        <h1 id="main-heading">标签</h1>
+        <div class="d-flex gap-2 ml-auto">
+          <a href="{% url 'linkding:tags.new' %}" class="btn">新增标签</a>
+          <a href="{% url 'linkding:tags.merge' %}" class="btn">合并标签</a>
+        </div>
+      </div>
+
+      {% include 'shared/messages.html' %}
+
+      {# Filters #}
+      <div class="crud-filters">
+        <form method="get" class="mb-2" ld-form-reset>
+          <div class="form-group">
+            <label class="form-label text-assistive" for="search">搜索标签</label>
+            <div class="input-group">
+              <input type="text" id="search" name="search" value="{{ search }}" placeholder="搜索标签..."
+                     class="form-input">
+              <button type="submit" class="btn input-group-btn">搜索</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label text-assistive" for="sort">排序依据</label>
+            <div class="input-group">
+              <span class="input-group-addon text-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path
+                    stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 9l4 -4l4 4m-4 -4v14"/><path
+                    d="M21 15l-4 4l-4 -4m4 4v-14"/></svg>
+              </span>
+              <select id="sort" name="sort" class="form-select" ld-auto-submit>
+                <option value="name-asc" {% if sort == "name-asc" %}selected{% endif %}>标签名称 ↑</option>
+                <option value="name-desc" {% if sort == "name-desc" %}selected{% endif %}>标签名称 ↓</option>
+                <option value="count-asc" {% if sort == "count-asc" %}selected{% endif %}>书签数量 ↑</option>
+                <option value="count-desc" {% if sort == "count-desc" %}selected{% endif %}>书签数量 ↓</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-checkbox">
+              <input type="checkbox" name="unused" value="true" {% if unused_only %}checked{% endif %} ld-auto-submit>
+              <i class="form-icon"></i> 仅显示未使用标签
+            </label>
+          </div>
+        </form>
+
+        {# Tags count #}
+        <p class="text-secondary text-small m-0">
+          {% if search or unused_only %}
+            {{ page.paginator.count }} 个标签（共 {{ total_tags }} 个）
+          {% else %}
+            共 {{ total_tags }} 个标签
+          {% endif %}
+        </p>
+      </div>
+
+      {# Tags List #}
+      {% if page.object_list %}
+        <form method="post">
+          {% csrf_token %}
+
+          <table class="table crud-table">
+            <thead>
+            <tr>
+              <th>名称</th>
+              <th style="width: 25%">书签数量</th>
+              <th class="actions">
+                <span class="text-assistive">操作</span>
+              </th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for tag in page.object_list %}
+              <tr>
+                <td>
+                  {{ tag.name }}
+                </td>
+                <td style="width: 25%">
+                  <a class="btn btn-link" href="{% url 'linkding:bookmarks.index' %}?q=%23{{ tag.name|urlencode }}">
+                    {{ tag.bookmark_count }}
+                  </a>
+                </td>
+                <td class="actions">
+                  <a class="btn btn-link" href="{% url 'linkding:tags.edit' tag.id %}">编辑</a>
+                  <button type="submit" name="delete_tag" value="{{ tag.id }}" class="btn btn-link text-error"
+                          ld-confirm-button>
+                    删除
+                  </button>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+
+        </form>
+
+        {% pagination page %}
+
+      {% else %}
+        <div class="empty">
+          {% if search or unused_only %}
+            <p class="empty-title h5">无标签</p>
+            <p class="empty-subtitle">请尝试调整搜索内容</p>
+          {% else %}
+            <p class="empty-title h5">你还没有标签</p>
+            <p class="empty-subtitle">你为书签添加标签后，标签将出现在这里</p>
+          {% endif %}
+        </div>
+      {% endif %}
+    </main>
+  </div>
+{% endblock %}
