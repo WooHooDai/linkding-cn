@@ -44,9 +44,25 @@ class BookmarkPagination extends Behavior {
   }
 
   setSticky() {
-    if (!this.container) return;
-    const r = this.container.getBoundingClientRect();
-    this.element.style.width = `${r.width}px`;
+    const width = this.getContainerWidth();
+    if (width === 0) return;
+    this.element.style.width = `${width}px`;
+  }
+
+  getContainerWidth() {
+    // 检查是否在Bundle预览环境中
+    const bundlePreview = this.element.closest('turbo-frame[id="preview"]');
+    if (bundlePreview) {
+      // 在Bundle预览中，使用预览容器的宽度
+      const previewContainer = bundlePreview.closest('aside');
+      if (previewContainer) {
+        return previewContainer.getBoundingClientRect().width;
+      }
+    }
+    
+    // 默认使用书签列表容器的宽度
+    if (!this.container) return 0;
+    return this.container.getBoundingClientRect().width;
   }
 
   updateStickyState() {
