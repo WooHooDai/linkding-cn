@@ -23,6 +23,7 @@ body {
   height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
+  padding-bottom: 30px; 
 
   @media (pointer: coarse) {
     scrollbar-gutter: initial;
