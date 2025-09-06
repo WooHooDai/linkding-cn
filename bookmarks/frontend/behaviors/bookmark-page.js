@@ -107,7 +107,7 @@ class HeaderControls extends Behavior {
     this.isOnResize = false;
     this.onScroll = this.onScroll.bind(this);
     this.onResize = this.onResize.bind(this);
-    window.addEventListener('scroll', this.onScroll, { passive: true });
+    this.scroller.addEventListener('scroll', this.onScroll, { passive: true });
     window.addEventListener('resize', this.onResize, { passive: true });
 
     this.updateStickyState();
