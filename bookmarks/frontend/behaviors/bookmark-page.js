@@ -218,6 +218,18 @@ class BookmarkItem extends Behavior {
       }
       titleElement.addEventListener('focus', this.showTitleTooltip, { passive: true });
       titleElement.addEventListener('blur', this.hideTitleTooltip, { passive: true });
+
+      // 标题：禁用Safari浏览器下原生tooltip
+      // 禁用标题链接鼠标响应，由标题父容器实现点击点转
+      const isSafari = navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome');
+      if(isSafari) {
+        const titleLinkElement = element.querySelector("a.title-link")
+        titleLinkElement.style.pointerEvents = 'none';
+
+        titleElement.style.cursor = "pointer";
+        this.onTitleClick = this.onTitleClick.bind(this);
+        titleElement.addEventListener("click", this.onTitleClick);
+      }
     }
 
     // 描述浮窗：当描述被截断时显示完整描述
@@ -289,6 +301,7 @@ class BookmarkItem extends Behavior {
       this.titleElement.removeEventListener('touchend', this.hideTitleTooltip);
       this.titleElement.removeEventListener('focus', this.showTitleTooltip);
       this.titleElement.removeEventListener('blur', this.hideTitleTooltip);
+      this.titleElement.removeEventListener("click", this.onTitleClick);
     }
     if (this.descriptionContainer) {
       this.descriptionContainer.removeEventListener('mouseenter', this.showDescriptionTooltip);
@@ -308,6 +321,23 @@ class BookmarkItem extends Behavior {
   onEditClick() {
     localStorage.setItem('bookmarkListScrollPosition', window.scrollY);
     localStorage.setItem('bookmarkListReturnUrl', window.location.pathname);
+  }
+
+  onTitleClick(event) {
+    // 不要处理favicon的点击
+    if (event.target.closest('a.favicon-link')) return;
+
+    const link = this.titleElement.querySelector('a.title-link');
+    if (!link || !link.href) return;
+
+    const target = link.getAttribute('target');
+    if (target==='_blank') {
+      window.open(link.href, target, 'noopener noreferrer');
+    } else {
+      window.open(link.href, target);
+    }
+
+    return;
   }
 
   showFloatTooltip(targetEl) {
