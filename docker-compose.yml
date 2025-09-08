@@ -1,7 +1,7 @@
 services:
   linkding:
-    container_name: "${LD_CONTAINER_NAME:-linkding}"
-    image: sissbruecker/linkding:latest
+    container_name: "${LD_CONTAINER_NAME}"
+    image: woohoodai/linkding-cn:latest
     ports:
       - "${LD_HOST_PORT:-9090}:9090"
     volumes:
