@@ -183,6 +183,7 @@ class BookmarkItem extends Behavior {
     }
 
     // 记录滚动位置（点击编辑按钮时）
+    this.scroller = document.querySelector('.body-container');
     this.editAction = element.querySelector(".edit-action");
     if (this.editAction) {
       this.onEditClick = this.onEditClick.bind(this);
@@ -319,7 +320,7 @@ class BookmarkItem extends Behavior {
   }
 
   onEditClick() {
-    localStorage.setItem('bookmarkListScrollPosition', window.scrollY);
+    localStorage.setItem('bookmarkListScrollPosition', this.scroller.scrollTop);
     localStorage.setItem('bookmarkListReturnUrl', window.location.pathname);
   }
 
@@ -495,6 +496,7 @@ document.addEventListener("turbo:load", bindBundleMenuBehaviors);
 // TODO：可以更细化记录与恢复位置的页面&时机
 function restoreBookmarkListScrollPosition() {
   // 只在有书签列表主容器的页面恢复滚动
+  const scroller = document.querySelector('.body-container');
   if (document.querySelector('.bookmark-list')) {
     var scroll = localStorage.getItem('bookmarkListScrollPosition');
     var returnUrl = localStorage.getItem('bookmarkListReturnUrl');
@@ -503,7 +505,7 @@ function restoreBookmarkListScrollPosition() {
       returnUrl !== null
     ) {
       if (window.location.pathname === returnUrl) {
-        window.scrollTo(0, parseInt(scroll, 10));
+        scroller.scrollTo(0, parseInt(scroll, 10));
       }
       localStorage.removeItem('bookmarkListScrollPosition');
       localStorage.removeItem('bookmarkListReturnUrl');
