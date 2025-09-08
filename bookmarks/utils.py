@@ -48,7 +48,7 @@ def humanize_absolute_date(
     delta = relativedelta(now_local, value_local)
     yesterday = now_local - relativedelta(days=1)
 
-    is_older_than_a_week = delta.years > 0 or delta.months > 0 or delta.weeks > 0
+    is_older_than_a_week = delta.years > 0 or delta.months > 0 or delta.weeks > 0 or delta.days > 0
 
     if is_older_than_a_week:
         return formats.date_format(value_local, "SHORT_DATE_FORMAT")
@@ -69,6 +69,7 @@ def humanize_relative_date(
     value_local = timezone.localtime(value)
     now_local = timezone.localtime(now)
     delta = relativedelta(now_local, value_local)
+    is_current_week = value_local.isocalendar()[:2] == now_local.isocalendar()[:2]
 
     if delta.years > 0:
         return f"{delta.years} 年前"
@@ -82,8 +83,10 @@ def humanize_relative_date(
             return "今天"
         elif value_local.day == yesterday.day:
             return "昨天"
-        else:
+        elif is_current_week:
             return weekday_names[value_local.isoweekday()]
+        else:
+            return "上" + weekday_names[value_local.isoweekday()]
 
 def humanize_absolute_date_short(
     value: datetime.datetime, now: Optional[datetime.datetime] = None
@@ -95,7 +98,7 @@ def humanize_absolute_date_short(
     delta = relativedelta(now_local, value_local)
     yesterday = now_local - relativedelta(days=1)
 
-    is_older_than_yesterday = delta.years > 0 or delta.months > 0 or delta.weeks > 0 or delta.days > 1
+    is_older_than_yesterday = delta.years > 0 or delta.months > 0 or delta.weeks > 0 or delta.days > 0
 
     if is_older_than_yesterday:
         if value_local.year == now_local.year:
