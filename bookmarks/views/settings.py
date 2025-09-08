@@ -142,7 +142,7 @@ def get_version_info(ttl_hash=None):
     latest_version = None
     try:
         latest_version_url = (
-            "https://api.github.com/repos/sissbruecker/linkding/releases/latest"
+            "https://api.github.com/repos/WooHooDai/linkding-cn/releases/latest"
         )
         response = requests.get(latest_version_url, timeout=5)
         json = response.json()
