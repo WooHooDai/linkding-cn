@@ -14,8 +14,6 @@ html.default {
   body {
     overflow: hidden;
     height: 100vh;
-    margin-left: 0;
-    margin-right: 0;
     padding: 0;
   }
 }
