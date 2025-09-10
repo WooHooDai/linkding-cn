@@ -230,7 +230,7 @@ def build_request_cookies(config: dict = None) -> dict:
         try:
             simple_cookie = SimpleCookie()
             simple_cookie.load(cookies_str)
-            cookies = {key: value.value for key, value in cookies.items()}
+            cookies = {key: value.value for key, value in simple_cookie.items()}
         except Exception as e:
             logger.warning(f"Failed to parse cookies '{cookies_str}': {e}")
             return cookies
