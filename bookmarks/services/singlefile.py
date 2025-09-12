@@ -19,16 +19,21 @@ def get_custom_options(config: dict):
         custom_options = config.get("singlefile_args")
     else:
         return []
-    
-    if isinstance(custom_options, str):
-        # 字符串：直接拆分
-        return shlex.split(custom_options)
-    elif isinstance(custom_options, list):
-        # 数组：先join再split，这样配置文件可以将参数项和参数值写入一个元素
-        return shlex.split(shlex.join(custom_options))
-    else:
+
+    if not custom_options:
         return []
 
+    args = []
+    
+    if isinstance(custom_options, dict):
+        for arg, value in custom_options.items():
+            args.append(arg + "=" + value)
+    else:
+        logger.error("Fail to get singlefile's option, please check settings' format.")
+        return []
+
+    logger.debug(f"singlefile自定义参数为：{args}")
+    return args
 
 def create_snapshot(url: str, filepath: str, config: dict = None):
     singlefile_path = settings.LD_SINGLEFILE_PATH
@@ -41,6 +46,9 @@ def create_snapshot(url: str, filepath: str, config: dict = None):
     # 参数优先级：custom_options > global_options
     options = custom_options or global_options
     args = [singlefile_path] + ublock_options + options + [url, filepath]
+
+    logger.debug(f"singlefile最终完整参数为: {args}")
+    
     try:
         # Use start_new_session=True to create a new process group
         process = subprocess.Popen(args, start_new_session=True)
