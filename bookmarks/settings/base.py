@@ -313,14 +313,14 @@ LD_SINGLEFILE_UBLOCK_OPTIONS = os.getenv(
     "LD_SINGLEFILE_UBLOCK_OPTIONS",
     shlex.join(
         [
-            '--browser-arg="--headless=new"',
-            '--browser-arg="--user-data-dir=./chromium-profile"',
-            '--browser-arg="--no-sandbox"',
-            '--browser-arg="--load-extension=uBOLite.chromium.mv3"',
+            '--browser-arg=--headless=new',
+            '--browser-arg=--user-data-dir=chromium-profile',
+            '--browser-arg=--no-sandbox',
+            '--browser-arg=--load-extension=uBOLite.chromium.mv3'
         ]
     ),
 )
-LD_SINGLEFILE_OPTIONS = os.getenv("LD_SINGLEFILE_OPTIONS", f'--user-agent="{LD_DEFAULT_USER_AGENT}"')
+LD_SINGLEFILE_OPTIONS = os.getenv("LD_SINGLEFILE_OPTIONS", "")
 LD_SINGLEFILE_TIMEOUT_SEC = float(os.getenv("LD_SINGLEFILE_TIMEOUT_SEC", 120))
 
 # Monolith isn't used at the moment, as the local snapshot implementation

@@ -40,15 +40,31 @@ def create_snapshot(url: str, filepath: str, config: dict = None):
 
     # 解析参数
     ublock_options = shlex.split(settings.LD_SINGLEFILE_UBLOCK_OPTIONS)
-    global_options = shlex.split(settings.LD_SINGLEFILE_OPTIONS)
-    custom_options = get_custom_options(config)
+    global_options = shlex.split(settings.LD_SINGLEFILE_OPTIONS)    # 环境变量参数
+    custom_options = get_custom_options(config)    # 自定义配置文件参数
+    options = custom_options or global_options      # 若自定义配置文件有参数，则直接抛弃环境变量中的参数
 
-    # 参数优先级：custom_options > global_options
-    options = custom_options or global_options
-    args = [singlefile_path] + ublock_options + options + [url, filepath]
+    # 默认参数：需过滤掉不可重复参数
+    default_options = [
+        '--browser-arg=--disable-blink-features=AutomationControlled'
+    ]
+    need_default_options = {
+        "--user-agent": True
+    }
+    for option in options:
+        arg_name = option.split("=")[0]
+        if need_default_options.get(arg_name):
+            need_default_options[arg_name] = False
+
+    if need_default_options["--user-agent"]:
+        default_options.append(f'--user-agent={settings.LD_DEFAULT_USER_AGENT}')
+
+
+    # 参数优先级：default_options > custom_options > global_options
+    args = [singlefile_path] + default_options + ublock_options + options + [url, filepath]
 
     logger.debug(f"singlefile最终完整参数为: {args}")
-    
+
     try:
         # Use start_new_session=True to create a new process group
         process = subprocess.Popen(args, start_new_session=True)
