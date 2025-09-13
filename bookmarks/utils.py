@@ -7,6 +7,7 @@ import unicodedata
 import urllib.parse
 import datetime
 from typing import Optional
+from pathlib import Path
 
 from dateutil.relativedelta import relativedelta
 from django.http import HttpResponseRedirect
@@ -186,6 +187,7 @@ def search_config_for_domain(domain, domain_map):
     return None
 
 def load_settings(path, cache):
+    base_dir = Path(path).resolve().parent
     cache = {} if cache is None else cache
     try:
         mtime = os.path.getmtime(path)
@@ -198,7 +200,8 @@ def load_settings(path, cache):
     if cache_settings is None or cache_mtime != mtime:
         try:
             with open(path, "r", encoding="utf-8") as f:
-                cache["cache"] = json.load(f)
+                config_data = json.load(f)
+                cache["cache"] = _process_path(config_data, base_dir)
             cache["mtime"] = mtime
         except json.JSONDecodeError:
             cache["cache"] = "__JSON_ERROR__"
@@ -208,6 +211,21 @@ def load_settings(path, cache):
             cache["mtime"] = None
     return cache.get("cache")
 
+def _process_path(node, base_dir):
+    '''解析相对路径'''
+    if isinstance(node, dict):
+        for key, value in node.items():
+            node[key] = _process_path(value, base_dir)
+    elif isinstance(node, list):
+        for i, item in enumerate(node):
+            node[i] = _process_path(item, base_dir)
+    elif isinstance(node, str) and (node.startswith('./') or node.startswith('../')):
+        # 如果是字符串且以 ./ 或 ../ 开头，就解析它
+        # (base_dir / node) 将路径拼接起来
+        # .resolve() 将其转换为绝对路径，并处理 ".." 等情况
+        return str((base_dir / node).resolve())
+    
+    return node
 
 def load_module(path, cache):
     cache = {} if cache is None else cache
