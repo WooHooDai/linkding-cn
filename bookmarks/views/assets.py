@@ -31,7 +31,11 @@ def view(request, asset_id: int):
     asset = access.asset_read(request, asset_id)
     content = _get_asset_content(asset)
 
-    return HttpResponse(content, content_type=asset.content_type)
+    content_type = asset.content_type
+    if 'charset' not in content_type.lower():
+        content_type = f'{content_type}; charset=utf-8'
+
+    return HttpResponse(content, content_type=content_type)
 
 
 def read(request, asset_id: int):

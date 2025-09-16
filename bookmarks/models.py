@@ -124,7 +124,7 @@ class BookmarkAsset(models.Model):
     TYPE_SNAPSHOT = "snapshot"
     TYPE_UPLOAD = "upload"
 
-    CONTENT_TYPE_HTML = "text/html"
+    CONTENT_TYPE_HTML = "text/html; charset=utf-8"
 
     STATUS_PENDING = "pending"
     STATUS_COMPLETE = "complete"
