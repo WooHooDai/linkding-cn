@@ -18,9 +18,11 @@ def get_custom_options(config: dict):
     if config:
         custom_options = config.get("singlefile_args")
     else:
+        logger.debug(f"未提供自定义配置")
         return []
 
     if not custom_options:
+        logger.debug(f"未提供【singlefile_args】参数")
         return []
 
     args = []
@@ -39,29 +41,47 @@ def create_snapshot(url: str, filepath: str, config: dict = None):
     singlefile_path = settings.LD_SINGLEFILE_PATH
 
     # 解析参数
-    ublock_options = shlex.split(settings.LD_SINGLEFILE_UBLOCK_OPTIONS)
-    global_options = shlex.split(settings.LD_SINGLEFILE_OPTIONS)    # 环境变量参数
     custom_options = get_custom_options(config)    # 自定义配置文件参数
-    options = custom_options or global_options      # 若自定义配置文件有参数，则直接抛弃环境变量中的参数
+    global_options = shlex.split(settings.LD_SINGLEFILE_OPTIONS)    # 环境变量参数
+    ublock_options = shlex.split(settings.LD_SINGLEFILE_UBLOCK_OPTIONS)
+    required_options = [
+        '--browser-arg=--disable-blink-features=AutomationControlled',
+        f'--user-agent={settings.LD_DEFAULT_USER_AGENT}'
+    ]   # 必需参数
 
-    # 默认参数：需过滤掉不可重复参数
-    default_options = [
-        '--browser-arg=--disable-blink-features=AutomationControlled'
+    # 参数去重，优先级：custom_options > global_options > ublock_options
+    multi_value_arg_list = [ # 允许多个值的参数
+        "--browser-script",
+        "--browser-stylesheet",
+        "--browser-arg",
+        "--browser-cookie",
+        "--crawl-rewrite-rule",
+        "--emulate-media-feature",
+        "--http-header"
     ]
-    need_default_options = {
-        "--user-agent": True
-    }
-    for option in options:
-        arg_name = option.split("=")[0]
-        if need_default_options.get(arg_name):
-            need_default_options[arg_name] = False
 
-    if need_default_options["--user-agent"]:
-        default_options.append(f'--user-agent={settings.LD_DEFAULT_USER_AGENT}')
+    def merge_option(target_options, merged_options):
+        ''' 越早添加，优先级越高（参数越靠后） '''
+        target_options_arg_list = list(map(lambda option: option.split("=")[0], target_options))
+        for merged_option in merged_options:
+            if (merged_option in target_options):   # 跳过相同参数
+                continue
+            merged_arg, merged_value = merged_option.split('=',1)
+            if merged_arg in multi_value_arg_list: # 允许多个值的参数直接添加
+                target_options.insert(0, merged_option)
+            if merged_arg not in target_options_arg_list: # 之前没有的参数直接添加
+                target_options.insert(0, merged_option)
+        
+        return target_options
+    
+    # 优先级：custom > global > ublock > required
+    result_options = []
+    result_options = merge_option(result_options, custom_options)
+    result_options = merge_option(result_options, global_options)
+    result_options = merge_option(result_options, ublock_options)
+    result_options = merge_option(result_options, required_options)
 
-
-    # 参数优先级：default_options > custom_options > global_options
-    args = [singlefile_path] + default_options + ublock_options + options + [url, filepath]
+    args = [singlefile_path] + result_options + [url, filepath]
 
     logger.debug(f"singlefile最终完整参数为: {args}")
 
