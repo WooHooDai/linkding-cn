@@ -179,12 +179,28 @@ def get_domain(url: str) -> str:
     return urllib.parse.urlparse(url).netloc
 
 def search_config_for_domain(domain, domain_map):
-    if domain in domain_map:
-        return domain_map[domain]
-    for key in domain_map:
-        if key.startswith("*.") and domain.endswith(key[1:]):
-            return domain_map[key]
-    return None
+    config = None
+    if domain in domain_map: # 直接命中
+        config = domain_map[domain]
+    if not config:
+        for key in domain_map: # 解析命中（通用匹配符*）
+            if key.startswith("*.") and domain.endswith(key[1:]):
+                config =  domain_map[key]
+
+    if not isinstance(config, str):
+        return config
+
+    # 配置别名逻辑：将另一个域名的配置作为当前域名的配置
+    visited = {config}
+    while isinstance(config, str):
+        alias = config
+        if alias in visited:
+            return None
+        visited.add(alias)
+        config = domain_map.get(alias)
+        if config is None:
+            return None
+    return config
 
 def load_settings(path, cache):
     base_dir = Path(path).resolve().parent
