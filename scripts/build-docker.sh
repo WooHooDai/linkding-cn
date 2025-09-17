@@ -7,5 +7,5 @@ version=$(<version.txt)
 docker buildx build --target linkding-plus --platform linux/amd64,linux/arm64 \
   -f docker/default.Dockerfile \
   -t woohoodai/linkding-cn:latest \
-  -t woohoodai/linkding-cn:$version \
+  -t woohoodai/linkding-cn:v$version \
   --push .
