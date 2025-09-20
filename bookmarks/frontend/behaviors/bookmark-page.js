@@ -325,9 +325,11 @@ class BookmarkItem extends Behavior {
   }
 
   onTitleClick(event) {
-    // 不要处理favicon的点击
-    if (event.target.closest('a.favicon-link')) return;
+    // 不要处理无关元素的点击
+    if (event.target.closest('a.favicon-link')) return; // favicon
+    if (event.target.closest('label.bulk-edit-checkbox')) return; // 批量勾选框
 
+    console.log(event.target.closest('a.title-link'))
     const link = this.titleElement.querySelector('a.title-link');
     if (!link || !link.href) return;
 
