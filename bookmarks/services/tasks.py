@@ -249,7 +249,6 @@ def _refresh_metadata_task(bookmark_id: int):
     logger.info(f"Refresh metadata for bookmark. url={bookmark.url}")
 
     metadata = load_website_metadata(bookmark.url)
-
     update_fields = []
     if metadata.title:
         bookmark.title = metadata.title
@@ -260,6 +259,9 @@ def _refresh_metadata_task(bookmark_id: int):
     if metadata.preview_image:
         bookmark.preview_image_remote_url = metadata.preview_image
         update_fields.append("preview_image_remote_url")
+    if metadata.url and metadata.url != bookmark.url:
+        bookmark.url = metadata.url
+        update_fields.append("url")
     bookmark.date_modified = timezone.now()
 
     bookmark.save(update_fields=update_fields)
