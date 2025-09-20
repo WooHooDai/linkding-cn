@@ -561,7 +561,7 @@ ul.bookmark-list {
 [ld-bulk-edit] {
   & .bulk-edit-bar {
     margin-top: -1px;
-    /* margin-left: calc(-1 * var(--bulk-edit-bar-offset)); */
+    margin-left: calc(-1 * var(--bulk-edit-bar-offset));
     margin-left: -8px;
     max-height: 0;
     overflow: hidden;
@@ -572,6 +572,23 @@ ul.bookmark-list {
   &.active .bulk-edit-bar {
     max-height: 37px;
     border-bottom: solid 1px var(--secondary-border-color);
+        
+    &.sticky {
+      flex: 0 0 auto;
+      position: fixed;
+      top: 0;
+      margin: 0;
+      z-index: 10;
+      background: var(--body-color);
+      padding-top: var(--unit-2);
+      padding-bottom: var(--unit-2);
+      border-bottom: none;
+      margin-bottom: var(--unit-4);
+
+      & .bulk-edit-checkbox{
+        margin-left: 0;
+      }
+    }
   }
 
   /* Hide section border when bulk edit bar is opened, otherwise borders overlap in dark mode due to using contrast colors */

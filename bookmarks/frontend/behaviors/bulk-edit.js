@@ -12,6 +12,16 @@ class BulkEdit extends Behavior {
     this.onToggleBookmark = this.onToggleBookmark.bind(this);
     this.onActionSelected = this.onActionSelected.bind(this);
 
+    // 批量编辑工具栏粘性吸顶
+    this.headerControls = element.querySelector("div.header-controls");
+    const isStickyOn = this.headerControls.dataset.stickyOn === 'true'
+    if(isStickyOn) {
+      this.isStickyOn = isStickyOn
+      this.bulkEditBar = document.querySelector('.bulk-edit-bar');
+      this.scroller = document.querySelector('.body-container') || window;
+      this.onScroll = this.onScroll.bind(this);
+    }
+
     this.init();
     // Reset when bookmarks are updated
     document.addEventListener("bookmark-list-updated", this.init);
@@ -67,6 +77,9 @@ class BulkEdit extends Behavior {
     this.bookmarkCheckboxes.forEach((checkbox) => {
       checkbox.removeEventListener("change", this.onToggleBookmark);
     });
+    if(this.isStickyOn) {
+      this.scroller.removeEventListener('scroll', this.onScroll);
+    }
   }
 
   onToggleActive() {
@@ -76,8 +89,16 @@ class BulkEdit extends Behavior {
       setTimeout(() => {
         this.element.classList.remove("activating");
       }, 500);
+
+      // 粘性吸附
+      if(this.isStickyOn) {
+        this.scroller.addEventListener('scroll', this.onScroll, { passive: true });
+      }
     } else {
       this.element.classList.remove("active");
+      if(this.isStickyOn) {
+        this.scroller.removeEventListener('scroll', this.onScroll);
+      }
     }
   }
 
@@ -122,6 +143,14 @@ class BulkEdit extends Behavior {
       checkbox.checked = false;
     });
     this.updateSelectAcross(false);
+  }
+
+  onScroll() {
+    if(this.headerControls.classList.contains("sticky")){
+      this.bulkEditBar.classList.add("sticky")
+    } else {
+      this.bulkEditBar.classList.remove("sticky")
+    }
   }
 }
 

@@ -114,7 +114,9 @@ class HeaderControls extends Behavior {
   }
 
   destroy() {
-    window.removeEventListener('scroll', this.onScroll);
+    if(this.scroller){
+      this.scroller.removeEventListener('scroll', this.onScroll);
+    }
     window.removeEventListener('resize', this.onResize);
   }
 
