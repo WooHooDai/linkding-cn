@@ -147,6 +147,18 @@ def parse_timestamp(value: str):
     # Timestamp is out of range
     raise ValueError(f"{value} exceeds maximum value for a timestamp")
 
+def get_clean_url(url: str) -> str:
+    # 清除 url 中所有参数
+    parsed_url = urllib.parse.urlparse(url)
+    clean_url = urllib.parse.urlunparse((
+        parsed_url.scheme, 
+        parsed_url.netloc, 
+        parsed_url.path, 
+        '',  # 清空 params
+        '',  # 清空 query (? 后的部分)
+        ''   # 清空 fragment (# 后的部分)
+    ))
+    return clean_url
 
 def get_safe_return_url(return_url: str, fallback_url: str):
     # Use fallback if URL is none or URL is not on same domain

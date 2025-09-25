@@ -99,7 +99,8 @@
                 class="preview-image"
                 src="{{ form.preview_image_remote_url.value }}"
                 referrerpolicy="unsafe-url"
-                alt="预览图" />
+                alt="预览图"
+                onerror="handlePreviewImageError(this)" />
           {% endif %}
         </div>
       </details>
@@ -141,6 +142,50 @@
     <a href="{{ return_url }}" class="btn">取消</a>
   </div>
   <script type="application/javascript">
+    // 遇到 CORS/CORP 时下载预览图用作临时展示
+    function handlePreviewImageError(img) {
+      // Don't do anything if there is no src or if it's a data URL
+      if (!img.src || img.src.startsWith('data:')) {
+        return;
+      }
+      // Avoid infinite loop if the fallback also fails
+      if (img.dataset.fallbackAttempted) {
+        return;
+      }
+      img.dataset.fallbackAttempted = 'true';
+
+      const previewImageRemoteUrlInput = document.getElementById('{{ form.preview_image_remote_url.id_for_label }}');
+      const remoteImageUrl = previewImageRemoteUrlInput.value;
+
+      if (!remoteImageUrl) {
+        return;
+      }
+
+      // Call backend to download the image
+      const requestUrl = `{% url 'linkding:root' %}bookmarks/load_temporary_preview_image?url=${encodeURIComponent(remoteImageUrl)}`;
+      fetch(requestUrl)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to download image');
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.temp_path) {
+            img.src = data.temp_path;
+            // The previewImageRemoteUrlInput already holds the original remote URL,
+            // which is what load_preview_image uses to derive the temp filename.
+            // No need to update it here.
+          } else {
+            img.style.display = 'none';
+          }
+        })
+        .catch(error => {
+          console.error('Could not download preview image:', error);
+          img.style.display = 'none';
+        });
+    }
+
     /**
      * - Pre-fill title and description with metadata from website as soon as URL changes
      * - Show hint if URL is already bookmarked
@@ -185,6 +230,8 @@
         const previewImageImg = document.getElementById('preview-image-img');
         const previewImageDetails = document.querySelector('details.preview-image');
         if (previewImageImg) {
+          // Reset fallback attempt flag when src changes
+          delete previewImageImg.dataset.fallbackAttempted;
           previewImageImg.src = previewImageRemoteUrlInput.value || '';
           previewImageImg.style.display = previewImageRemoteUrlInput.value ? '' : 'none';
         }

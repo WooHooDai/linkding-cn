@@ -1,10 +1,12 @@
 import urllib.parse
 import time
+import os
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db.models import QuerySet
 from django.http import (
+    JsonResponse,
     HttpResponseRedirect,
     HttpResponseBadRequest,
     HttpResponseForbidden,
@@ -18,7 +20,7 @@ from bookmarks.models import (
     Bookmark,
     BookmarkSearch,
 )
-from bookmarks.services import assets as asset_actions, tasks, website_loader
+from bookmarks.services import assets as asset_actions, tasks, website_loader, preview_image_loader
 from bookmarks.services.bookmarks import (
     archive_bookmark,
     archive_bookmarks,
@@ -285,6 +287,24 @@ def mark_as_read(request: HttpRequest, bookmark_id: int | str):
     bookmark.unread = False
     bookmark.save()
 
+def load_temporary_preview_image(request: HttpRequest):
+    image_url = request.GET.get('url')
+    if not image_url:
+        return HttpResponseBadRequest({'error': 'URL parameter is missing'})
+    try:
+        image_name = preview_image_loader.load_temporary_preview_image(image_url)
+        image_path = preview_image_loader._get_temporary_image_path(image_name)
+        tasks.delete_preview_image_temp_file.schedule(args=(image_path,), delay=600)
+
+        temp_path = settings.STATIC_URL + "tmp" + "/" + image_name
+        result = {
+            "temp_path": temp_path
+        }
+        print(result)
+        print(JsonResponse(result))
+        return JsonResponse(result)
+    except Exception as e:
+        return HttpResponseBadRequest({'error': f'Failed to download image: {e}'})
 
 def create_html_snapshot(request: HttpRequest, bookmark_id: int | str):
     bookmark = access.bookmark_write(request, bookmark_id)

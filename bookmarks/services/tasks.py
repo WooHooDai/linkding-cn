@@ -1,5 +1,6 @@
 import functools
 import logging
+import os
 from typing import List
 
 import waybackpy
@@ -193,6 +194,13 @@ def load_preview_image(user: User, bookmark: Bookmark):
     if is_preview_feature_active(user):
         _load_preview_image_task(bookmark.id)
 
+
+@task()
+def delete_preview_image_temp_file(filepath: str):
+    logger.debug(f"Followed temporary preview image file will be deleted after a while: {filepath}")
+    if os.path.exists(filepath):
+        os.remove(filepath)
+        logger.info(f"Deleted temporary preview image file: {filepath}")
 
 @task()
 def _load_preview_image_task(bookmark_id: int):
