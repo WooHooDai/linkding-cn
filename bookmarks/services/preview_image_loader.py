@@ -45,16 +45,19 @@ def _download_and_save_image(image_url: str, referer_url: str = None) -> str | N
                 )
                 return None
 
-            if "Content-Length" not in response.headers:
+            transfer_encoding = response.headers.get("Transfer-Encoding")
+            is_chunked = True if (transfer_encoding and transfer_encoding=='chunked') else False
+            if "Content-Length" not in response.headers and not is_chunked:
                 logger.debug(f"Empty Content-Length for preview image: {image_url}")
                 return None
 
-            content_length = int(response.headers["Content-Length"])
-            if content_length > settings.LD_PREVIEW_MAX_SIZE:
-                logger.debug(
-                    f"Content-Length exceeds LD_PREVIEW_MAX_SIZE: {image_url} length={content_length}"
-                )
-                return None
+            if not is_chunked:
+                content_length = int(response.headers["Content-Length"])
+                if content_length > settings.LD_PREVIEW_MAX_SIZE:
+                    logger.debug(
+                        f"Content-Length exceeds LD_PREVIEW_MAX_SIZE: {image_url} length={content_length}"
+                    )
+                    return None
 
             if "Content-Type" not in response.headers:
                 logger.debug(f"Empty Content-Type for preview image: {image_url}")
@@ -77,16 +80,28 @@ def _download_and_save_image(image_url: str, referer_url: str = None) -> str | N
 
             with open(image_file_path, "wb") as file:
                 downloaded = 0
+                should_end_download = False
                 for chunk in response.iter_content(chunk_size=8192):
                     downloaded += len(chunk)
-                    if downloaded > content_length:
+                    if (not is_chunked) and (downloaded > content_length):
+                        should_end_download = True
                         logger.debug(
                             f"Content-Length mismatch for image: {image_url} length={content_length} downloaded={downloaded}"
                         )
+                    if downloaded > settings.LD_PREVIEW_MAX_SIZE:
+                        should_end_download = True
+                        logger.debug(
+                            f"Content-Length exceeds LD_PREVIEW_MAX_SIZE: {image_url}"
+                        )
+
+                    if should_end_download:
                         file.close()
                         image_file_path.unlink()
                         return None
+                    
                     file.write(chunk)
+
+            # TODO: 分块传输应校验文件正确性，服务器响应自定义字段校验不现实，应通过图像库校验
 
             logger.debug(f"Downloaded preview image to temporary path: {image_file_path}")
             return image_file_name
