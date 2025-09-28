@@ -93,7 +93,6 @@ WORKDIR /etc/linkding
 # Install necessary tools
 # Download and unzip the latest uBlock Origin Lite release
 # Patch manifest to enable annoyances by default
-# Patch ruleset-manager.js to use rulesets enabled in manifest by default
 RUN apk add --no-cache curl jq unzip && \
     TAG=$(curl -sL https://api.github.com/repos/uBlockOrigin/uBOL-home/releases/latest | jq -r '.tag_name') && \
     DOWNLOAD_URL=https://github.com/uBlockOrigin/uBOL-home/releases/download/$TAG/uBOLite_$TAG.chromium.zip && \
