@@ -38,6 +38,7 @@ from bookmarks.services.bookmarks import (
     trash_bookmarks,
     restore_bookmark,
     restore_bookmarks,
+    create_html_snapshots,
 )
 from bookmarks.type_defs import HttpRequest
 from bookmarks.utils import get_safe_return_url
@@ -514,6 +515,8 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
             return trash_bookmarks(bookmark_ids, request.user)
         if "bulk_restore" == bulk_action:
             return restore_bookmarks(bookmark_ids, request.user)
+        if "bulk_snapshot" == bulk_action:
+            return create_html_snapshots(bookmark_ids, request.user)
 
 
 @login_required

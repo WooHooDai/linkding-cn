@@ -45,6 +45,9 @@
         {% if not 'bulk_refresh' in disable_actions %}
           <option value="bulk_refresh">重新抓取</option>
         {% endif %}
+        {% if bookmark_list.snapshot_feature_enabled %}
+          <option value="bulk_snapshot">创建HTML快照</option>
+        {% endif %}
       </select>
       <div class="tag-autocomplete d-none" ld-tag-autocomplete>
         <input name="bulk_tag_string" class="form-input input-sm" placeholder="标签名" variant="small">
