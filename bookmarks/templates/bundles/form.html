@@ -11,7 +11,7 @@
 </div>
 
 <div class="form-group {% if form.search.errors %}has-error{% endif %}">
-  <label for="{{ form.search.id_for_label }}" class="form-label">搜索</label>
+  <label for="{{ form.search.id_for_label }}" class="form-label">搜索词</label>
   {{ form.search|add_class:"form-input"|attr:"autocomplete:off"|attr:"placeholder: " }}
   {% if form.search.errors %}
     <div class="form-input-hint">
@@ -19,7 +19,7 @@
     </div>
   {% endif %}
   <div class="form-input-hint">
-    匹配搜索的书签。
+    书签中要出现的搜索词。
   </div>
 </div>
 
@@ -27,7 +27,7 @@
   <label for="{{ form.any_tags.id_for_label }}" class="form-label">标签</label>
   {{ form.any_tags|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
   <div class="form-input-hint">
-    书签的标题、描述、笔记、url中，任意一个包含关键词即可匹配。
+    书签至少包含一个这里的标签。
   </div>
 </div>
 
@@ -35,7 +35,7 @@
   <label for="{{ form.all_tags.id_for_label }}" class="form-label">必选标签</label>
   {{ form.all_tags|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
   <div class="form-input-hint">
-    书签拥有所有标签方可匹配。
+    书签必须包含所有这里的标签。
   </div>
 </div>
 
@@ -43,7 +43,7 @@
   <label for="{{ form.excluded_tags.id_for_label }}" class="form-label">排除标签</label>
   {{ form.excluded_tags|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
   <div class="form-input-hint">
-    书签不包含任一标签方可匹配。
+    书签不包含任何一个这里的标签。
   </div>
 </div>
 
