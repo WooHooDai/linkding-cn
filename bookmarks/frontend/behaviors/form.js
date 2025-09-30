@@ -1,5 +1,27 @@
 import { Behavior, registerBehavior } from "./index";
 
+class FormSubmit extends Behavior {
+  constructor(element) {
+    super(element);
+
+    this.onKeyDown = this.onKeyDown.bind(this);
+    this.element.addEventListener("keydown", this.onKeyDown);
+  }
+
+  destroy() {
+    this.element.removeEventListener("keydown", this.onKeyDown);
+  }
+
+  onKeyDown(event) {
+    // Check for Ctrl/Cmd + Enter combination
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.element.requestSubmit();
+    }
+  }
+}
+
 class AutoSubmitBehavior extends Behavior {
   constructor(element) {
     super(element);
@@ -193,6 +215,7 @@ class AssetRename extends Behavior {
   }
 }
 
+registerBehavior("ld-form-submit", FormSubmit);
 registerBehavior("ld-auto-submit", AutoSubmitBehavior);
 registerBehavior("ld-upload-button", UploadButton);
-registerBehavior("ld-asset-rename", AssetRename); 
+registerBehavior("ld-asset-rename", AssetRename);
