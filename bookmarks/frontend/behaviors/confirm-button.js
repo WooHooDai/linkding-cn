@@ -20,17 +20,7 @@ class ConfirmButtonBehavior extends Behavior {
     const container = document.createElement("span");
     container.className = "confirmation";
 
-    const icon = this.element.getAttribute("ld-confirm-icon");
-    if (icon) {
-      const iconElement = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "svg",
-      );
-      iconElement.style.width = "16px";
-      iconElement.style.height = "16px";
-      iconElement.innerHTML = `<use xlink:href="#${icon}"></use>`;
-      container.append(iconElement);
-    }
+
 
     const question = this.element.getAttribute("ld-confirm-question");
     if (question) {
@@ -45,7 +35,7 @@ class ConfirmButtonBehavior extends Behavior {
 
     const cancelButton = document.createElement(this.element.nodeName);
     cancelButton.type = "button";
-    cancelButton.innerText = question ? "否" : "取消";
+    cancelButton.innerText = question!=null ? "否" : "取消";
     cancelButton.className = `${buttonClasses} mr-1`;
     cancelButton.addEventListener("click", this.reset.bind(this));
 
@@ -53,11 +43,28 @@ class ConfirmButtonBehavior extends Behavior {
     confirmButton.type = this.element.type;
     confirmButton.name = this.element.name;
     confirmButton.value = this.element.value;
-    confirmButton.innerText = question ? "是" : "确认";
+    confirmButton.innerText = question!=null ? "是" : "确认";
     confirmButton.className = buttonClasses;
     confirmButton.addEventListener("click", this.reset.bind(this));
 
-    container.append(cancelButton, confirmButton);
+    if(question != null){
+      container.append(confirmButton, cancelButton);
+    } else {
+      container.append(cancelButton, confirmButton);
+    }
+
+    const icon = this.element.getAttribute("ld-confirm-icon");
+    if (icon) {
+      const iconElement = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "svg",
+      );
+      iconElement.style.width = "16px";
+      iconElement.style.height = "16px";
+      iconElement.innerHTML = `<use xlink:href="#${icon}"></use>`;
+      container.append(iconElement);
+    }
+    
     this.container = container;
 
     this.element.before(container);

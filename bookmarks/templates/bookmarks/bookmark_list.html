@@ -134,7 +134,7 @@
                     {% if bookmark_item.show_mark_as_read %}
                       <button type="submit" name="mark_as_read" value="{{ bookmark_item.id }}"
                               class="btn btn-link btn-sm btn-icon"
-                              ld-confirm-button ld-confirm-icon="ld-icon-read" ld-confirm-question="标为已读?">
+                              ld-confirm-button ld-confirm-icon="ld-icon-read" ld-confirm-question="">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
                           <use xlink:href="#ld-icon-unread"></use>
                         </svg>
@@ -144,7 +144,7 @@
                     {% if bookmark_item.show_unshare %}
                       <button type="submit" name="unshare" value="{{ bookmark_item.id }}"
                               class="btn btn-link btn-sm btn-icon"
-                              ld-confirm-button ld-confirm-icon="ld-icon-unshare" ld-confirm-question="取消分享?">
+                              ld-confirm-button ld-confirm-icon="ld-icon-unshare" ld-confirm-question="">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
                           <use xlink:href="#ld-icon-share"></use>
                         </svg>
