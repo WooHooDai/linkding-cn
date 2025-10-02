@@ -142,46 +142,55 @@
     <a href="{{ return_url }}" class="btn">取消</a>
   </div>
   <script type="application/javascript">
-    // 遇到 CORS/CORP 时下载预览图用作临时展示
+    // 下载预览图用作临时展示：仅在遇到 CORS/CORP 错误时
     function handlePreviewImageError(img) {
-      // Don't do anything if there is no src or if it's a data URL
       if (!img.src || img.src.startsWith('data:')) {
         return;
       }
-      // Avoid infinite loop if the fallback also fails
       if (img.dataset.fallbackAttempted) {
         return;
       }
       img.dataset.fallbackAttempted = 'true';
 
-      const previewImageRemoteUrlInput = document.getElementById('{{ form.preview_image_remote_url.id_for_label }}');
-      const remoteImageUrl = previewImageRemoteUrlInput.value;
+      const remoteImageUrl = img.src;
 
-      if (!remoteImageUrl) {
-        return;
-      }
+      // 探测错误类型
+      fetch(remoteImageUrl)
+        .then(response => {
+          // fetch 成功，但 HTTP 状态码是错误（如 404） => 不下载
+          if (!response.ok) {
+            console.error(`Preview image failed to load with status: ${response.status}`);
+            img.style.display = 'none';
+            return;
+          }
+          // fetch 成功，且 HTTP 状态码 OK => 说明是 CORP 策略阻止了 <img> 渲染，下载
+          downloadViaBackend(img, remoteImageUrl);
+        })
+        .catch(error => {
+          // fetch 失败，则是 CORS 策略或网络问题
+          console.error('Could not fetch preview image, likely a CORS or network issue:', error);
+          downloadViaBackend(img, remoteImageUrl);
+        });
+    }
 
-      // Call backend to download the image
+    function downloadViaBackend(img, remoteImageUrl) {
       const requestUrl = `{% url 'linkding:root' %}bookmarks/load_temporary_preview_image?url=${encodeURIComponent(remoteImageUrl)}`;
       fetch(requestUrl)
         .then(response => {
           if (!response.ok) {
-            throw new Error('Failed to download image');
+            throw new Error('Failed to download image via backend');
           }
           return response.json();
         })
         .then(data => {
           if (data.temp_path) {
             img.src = data.temp_path;
-            // The previewImageRemoteUrlInput already holds the original remote URL,
-            // which is what load_preview_image uses to derive the temp filename.
-            // No need to update it here.
           } else {
             img.style.display = 'none';
           }
         })
         .catch(error => {
-          console.error('Could not download preview image:', error);
+          console.error('Could not download preview image via backend:', error);
           img.style.display = 'none';
         });
     }
