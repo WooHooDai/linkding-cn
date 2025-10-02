@@ -233,6 +233,7 @@ li[ld-bookmark-item] {
     width: 100px;
     height: 60px;
     margin-top: var(--unit-h);
+    margin-right: 10px;
     border-radius: var(--border-radius);
     border: solid 1px var(--border-color);
     object-fit: cover;
