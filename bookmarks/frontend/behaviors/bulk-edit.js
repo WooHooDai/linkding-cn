@@ -18,6 +18,7 @@ class BulkEdit extends Behavior {
     if(isStickyOn) {
       this.isStickyOn = isStickyOn
       this.bulkEditBar = document.querySelector('.bulk-edit-bar');
+      this.searchContainer = document.querySelector('.search-container');
       this.scroller = document.querySelector('.body-container') || window;
       this.onScroll = this.onScroll.bind(this);
     }
@@ -89,13 +90,14 @@ class BulkEdit extends Behavior {
       setTimeout(() => {
         this.element.classList.remove("activating");
       }, 500);
-
+      this.searchContainer.style.opacity = 0;
       // 粘性吸附
       if(this.isStickyOn) {
         this.scroller.addEventListener('scroll', this.onScroll, { passive: true });
       }
     } else {
       this.element.classList.remove("active");
+      this.searchContainer.style.opacity = 1;
       if(this.isStickyOn) {
         this.scroller.removeEventListener('scroll', this.onScroll);
       }
