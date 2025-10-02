@@ -114,15 +114,27 @@ class BookmarkViewSet(
     def check(self, request: HttpRequest):
         url = request.GET.get("url")
         ignore_cache = request.GET.get("ignore_cache", False) in ["true"]
+
+        # First check: using the original URL
         normalized_url = normalize_url(url)
         bookmark = Bookmark.objects.filter(
             owner=request.user, url_normalized=normalized_url
         ).first()
+
+        # Load metadata, which might transform the URL
+        metadata = website_loader.load_website_metadata(url, ignore_cache=ignore_cache)
+
+        # If the first check didn't find a bookmark AND the URL was transformed,
+        # try a second check using the transformed URL.
+        if not bookmark and metadata.url and normalize_url(metadata.url) != normalized_url:
+            normalized_metadata_url = normalize_url(metadata.url)
+            bookmark = Bookmark.objects.filter(
+                owner=request.user, url_normalized=normalized_metadata_url
+            ).first()
+
         existing_bookmark_data = (
             self.get_serializer(bookmark).data if bookmark else None
         )
-
-        metadata = website_loader.load_website_metadata(url, ignore_cache=ignore_cache)
 
         # Return tags that would be automatically applied to the bookmark
         profile = request.user.profile

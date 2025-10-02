@@ -264,6 +264,11 @@
             const metadata = data.metadata;
             toggleLoadingIcon(urlInput, false);
 
+            // Always update the URL input if the metadata provides a different, canonical URL
+            if (metadata.url && metadata.url !== urlInput.value) {
+              updateInput(urlInput, metadata.url);
+            }
+
             // Display hint if URL is already bookmarked
             const existingBookmark = data.bookmark;
             bookmarkExistsHint.style['display'] = 'none';
@@ -291,9 +296,6 @@
               updateCheckbox(sharedCheckbox, existingBookmark.shared);
             } else {
               // Update title and description with website metadata, unless they have been modified
-              if (metadata.url && metadata.url !== existingBookmark?.url) {
-                updateInput(urlInput, metadata.url);
-              }
               if (!isTitleModified) {
                 updateInput(titleInput, metadata.title);
               }
