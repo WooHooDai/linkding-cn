@@ -48,10 +48,12 @@
                 </div>
               </td>
               <td class="actions">
-                <a class="btn btn-link" href="{% url 'linkding:bundles.edit' bundle.id %}">编辑</a>
-                <button ld-confirm-button type="submit" name="remove_bundle" value="{{ bundle.id }}"
-                        class="btn btn-link">删除
-                </button>
+                <div>
+                  <a class="btn btn-link" href="{% url 'linkding:bundles.edit' bundle.id %}">编辑</a>
+                  <button ld-confirm-button type="submit" name="remove_bundle" value="{{ bundle.id }}"
+                          class="btn btn-link">删除
+                  </button>
+                </div>
               </td>
             </tr>
           {% endfor %}

@@ -44,8 +44,8 @@
       height: unset;
     }
 
-    th,
-    td {
+    th:not(.actions),
+    td:not(.actions) {
       max-width: 0;
       white-space: nowrap;
       overflow: hidden;
@@ -54,11 +54,17 @@
 
     th.actions,
     td.actions {
-      width: 1%;
-      max-width: 150px;
+      width: 180px;
+      text-align: right;
 
-      *:not(:last-child) {
-        margin-right: var(--unit-2);
+      div {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+  
+        *:not(:last-child) {
+          margin-right: var(--unit-2);
+        }
       }
     }
   }
