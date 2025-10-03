@@ -20,7 +20,7 @@ from bookmarks.models import (
     Bookmark,
     BookmarkSearch,
 )
-from bookmarks.services import assets as asset_actions, tasks, website_loader, preview_image_loader
+from bookmarks.services import assets as asset_actions, tasks, website_loader, preview_image_loader, favicon_loader
 from bookmarks.services.bookmarks import (
     archive_bookmark,
     archive_bookmarks,
@@ -318,6 +318,25 @@ def mark_as_read(request: HttpRequest, bookmark_id: int | str):
     bookmark = access.bookmark_write(request, bookmark_id)
     bookmark.unread = False
     bookmark.save()
+
+
+def prefetch_favicon(request: HttpRequest):
+    if not request.user.profile.enable_favicons:
+        return JsonResponse({"status": "disabled"})
+
+    url = request.GET.get("url")
+    if not url:
+        return JsonResponse({"error": "URL parameter is missing"}, status=400)
+
+    favicon_file = favicon_loader.load_favicon(url, timeout=5)
+
+    if favicon_file:
+        return JsonResponse({"status": "success", "favicon_file": favicon_file})
+    else:
+        return JsonResponse(
+            {"status": "error", "message": "Failed to prefetch favicon"}
+        )
+
 
 def load_temporary_preview_image(request: HttpRequest):
     image_url = request.GET.get('url')

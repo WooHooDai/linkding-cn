@@ -36,6 +36,7 @@ urlpatterns = [
     path("bookmarks/<int:bookmark_id>/trash", views.bookmarks.trashed, name="bookmarks.trash"),
     path("bookmarks/trash", views.bookmarks.trashed, name="bookmarks.trashed"),
     path("bookmarks/trash/action", views.bookmarks.trashed_action, name="bookmarks.trashed.action"),
+    path("bookmarks/prefetch-favicon", views.bookmarks.prefetch_favicon, name="bookmarks.prefetch_favicon"),
     path("bookmarks/load_temporary_preview_image", views.bookmarks.load_temporary_preview_image, name="bookmarks.load_temporary_preview_image"),
     # Assets
     path(

@@ -57,20 +57,24 @@ def _is_stale(path: Path) -> bool:
     return file_age >= max_file_age
 
 
-def load_favicon(url: str) -> str:
-    url_parameters = _get_url_parameters(url)
+def load_favicon(url: str, timeout: int = 10) -> str:
+    try:
+        url_parameters = _get_url_parameters(url)
 
-    # Create favicon folder if not exists
-    _ensure_favicon_folder()
-    # Use scheme+hostname as favicon filename to reuse icon for all pages on the same domain
-    favicon_name = _url_to_filename(url_parameters["url"])
-    favicon_file = _check_existing_favicon(favicon_name)
+        # Create favicon folder if not exists
+        _ensure_favicon_folder()
+        # Use scheme+hostname as favicon filename to reuse icon for all pages on the same domain
+        favicon_name = _url_to_filename(url_parameters["url"])
+        favicon_file = _check_existing_favicon(favicon_name)
 
-    if not favicon_file:
+        if favicon_file:
+            return favicon_file
+
         # Load favicon from provider, save to file
         favicon_url = settings.LD_FAVICON_PROVIDER.format(**url_parameters)
         logger.debug(f"Loading favicon from: {favicon_url}")
-        with requests.get(favicon_url, stream=True) as response:
+        with requests.get(favicon_url, stream=True, timeout=timeout) as response:
+            response.raise_for_status()
             content_type = response.headers["Content-Type"]
             file_extension = mimetypes.guess_extension(content_type)
             favicon_file = f"{favicon_name}{file_extension}"
@@ -80,7 +84,13 @@ def load_favicon(url: str) -> str:
                     file.write(chunk)
         logger.debug(f"Saved favicon as: {favicon_path}")
 
-    return favicon_file
+        return favicon_file
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to load favicon for {url}: {e}")
+        return ""
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during favicon load for {url}: {e}")
+        return ""
 
 def is_favicon_file_exists(url: str) -> bool:
     url_parameters = _get_url_parameters(url)

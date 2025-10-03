@@ -40,8 +40,9 @@ def create_bookmark(
     bookmark.save()
     # Create snapshot on web archive
     tasks.create_web_archive_snapshot(current_user, bookmark, False)
-    # Load favicon
-    tasks.load_favicon(current_user, bookmark)
+    # Load favicon, unless it was pre-filled
+    if not bookmark.favicon_file:
+        tasks.load_favicon(current_user, bookmark)
     # Load preview image
     tasks.load_preview_image(current_user, bookmark)
     # Create HTML snapshot
