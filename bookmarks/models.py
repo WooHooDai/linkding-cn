@@ -1,4 +1,3 @@
-import binascii
 import hashlib
 import logging
 import os
@@ -9,11 +8,13 @@ from typing import List
 from datetime import date, timedelta, datetime
 
 
+import binascii
 from django import forms
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Q
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.http import QueryDict
@@ -110,6 +111,16 @@ class Bookmark(models.Model):
 
     def __str__(self):
         return self.resolved_title + " (" + self.url[:30] + "...)"
+
+    @staticmethod
+    def query_existing(owner: User, url: str) -> models.QuerySet:
+        # Find existing bookmark by normalized URL, or fall back to exact URL if
+        # normalized URL was not generated for whatever reason
+        normalized_url = normalize_url(url)
+        q = Q(owner=owner) & (
+            Q(url_normalized=normalized_url) | Q(url_normalized="", url=url)
+        )
+        return Bookmark.objects.filter(q)
 
 
 @receiver(post_delete, sender=Bookmark)

@@ -27,9 +27,9 @@ from bookmarks.models import (
     BookmarkBundle,
 )
 from bookmarks.services import assets, bookmarks, bundles, auto_tagging, website_loader
-from bookmarks.utils import normalize_url
 from bookmarks.type_defs import HttpRequest
 from bookmarks.views import access
+from bookmarks.utils import normalize_url
 
 logger = logging.getLogger(__name__)
 
@@ -115,22 +115,15 @@ class BookmarkViewSet(
         url = request.GET.get("url")
         ignore_cache = request.GET.get("ignore_cache", False) in ["true"]
 
-        # First check: using the original URL
+        bookmark = Bookmark.query_existing(request.user, url).first()
+
+        # URL 可能会被自定义脚本改变
+        # 当被改变时，进行二次检查
         normalized_url = normalize_url(url)
-        bookmark = Bookmark.objects.filter(
-            owner=request.user, url_normalized=normalized_url
-        ).first()
-
-        # Load metadata, which might transform the URL
         metadata = website_loader.load_website_metadata(url, ignore_cache=ignore_cache)
-
-        # If the first check didn't find a bookmark AND the URL was transformed,
-        # try a second check using the transformed URL.
         if not bookmark and metadata.url and normalize_url(metadata.url) != normalized_url:
             normalized_metadata_url = normalize_url(metadata.url)
-            bookmark = Bookmark.objects.filter(
-                owner=request.user, url_normalized=normalized_metadata_url
-            ).first()
+            bookmark = Bookmark.query_existing(request.user, normalized_metadata_url).first()
 
         existing_bookmark_data = (
             self.get_serializer(bookmark).data if bookmark else None
@@ -173,10 +166,7 @@ class BookmarkViewSet(
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        normalized_url = normalize_url(url)
-        bookmark = Bookmark.objects.filter(
-            owner=request.user, url_normalized=normalized_url
-        ).first()
+        bookmark = Bookmark.query_existing(request.user, url).first()
 
         if not bookmark:
             bookmark = Bookmark(url=url)
