@@ -471,6 +471,14 @@ msgstr "管理过滤器"
 msgid "Create bundle from search"
 msgstr "从搜索创建过滤器"
 
+#: bookmarks/templates/bookmarks/domain_section.html:5
+msgid "Domains"
+msgstr "域名"
+
+#: bookmarks/templates/bookmarks/domain_section.html:8
+msgid "Domains menu"
+msgstr "域名菜单"
+
 #: bookmarks/templates/bookmarks/close.html:8
 msgid "You can now close this window."
 msgstr "你现在可以关闭这个窗口。"
@@ -478,6 +486,26 @@ msgstr "你现在可以关闭这个窗口。"
 #: bookmarks/templates/bookmarks/collapsed_button.html:3
 msgid "Expand or collapse"
 msgstr "展开或折叠"
+
+#: bookmarks/views/contexts.py:502
+msgid "Full mode"
+msgstr "完整模式"
+
+#: bookmarks/views/contexts.py:502
+msgid "Icon mode"
+msgstr "图标模式"
+
+#: bookmarks/views/contexts.py:509
+msgid "All domains"
+msgstr "全部域名"
+
+#: bookmarks/views/contexts.py:511
+msgid "Only important domains"
+msgstr "仅重要域名"
+
+#: bookmarks/views/contexts.py:615
+msgid "Other"
+msgstr "其他"
 
 #: bookmarks/templates/bookmarks/details/assets.html:26
 msgid "Rename"

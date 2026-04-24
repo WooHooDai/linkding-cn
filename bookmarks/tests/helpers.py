@@ -374,18 +374,34 @@ class DomainSidebarTestMixin(TestCase, HtmlTestMixin):
             self.assertEqual(
                 int(list_item.attrs["data-domain-level"]), expected.get("level", 0)
             )
+            self.assertEqual(
+                list_item.attrs.get("data-domain-group", "false"),
+                "true" if expected.get("group") else "false",
+            )
 
-            link = list_item.select_one("a")
-            self.assertIsNotNone(link)
-            self.assertEqual(link.select_one(".domain-label").text.strip(), expected["label"])
-            self.assertEqual(link.select_one(".count").text.strip(), f"({expected['count']})")
+            primary = list_item.select_one("[data-domain-primary]")
+            self.assertIsNotNone(primary)
+            self.assertEqual(
+                primary.select_one(".domain-label").text.strip(), expected["label"]
+            )
+            self.assertEqual(
+                primary.select_one(".count").text.strip(), f"({expected['count']})"
+            )
 
-            favicon = link.select_one("img.favicon")
+            if expected.get("clickable", True):
+                self.assertEqual(primary.name, "a")
+            else:
+                self.assertNotEqual(primary.name, "a")
+
+            favicon = primary.select_one(".favicon")
             self.assertIsNotNone(favicon)
-            self.assertEqual(favicon.attrs["width"], "16")
-            self.assertEqual(favicon.attrs["height"], "16")
-            if "favicon" in expected:
-                self.assertEqual(favicon.attrs["src"], f"/static/{expected['favicon']}")
+            if favicon.name == "img":
+                self.assertEqual(favicon.attrs["width"], "16")
+                self.assertEqual(favicon.attrs["height"], "16")
+                if "favicon" in expected:
+                    self.assertEqual(
+                        favicon.attrs["src"], f"/static/{expected['favicon']}"
+                    )
 
             if expected.get("selected"):
                 self.assertIn("selected", list_item.attrs.get("class", []))

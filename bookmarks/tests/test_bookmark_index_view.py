@@ -880,3 +880,165 @@ class BookmarkIndexViewTestCase(
         # Regression: the toggle should not live inline before the link text anymore.
         old_inline_toggle = root_item.select_one(":scope > .domain-node .folder-toggle")
         self.assertIsNone(old_inline_toggle)
+
+    def test_domain_menu_shows_default_actions(self):
+        response = self.client.get(reverse("linkding:bookmarks.index"))
+        soup = self.make_soup(response.content.decode())
+
+        menu = soup.select_one('[aria-label="Domains menu"]')
+        self.assertIsNotNone(menu)
+
+        menu_links = soup.select("section[aria-labelledby='domains-heading'] .menu-link")
+        menu_texts = [link.text.strip() for link in menu_links]
+
+        self.assertEqual(menu_texts, ["Icon mode", "All domains"])
+        self.assertEqual(menu_links[0].attrs["href"], "?domain_view=icon")
+        self.assertEqual(menu_links[1].attrs["href"], "?domain_compact=0")
+
+    def test_domain_menu_shows_full_mode_action_when_icon_mode_is_enabled(self):
+        self.setup_bookmark(url="https://example.com/alpha")
+
+        response = self.client.get(
+            reverse("linkding:bookmarks.index") + "?domain_view=icon"
+        )
+        soup = self.make_soup(response.content.decode())
+
+        menu_links = soup.select("section[aria-labelledby='domains-heading'] .menu-link")
+        menu_texts = [link.text.strip() for link in menu_links]
+
+        self.assertEqual(menu_texts, ["Full mode", "All domains"])
+        self.assertEqual(menu_links[0].attrs["href"], "?")
+        self.assertEqual(menu_links[1].attrs["href"], "?domain_view=icon&domain_compact=0")
+
+        domain_list = soup.select_one("ul.domain-menu")
+        self.assertIsNotNone(domain_list)
+        self.assertEqual(domain_list.attrs["data-domain-view-mode"], "icon")
+
+        root_item = domain_list.select_one('li[data-domain-host="example.com"]')
+        self.assertIsNotNone(root_item)
+        root_summary = root_item.select_one(".domain-root-icon-summary")
+        self.assertIsNotNone(root_summary)
+        self.assertIsNotNone(root_summary.select_one(".favicon"))
+        count = root_summary.select_one(".count.domain-count-icon")
+        self.assertIsNotNone(count)
+        self.assertEqual(count.text.strip(), "1")
+
+    def test_domain_compact_mode_groups_non_top_roots_under_other(self):
+        for index in range(17):
+            for count in range(17 - index):
+                self.setup_bookmark(
+                    url=f"https://domain-{index}.example.com/{count}",
+                    favicon_file=f"https_domain_{index}_example_com.png",
+                )
+
+        response = self.client.get(reverse("linkding:bookmarks.index"))
+
+        expected_domains = [
+            {
+                "host": f"domain-{index}.example.com",
+                "label": f"domain-{index}.example.com",
+                "count": 17 - index,
+                "level": 0,
+                "favicon": f"https_domain_{index}_example_com.png",
+            }
+            for index in range(10)
+        ] + [
+            {
+                "host": "__other__",
+                "label": "Other",
+                "count": 28,
+                "level": 0,
+                "group": True,
+                "clickable": False,
+            },
+            {
+                "host": "domain-10.example.com",
+                "label": "domain-10.example.com",
+                "count": 7,
+                "level": 1,
+                "favicon": "https_domain_10_example_com.png",
+            },
+            {
+                "host": "domain-11.example.com",
+                "label": "domain-11.example.com",
+                "count": 6,
+                "level": 1,
+                "favicon": "https_domain_11_example_com.png",
+            },
+            {
+                "host": "domain-12.example.com",
+                "label": "domain-12.example.com",
+                "count": 5,
+                "level": 1,
+                "favicon": "https_domain_12_example_com.png",
+            },
+            {
+                "host": "domain-13.example.com",
+                "label": "domain-13.example.com",
+                "count": 4,
+                "level": 1,
+                "favicon": "https_domain_13_example_com.png",
+            },
+            {
+                "host": "domain-14.example.com",
+                "label": "domain-14.example.com",
+                "count": 3,
+                "level": 1,
+                "favicon": "https_domain_14_example_com.png",
+            },
+            {
+                "host": "domain-15.example.com",
+                "label": "domain-15.example.com",
+                "count": 2,
+                "level": 1,
+                "favicon": "https_domain_15_example_com.png",
+            },
+            {
+                "host": "domain-16.example.com",
+                "label": "domain-16.example.com",
+                "count": 1,
+                "level": 1,
+                "favicon": "https_domain_16_example_com.png",
+            },
+        ]
+
+        self.assertVisibleDomains(response, expected_domains)
+
+        soup = self.make_soup(response.content.decode())
+        domain_list = soup.select_one("ul.domain-menu")
+        self.assertIsNotNone(domain_list)
+        self.assertEqual(domain_list.attrs["data-domain-compact-mode"], "true")
+
+        root_hosts = [
+            item.attrs["data-domain-host"]
+            for item in domain_list.select(":scope > li.domain-menu-item")
+        ]
+        self.assertEqual(root_hosts[-1], "__other__")
+
+        menu_links = soup.select("section[aria-labelledby='domains-heading'] .menu-link")
+        menu_texts = [link.text.strip() for link in menu_links]
+        self.assertEqual(menu_texts, ["Icon mode", "All domains"])
+
+    def test_domain_compact_icon_mode_uses_icon_layout_for_other_children(self):
+        for index in range(17):
+            for count in range(17 - index):
+                self.setup_bookmark(
+                    url=f"https://domain-{index}.example.com/{count}",
+                    favicon_file=f"https_domain_{index}_example_com.png",
+                )
+
+        response = self.client.get(
+            reverse("linkding:bookmarks.index") + "?domain_view=icon"
+        )
+        soup = self.make_soup(response.content.decode())
+
+        other_item = soup.select_one('li[data-domain-host="__other__"]')
+        self.assertIsNotNone(other_item)
+
+        other_children = other_item.select_one(":scope > ul.domain-children.domain-children-icon")
+        self.assertIsNotNone(other_children)
+
+        other_child = other_children.select_one('li[data-domain-host="domain-10.example.com"]')
+        self.assertIsNotNone(other_child)
+        self.assertIsNotNone(other_child.select_one(":scope > .domain-row.domain-row-icon"))
+        self.assertIsNotNone(other_child.select_one(":scope > .domain-row .domain-root-icon-summary"))

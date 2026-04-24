@@ -1,4 +1,4 @@
-<ul class="domain-menu" ld-domain-tree>
+<ul class="domain-menu" ld-domain-tree data-domain-view-mode="{{ domains.view_mode }}" data-domain-compact-mode="{{ domains.is_compact_mode|yesno:'true,false' }}">
   {% for domain in domains.roots %}
     {% include "bookmarks/domain_tree_node.html" with domain=domain %}
   {% endfor %}

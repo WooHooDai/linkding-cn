@@ -1,19 +1,47 @@
 {% load i18n static %}
-<li class="domain-menu-item {% if domain.is_selected %}selected{% endif %}"
+<li class="domain-menu-item {% if domain.is_selected %}selected{% endif %}{% if domain.is_group_node %} domain-menu-item-group{% endif %}"
     data-domain-host="{{ domain.host }}"
     data-domain-level="{{ domain.level }}"
     data-domain-node-id="{{ domain.node_id }}"
-    data-domain-has-children="{{ domain.has_children|yesno:'true,false' }}">
-  <div class="domain-row" style="--domain-level: {{ domain.level }};">
+    data-domain-has-children="{{ domain.has_children|yesno:'true,false' }}"
+    data-domain-group="{{ domain.is_group_node|yesno:'true,false' }}">
+  <div class="domain-row{% if domains.is_icon_mode and domain.prefers_icon_layout %} domain-row-icon{% endif %}" style="--domain-level: {{ domain.level }};">
     <div class="domain-content">
-      <a href="{{ domain.url }}" class="domain-link">
-        <span class="domain-link-main">
-          <img class="favicon" src="{% static domain.favicon_file %}" alt="" width="16" height="16">
-          <span class="domain-text">
-            <span class="domain-label">{{ domain.label }}</span> <span class="count">({{ domain.count }})</span>
+      {% if domain.url %}
+        <a href="{{ domain.url }}"
+           class="domain-link{% if domain.is_group_node %} domain-link-static{% endif %}"
+           data-domain-primary
+           title="{{ domain.label }}"
+           aria-label="{{ domain.label }} ({{ domain.count }})">
+      {% else %}
+        <div class="domain-link domain-link-static" data-domain-primary title="{{ domain.label }}">
+      {% endif %}
+        <span class="{% if domains.is_icon_mode and domain.prefers_icon_layout %}domain-root-icon-summary{% else %}domain-link-main{% endif %}">
+          {% if domain.is_group_node %}
+            <span class="favicon favicon-group" aria-hidden="true">
+              <svg class="icon" width="12" height="12" viewBox="0 0 20 20" fill="none">
+                <circle cx="4" cy="10" r="1.5" fill="currentColor"/>
+                <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
+                <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
+              </svg>
+            </span>
+          {% else %}
+            <img class="favicon" src="{% static domain.favicon_file %}" alt="" width="16" height="16">
+          {% endif %}
+          <span class="domain-text{% if domains.is_icon_mode and domain.prefers_icon_layout %} domain-text-icon{% endif %}">
+            <span class="domain-label">{{ domain.label }}</span>
+            {% if domains.is_icon_mode and domain.prefers_icon_layout %}
+              <span class="count domain-count-icon">{{ domain.count }}</span>
+            {% else %}
+              <span class="count">({{ domain.count }})</span>
+            {% endif %}
           </span>
         </span>
-      </a>
+      {% if domain.url %}
+        </a>
+      {% else %}
+        </div>
+      {% endif %}
     </div>
     <div class="domain-action">
       {% if domain.has_children %}
@@ -28,7 +56,7 @@
     </div>
   </div>
   {% if domain.has_children %}
-    <ul class="domain-children">
+    <ul class="domain-children{% if domains.is_icon_mode and domain.children_prefer_icon_layout %} domain-children-icon{% endif %}">
       {% for domain in domain.children %}
         {% include "bookmarks/domain_tree_node.html" with domain=domain %}
       {% endfor %}

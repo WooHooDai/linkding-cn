@@ -527,6 +527,29 @@ li[ld-bookmark-item] {
   list-style: none;
 }
 
+.domain-menu[data-domain-view-mode="icon"],
+.domain-children-icon {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--unit-2);
+  align-items: start;
+}
+
+.domain-menu[data-domain-view-mode="icon"] > .domain-menu-item,
+.domain-children-icon > .domain-menu-item {
+  display: contents;
+}
+
+.domain-menu[data-domain-view-mode="icon"] > .domain-menu-item > .domain-row,
+.domain-children-icon > .domain-menu-item > .domain-row {
+  grid-column: span 1;
+}
+
+.domain-menu[data-domain-view-mode="icon"] > .domain-menu-item > .domain-children,
+.domain-children-icon > .domain-menu-item > .domain-children {
+  grid-column: 1 / -1;
+}
+
 .domain-children {
   margin: 0;
   padding: 0;
@@ -544,7 +567,7 @@ li[ld-bookmark-item] {
 
 .domain-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--unit-1);
   padding-left: calc(var(--domain-level) * 1rem);
   margin: 0 0 var(--unit-2);
@@ -559,6 +582,11 @@ li[ld-bookmark-item] {
   display: block;
   padding: var(--unit-1) var(--unit-2);
   border-radius: var(--border-radius);
+}
+
+.domain-link-static {
+  color: var(--link-color);
+  text-decoration: none;
 }
 
 .domain-link-main {
@@ -588,11 +616,100 @@ li[ld-bookmark-item] {
   display: block;
 }
 
+.domain-menu-item .favicon-group {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: var(--body-color-contrast);
+  color: var(--secondary-text-color);
+}
+
 .domain-action {
   flex: 0 0 22px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-end;
+}
+
+.domain-menu-item-group[data-domain-has-children="true"] > .domain-row {
+  cursor: pointer;
+}
+
+.domain-row-icon .domain-link {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  padding: var(--unit-2) calc(var(--unit-4) + 6px) var(--unit-2) var(--unit-1);
+}
+
+.domain-row-icon {
+  position: relative;
+  display: block;
+  padding-left: 0;
+  margin-bottom: 0;
+}
+
+.domain-root-icon-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--unit-1);
+  width: 100%;
+}
+
+.domain-text-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.domain-count-icon {
+  white-space: nowrap;
+  line-height: 1;
+  font-size: var(--font-size-sm);
+}
+
+.domain-row-icon .domain-label {
+  display: none;
+}
+
+.domain-row-icon .favicon,
+.domain-row-icon .favicon-group {
+  width: 20px;
+  height: 20px;
+  max-width: 20px;
+  max-height: 20px;
+  flex-basis: 20px;
+}
+
+.domain-row-icon .favicon-group .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.domain-row-icon .domain-action {
+  position: absolute;
+  top: calc(var(--unit-2) + 10px);
+  right: 0;
+  width: 28px;
+  height: 20px;
+  transform: translateY(-50%);
+  align-items: center;
+  justify-content: center;
+}
+
+.domain-row-icon .domain-action .folder-toggle,
+.domain-row-icon .domain-action .folder-toggle-placeholder {
+  width: 20px;
+  min-width: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Bookmark notes */

@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
 from django.db import models
 from django.http import Http404
 from django.urls import reverse
+from django.utils.translation import gettext as _
 
 from bookmarks import queries
 from bookmarks import utils
@@ -413,23 +414,35 @@ class DomainTreeNode:
         hostname: str,
         level: int,
         include_subdomains: bool,
+        label: str | None = None,
+        is_group_node: bool = False,
+        node_id: str | None = None,
+        is_under_group_node: bool = False,
     ) -> None:
         self.hostname = hostname
         self.level = level
         self.include_subdomains = include_subdomains
+        self.label = label or hostname
+        self.is_group_node = is_group_node
+        self.node_id = node_id or hostname
+        self.is_under_group_node = is_under_group_node
         self.total = 0
         self.children: dict[str, "DomainTreeNode"] = {}
         self._exact_favicon_file = ""
         self._fallback_favicon_file = ""
 
     @property
-    def filter_value(self) -> str:
+    def filter_value(self) -> str | None:
+        if self.is_group_node:
+            return None
         return utils.build_domain_filter_value(
             self.hostname, include_subdomains=self.include_subdomains
         )
 
     @property
     def favicon_file(self) -> str:
+        if self.is_group_node:
+            return ""
         return self._exact_favicon_file or self._fallback_favicon_file
 
     def add_bookmark(self, bookmark_host: str, favicon_file: str) -> None:
@@ -449,33 +462,65 @@ class DomainItem:
         selected_domain_filters: set[str],
         children: list["DomainItem"],
     ) -> None:
-        self.node_id = node.hostname
+        self.node_id = node.node_id
         self.host = node.hostname
-        self.label = node.hostname
+        self.label = node.label
         self.count = node.total
         self.level = node.level
         self.filter_value = node.filter_value
         self.favicon_file = node.favicon_file or "favicon.svg"
-        self.is_selected = self.filter_value in selected_domain_filters
+        self.is_group_node = node.is_group_node
+        self.is_under_group_node = node.is_under_group_node
+        self.prefers_icon_layout = node.level == 0 or node.is_under_group_node
+        self.children_prefer_icon_layout = (
+            node.is_group_node or node.is_under_group_node
+        )
+        self.is_selected = (
+            False
+            if self.is_group_node or not self.filter_value
+            else self.filter_value in selected_domain_filters
+        )
         self.children = children
         self.has_children = len(children) > 0
+        self.url = None
 
-        query_string = queries.replace_field_terms(
-            search_query, "domain", [self.filter_value]
-        )
-        query_params = request_context.query_params.copy()
-        query_params.setlist("q", [query_string])
-        query_params.pop("page", None)
-        encoded_query = query_params.urlencode()
-        self.url = "?" + encoded_query if encoded_query else request_context.index_url
+        if self.filter_value:
+            query_string = queries.replace_field_terms(
+                search_query, "domain", [self.filter_value]
+            )
+            query_params = request_context.query_params.copy()
+            query_params.setlist("q", [query_string])
+            query_params.pop("page", None)
+            encoded_query = query_params.urlencode()
+            self.url = "?" + encoded_query if encoded_query else request_context.index_url
 
 
 class DomainsContext:
     request_context = RequestContext
+    TOP_ROOT_LIMIT = 10
 
     def __init__(self, request: HttpRequest, search: BookmarkSearch) -> None:
         request_context = self.request_context(request)
         domain_roots = utils.parse_domain_roots(request.user_profile.custom_domain_root)
+        self.view_mode = self._parse_view_mode(request)
+        self.is_icon_mode = self.view_mode == "icon"
+        self.is_compact_mode = self._parse_compact_mode(request)
+        self.toggle_view_mode_label = (
+            _("Full mode") if self.is_icon_mode else _("Icon mode")
+        )
+        self.toggle_view_mode_url = self._build_menu_url(
+            request,
+            {"domain_view": None if self.is_icon_mode else "icon"},
+        )
+        self.toggle_compact_mode_label = (
+            _("All domains")
+            if self.is_compact_mode
+            else _("Only important domains")
+        )
+        self.toggle_compact_mode_url = self._build_menu_url(
+            request,
+            {"domain_compact": "0" if self.is_compact_mode else None},
+        )
 
         parsed_query = queries.parse_query_string(search.q)
         selected_domain_filters = {
@@ -490,6 +535,8 @@ class DomainsContext:
         bookmarks.sort(key=lambda bookmark: bookmark["url"])
 
         root_nodes = self._build_domain_tree(bookmarks, domain_roots)
+        if self.is_compact_mode:
+            root_nodes = self._compact_root_nodes(root_nodes)
         self.roots = self._build_items(
             root_nodes,
             request_context,
@@ -535,6 +582,65 @@ class DomainsContext:
     @staticmethod
     def _sorted_nodes(nodes):
         return sorted(nodes, key=lambda node: (-node.total, node.hostname.lower()))
+
+    @staticmethod
+    def _parse_view_mode(request: HttpRequest) -> str:
+        return "icon" if request.GET.get("domain_view") == "icon" else "full"
+
+    @staticmethod
+    def _parse_compact_mode(request: HttpRequest) -> bool:
+        return request.GET.get("domain_compact") != "0"
+
+    @staticmethod
+    def _build_menu_url(request: HttpRequest, updates: dict[str, str | None]) -> str:
+        query_params = request.GET.copy()
+
+        for key, value in updates.items():
+            if value is None:
+                query_params.pop(key, None)
+            else:
+                query_params.setlist(key, [value])
+
+        encoded_query = query_params.urlencode()
+        return "?" + encoded_query if encoded_query else "?"
+
+    @classmethod
+    def _compact_root_nodes(cls, root_nodes: list[DomainTreeNode]) -> list[DomainTreeNode]:
+        if len(root_nodes) <= cls.TOP_ROOT_LIMIT:
+            return root_nodes
+
+        visible_nodes = list(root_nodes[: cls.TOP_ROOT_LIMIT])
+        overflow_nodes = list(root_nodes[cls.TOP_ROOT_LIMIT :])
+
+        for node in overflow_nodes:
+            cls._mark_under_group(node)
+            cls._offset_levels(node, 1)
+
+        other_node = DomainTreeNode(
+            "__other__",
+            level=0,
+            include_subdomains=False,
+            label=_("Other"),
+            is_group_node=True,
+            node_id="__other__",
+        )
+        other_node.total = sum(node.total for node in overflow_nodes)
+        other_node.children = {node.hostname: node for node in overflow_nodes}
+
+        visible_nodes.append(other_node)
+        return visible_nodes
+
+    @classmethod
+    def _mark_under_group(cls, node: DomainTreeNode) -> None:
+        node.is_under_group_node = True
+        for child in node.children.values():
+            cls._mark_under_group(child)
+
+    @classmethod
+    def _offset_levels(cls, node: DomainTreeNode, delta: int) -> None:
+        node.level += delta
+        for child in node.children.values():
+            cls._offset_levels(child, delta)
 
     @classmethod
     def _build_items(

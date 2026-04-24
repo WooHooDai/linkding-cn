@@ -501,17 +501,37 @@ class DomainTreeBehavior extends Behavior {
 
   onTreeClick(event) {
     const button = event.target.closest(".folder-toggle");
-    if (!button || !this.element.contains(button)) {
+    if (button && this.element.contains(button)) {
+      const item = button.closest(".domain-menu-item");
+      this.toggleTreeItem(item, event);
       return;
     }
 
-    const item = button.closest(".domain-menu-item");
+    const row = event.target.closest(".domain-row");
+    if (!row || !this.element.contains(row)) {
+      return;
+    }
+
+    const item = row.closest(".domain-menu-item");
+    if (
+      !item ||
+      item.dataset.domainGroup !== "true" ||
+      item.dataset.domainHasChildren !== "true"
+    ) {
+      return;
+    }
+
+    this.toggleTreeItem(item, event);
+  }
+
+  toggleTreeItem(item, event) {
     if (!item) {
       return;
     }
 
     const childList = item.querySelector(":scope > ul.domain-children");
-    if (!childList) {
+    const button = item.querySelector(":scope > .domain-row .folder-toggle");
+    if (!childList || !button) {
       return;
     }
 

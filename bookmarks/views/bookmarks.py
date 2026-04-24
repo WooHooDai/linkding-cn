@@ -249,6 +249,10 @@ def search_action(request: HttpRequest):
     )
     base_url = request.path
     query_params = search.query_params
+    for param in ("domain_view", "domain_compact"):
+        value = request.POST.get(param) or request.GET.get(param)
+        if value:
+            query_params[param] = value
     query_string = urllib.parse.urlencode(query_params)
     url = base_url if not query_string else base_url + "?" + query_string
     return HttpResponseRedirect(url)
