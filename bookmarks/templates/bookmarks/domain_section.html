@@ -1,0 +1,12 @@
+{% load i18n static %}
+<section aria-labelledby="domains-heading" ld-collapse-button data-toggle-storage-key="domainSectionState" data-toggle-target-selector=".section-content">
+  <div class="section-header no-wrap">
+    <div class="section-title">
+      <h2 id="domains-heading">{% translate "Domains" %}</h2>
+      {% include "bookmarks/collapsed_button.html" with toggle_class="section-toggle" %}
+    </div>
+  </div>
+  <div id="domain-tree-container" class="section-content">
+    {% include "bookmarks/domain_tree.html" %}
+  </div>
+</section>

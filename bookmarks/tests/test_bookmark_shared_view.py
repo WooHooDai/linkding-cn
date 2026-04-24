@@ -9,12 +9,17 @@ from bookmarks.models import Bookmark, BookmarkSearch, Tag, UserProfile
 from bookmarks.tests.helpers import (
     BookmarkFactoryMixin,
     BookmarkListTestMixin,
+    DomainSidebarTestMixin,
     TagCloudTestMixin,
 )
 
 
 class BookmarkSharedViewTestCase(
-    TestCase, BookmarkFactoryMixin, BookmarkListTestMixin, TagCloudTestMixin
+    TestCase,
+    BookmarkFactoryMixin,
+    BookmarkListTestMixin,
+    DomainSidebarTestMixin,
+    TagCloudTestMixin,
 ):
     def authenticate(self) -> None:
         user = self.get_or_create_test_user()
@@ -52,6 +57,37 @@ class BookmarkSharedViewTestCase(
             <a href="{url}">Edit</a>        
         """,
             html,
+        )
+
+    def test_should_list_domains_for_shared_bookmarks(self):
+        self.authenticate()
+        owner = self.get_or_create_test_user()
+        owner.profile.enable_sharing = True
+        owner.profile.save()
+
+        self.setup_bookmark(
+            shared=True, user=owner, url="https://shared.example.com/a"
+        )
+        self.setup_bookmark(shared=True, user=owner, url="https://example.com/b")
+
+        response = self.client.get(reverse("linkding:bookmarks.shared"))
+
+        self.assertVisibleDomains(
+            response,
+            [
+                {
+                    "host": "example.com",
+                    "label": "example.com",
+                    "count": 1,
+                    "level": 0,
+                },
+                {
+                    "host": "shared.example.com",
+                    "label": "shared.example.com",
+                    "count": 1,
+                    "level": 0,
+                },
+            ],
         )
 
     def test_should_list_shared_bookmarks_from_all_users_that_have_sharing_enabled(

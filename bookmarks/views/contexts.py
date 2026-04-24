@@ -407,6 +407,187 @@ class SharedTagCloudContext(TagCloudContext):
     request_context = SharedBookmarksContext
 
 
+class DomainTreeNode:
+    def __init__(
+        self,
+        hostname: str,
+        level: int,
+        include_subdomains: bool,
+    ) -> None:
+        self.hostname = hostname
+        self.level = level
+        self.include_subdomains = include_subdomains
+        self.total = 0
+        self.children: dict[str, "DomainTreeNode"] = {}
+        self._exact_favicon_file = ""
+        self._fallback_favicon_file = ""
+
+    @property
+    def filter_value(self) -> str:
+        return utils.build_domain_filter_value(
+            self.hostname, include_subdomains=self.include_subdomains
+        )
+
+    @property
+    def favicon_file(self) -> str:
+        return self._exact_favicon_file or self._fallback_favicon_file
+
+    def add_bookmark(self, bookmark_host: str, favicon_file: str) -> None:
+        self.total += 1
+        if favicon_file and not self._fallback_favicon_file:
+            self._fallback_favicon_file = favicon_file
+        if favicon_file and bookmark_host == self.hostname and not self._exact_favicon_file:
+            self._exact_favicon_file = favicon_file
+
+
+class DomainItem:
+    def __init__(
+        self,
+        request_context: RequestContext,
+        search_query: str,
+        node: DomainTreeNode,
+        selected_domain_filters: set[str],
+        children: list["DomainItem"],
+    ) -> None:
+        self.node_id = node.hostname
+        self.host = node.hostname
+        self.label = node.hostname
+        self.count = node.total
+        self.level = node.level
+        self.filter_value = node.filter_value
+        self.favicon_file = node.favicon_file or "favicon.svg"
+        self.is_selected = self.filter_value in selected_domain_filters
+        self.children = children
+        self.has_children = len(children) > 0
+
+        query_string = queries.replace_field_terms(
+            search_query, "domain", [self.filter_value]
+        )
+        query_params = request_context.query_params.copy()
+        query_params.setlist("q", [query_string])
+        query_params.pop("page", None)
+        encoded_query = query_params.urlencode()
+        self.url = "?" + encoded_query if encoded_query else request_context.index_url
+
+
+class DomainsContext:
+    request_context = RequestContext
+
+    def __init__(self, request: HttpRequest, search: BookmarkSearch) -> None:
+        request_context = self.request_context(request)
+        domain_roots = utils.parse_domain_roots(request.user_profile.custom_domain_root)
+
+        parsed_query = queries.parse_query_string(search.q)
+        selected_domain_filters = {
+            utils.canonicalize_domain_filter_value(value)
+            for value in parsed_query["field_terms"]["domain"]
+            if value
+        }
+
+        bookmarks = list(
+            request_context.get_bookmark_query_set(search).values("url", "favicon_file")
+        )
+        bookmarks.sort(key=lambda bookmark: bookmark["url"])
+
+        root_nodes = self._build_domain_tree(bookmarks, domain_roots)
+        self.roots = self._build_items(
+            root_nodes,
+            request_context,
+            search.q,
+            selected_domain_filters,
+        )
+        self.items = self._flatten_items(self.roots)
+        self.is_empty = len(self.items) == 0
+
+    @staticmethod
+    def _build_domain_tree(
+        bookmarks: list[dict],
+        domain_roots: list[str],
+    ) -> list[DomainTreeNode]:
+        root_nodes: dict[str, DomainTreeNode] = {}
+
+        for bookmark in bookmarks:
+            hostname = utils.extract_hostname(bookmark["url"])
+            if not hostname:
+                continue
+
+            path = utils.get_matching_domain_roots(hostname, domain_roots)
+            if not path:
+                path = [hostname]
+
+            current_nodes = root_nodes
+            for level, node_host in enumerate(path):
+                include_subdomains = node_host in domain_roots
+                node = current_nodes.get(node_host)
+                if node is None:
+                    node = DomainTreeNode(
+                        node_host,
+                        level=level,
+                        include_subdomains=include_subdomains,
+                    )
+                    current_nodes[node_host] = node
+
+                node.add_bookmark(hostname, bookmark["favicon_file"])
+                current_nodes = node.children
+
+        return DomainsContext._sorted_nodes(root_nodes.values())
+
+    @staticmethod
+    def _sorted_nodes(nodes):
+        return sorted(nodes, key=lambda node: (-node.total, node.hostname.lower()))
+
+    @classmethod
+    def _build_items(
+        cls,
+        nodes: list[DomainTreeNode],
+        request_context: RequestContext,
+        search_query: str,
+        selected_domain_filters: set[str],
+    ) -> list[DomainItem]:
+        items = []
+
+        for node in nodes:
+            children = cls._build_items(
+                cls._sorted_nodes(node.children.values()),
+                request_context,
+                search_query,
+                selected_domain_filters,
+            )
+            items.append(
+                DomainItem(
+                    request_context,
+                    search_query,
+                    node,
+                    selected_domain_filters,
+                    children,
+                )
+            )
+
+        return items
+
+    @classmethod
+    def _flatten_items(cls, items: list[DomainItem]) -> list[DomainItem]:
+        flattened_items = []
+
+        for item in items:
+            flattened_items.append(item)
+            flattened_items.extend(cls._flatten_items(item.children))
+
+        return flattened_items
+
+
+class ActiveDomainsContext(DomainsContext):
+    request_context = ActiveBookmarksContext
+
+
+class ArchivedDomainsContext(DomainsContext):
+    request_context = ArchivedBookmarksContext
+
+
+class SharedDomainsContext(DomainsContext):
+    request_context = SharedBookmarksContext
+
+
 class BookmarkAssetItem:
     def __init__(self, asset: BookmarkAsset):
         self.asset = asset
@@ -514,6 +695,9 @@ class TrashedBookmarkListContext(BookmarkListContext):
         self.is_trash_page = True
 
 class TrashedTagCloudContext(TagCloudContext):
+    request_context = TrashedBookmarksContext
+
+class TrashedDomainsContext(DomainsContext):
     request_context = TrashedBookmarksContext
 
 class TrashedBookmarkDetailsContext(BookmarkDetailsContext):

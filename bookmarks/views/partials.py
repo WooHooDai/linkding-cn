@@ -2,7 +2,7 @@ from bookmarks.models import BookmarkSearch
 from bookmarks.views import contexts, turbo
 
 
-def render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles):
+def render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles, domains):
     return turbo.stream(
         request,
         "bookmarks/updates/bookmark_view_stream.html",
@@ -11,6 +11,7 @@ def render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles):
             "tag_cloud": tag_cloud,
             "details": details,
             "bundles": bundles,
+            "domains": domains,
         },
     )
 
@@ -25,7 +26,10 @@ def active_bookmark_update(request):
         request, contexts.ActiveBookmarkDetailsContext
     )
     bundles = contexts.BundlesContext(request)
-    return render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles)
+    domains = contexts.ActiveDomainsContext(request, search)
+    return render_bookmark_update(
+        request, bookmark_list, tag_cloud, details, bundles, domains
+    )
 
 
 def archived_bookmark_update(request):
@@ -38,7 +42,10 @@ def archived_bookmark_update(request):
         request, contexts.ArchivedBookmarkDetailsContext
     )
     bundles = contexts.BundlesContext(request)
-    return render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles)
+    domains = contexts.ArchivedDomainsContext(request, search)
+    return render_bookmark_update(
+        request, bookmark_list, tag_cloud, details, bundles, domains
+    )
 
 
 def shared_bookmark_update(request):
@@ -51,7 +58,10 @@ def shared_bookmark_update(request):
         request, contexts.SharedBookmarkDetailsContext
     )
     bundles = contexts.BundlesContext(request)
-    return render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles)
+    domains = contexts.SharedDomainsContext(request, search)
+    return render_bookmark_update(
+        request, bookmark_list, tag_cloud, details, bundles, domains
+    )
 
 
 def trashed_bookmark_update(request):
@@ -64,4 +74,7 @@ def trashed_bookmark_update(request):
         request, contexts.TrashedBookmarkDetailsContext
     )
     bundles = contexts.BundlesContext(request)
-    return render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles)
+    domains = contexts.TrashedDomainsContext(request, search)
+    return render_bookmark_update(
+        request, bookmark_list, tag_cloud, details, bundles, domains
+    )

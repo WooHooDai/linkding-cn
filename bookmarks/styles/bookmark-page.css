@@ -521,6 +521,80 @@ li[ld-bookmark-item] {
   }
 }
 
+.domain-menu {
+  margin: 0 0 var(--unit-6);
+  padding: 0;
+  list-style: none;
+}
+
+.domain-children {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.domain-menu-item {
+  margin: 0;
+  list-style: none;
+}
+
+.domain-menu-item::marker {
+  content: none;
+}
+
+.domain-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--unit-1);
+  padding-left: calc(var(--domain-level) * 1rem);
+  margin: 0 0 var(--unit-2);
+}
+
+.domain-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.domain-link {
+  display: block;
+  padding: var(--unit-1) var(--unit-2);
+  border-radius: var(--border-radius);
+}
+
+.domain-link-main {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: var(--unit-2);
+  align-items: start;
+}
+
+.domain-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.domain-menu-item.selected > .domain-row .domain-link {
+  background: var(--primary-color);
+  color: var(--contrast-text-color);
+}
+
+.domain-menu-item .favicon {
+  width: 16px;
+  height: 16px;
+  max-width: 16px;
+  max-height: 16px;
+  flex: 0 0 16px;
+  object-fit: contain;
+  display: block;
+}
+
+.domain-action {
+  flex: 0 0 22px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
 /* Bookmark notes */
 ul.bookmark-list {
   & .notes {

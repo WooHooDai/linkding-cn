@@ -487,6 +487,80 @@ class BundleCollapseButton extends CollapseButtonBehavior {
 
 registerBehavior('ld-bundle-menu', BundleCollapseButton);
 
+class DomainTreeBehavior extends Behavior {
+  constructor(element) {
+    super(element);
+    this.onTreeClick = this.onTreeClick.bind(this);
+    this.element.addEventListener("click", this.onTreeClick);
+    this.restoreTreeState();
+  }
+
+  destroy() {
+    this.element.removeEventListener("click", this.onTreeClick);
+  }
+
+  onTreeClick(event) {
+    const button = event.target.closest(".folder-toggle");
+    if (!button || !this.element.contains(button)) {
+      return;
+    }
+
+    const item = button.closest(".domain-menu-item");
+    if (!item) {
+      return;
+    }
+
+    const childList = item.querySelector(":scope > ul.domain-children");
+    if (!childList) {
+      return;
+    }
+
+    event.preventDefault();
+    const expanded = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", !expanded);
+    childList.style.display = expanded ? "none" : "";
+    this.setNodeState(item.dataset.domainNodeId, !expanded);
+  }
+
+  setNodeState(nodeId, expanded) {
+    if (!nodeId) return;
+
+    let state = {};
+    try {
+      state = JSON.parse(localStorage.getItem("domainTreeState") || "{}");
+    } catch {}
+
+    state[nodeId] = expanded;
+    localStorage.setItem("domainTreeState", JSON.stringify(state));
+  }
+
+  restoreTreeState() {
+    let state = {};
+    try {
+      state = JSON.parse(localStorage.getItem("domainTreeState") || "{}");
+    } catch {}
+
+    this.element
+      .querySelectorAll('.domain-menu-item[data-domain-has-children="true"]')
+      .forEach((item) => {
+        const button = item.querySelector(":scope > .domain-row .folder-toggle");
+        const childList = item.querySelector(":scope > ul.domain-children");
+        if (!button || !childList) {
+          return;
+        }
+
+        const nodeId = item.dataset.domainNodeId;
+        const hasSelectedDescendant = childList.querySelector(".domain-menu-item.selected");
+        const expanded = hasSelectedDescendant ? true : state[nodeId] !== false;
+
+        button.setAttribute("aria-expanded", expanded);
+        childList.style.display = expanded ? "" : "none";
+      });
+  }
+}
+
+registerBehavior("ld-domain-tree", DomainTreeBehavior);
+
 function bindBundleMenuBehaviors() {
   document.querySelectorAll("[ld-bundle-menu]").forEach((el) => {
     applyBehaviors(el, ["ld-bundle-menu"]);
@@ -610,4 +684,3 @@ class SidePanel extends Behavior {
 }
 
 registerBehavior("ld-side-panel", SidePanel);
-

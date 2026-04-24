@@ -1,0 +1,37 @@
+{% load i18n static %}
+<li class="domain-menu-item {% if domain.is_selected %}selected{% endif %}"
+    data-domain-host="{{ domain.host }}"
+    data-domain-level="{{ domain.level }}"
+    data-domain-node-id="{{ domain.node_id }}"
+    data-domain-has-children="{{ domain.has_children|yesno:'true,false' }}">
+  <div class="domain-row" style="--domain-level: {{ domain.level }};">
+    <div class="domain-content">
+      <a href="{{ domain.url }}" class="domain-link">
+        <span class="domain-link-main">
+          <img class="favicon" src="{% static domain.favicon_file %}" alt="" width="16" height="16">
+          <span class="domain-text">
+            <span class="domain-label">{{ domain.label }}</span> <span class="count">({{ domain.count }})</span>
+          </span>
+        </span>
+      </a>
+    </div>
+    <div class="domain-action">
+      {% if domain.has_children %}
+        <button class="folder-toggle" aria-expanded="true" type="button" title="{% translate 'Expand or collapse' %}">
+          <svg class="icon" width="14" height="14" viewBox="0 0 20 20" fill="none">
+            <polyline points="6 8 10 12 14 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      {% else %}
+        <span class="folder-toggle-placeholder"></span>
+      {% endif %}
+    </div>
+  </div>
+  {% if domain.has_children %}
+    <ul class="domain-children">
+      {% for domain in domain.children %}
+        {% include "bookmarks/domain_tree_node.html" with domain=domain %}
+      {% endfor %}
+    </ul>
+  {% endif %}
+</li>

@@ -1,0 +1,5 @@
+<ul class="domain-menu" ld-domain-tree>
+  {% for domain in domains.roots %}
+    {% include "bookmarks/domain_tree_node.html" with domain=domain %}
+  {% endfor %}
+</ul>

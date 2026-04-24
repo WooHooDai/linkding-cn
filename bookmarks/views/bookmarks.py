@@ -58,6 +58,7 @@ def index(request: HttpRequest):
     create_bundle_query_string = _get_create_bundle_query_string(search)
     bookmark_list = contexts.ActiveBookmarkListContext(request, search)
     bundles = contexts.BundlesContext(request)
+    domains = contexts.ActiveDomainsContext(request, search)
     tag_cloud = contexts.ActiveTagCloudContext(request, search)
     bookmark_details = contexts.get_details_context(
         request, contexts.ActiveBookmarkDetailsContext
@@ -70,6 +71,7 @@ def index(request: HttpRequest):
             "page_title": _("Bookmarks - Linkding"),
             "bookmark_list": bookmark_list,
             "bundles": bundles,
+            "domains": domains,
             "tag_cloud": tag_cloud,
             "details": bookmark_details,
             "create_bundle_query_string": create_bundle_query_string,
@@ -88,6 +90,7 @@ def archived(request: HttpRequest):
     create_bundle_query_string = _get_create_bundle_query_string(search)
     bookmark_list = contexts.ArchivedBookmarkListContext(request, search)
     bundles = contexts.BundlesContext(request)
+    domains = contexts.ArchivedDomainsContext(request, search)
     tag_cloud = contexts.ArchivedTagCloudContext(request, search)
     bookmark_details = contexts.get_details_context(
         request, contexts.ArchivedBookmarkDetailsContext
@@ -100,6 +103,7 @@ def archived(request: HttpRequest):
             "page_title": _("Archived bookmarks - Linkding"),
             "bookmark_list": bookmark_list,
             "bundles": bundles,
+            "domains": domains,
             "tag_cloud": tag_cloud,
             "details": bookmark_details,
             "create_bundle_query_string": create_bundle_query_string,
@@ -116,6 +120,7 @@ def shared(request: HttpRequest):
     )
     create_bundle_query_string = _get_create_bundle_query_string(search)
     bookmark_list = contexts.SharedBookmarkListContext(request, search)
+    domains = contexts.SharedDomainsContext(request, search)
     tag_cloud = contexts.SharedTagCloudContext(request, search)
     bookmark_details = contexts.get_details_context(
         request, contexts.SharedBookmarkDetailsContext
@@ -130,6 +135,7 @@ def shared(request: HttpRequest):
         {
             "page_title": _("Shared bookmarks - Linkding"),
             "bookmark_list": bookmark_list,
+            "domains": domains,
             "tag_cloud": tag_cloud,
             "details": bookmark_details,
             "users": users,
@@ -154,6 +160,7 @@ def trashed(request: HttpRequest):
     create_bundle_query_string = _get_create_bundle_query_string(search)
     bookmark_list = contexts.TrashedBookmarkListContext(request, search)
     bundles = contexts.BundlesContext(request)
+    domains = contexts.TrashedDomainsContext(request, search)
     tag_cloud = contexts.TrashedTagCloudContext(request, search)
     bookmark_details = contexts.get_details_context(
         request, contexts.TrashedBookmarkDetailsContext
@@ -166,6 +173,7 @@ def trashed(request: HttpRequest):
             "page_title": _("Trash - Linkding"),
             "bookmark_list": bookmark_list,
             "bundles": bundles,
+            "domains": domains,
             "tag_cloud": tag_cloud,
             "details": bookmark_details,
             "create_bundle_query_string": create_bundle_query_string,

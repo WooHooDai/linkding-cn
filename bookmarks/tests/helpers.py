@@ -359,6 +359,40 @@ class TagCloudTestMixin(TestCase, HtmlTestMixin):
             )
 
 
+class DomainSidebarTestMixin(TestCase, HtmlTestMixin):
+    def assertVisibleDomains(self, response, domains):
+        soup = self.make_soup(response.content.decode())
+        domain_list = soup.select_one("ul.domain-menu")
+        self.assertIsNotNone(domain_list)
+
+        list_items = domain_list.select("li.domain-menu-item")
+        self.assertEqual(len(list_items), len(domains))
+
+        for index, list_item in enumerate(list_items):
+            expected = domains[index]
+            self.assertEqual(list_item.attrs["data-domain-host"], expected["host"])
+            self.assertEqual(
+                int(list_item.attrs["data-domain-level"]), expected.get("level", 0)
+            )
+
+            link = list_item.select_one("a")
+            self.assertIsNotNone(link)
+            self.assertEqual(link.select_one(".domain-label").text.strip(), expected["label"])
+            self.assertEqual(link.select_one(".count").text.strip(), f"({expected['count']})")
+
+            favicon = link.select_one("img.favicon")
+            self.assertIsNotNone(favicon)
+            self.assertEqual(favicon.attrs["width"], "16")
+            self.assertEqual(favicon.attrs["height"], "16")
+            if "favicon" in expected:
+                self.assertEqual(favicon.attrs["src"], f"/static/{expected['favicon']}")
+
+            if expected.get("selected"):
+                self.assertIn("selected", list_item.attrs.get("class", []))
+            else:
+                self.assertNotIn("selected", list_item.attrs.get("class", []))
+
+
 class LinkdingApiTestCase(APITestCase):
     def authenticate(self):
         self.api_token = Token.objects.get_or_create(

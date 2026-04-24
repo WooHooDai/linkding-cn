@@ -337,3 +337,84 @@ def normalize_url(url: str) -> str:
 
     except (ValueError, AttributeError):
         return url
+
+
+def extract_hostname(url: str) -> str:
+    if not url or not isinstance(url, str):
+        return ""
+
+    try:
+        parsed = urllib.parse.urlparse(url.strip())
+    except ValueError:
+        return ""
+
+    if not parsed.hostname:
+        return ""
+
+    return parsed.hostname.rstrip(".").lower()
+
+
+def parse_domain_roots(custom_domain_root: str) -> list[str]:
+    roots = []
+    if not custom_domain_root:
+        return roots
+
+    for line in custom_domain_root.splitlines():
+        line = line.strip()
+        if "://" not in line:
+            line = f"https://{line}"
+        hostname = extract_hostname(line)
+        if hostname:
+            roots.append(hostname)
+
+    # Preserve user-defined order while removing duplicates case-insensitively.
+    return list(dict.fromkeys(roots))
+
+
+def get_matching_domain_roots(hostname: str, domain_roots: list[str]) -> list[str]:
+    hostname = hostname.lower()
+    matches = []
+
+    for root in domain_roots:
+        if hostname == root or hostname.endswith(f".{root}"):
+            matches.append(root)
+
+    return sorted(matches, key=lambda value: (value.count("."), value))
+
+
+def build_domain_filter_value(hostname: str, include_subdomains: bool = False) -> str:
+    hostname = hostname.lower()
+    if not include_subdomains:
+        return hostname
+    return f"{hostname} | .{hostname}"
+
+
+def canonicalize_domain_filter_value(value: str) -> str:
+    if not value:
+        return ""
+
+    parts = [part.strip().lower() for part in value.split("|")]
+    parts = [part for part in parts if part]
+    if not parts:
+        return ""
+
+    if len(parts) == 1:
+        return parts[0]
+
+    exact_parts = [part for part in parts if not part.startswith(".")]
+    subdomain_parts = [part for part in parts if part.startswith(".")]
+    ordered_parts = sorted(exact_parts) + sorted(subdomain_parts)
+    return " | ".join(ordered_parts)
+
+
+def get_sidebar_domain_filter_value(url: str, custom_domain_root: str = "") -> str:
+    hostname = extract_hostname(url)
+    if not hostname:
+        return ""
+
+    domain_roots = parse_domain_roots(custom_domain_root)
+    matching_roots = get_matching_domain_roots(hostname, domain_roots)
+    if not matching_roots:
+        return build_domain_filter_value(hostname)
+
+    return build_domain_filter_value(matching_roots[-1], include_subdomains=True)

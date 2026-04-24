@@ -8,12 +8,17 @@ from bookmarks.models import BookmarkSearch, UserProfile
 from bookmarks.tests.helpers import (
     BookmarkFactoryMixin,
     BookmarkListTestMixin,
+    DomainSidebarTestMixin,
     TagCloudTestMixin,
 )
 
 
 class BookmarkArchivedViewTestCase(
-    TestCase, BookmarkFactoryMixin, BookmarkListTestMixin, TagCloudTestMixin
+    TestCase,
+    BookmarkFactoryMixin,
+    BookmarkListTestMixin,
+    DomainSidebarTestMixin,
+    TagCloudTestMixin,
 ):
 
     def setUp(self) -> None:
@@ -34,6 +39,30 @@ class BookmarkArchivedViewTestCase(
         form = soup.select_one("form.bookmark-actions")
         self.assertIsNotNone(form)
         self.assertEqual(form.attrs["action"], url)
+
+    def test_should_list_domains_for_archived_bookmarks(self):
+        self.setup_bookmark(is_archived=True, url="https://archive.example.com/a")
+        self.setup_bookmark(is_archived=True, url="https://example.com/b")
+
+        response = self.client.get(reverse("linkding:bookmarks.archived"))
+
+        self.assertVisibleDomains(
+            response,
+            [
+                {
+                    "host": "archive.example.com",
+                    "label": "archive.example.com",
+                    "count": 1,
+                    "level": 0,
+                },
+                {
+                    "host": "example.com",
+                    "label": "example.com",
+                    "count": 1,
+                    "level": 0,
+                },
+            ],
+        )
 
     def test_should_list_archived_and_user_owned_bookmarks(self):
         other_user = User.objects.create_user(

@@ -464,6 +464,24 @@ def parse_query_string(query_string):
     return _parse_tokens(tokens)
 
 
+def replace_field_terms(query_string: str, field_name: str, new_terms: list[str]) -> str:
+    tokens = _tokenize_query_string((query_string or "").strip())
+    filtered_tokens = []
+
+    for token in tokens:
+        if _is_field_term(token):
+            parsed_field_name, _ = _extract_field_content(token)
+            if parsed_field_name == field_name:
+                continue
+        filtered_tokens.append(token)
+
+    for term in new_terms:
+        if term:
+            filtered_tokens.append(f"{field_name}:({term})")
+
+    return " ".join(filtered_tokens).strip()
+
+
 def _tokenize_query_string(query_string):
     """分词：将query_string拆分为tokens, 处理field_term和转义."""
     if not query_string:

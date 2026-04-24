@@ -5,7 +5,6 @@ import markdown
 from bleach_allowlist import markdown_tags, markdown_attrs
 from django import template
 from django.utils.safestring import mark_safe
-from urllib.parse import urlparse
 
 from bookmarks import utils
 from bookmarks.models import UserProfile
@@ -184,19 +183,13 @@ def form_field(field, modifier_string):
 @register.filter
 def extract_domain(value, user_profile=None):
     try:
-        netloc = urlparse(value).netloc
-        # 获取用户自定义规则
-        domain_roots = []
-        if user_profile and hasattr(user_profile, 'custom_domain_root') and user_profile.custom_domain_root:
-            domain_roots = [d.strip() for d in user_profile.custom_domain_root.splitlines() if d.strip()]
-        # 精确匹配
-        if netloc in domain_roots:
-            return netloc
-        # *.root 匹配
-        for root in domain_roots:
-            if netloc.endswith('.' + root):
-                domain_str = f".{root} | {root}"
-                return domain_str
-        return netloc
-    except Exception as e:
+        custom_domain_root = ""
+        if (
+            user_profile
+            and hasattr(user_profile, "custom_domain_root")
+            and user_profile.custom_domain_root
+        ):
+            custom_domain_root = user_profile.custom_domain_root
+        return utils.get_sidebar_domain_filter_value(value, custom_domain_root)
+    except Exception:
         return ""

@@ -5,9 +5,13 @@ from django.test import TestCase
 from django.utils import timezone
 
 from bookmarks.utils import (
+    build_domain_filter_value,
+    canonicalize_domain_filter_value,
+    get_sidebar_domain_filter_value,
     humanize_absolute_date,
     humanize_relative_date,
     parse_timestamp,
+    parse_domain_roots,
     normalize_url,
 )
 
@@ -361,3 +365,40 @@ class UtilsTestCase(TestCase):
             with self.subTest(url=original):
                 result = normalize_url(original)
                 self.assertEqual(expected, result)
+
+    def test_parse_domain_roots(self):
+        result = parse_domain_roots("docs.FEISHU.cn\n\nfeishu.cn\ndocs.feishu.cn")
+        self.assertEqual(result, ["docs.feishu.cn", "feishu.cn"])
+
+    def test_build_domain_filter_value(self):
+        self.assertEqual(build_domain_filter_value("example.com"), "example.com")
+        self.assertEqual(
+            build_domain_filter_value("example.com", include_subdomains=True),
+            "example.com | .example.com",
+        )
+
+    def test_canonicalize_domain_filter_value(self):
+        self.assertEqual(
+            canonicalize_domain_filter_value(".example.com | example.com"),
+            "example.com | .example.com",
+        )
+
+    def test_get_sidebar_domain_filter_value(self):
+        self.assertEqual(
+            get_sidebar_domain_filter_value("https://example.com/path"),
+            "example.com",
+        )
+        self.assertEqual(
+            get_sidebar_domain_filter_value(
+                "https://docs.feishu.cn/123",
+                "docs.feishu.cn\nfeishu.cn",
+            ),
+            "docs.feishu.cn | .docs.feishu.cn",
+        )
+        self.assertEqual(
+            get_sidebar_domain_filter_value(
+                "https://131312.feishu.cn/123",
+                "docs.feishu.cn\nfeishu.cn",
+            ),
+            "feishu.cn | .feishu.cn",
+        )

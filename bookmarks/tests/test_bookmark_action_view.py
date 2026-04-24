@@ -1039,6 +1039,13 @@ class BookmarkActionViewTestCase(
             )
         )
 
+        # domain sidebar update
+        self.assertIsNotNone(
+            soup.select_one(
+                "turbo-stream[action='update'][target='domain-tree-container']"
+            )
+        )
+
         # update event
         self.assertInHTML(
             """

@@ -8,12 +8,17 @@ from bookmarks.models import BookmarkSearch, UserProfile
 from bookmarks.tests.helpers import (
     BookmarkFactoryMixin,
     BookmarkListTestMixin,
+    DomainSidebarTestMixin,
     TagCloudTestMixin,
 )
 
 
 class BookmarkIndexViewTestCase(
-    TestCase, BookmarkFactoryMixin, BookmarkListTestMixin, TagCloudTestMixin
+    TestCase,
+    BookmarkFactoryMixin,
+    BookmarkListTestMixin,
+    DomainSidebarTestMixin,
+    TagCloudTestMixin,
 ):
     def setUp(self) -> None:
         user = self.get_or_create_test_user()
@@ -632,3 +637,246 @@ class BookmarkIndexViewTestCase(
         html = response.content.decode()
 
         self.assertInHTML('<h2 id="bundles-heading">Bundles</h2>', html, count=0)
+
+    def test_list_domains_without_normalization_rules(self):
+        self.setup_bookmark(
+            url="https://example.com/alpha", favicon_file="https_example_com.png"
+        )
+        self.setup_bookmark(
+            url="https://sub.example.com/beta",
+            favicon_file="https_sub_example_com.png",
+        )
+
+        response = self.client.get(reverse("linkding:bookmarks.index"))
+
+        self.assertVisibleDomains(
+            response,
+            [
+                {
+                    "host": "example.com",
+                    "label": "example.com",
+                    "count": 1,
+                    "level": 0,
+                    "favicon": "https_example_com.png",
+                },
+                {
+                    "host": "sub.example.com",
+                    "label": "sub.example.com",
+                    "count": 1,
+                    "level": 0,
+                    "favicon": "https_sub_example_com.png",
+                },
+            ],
+        )
+
+    def test_list_domains_with_custom_domain_hierarchy(self):
+        profile = self.get_or_create_test_user().profile
+        profile.custom_domain_root = "docs.feishu.cn\nfeishu.cn"
+        profile.save()
+
+        self.setup_bookmark(
+            url="https://docs.feishu.cn/123",
+            favicon_file="https_docs_feishu_cn.png",
+        )
+        self.setup_bookmark(
+            url="https://feishu.cn/blog", favicon_file="https_feishu_cn.png"
+        )
+        self.setup_bookmark(
+            url="https://131312.feishu.cn",
+            favicon_file="https_131312_feishu_cn.png",
+        )
+
+        response = self.client.get(reverse("linkding:bookmarks.index"))
+
+        self.assertVisibleDomains(
+            response,
+            [
+                {
+                    "host": "feishu.cn",
+                    "label": "feishu.cn",
+                    "count": 3,
+                    "level": 0,
+                    "favicon": "https_feishu_cn.png",
+                },
+                {
+                    "host": "docs.feishu.cn",
+                    "label": "docs.feishu.cn",
+                    "count": 1,
+                    "level": 1,
+                    "favicon": "https_docs_feishu_cn.png",
+                },
+            ],
+        )
+
+    def test_domain_links_replace_existing_domain_filter_and_highlight_selection(self):
+        profile = self.get_or_create_test_user().profile
+        profile.custom_domain_root = "docs.feishu.cn\nfeishu.cn"
+        profile.save()
+
+        self.setup_bookmark(url="https://docs.feishu.cn/123", title="hello docs")
+        self.setup_bookmark(url="https://feishu.cn/blog", title="hello root")
+
+        response = self.client.get(
+            reverse("linkding:bookmarks.index")
+            + "?q=hello+domain:(docs.feishu.cn+|+.docs.feishu.cn)"
+        )
+
+        self.assertVisibleDomains(
+            response,
+            [
+                {
+                    "host": "feishu.cn",
+                    "label": "feishu.cn",
+                    "count": 1,
+                    "level": 0,
+                },
+                {
+                    "host": "docs.feishu.cn",
+                    "label": "docs.feishu.cn",
+                    "count": 1,
+                    "level": 1,
+                    "selected": True,
+                },
+            ],
+        )
+
+        soup = self.make_soup(response.content.decode())
+        root_link = soup.select_one('li[data-domain-host="feishu.cn"] a')
+        self.assertIsNotNone(root_link)
+        self.assertEqual(root_link.attrs["href"], "?q=hello+domain%3A%28feishu.cn+%7C+.feishu.cn%29")
+
+    def test_domain_groups_are_sorted_by_root_bookmark_count_desc(self):
+        profile = self.get_or_create_test_user().profile
+        profile.custom_domain_root = "docs.feishu.cn\nfeishu.cn\ngithub.com"
+        profile.save()
+
+        self.setup_bookmark(url="https://docs.feishu.cn/doc-1")
+        self.setup_bookmark(url="https://feishu.cn/doc-2")
+        self.setup_bookmark(url="https://sub.feishu.cn/doc-3")
+        self.setup_bookmark(url="https://github.com/repo-1")
+        self.setup_bookmark(url="https://github.com/repo-2")
+
+        response = self.client.get(reverse("linkding:bookmarks.index"))
+
+        self.assertVisibleDomains(
+            response,
+            [
+                {
+                    "host": "feishu.cn",
+                    "label": "feishu.cn",
+                    "count": 3,
+                    "level": 0,
+                },
+                {
+                    "host": "docs.feishu.cn",
+                    "label": "docs.feishu.cn",
+                    "count": 1,
+                    "level": 1,
+                },
+                {
+                    "host": "github.com",
+                    "label": "github.com",
+                    "count": 2,
+                    "level": 0,
+                },
+            ],
+        )
+
+    def test_domain_children_are_sorted_by_bookmark_count_desc(self):
+        profile = self.get_or_create_test_user().profile
+        profile.custom_domain_root = (
+            "blog.feishu.cn\ndocs.feishu.cn\nfeishu.cn\ngithub.com"
+        )
+        profile.save()
+
+        self.setup_bookmark(url="https://blog.feishu.cn/post-1")
+        self.setup_bookmark(url="https://blog.feishu.cn/post-2")
+        self.setup_bookmark(url="https://docs.feishu.cn/doc-1")
+        self.setup_bookmark(url="https://feishu.cn/root-1")
+        self.setup_bookmark(url="https://github.com/repo-1")
+        self.setup_bookmark(url="https://github.com/repo-2")
+
+        response = self.client.get(reverse("linkding:bookmarks.index"))
+
+        self.assertVisibleDomains(
+            response,
+            [
+                {
+                    "host": "feishu.cn",
+                    "label": "feishu.cn",
+                    "count": 4,
+                    "level": 0,
+                },
+                {
+                    "host": "blog.feishu.cn",
+                    "label": "blog.feishu.cn",
+                    "count": 2,
+                    "level": 1,
+                },
+                {
+                    "host": "docs.feishu.cn",
+                    "label": "docs.feishu.cn",
+                    "count": 1,
+                    "level": 1,
+                },
+                {
+                    "host": "github.com",
+                    "label": "github.com",
+                    "count": 2,
+                    "level": 0,
+                },
+            ],
+        )
+
+    def test_domain_tree_renders_nested_children_and_toggle_for_parent_nodes(self):
+        profile = self.get_or_create_test_user().profile
+        profile.custom_domain_root = "docs.feishu.cn\nfeishu.cn"
+        profile.save()
+
+        self.setup_bookmark(url="https://docs.feishu.cn/doc-1")
+        self.setup_bookmark(url="https://feishu.cn/root-1")
+
+        response = self.client.get(reverse("linkding:bookmarks.index"))
+        soup = self.make_soup(response.content.decode())
+
+        root_item = soup.select_one('li[data-domain-host="feishu.cn"]')
+        self.assertIsNotNone(root_item)
+        self.assertEqual(root_item.attrs["data-domain-level"], "0")
+
+        toggle_button = root_item.select_one(":scope > .domain-row .domain-action .folder-toggle")
+        self.assertIsNotNone(toggle_button)
+
+        nested_children = root_item.select_one(":scope > ul.domain-children")
+        self.assertIsNotNone(nested_children)
+
+        child_item = nested_children.select_one('li[data-domain-host="docs.feishu.cn"]')
+        self.assertIsNotNone(child_item)
+        self.assertEqual(child_item.attrs["data-domain-level"], "1")
+
+    def test_domain_parent_rows_use_right_side_action_layout(self):
+        profile = self.get_or_create_test_user().profile
+        profile.custom_domain_root = "docs.feishu.cn\nfeishu.cn"
+        profile.save()
+
+        self.setup_bookmark(url="https://docs.feishu.cn/doc-1")
+        self.setup_bookmark(url="https://feishu.cn/root-1")
+        response = self.client.get(reverse("linkding:bookmarks.index"))
+        soup = self.make_soup(response.content.decode())
+
+        root_item = soup.select_one('li[data-domain-host="feishu.cn"]')
+        self.assertIsNotNone(root_item)
+
+        row = root_item.select_one(":scope > .domain-row")
+        self.assertIsNotNone(row)
+
+        content = row.select_one(":scope > .domain-content")
+        self.assertIsNotNone(content)
+        self.assertIsNotNone(content.select_one("a.domain-link"))
+
+        action = row.select_one(":scope > .domain-action")
+        self.assertIsNotNone(action)
+        self.assertIsNotNone(action.select_one(".folder-toggle"))
+
+        # Regression: the toggle should not live inline before the link text anymore.
+        old_inline_toggle = root_item.select_one(":scope > .domain-node .folder-toggle")
+        self.assertIsNone(old_inline_toggle)
