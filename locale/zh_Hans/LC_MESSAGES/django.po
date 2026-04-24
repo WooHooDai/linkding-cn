@@ -655,7 +655,6 @@ msgid "Linkding"
 msgstr "Linkding"
 
 #: bookmarks/templates/bookmarks/index.html:10
-#: bookmarks/templates/bookmarks/nav_menu.html:7
 #: bookmarks/templates/bookmarks/nav_menu.html:11
 #: bookmarks/templates/bookmarks/nav_menu.html:68
 msgid "Bookmarks"
@@ -665,12 +664,19 @@ msgstr "书签"
 msgid "Application logo"
 msgstr "应用图标"
 
-#: bookmarks/templates/bookmarks/nav_menu.html:4
 #: bookmarks/templates/bookmarks/nav_menu.html:53
 #: bookmarks/templates/bookmarks/new.html:15
 #: bookmarks/templates/settings/integrations.html:79
 msgid "Add bookmark"
 msgstr "新增书签"
+
+#: bookmarks/templates/bookmarks/nav_menu.html:4
+msgid "Add"
+msgstr "新增"
+
+#: bookmarks/templates/bookmarks/nav_menu.html:7
+msgid "Categories"
+msgstr "分类"
 
 #: bookmarks/templates/bookmarks/nav_menu.html:22
 #: bookmarks/templates/bookmarks/nav_menu.html:79
