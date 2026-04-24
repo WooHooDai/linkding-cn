@@ -3,6 +3,7 @@ import random
 from unittest.mock import patch, Mock
 
 import requests
+from bs4 import BeautifulSoup
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from requests import RequestException
@@ -24,6 +25,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
             overrides = {}
         form_data = {
             "update_profile": "",
+            "language": "en",
             "theme": UserProfile.THEME_AUTO,
             "bookmark_date_display": UserProfile.BOOKMARK_DATE_DISPLAY_RELATIVE,
             "bookmark_description_display": UserProfile.BOOKMARK_DESCRIPTION_DISPLAY_INLINE,
@@ -53,6 +55,12 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
 
         return {**form_data, **overrides}
 
+    def create_language_form_data(self, language="zh-hans", next_url=None):
+        return {
+            "language": language,
+            "next": next_url or reverse("linkding:settings.general"),
+        }
+
     def assertSuccessMessage(self, html, message: str, count=1):
         self.assertInHTML(
             f"""
@@ -76,6 +84,65 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
 
         self.assertEqual(response.status_code, 200)
 
+    def test_should_render_language_field(self):
+        response = self.client.get(reverse("linkding:settings.general"))
+        html = response.content.decode()
+        soup = BeautifulSoup(html, "html.parser")
+        profile_form = soup.find(
+            "form", attrs={"action": reverse("linkding:settings.update")}
+        )
+        language_form = soup.find(
+            "form", attrs={"action": reverse("language-update")}
+        )
+
+        self.assertContains(response, 'name="language"')
+        self.assertIsNotNone(profile_form)
+        self.assertIsNotNone(language_form)
+        self.assertIsNone(profile_form.find(attrs={"name": "language"}))
+        self.assertIsNotNone(language_form.find(attrs={"name": "language"}))
+        self.assertIsNotNone(
+            language_form.find("select", attrs={"id": "settings-language-switcher"})
+        )
+        self.assertIsNone(language_form.find(class_="dropdown-toggle"))
+
+    def test_language_options_keep_native_names(self):
+        self.user.profile.language = "zh-hans"
+        self.user.profile.save()
+
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = BeautifulSoup(response.content.decode(), "html.parser")
+        options = soup.select("#settings-language-switcher option")
+
+        self.assertEqual(
+            [option.get_text(strip=True) for option in options],
+            ["English", "简体中文"],
+        )
+
+    def test_update_language_persists_language_preference(self):
+        form_data = self.create_language_form_data()
+
+        response = self.client.post(
+            reverse("language-update"), form_data, follow=True
+        )
+
+        self.user.profile.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.user.profile.language, "zh-hans")
+
+    def test_update_language_ignores_unsupported_language(self):
+        response = self.client.post(
+            reverse("language-update"),
+            self.create_language_form_data(language="fr"),
+        )
+
+        self.user.profile.refresh_from_db()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.user.profile.language, "en")
+        self.assertNotIn("django_language", response.cookies)
+
+
     def test_should_check_authentication(self):
         self.client.logout()
         response = self.client.get(reverse("linkding:settings.general"), follow=True)
@@ -95,6 +162,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
     def test_update_profile(self):
         form_data = {
             "update_profile": "",
+            "language": "zh-hans",
             "theme": UserProfile.THEME_DARK,
             "bookmark_date_display": UserProfile.BOOKMARK_DATE_DISPLAY_HIDDEN,
             "bookmark_description_display": UserProfile.BOOKMARK_DESCRIPTION_DISPLAY_SEPARATE,
@@ -217,6 +285,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
 
     def test_update_profile_should_not_be_called_without_respective_form_action(self):
         form_data = {
+            "language": "zh-hans",
             "theme": UserProfile.THEME_DARK,
         }
         response = self.client.post(
@@ -400,6 +469,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
 
             mock_schedule_bookmarks_without_previews.assert_not_called()
 
+    @override_settings(LD_ENABLE_SNAPSHOTS=False)
     def test_automatic_html_snapshots_should_be_hidden_when_snapshots_not_supported(
         self,
     ):
@@ -430,14 +500,17 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         )
 
     def test_about_shows_version_info(self):
-        response = self.client.get(reverse("linkding:settings.general"))
+        with patch(
+            "bookmarks.views.settings.get_version_info", return_value=app_version
+        ):
+            response = self.client.get(reverse("linkding:settings.general"))
         html = response.content.decode()
 
         self.assertInHTML(
             f"""
             <tr>
                 <td>Version</td>
-                <td>{get_version_info(random.random())}</td>
+                <td>{app_version}</td>
             </tr>
         """,
             html,

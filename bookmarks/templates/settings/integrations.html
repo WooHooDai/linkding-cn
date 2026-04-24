@@ -1,85 +1,82 @@
 {% extends "bookmarks/layout.html" %}
+{% load i18n %}
 
 {% block head %}
-  {% with page_title="集成 - Linkding" %}
+  {% translate "Integrations - Linkding" as page_title %}
+  {% with page_title=page_title %}
     {{ block.super }}
   {% endwith %}
 {% endblock %}
 
 {% block content %}
   <main class="settings-page" aria-labelledby="main-heading">
-    <h1 id="main-heading">集成</h1>
+    <h1 id="main-heading">{% translate "Integrations" %}</h1>
 
     <section aria-labelledby="rest-api-heading">
       <h2 id="rest-api-heading">REST API</h2>
-      <p>下方令牌（token）可用于对第三方应用程序使用 REST API 的验证授权：</p>
+      <p>{% translate "The following token can be used to authenticate third-party applications against the REST API:" %}</p>
       <div class="form-group">
         <div class="width-50 width-md-100">
           <input class="form-input" value="{{ api_token }}" readonly>
         </div>
       </div>
       <p>
-        <strong>请认真保管该令牌（token）。</strong>
-        持有该令牌可访问和管理你的全部书签。
-        当你认为令牌有泄漏风险时，你可在<a
-          target="_blank" href="{% url 'admin:authtoken_tokenproxy_changelist' %}">管理后台</a>删除它。
-          删除后，可刷新本页面，查看新生成的令牌。
+        <strong>{% translate "Please treat this token as you would any other credential." %}</strong>
+        {% translate "Any party with access to this token can access and manage all your bookmarks." %}
+        {% translate "If you think the token was compromised, you can revoke it in the" %}
+        <a target="_blank" href="{% url 'admin:authtoken_tokenproxy_changelist' %}" rel="noopener">{% translate "admin panel" %}</a>.
+        {% translate "After deleting the token, reload this page to generate a new one." %}
       </p>
     </section>
 
     <section aria-labelledby="rss-feeds-heading">
-      <h2 id="rss-feeds-heading">RSS 订阅源</h2>
-      <p>下述链接可供订阅书签的RSS：</p>
+      <h2 id="rss-feeds-heading">{% translate "RSS Feeds" %}</h2>
+      <p>{% translate "The following URLs provide RSS feeds for your bookmarks:" %}</p>
       <ul style="list-style-position: outside;">
-        <li><a target="_blank" href="{{ all_feed_url }}">全部书签</a></li>
-        <li><a target="_blank" href="{{ unread_feed_url }}">未读书签</a></li>
-        <li><a target="_blank" href="{{ shared_feed_url }}">已分享书签</a></li>
-        <li><a target="_blank" href="{{ public_shared_feed_url }}">已公开分享书签</a><br><span class="text-small text-secondary">已公开分享书签可被分享，且只展示被明确允许分享的已分享书签。</span>
+        <li><a target="_blank" href="{{ all_feed_url }}">{% translate "All bookmarks" %}</a></li>
+        <li><a target="_blank" href="{{ unread_feed_url }}">{% translate "Unread bookmarks" %}</a></li>
+        <li><a target="_blank" href="{{ shared_feed_url }}">{% translate "Shared bookmarks" %}</a></li>
+        <li>
+          <a target="_blank" href="{{ public_shared_feed_url }}">{% translate "Public shared bookmarks" %}</a><br>
+          <span class="text-small text-secondary">{% translate "This public feed does not include an authentication token and only shows bookmarks from users who explicitly enabled public sharing." %}</span>
         </li>
       </ul>
-      <p>
-        所有链接都支持如下 URL 参数：
-      </p>
+      <p>{% translate "All URLs support the following URL parameters:" %}</p>
       <ul style="list-style-position: outside;">
-        <li><code>limit</code>：指定订阅源包含书签数量的最大值，默认为100。
-        </li>
-        <li><code>q</code>：指定搜索关键词，你可在书签列表搜索后，从浏览器地址栏获得。
-        </li>
-        <li><code>unread</code>：筛选未读或已读书签。<code>yes</code>代表未读，<code>no</code>代表已读
-        </li>
-        <li><code>shared</code>：筛选已分享或未分享书签。<code>yes</code>代表已分享，<code>no</code>代表未分享。
-        </li>
+        <li><code>limit</code>: {% translate "specifies the maximum number of bookmarks in the feed. The default is 100." %}</li>
+        <li><code>q</code>: {% translate "specifies the search query. You can copy an example from the bookmark list URL after running a search." %}</li>
+        <li><code>unread</code>: {% translate "filters unread or read bookmarks. Use yes for unread and no for read." %}</li>
+        <li><code>shared</code>: {% translate "filters shared or unshared bookmarks. Use yes for shared and no for unshared." %}</li>
       </ul>
       <p>
-        <strong>注意这些链接包含了授权令牌（authentication token），请认真保管。</strong>
-        持有这些链接可访问你的全部书签。
-        当你认为链接有泄漏风险时，你可在<a
-        target="_blank" href="{% url 'admin:bookmarks_feedtoken_changelist' %}">管理后台</a>删除对应用户的阅读令牌（token）。
-        删除后，可刷新本页面，查看新生成的链接。
+        <strong>{% translate "Please note that these URLs include an authentication token and should be handled like any other credential." %}</strong>
+        {% translate "Anyone with access to these URLs can read all your bookmarks." %}
+        {% translate "If you think a feed URL was compromised, delete the feed token in the" %}
+        <a target="_blank" href="{% url 'admin:bookmarks_feedtoken_changelist' %}" rel="noopener">{% translate "admin panel" %}</a>.
+        {% translate "After deleting the token, reload this page to generate new feed URLs." %}
       </p>
     </section>
 
     <section aria-labelledby="browser-extension-heading">
-      <h2 id="browser-extension-heading">浏览器扩展</h2>
-      <p>浏览器扩展可以帮你快速添加当前页面为书签。扩展可以从如下官方扩展商店获取：</p>
+      <h2 id="browser-extension-heading">{% translate "Browser extension" %}</h2>
+      <p>{% translate "The browser extension lets you quickly add the current page as a bookmark. It is available from the official stores for:" %}</p>
       <ul>
-        <li><a href="https://addons.mozilla.org/firefox/addon/linkding-extension/" target="_blank">Firefox</a></li>
-        <li><a href="https://chrome.google.com/webstore/detail/linkding-extension/beakmhbijpdhipnjhnclmhgjlddhidpe"
-               target="_blank">Chrome</a></li>
+        <li><a href="https://addons.mozilla.org/firefox/addon/linkding-extension/" target="_blank" rel="noopener">Firefox</a></li>
+        <li><a href="https://chrome.google.com/webstore/detail/linkding-extension/beakmhbijpdhipnjhnclmhgjlddhidpe" target="_blank" rel="noopener">Chrome</a></li>
       </ul>
-      <p>这个扩展是<a href="https://github.com/sissbruecker/linkding-extension" target="_blank">开源</a>的，可以自行构建并手动载入支持Chrome扩展的浏览器里。</p>
-      <h2>书签小程序（Bookmarklet）</h2>
-      <p>书签小程序是另一个快速添加当前页面为书签的方式，它是跨浏览器的。它的使用方式如下：</p>
+      <p>{% translate "The extension is open source and can also be built and loaded manually into Chromium-based browsers." %}</p>
+
+      <h2>{% translate "Bookmarklet" %}</h2>
+      <p>{% translate "The bookmarklet is another cross-browser way to quickly add the current page as a bookmark:" %}</p>
       <ul>
-        <li>将下面的书签小程序拖拽到浏览器的书签栏/工具栏</li>
-        <li>打开想添加为书签的网页</li>
-        <li>点击浏览器工具栏上你刚添加的书签小程序</li>
-        <li>linkding 会在新窗口或标签页打开新建书签页面</li>
-        <li>保存书签后，linkding 会自动关闭窗口返回网站</li>
+        <li>{% translate "Drag the bookmarklet below to your browser toolbar or bookmarks bar." %}</li>
+        <li>{% translate "Open the page you want to bookmark." %}</li>
+        <li>{% translate "Click the bookmarklet from your browser toolbar." %}</li>
+        <li>{% translate "Linkding opens a new bookmark page in a window or tab." %}</li>
+        <li>{% translate "After saving, Linkding automatically closes the helper window and returns you to the page." %}</li>
       </ul>
-      <p>将书签小程序拖拽到浏览器的工具栏：</p>
-      <a href="javascript: {% include 'bookmarks/bookmarklet.js' %}" data-turbo="false"
-         class="btn btn-primary">📎 添加书签小程序</a>
+      <p>{% translate "Drag this bookmarklet to your toolbar:" %}</p>
+      <a href="javascript: {% include 'bookmarks/bookmarklet.js' %}" data-turbo="false" class="btn btn-primary">📎 {% translate "Add bookmark" %}</a>
     </section>
   </main>
 {% endblock %}

@@ -1,4 +1,5 @@
 import { Behavior, registerBehavior } from "./index";
+import { gettext } from "./i18n";
 
 class FormSubmit extends Behavior {
   constructor(element) {
@@ -174,7 +175,7 @@ class AssetRename extends Behavior {
       const value = this.input.value.trim();
       if (value==="") {
         event.preventDefault();
-        this.showInputError(this.input, "名称不能为空！");
+        this.showInputError(this.input, gettext("Name cannot be empty."));
         this.input.focus();
       }
     });
@@ -216,7 +217,7 @@ class AssetRename extends Behavior {
 
     const cancelButton = document.createElement(this.element.nodeName);
     cancelButton.type = "button";
-    cancelButton.innerText = "取消"
+    cancelButton.innerText = gettext("Cancel");
     cancelButton.className = `${buttonClasses} mr-1`;
     cancelButton.addEventListener("click", this.reset.bind(this));
 
@@ -224,7 +225,7 @@ class AssetRename extends Behavior {
     confirmButton.type = "submit";
     confirmButton.name = this.element.name;
     confirmButton.value = this.element.value;
-    confirmButton.innerText = "确认";
+    confirmButton.innerText = gettext("Confirm");
     confirmButton.className = buttonClasses;
     
     container.append(cancelButton, confirmButton);

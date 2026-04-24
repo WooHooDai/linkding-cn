@@ -120,15 +120,15 @@ class TagsIndexViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertContains(response, "4 tags total")
 
         response = self.client.get(reverse("linkding:tags.index") + "?search=python")
-        self.assertContains(response, "Showing 1 of 4 tags")
+        self.assertContains(response, "1 tag (4 total)")
 
         response = self.client.get(reverse("linkding:tags.index") + "?unused=true")
-        self.assertContains(response, "Showing 1 of 4 tags")
+        self.assertContains(response, "1 tag (4 total)")
 
         response = self.client.get(
             reverse("linkding:tags.index") + "?search=nonexistent"
         )
-        self.assertContains(response, "Showing 0 of 4 tags")
+        self.assertContains(response, "0 tags (4 total)")
 
     def test_pagination(self):
         tags = []
@@ -256,11 +256,11 @@ class TagsIndexViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertInHTML(
             """
             <select id="sort" name="sort" class="form-select" ld-auto-submit>
-              <option value="name-asc" selected>Name A-Z</option>
-              <option value="name-desc">Name Z-A</option>
-              <option value="count-asc">Fewest bookmarks</option>
-              <option value="count-desc">Most bookmarks</option>
-            </select>        
+              <option value="name-asc" selected>Tag name ↑</option>
+              <option value="name-desc">Tag name ↓</option>
+              <option value="count-asc">Bookmark count ↑</option>
+              <option value="count-desc">Bookmark count ↓</option>
+            </select>
         """,
             html,
         )
@@ -271,11 +271,11 @@ class TagsIndexViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertInHTML(
             """
             <select id="sort" name="sort" class="form-select" ld-auto-submit>
-              <option value="name-asc">Name A-Z</option>
-              <option value="name-desc" selected>Name Z-A</option>
-              <option value="count-asc">Fewest bookmarks</option>
-              <option value="count-desc">Most bookmarks</option>
-            </select>        
+              <option value="name-asc">Tag name ↑</option>
+              <option value="name-desc" selected>Tag name ↓</option>
+              <option value="count-asc">Bookmark count ↑</option>
+              <option value="count-desc">Bookmark count ↓</option>
+            </select>
         """,
             html,
         )

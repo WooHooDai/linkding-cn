@@ -7,11 +7,12 @@ from django.http import HttpResponse
 from django.template import Template, RequestContext
 from django.test import TestCase, RequestFactory
 from django.urls import reverse
-from django.utils import timezone, formats
+from django.utils import timezone
 
 from bookmarks.middlewares import LinkdingMiddleware
 from bookmarks.models import Bookmark, BookmarkSearch, UserProfile, User
 from bookmarks.tests.helpers import BookmarkFactoryMixin, HtmlTestMixin
+from bookmarks.utils import humanize_absolute_date_short
 from bookmarks.views import contexts
 
 
@@ -20,35 +21,29 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
     def assertBookmarksLink(
         self, html: str, bookmark: Bookmark, link_target: str = "_blank"
     ):
-        favicon_img = (
-            f'<img class="favicon" src="/static/{bookmark.favicon_file}" alt="">'
-            if bookmark.favicon_file
-            else ""
-        )
-        self.assertInHTML(
-            f"""
-            {favicon_img}
-            <a href="{bookmark.url}" 
-                target="{link_target}" 
-                rel="noopener">
-                <span>{bookmark.resolved_title}</span>
-            </a>
-            """,
-            html,
-        )
+        soup = self.make_soup(html)
+        link = soup.find("a", href=bookmark.url, class_="title-link")
+        self.assertIsNotNone(link)
+        self.assertEqual(link.get("target"), link_target)
+        self.assertIn("noopener", link.get("rel", []))
+
+        title = link.find("span")
+        self.assertIsNotNone(title)
+        self.assertEqual(title.text.strip(), bookmark.resolved_title)
 
     def assertWebArchiveLink(
         self, html: str, label_content: str, url: str, link_target: str = "_blank"
     ):
-        self.assertInHTML(
-            f"""
-        <a href="{url}"
-           title="View snapshot on the Internet Archive Wayback Machine" target="{link_target}" rel="noopener">
-            {label_content}
-        </a>
-        """,
-            html,
+        soup = self.make_soup(html)
+        link = soup.find(
+            "a",
+            href=url,
+            title="View snapshot on the Internet Archive Wayback Machine",
         )
+        self.assertIsNotNone(link)
+        self.assertEqual(link.get("target"), link_target)
+        self.assertIn("noopener", link.get("rel", []))
+        self.assertEqual(link.get_text(strip=True), label_content)
 
     def assertViewLink(self, html: str, bookmark: Bookmark, base_url=None):
         self.assertViewLinkCount(html, bookmark, base_url)
@@ -78,7 +73,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         edit_url = reverse("linkding:bookmarks.edit", args=[bookmark.id])
         self.assertInHTML(
             f"""
-            <a href="{edit_url}?return_url=/bookmarks">Edit</a>
+            <a href="{edit_url}?return_url=/bookmarks" class="edit-action">Edit</a>
         """,
             html,
             count=count,
@@ -87,7 +82,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
     def assertArchiveLinkCount(self, html: str, bookmark: Bookmark, count=1):
         self.assertInHTML(
             f"""
-            <button type="submit" name="archive" value="{bookmark.id}"
+            <button ld-confirm-button type="submit" name="archive" value="{bookmark.id}"
                class="btn btn-link btn-sm">Archive</button>
         """,
             html,
@@ -97,7 +92,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
     def assertDeleteLinkCount(self, html: str, bookmark: Bookmark, count=1):
         self.assertInHTML(
             f"""
-            <button ld-confirm-button type="submit" name="remove" value="{bookmark.id}"
+            <button ld-confirm-button type="submit" name="trash" value="{bookmark.id}"
                class="btn btn-link btn-sm">Remove</button>
         """,
             html,
@@ -219,7 +214,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
             <use xlink:href="#ld-icon-note"></use>
           </svg>
-          Notes
+          <!-- 笔记 -->
         </button>      
           """,
             html,
@@ -231,11 +226,11 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             f"""
         <button type="submit" name="unshare" value="{bookmark.id}"
                 class="btn btn-link btn-sm btn-icon"
-                ld-confirm-button ld-confirm-icon="ld-icon-unshare" ld-confirm-question="Unshare?">
+                ld-confirm-button ld-confirm-icon="ld-icon-unshare" ld-confirm-question="">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
             <use xlink:href="#ld-icon-share"></use>
           </svg>
-          Shared
+          <!-- 已分享 -->
         </button>    
           """,
             html,
@@ -247,11 +242,11 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             f"""
         <button type="submit" name="mark_as_read" value="{bookmark.id}"
                 class="btn btn-link btn-sm btn-icon"
-                ld-confirm-button ld-confirm-icon="ld-icon-read" ld-confirm-question="Mark as read?">
+                ld-confirm-button ld-confirm-icon="ld-icon-read" ld-confirm-question="">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
             <use xlink:href="#ld-icon-unread"></use>
           </svg>
-          Unread
+          <!-- 未读 -->
         </button>   
           """,
             html,
@@ -302,7 +297,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         has_tags = len(bookmark.tags.all()) > 0
 
         # inline description block exists
-        description = soup.select_one(".description.inline.truncate")
+        description = soup.select_one(".description.inline .description-container.truncate")
         self.assertIsNotNone(description)
 
         # separate description block does not exist
@@ -384,15 +379,16 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         inline_description = soup.select_one(".description.inline")
         self.assertIsNone(inline_description)
 
+        description = soup.select_one(".description .description-container.separate")
+        self.assertIsNotNone(description)
+
         if not has_description:
-            # no description element
-            description = soup.select_one(".description")
-            self.assertIsNone(description)
+            description_text = description.select_one(".description-text")
+            self.assertIsNone(description_text)
         else:
-            # contains description text, without leading/trailing whitespace
-            description = soup.select_one(".description.separate")
-            self.assertIsNotNone(description)
-            self.assertEqual(description.text, bookmark.description)
+            description_text = description.select_one(".description-text")
+            self.assertIsNotNone(description_text)
+            self.assertEqual(description_text.text, bookmark.description)
 
         if not has_tags:
             # no tags element
@@ -482,7 +478,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             "https://web.archive.org/web/20210811214511/https://wanikani.com/",
         )
         html = self.render_template()
-        formatted_date = formats.date_format(bookmark.date_added, "SHORT_DATE_FORMAT")
+        formatted_date = humanize_absolute_date_short(bookmark.date_added)
 
         self.assertWebArchiveLink(
             html, formatted_date, bookmark.web_archive_snapshot_url
@@ -510,7 +506,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         )
 
         html = self.render_template()
-        formatted_date = formats.date_format(bookmark.date_added, "SHORT_DATE_FORMAT")
+        formatted_date = humanize_absolute_date_short(bookmark.date_added)
 
         self.assertWebArchiveLink(
             html,
@@ -570,7 +566,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         bookmark.save()
 
         html = self.render_template()
-        formatted_date = formats.date_format(bookmark.date_added, "SHORT_DATE_FORMAT")
+        formatted_date = humanize_absolute_date_short(bookmark.date_added)
         snapshot_url = reverse(
             "linkding:assets.view", args=[bookmark.latest_snapshot.id]
         )
@@ -582,7 +578,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
                title="View latest snapshot" target="_blank" rel="noopener">
                 {formatted_date}
             </a>
-            <span>|</span>
+            <span class="hide-sm">|</span>
             """,
             html,
         )
@@ -1021,7 +1017,10 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.setup_bookmark()
         html = self.render_template()
 
-        self.assertIn('<div class="bookmark-pagination">', html)
+        self.assertIn(
+            '<div class="bookmark-pagination" ld-pagination data-sticky-on="false">',
+            html,
+        )
 
     def test_pagination_is_sticky_when_enabled_in_profile(self):
         self.setup_bookmark()
@@ -1030,7 +1029,10 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         profile.save()
         html = self.render_template()
 
-        self.assertIn('<div class="bookmark-pagination sticky">', html)
+        self.assertIn(
+            '<div class="bookmark-pagination" ld-pagination data-sticky-on="true">',
+            html,
+        )
 
     def test_items_per_page_is_30_by_default(self):
         self.setup_numbered_bookmarks(50)

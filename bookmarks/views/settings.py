@@ -12,6 +12,11 @@ from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext as _, ngettext
+from django.utils.translation import check_for_language
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.urls import translate_url
+from django.views.i18n import LANGUAGE_QUERY_PARAMETER
 from rest_framework.authtoken.models import Token
 
 from bookmarks.models import (
@@ -27,6 +32,62 @@ from bookmarks.type_defs import HttpRequest
 from bookmarks.utils import app_version
 
 logger = logging.getLogger(__name__)
+
+
+def update_language(request: HttpRequest):
+    next_url = request.POST.get("next", request.GET.get("next"))
+    if (
+        next_url or request.accepts("text/html")
+    ) and not url_has_allowed_host_and_scheme(
+        url=next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        next_url = request.META.get("HTTP_REFERER")
+        if not url_has_allowed_host_and_scheme(
+            url=next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            next_url = "/"
+
+    response = HttpResponseRedirect(next_url) if next_url else HttpResponse(status=204)
+    if request.method != "POST":
+        return response
+
+    lang_code = request.POST.get(LANGUAGE_QUERY_PARAMETER)
+    if not lang_code:
+        return response
+
+    supported_languages = {
+        code.lower(): code for code, _label in django_settings.LANGUAGES
+    }
+    lang_code = supported_languages.get(lang_code.lower())
+    if not lang_code or not check_for_language(lang_code):
+        return response
+
+    if request.user.is_authenticated:
+        profile = request.user.profile
+        if profile.language != lang_code:
+            profile.language = lang_code
+            profile.save(update_fields=["language"])
+
+    if next_url:
+        next_translated = translate_url(next_url, lang_code)
+        if next_translated != next_url:
+            response = HttpResponseRedirect(next_translated)
+
+    response.set_cookie(
+        django_settings.LANGUAGE_COOKIE_NAME,
+        lang_code,
+        max_age=django_settings.LANGUAGE_COOKIE_AGE,
+        path=django_settings.LANGUAGE_COOKIE_PATH,
+        domain=django_settings.LANGUAGE_COOKIE_DOMAIN,
+        secure=django_settings.LANGUAGE_COOKIE_SECURE,
+        httponly=django_settings.LANGUAGE_COOKIE_HTTPONLY,
+        samesite=django_settings.LANGUAGE_COOKIE_SAMESITE,
+    )
+    return response
 
 
 @login_required
@@ -73,14 +134,12 @@ def update(request: HttpRequest):
             return update_profile(request)
         if "update_global_settings" in request.POST:
             update_global_settings(request)
-            messages.success(
-                request, "全局设置已更新", "settings_success_message"
-            )
+            messages.success(request, _("Global settings updated"), "settings_success_message")
         if "refresh_favicons" in request.POST:
             tasks.schedule_refresh_favicons(request.user)
             messages.success(
                 request,
-                "favicon已安排更新，这需要花费一些时间。",
+                _("Scheduled favicon update. This may take a while..."),
                 "settings_success_message",
             )
         if "create_missing_html_snapshots" in request.POST:
@@ -88,13 +147,16 @@ def update(request: HttpRequest):
             if count > 0:
                 messages.success(
                     request,
-                    f"【{count}】个缺失快照已加入队列，这需要花费一些时间。",
+                    ngettext(
+                        "Queued %(count)s missing snapshot. This may take a while...",
+                        "Queued %(count)s missing snapshots. This may take a while...",
+                        count,
+                    )
+                    % {"count": count},
                     "settings_success_message",
                 )
             else:
-                messages.success(
-                    request, "未发现缺失快照。", "settings_success_message"
-                )
+                messages.success(request, _("No missing snapshots found."), "settings_success_message")
 
     return HttpResponseRedirect(reverse("linkding:settings.general"))
 
@@ -107,7 +169,7 @@ def update_profile(request: HttpRequest):
     form = UserProfileForm(request.POST, instance=profile)
     if form.is_valid():
         form.save()
-        messages.success(request, "个人资料已更新", "settings_success_message")
+        messages.success(request, _("Profile updated"), "settings_success_message")
         # Load missing favicons if the feature was just enabled
         if profile.enable_favicons and not favicons_were_enabled:
             tasks.schedule_bookmarks_without_favicons(request.user)
@@ -119,7 +181,7 @@ def update_profile(request: HttpRequest):
 
     messages.error(
         request,
-        "Profile update failed, check the form below for errors",
+        _("Profile update failed, check the form below for errors"),
         "settings_error_message",
     )
     return general(request, 422, {"form": form})
@@ -205,26 +267,31 @@ def bookmark_import(request: HttpRequest):
 
     if import_file is None:
         messages.error(
-            request, "Please select a file to import.", "settings_error_message"
+            request, _("Please select a file to import."), "settings_error_message"
         )
         return HttpResponseRedirect(reverse("linkding:settings.general"))
 
     try:
         content = import_file.read().decode()
         result = importer.import_netscape_html(content, request.user, import_options)
-        success_msg = str(result.success) + " bookmarks were successfully imported."
+        success_msg = ngettext(
+            "%(count)s bookmark was imported successfully.",
+            "%(count)s bookmarks were imported successfully.",
+            result.success,
+        ) % {"count": result.success}
         messages.success(request, success_msg, "settings_success_message")
         if result.failed > 0:
-            err_msg = (
-                str(result.failed)
-                + " bookmarks could not be imported. Please check the logs for more details."
-            )
+            err_msg = ngettext(
+                "%(count)s bookmark could not be imported. Please check the logs for more details.",
+                "%(count)s bookmarks could not be imported. Please check the logs for more details.",
+                result.failed,
+            ) % {"count": result.failed}
             messages.error(request, err_msg, "settings_error_message")
     except:
         logging.exception("Unexpected error during bookmark import")
         messages.error(
             request,
-            "An error occurred during bookmark import.",
+            _("An error occurred during bookmark import."),
             "settings_error_message",
         )
 
@@ -253,7 +320,7 @@ def bookmark_export(request: HttpRequest):
         return render(
             request,
             "settings/general.html",
-            {"export_error": "An error occurred during bookmark export."},
+            {"export_error": _("An error occurred during bookmark export.")},
         )
 
 

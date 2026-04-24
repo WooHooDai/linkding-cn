@@ -57,7 +57,7 @@ class LinkdingE2ETestCase(LiveServerTestCase, BookmarkFactoryMixin):
         return self.page.locator(".modal.bookmark-details")
 
     def open_details_modal(self, bookmark):
-        details_button = self.locate_bookmark(bookmark.title).get_by_text("View")
+        details_button = self.locate_bookmark(bookmark.title).locator("a.view-action")
         details_button.click()
 
         details_modal = self.locate_details_modal()

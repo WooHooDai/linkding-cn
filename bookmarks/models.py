@@ -18,6 +18,7 @@ from django.db.models import Q
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.http import QueryDict
+from django.utils.translation import gettext_lazy as _
 
 from bookmarks.utils import unique, normalize_url
 from bookmarks.validators import BookmarkURLValidator
@@ -199,9 +200,9 @@ class BookmarkBundle(models.Model):
     date_created = models.DateTimeField(auto_now_add=True, null=False)
     date_modified = models.DateTimeField(auto_now=True, null=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    show_count = models.BooleanField(default=True, verbose_name="显示书签数")
+    show_count = models.BooleanField(default=True, verbose_name=_("Show bookmark count"))
     is_folder = models.BooleanField(default=True)
-    search_params = models.JSONField(default=dict, blank=True, verbose_name="搜索参数")
+    search_params = models.JSONField(default=dict, blank=True, verbose_name=_("Search parameters"))
 
     def __str__(self):
         return self.name
@@ -515,35 +516,35 @@ class BookmarkSearch:
 
 class BookmarkSearchForm(forms.Form):
     SORT_CHOICES = [
-        (BookmarkSearch.SORT_ADDED_ASC, "添加时间 ↑"),
-        (BookmarkSearch.SORT_ADDED_DESC, "添加时间 ↓"),
-        (BookmarkSearch.SORT_TITLE_ASC, "标题 ↑"),
-        (BookmarkSearch.SORT_TITLE_DESC, "标题 ↓"),
-        (BookmarkSearch.SORT_RANDOM, "随机"),
+        (BookmarkSearch.SORT_ADDED_ASC, _("Added ↑")),
+        (BookmarkSearch.SORT_ADDED_DESC, _("Added ↓")),
+        (BookmarkSearch.SORT_TITLE_ASC, _("Title ↑")),
+        (BookmarkSearch.SORT_TITLE_DESC, _("Title ↓")),
+        (BookmarkSearch.SORT_RANDOM, _("Random")),
     ]
     FILTER_SHARED_CHOICES = [
-        (BookmarkSearch.FILTER_SHARED_OFF, "关闭"),
-        (BookmarkSearch.FILTER_SHARED_SHARED, "已分享"),
-        (BookmarkSearch.FILTER_SHARED_UNSHARED, "未分享"),
+        (BookmarkSearch.FILTER_SHARED_OFF, _("Off")),
+        (BookmarkSearch.FILTER_SHARED_SHARED, _("Shared")),
+        (BookmarkSearch.FILTER_SHARED_UNSHARED, _("Unshared")),
     ]
     FILTER_UNREAD_CHOICES = [
-        (BookmarkSearch.FILTER_UNREAD_OFF, "关闭"),
-        (BookmarkSearch.FILTER_UNREAD_YES, "未读"),
-        (BookmarkSearch.FILTER_UNREAD_NO, "已读"),
+        (BookmarkSearch.FILTER_UNREAD_OFF, _("Off")),
+        (BookmarkSearch.FILTER_UNREAD_YES, _("Unread")),
+        (BookmarkSearch.FILTER_UNREAD_NO, _("Read")),
     ]
     FILTER_TAGGED_CHOICES = [
-        (BookmarkSearch.FILTER_TAGGED_OFF, "关闭"),
-        (BookmarkSearch.FILTER_TAGGED_TAGGED, "有标签"),
-        (BookmarkSearch.FILTER_TAGGED_UNTAGGED, "无标签"),
+        (BookmarkSearch.FILTER_TAGGED_OFF, _("Off")),
+        (BookmarkSearch.FILTER_TAGGED_TAGGED, _("Tagged")),
+        (BookmarkSearch.FILTER_TAGGED_UNTAGGED, _("Untagged")),
     ]
     FILTER_DATE_BY_CHOICES = [
-        (BookmarkSearch.FILTER_DATE_OFF, "关闭"),
-        (BookmarkSearch.FILTER_DATE_BY_ADDED, "添加"),
-        (BookmarkSearch.FILTER_DATE_BY_MODIFIED, "修改")
+        (BookmarkSearch.FILTER_DATE_OFF, _("Off")),
+        (BookmarkSearch.FILTER_DATE_BY_ADDED, _("Added")),
+        (BookmarkSearch.FILTER_DATE_BY_MODIFIED, _("Modified")),
     ]
     FILTER_DATE_TYPE_CHOICES = [
-        (BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE, "绝对"),
-        (BookmarkSearch.FILTER_DATE_TYPE_RELATIVE, "相对")
+        (BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE, _("Absolute")),
+        (BookmarkSearch.FILTER_DATE_TYPE_RELATIVE, _("Relative")),
     ]
 
     q = forms.CharField()
@@ -575,7 +576,7 @@ class BookmarkSearchForm(forms.Form):
         # set choices for user field if users are provided
         if users:
             user_choices = [(user.username, user.username) for user in users]
-            user_choices.insert(0, ("", "所有人"))
+            user_choices.insert(0, ("", _("Everyone")))
             self.fields["user"].choices = user_choices
 
         for param in search.params:
@@ -600,53 +601,62 @@ class BookmarkSearchForm(forms.Form):
 
 
 class UserProfile(models.Model):
+    LANGUAGE_EN = "en"
+    LANGUAGE_ZH_HANS = "zh-hans"
+    LANGUAGE_CHOICES = [
+        (LANGUAGE_EN, _("English")),
+        (LANGUAGE_ZH_HANS, _("Simplified Chinese")),
+    ]
     THEME_AUTO = "auto"
     THEME_LIGHT = "light"
     THEME_DARK = "dark"
     THEME_CHOICES = [
-        (THEME_AUTO, "自动"),
-        (THEME_LIGHT, "亮色"),
-        (THEME_DARK, "暗色"),
+        (THEME_AUTO, _("Auto")),
+        (THEME_LIGHT, _("Light")),
+        (THEME_DARK, _("Dark")),
     ]
     BOOKMARK_DATE_DISPLAY_RELATIVE = "relative"
     BOOKMARK_DATE_DISPLAY_ABSOLUTE = "absolute"
     BOOKMARK_DATE_DISPLAY_HIDDEN = "hidden"
     BOOKMARK_DATE_DISPLAY_CHOICES = [
-        (BOOKMARK_DATE_DISPLAY_RELATIVE, "相对"),
-        (BOOKMARK_DATE_DISPLAY_ABSOLUTE, "绝对"),
-        (BOOKMARK_DATE_DISPLAY_HIDDEN, "隐藏"),
+        (BOOKMARK_DATE_DISPLAY_RELATIVE, _("Relative")),
+        (BOOKMARK_DATE_DISPLAY_ABSOLUTE, _("Absolute")),
+        (BOOKMARK_DATE_DISPLAY_HIDDEN, _("Hidden")),
     ]
     BOOKMARK_DESCRIPTION_DISPLAY_INLINE = "inline"
     BOOKMARK_DESCRIPTION_DISPLAY_SEPARATE = "separate"
     BOOKMARK_DESCRIPTION_DISPLAY_CHOICES = [
-        (BOOKMARK_DESCRIPTION_DISPLAY_INLINE, "行内"),
-        (BOOKMARK_DESCRIPTION_DISPLAY_SEPARATE, "分行"),
+        (BOOKMARK_DESCRIPTION_DISPLAY_INLINE, _("Inline")),
+        (BOOKMARK_DESCRIPTION_DISPLAY_SEPARATE, _("Separate")),
     ]
     BOOKMARK_LINK_TARGET_BLANK = "_blank"
     BOOKMARK_LINK_TARGET_SELF = "_self"
     BOOKMARK_LINK_TARGET_CHOICES = [
-        (BOOKMARK_LINK_TARGET_BLANK, "新页面"),
-        (BOOKMARK_LINK_TARGET_SELF, "当前页面"),
+        (BOOKMARK_LINK_TARGET_BLANK, _("New page")),
+        (BOOKMARK_LINK_TARGET_SELF, _("Same page")),
     ]
     WEB_ARCHIVE_INTEGRATION_DISABLED = "disabled"
     WEB_ARCHIVE_INTEGRATION_ENABLED = "enabled"
     WEB_ARCHIVE_INTEGRATION_CHOICES = [
-        (WEB_ARCHIVE_INTEGRATION_DISABLED, "禁用"),
-        (WEB_ARCHIVE_INTEGRATION_ENABLED, "启用"),
+        (WEB_ARCHIVE_INTEGRATION_DISABLED, _("Disabled")),
+        (WEB_ARCHIVE_INTEGRATION_ENABLED, _("Enabled")),
     ]
     TAG_SEARCH_STRICT = "strict"
     TAG_SEARCH_LAX = "lax"
     TAG_SEARCH_CHOICES = [
-        (TAG_SEARCH_STRICT, "严格 Strict"),
-        (TAG_SEARCH_LAX, "宽松 Lax"),
+        (TAG_SEARCH_STRICT, _("Strict")),
+        (TAG_SEARCH_LAX, _("Lax")),
     ]
     TAG_GROUPING_ALPHABETICAL = "alphabetical"
     TAG_GROUPING_DISABLED = "disabled"
     TAG_GROUPING_CHOICES = [
-        (TAG_GROUPING_ALPHABETICAL, "首字母"),
-        (TAG_GROUPING_DISABLED, "禁用"),
+        (TAG_GROUPING_ALPHABETICAL, _("Alphabetical")),
+        (TAG_GROUPING_DISABLED, _("Disabled")),
     ]
     user = models.OneToOneField(User, related_name="profile", on_delete=models.CASCADE)
+    language = models.CharField(
+        max_length=20, choices=LANGUAGE_CHOICES, blank=False, default=LANGUAGE_EN
+    )
     theme = models.CharField(
         max_length=10, choices=THEME_CHOICES, blank=False, default=THEME_AUTO
     )
@@ -813,8 +823,8 @@ class GlobalSettings(models.Model):
     LANDING_PAGE_LOGIN = "login"
     LANDING_PAGE_SHARED_BOOKMARKS = "shared_bookmarks"
     LANDING_PAGE_CHOICES = [
-        (LANDING_PAGE_LOGIN, "登录页"),
-        (LANDING_PAGE_SHARED_BOOKMARKS, "分享页"),
+        (LANDING_PAGE_LOGIN, _("Login")),
+        (LANDING_PAGE_SHARED_BOOKMARKS, _("Shared bookmarks")),
     ]
 
     landing_page = models.CharField(
@@ -849,4 +859,4 @@ class GlobalSettingsForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(GlobalSettingsForm, self).__init__(*args, **kwargs)
-        self.fields["guest_profile_user"].empty_label = "标准用户资料"
+        self.fields["guest_profile_user"].empty_label = _("Standard profile")

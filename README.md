@@ -11,7 +11,8 @@
 基于[linkding](https://github.com/sissbruecker/linkding)（forked from[linkding](https://github.com/sissbruecker/linkding)）修改和增强，感谢 sissbruecker 大佬做出这么棒的书签管理器！
 
 **具体修改和增强如下：**
-- 🇨🇳 中文本地化：界面翻译；标签聚合支持中文；时区与日期处理；favicon服务默认使用favicon.im，无需🪜
+- 🌍 多语言：目前支持简体中文、English，详见[这里](./docs/i18n-maintenance.md)
+- 🇨🇳 中文用户增强：标签聚合支持中文；时区与日期处理；favicon服务默认使用favicon.im，无需🪜
 - 🔍 搜索增强：新增支持限定搜索范围（标题、描述、笔记、url）
 - 📅 筛选增强：新增日期筛选（支持绝对日期和相对日期）；新增标签状态筛选（有标签/无标签）
 - 🎲 排序增强：新增随机排序；支持按删除时间排序（回收站中）

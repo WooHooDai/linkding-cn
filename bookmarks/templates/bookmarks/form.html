@@ -1,3 +1,4 @@
+{% load i18n %}
 {% load widget_tweaks %}
 {% load static %}
 {% load shared %}
@@ -9,12 +10,12 @@
   <!-- 标题 -->
   <div class="form-group">
     <div class="d-flex justify-between align-baseline">
-      <label for="{{ form.title.id_for_label }}" class="form-label">标题</label>
+      <label for="{{ form.title.id_for_label }}" class="form-label">{% translate "Title" %}</label>
       <div class="flex">
-        <button id="refresh-button" class="btn btn-link suffix-button" type="button">重新获取</button>
+        <button id="refresh-button" class="btn btn-link suffix-button" type="button">{% translate "Refresh from website" %}</button>
         <button ld-clear-button data-for="{{ form.title.id_for_label }}"
                 class="ml-2 btn btn-link suffix-button clear-button"
-                type="button">清空
+                type="button">{% translate "Clear" %}
         </button>
       </div>
     </div>
@@ -24,11 +25,11 @@
 
   <!-- 标签 -->
   <div class="form-group" ld-tag-autocomplete>
-    <label for="{{ form.tag_string.id_for_label }}" class="form-label">标签</label>
+    <label for="{{ form.tag_string.id_for_label }}" class="form-label">{% translate "Tags" %}</label>
     {{ form.tag_string|form_field:"help"|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
     <div id="{{ form.tag_string.auto_id }}_help" class="form-input-hint">
-      多个标签用空格隔开，<strong>不需要</strong>(#).
-      如果标签不存在，它会被自动创建。
+      {% translate "Enter tags separated by spaces and" %} <strong>{% translate "without" %}</strong>(#).
+      {% translate "If a tag does not exist, it will be created automatically." %}
     </div>
     <div class="form-input-hint auto-tags"></div>
     {{ form.tag_string.errors }}
@@ -47,22 +48,22 @@
       </div>
     {% endif %}
     <div class="form-input-hint bookmark-exists">
-      该URL书签已存在。
-      本页面将使用现有书签的信息填充，保存本页面将更新现有书签信息。
+      {% translate "This URL is already bookmarked." %}
+      {% translate "The form has been pre-filled with the existing bookmark, and saving it will update the existing bookmark." %}
     </div>
     <div class="form-input-hint bookmark-exists-deleted">
-      该URL书签已存在，但被移至回收站。
-      本页面将使用现有书签的信息填充，保存本页面将更新现有书签信息、并还原书签。
+      {% translate "This URL is already bookmarked, but the bookmark is currently in the trash." %}
+      {% translate "The form has been pre-filled with the existing bookmark, and saving it will update and restore that bookmark." %}
     </div>
   </div>
   <!-- 描述 -->
   <div class="form-group">
     <details class="description"{% if form.description.value %} open{% endif %}>
       <summary>
-        <span class="form-label d-inline-block">描述</span>
+        <span class="form-label d-inline-block">{% translate "Description" %}</span>
         <button ld-clear-button data-for="{{ form.description.id_for_label }}"
                 class="btn btn-link suffix-button clear-button"
-                type="button">清空
+                type="button">{% translate "Clear" %}
         </button>
       </summary>
       {{ form.description|add_class:"form-input"|attr:"rows:3" }}
@@ -72,12 +73,12 @@
   <div class="form-group">
     <details class="notes"{% if form.has_notes %} open{% endif %}>
       <summary>
-        <span class="form-label d-inline-block">笔记</span>
+        <span class="form-label d-inline-block">{% translate "Notes" %}</span>
       </summary>
-      <label for="{{ form.notes.id_for_label }}" class="text-assistive">Notes</label>
+      <label for="{{ form.notes.id_for_label }}" class="text-assistive">{% translate "Notes" %}</label>
       {{ form.notes|form_field:"help"|add_class:"form-input"|attr:"rows:8" }}
       <div id="{{ form.notes.auto_id }}_help" class="form-input-hint">
-        额外的笔记，支持 Markdown 格式。
+        {% translate "Additional notes. Markdown is supported." %}
       </div>
     </details>
     {{ form.notes.errors }}
@@ -87,20 +88,20 @@
       {{ form.preview_image_remote_url.as_hidden }}
       <details class="preview-image"{% if form.preview_image_remote_url.value %} open{% endif %}>
         <summary>
-          <span class="form-label d-inline-block">预览图</span>
+          <span class="form-label d-inline-block">{% translate "Preview image" %}</span>
         </summary>
         <div class="preview-image-container">
           {% if preview_image_file %}
             <img id="preview-image-img"
                 class="preview-image"
                 src="{% static preview_image_file %}"
-                alt="预览图" />
+                alt="{% translate 'Preview image' %}" />
           {% else %}
             <img id="preview-image-img"
                 class="preview-image"
                 src="{{ form.preview_image_remote_url.value }}"
                 referrerpolicy="unsafe-url"
-                alt="预览图"
+                alt="{% translate 'Preview image' %}"
                 onerror="handlePreviewImageError(this)" />
           {% endif %}
         </div>
@@ -111,10 +112,10 @@
     <div class="form-checkbox">
       {{ form.unread|form_field:"help" }}
       <i class="form-icon"></i>
-      <label for="{{ form.unread.id_for_label }}">标为未读</label>
+      <label for="{{ form.unread.id_for_label }}">{% translate "Mark as unread" %}</label>
     </div>
     <div id="{{ form.unread.auto_id }}_help" class="form-input-hint">
-      未读书签可以被过滤，并可在你读后标记为已读。
+      {% translate "Unread bookmarks can be filtered and marked as read after you have reviewed them." %}
     </div>
   </div>
   {% if request.user_profile.enable_sharing %}
@@ -122,13 +123,13 @@
       <div class="form-checkbox">
         {{ form.shared|form_field:"help" }}
         <i class="form-icon"></i>
-        <label for="{{ form.shared.id_for_label }}">分享</label>
+        <label for="{{ form.shared.id_for_label }}">{% translate "Share" %}</label>
       </div>
       <div id="{{ form.shared.auto_id }}_help" class="form-input-hint">
         {% if request.user_profile.enable_public_sharing %}
-          分享给其他注册用户和匿名用户。
+          {% translate "Share this bookmark with registered users and anonymous visitors." %}
         {% else %}
-          分享给其他注册用户。
+          {% translate "Share this bookmark with registered users." %}
         {% endif %}
       </div>
     </div>
@@ -136,11 +137,11 @@
   <div class="divider"></div>
   <div class="form-group d-flex justify-between">
     {% if form.is_auto_close %}
-      <input type="submit" value="保存并关闭" class="btn btn-primary btn-wide">
+      <input type="submit" value="{% translate 'Save and close' %}" class="btn btn-primary btn-wide">
     {% else %}
-      <input type="submit" value="保存" class="btn btn-primary btn btn-primary btn-wide">
+      <input type="submit" value="{% translate 'Save' %}" class="btn btn-primary btn btn-primary btn-wide">
     {% endif %}
-    <a href="{{ return_url }}" class="btn">取消</a>
+    <a href="{{ return_url }}" class="btn">{% translate "Cancel" %}</a>
   </div>
   <script type="application/javascript">
     // 下载预览图用作临时展示：仅在遇到 CORS/CORP 错误时

@@ -2,6 +2,7 @@ import re
 from typing import List
 
 from django import template
+from django.utils.translation import gettext as _
 
 from bookmarks.models import (
     BookmarkSearch,
@@ -25,12 +26,13 @@ def bookmark_search(context, search: BookmarkSearch, mode: str = ""):
         preferences_form = BookmarkSearchForm(
             search, editable_fields=["sort", "shared", "unread", "tagged", "date_filter_by", "date_filter_type", "date_filter_start", "date_filter_end", "date_filter_relative_string"]
         )
+        deleted_date_label = _("Date deleted")
         trash_sort_choices = [
-            (BookmarkSearch.SORT_DELETED_ASC, "删除时间 ↑"),
-            (BookmarkSearch.SORT_DELETED_DESC, "删除时间 ↓"),
+            (BookmarkSearch.SORT_DELETED_ASC, f"{deleted_date_label} ↑"),
+            (BookmarkSearch.SORT_DELETED_DESC, f"{deleted_date_label} ↓"),
         ]
         trash_date_filter_choices = [
-            (BookmarkSearch.FILTER_DATE_BY_DELETED, "删除"),
+            (BookmarkSearch.FILTER_DATE_BY_DELETED, deleted_date_label),
         ]
         preferences_form.fields["sort"].choices = trash_sort_choices + preferences_form.fields["sort"].choices
         preferences_form.fields["date_filter_by"].choices = preferences_form.fields["date_filter_by"].choices + trash_date_filter_choices

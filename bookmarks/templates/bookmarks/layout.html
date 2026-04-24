@@ -1,8 +1,9 @@
-{% load static %}
+{% load i18n static %}
 
 <!DOCTYPE html>
+{% get_current_language as CURRENT_LANGUAGE %}
 {# Use data attributes as storage for access in static scripts #}
-<html lang="en" data-api-base-url="{% url 'linkding:api-root' %}">
+<html lang="{{ CURRENT_LANGUAGE }}" data-api-base-url="{% url 'linkding:api-root' %}">
 {% block head %}{% include 'bookmarks/head.html' %}{% endblock %}
 <body ld-global-shortcuts>
 
@@ -82,17 +83,19 @@
     {% endif %}
     <div class="d-flex justify-between">
       <a href="{% url 'linkding:root' %}" class="app-link d-flex align-center">
-        <img class="app-logo" src="{% static 'logo.png' %}" alt="Application logo">
+        <img class="app-logo" src="{% static 'logo.png' %}" alt="{% translate 'Application logo' %}">
         <span class="app-name">LINKDING</span>
       </a>
       <nav>
-        {% if request.user.is_authenticated %}
-          {# Only show nav items menu when logged in #}
-          {% include 'bookmarks/nav_menu.html' %}
-        {% else %}
-          {# Otherwise show login link #}
-          <a href="{% url 'login' %}" class="btn btn-link">登录</a>
-        {% endif %}
+        {% block header_nav %}
+          {% if request.user.is_authenticated %}
+            {# Only show nav items menu when logged in #}
+            {% include 'bookmarks/nav_menu.html' %}
+          {% else %}
+            {# Otherwise show login link #}
+            <a href="{% url 'login' %}" class="btn btn-link">{% translate "Login" %}</a>
+          {% endif %}
+        {% endblock %}
       </nav>
     </div>
   </header>

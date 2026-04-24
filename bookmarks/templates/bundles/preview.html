@@ -1,11 +1,16 @@
+{% load i18n %}
 <turbo-frame id="preview">
   {% if bookmark_list.is_empty %}
     <div>
-      没有书签匹配当前过滤器。
+      {% translate "No bookmarks match the current filter." %}
     </div>
   {% else %}
     <div class="mb-4">
-      找到 {{ bookmark_list.bookmarks_total }} 个匹配过滤器的书签。
+      {% blocktranslate trimmed count count=bookmark_list.bookmarks_total %}
+        Found {{ count }} matching bookmark.
+      {% plural %}
+        Found {{ count }} matching bookmarks.
+      {% endblocktranslate %}
     </div>
     {% include 'bookmarks/bookmark_list.html' %}
   {% endif %}

@@ -1,4 +1,5 @@
 import { Behavior, registerBehavior } from "./index";
+import { gettext } from "./i18n";
 
 class ConfirmButtonBehavior extends Behavior {
   constructor(element) {
@@ -20,13 +21,12 @@ class ConfirmButtonBehavior extends Behavior {
     const container = document.createElement("span");
     container.className = "confirmation";
 
-
-
     const question = this.element.getAttribute("ld-confirm-question");
+    const hasQuestion = question !== null;
     if (question) {
       const questionElement = document.createElement("span");
       questionElement.innerText = question;
-      container.append(question);
+      container.append(questionElement);
     }
 
     const buttonClasses = Array.from(this.element.classList.values())
@@ -35,7 +35,7 @@ class ConfirmButtonBehavior extends Behavior {
 
     const cancelButton = document.createElement(this.element.nodeName);
     cancelButton.type = "button";
-    cancelButton.innerText = question!=null ? "否" : "取消";
+    cancelButton.innerText = hasQuestion ? gettext("No") : gettext("Cancel");
     cancelButton.className = `${buttonClasses} mr-1`;
     cancelButton.addEventListener("click", this.reset.bind(this));
 
@@ -43,11 +43,11 @@ class ConfirmButtonBehavior extends Behavior {
     confirmButton.type = this.element.type;
     confirmButton.name = this.element.name;
     confirmButton.value = this.element.value;
-    confirmButton.innerText = question!=null ? "是" : "确认";
+    confirmButton.innerText = hasQuestion ? gettext("Yes") : gettext("Confirm");
     confirmButton.className = buttonClasses;
     confirmButton.addEventListener("click", this.reset.bind(this));
 
-    if(question != null){
+    if (hasQuestion) {
       container.append(confirmButton, cancelButton);
     } else {
       container.append(cancelButton, confirmButton);
@@ -64,7 +64,7 @@ class ConfirmButtonBehavior extends Behavior {
       iconElement.innerHTML = `<use xlink:href="#${icon}"></use>`;
       container.append(iconElement);
     }
-    
+
     this.container = container;
 
     this.element.before(container);

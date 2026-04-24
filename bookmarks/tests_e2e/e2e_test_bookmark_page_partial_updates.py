@@ -139,8 +139,16 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             self.open(reverse("linkding:bookmarks.index"), p)
 
             expect(self.locate_bookmark("Bookmark 2")).to_have_class("unread")
-            self.locate_bookmark("Bookmark 2").get_by_text("Unread").click()
-            self.locate_bookmark("Bookmark 2").get_by_text("Yes").click()
+            self.page.wait_for_function(
+                """() => {
+                    const button = document.querySelector('button[name="mark_as_read"]');
+                    return Boolean(button && button.__behaviors && button.__behaviors.length);
+                }"""
+            )
+            self.locate_bookmark("Bookmark 2").locator(
+                'button[name="mark_as_read"]'
+            ).click()
+            self.page.get_by_text("是", exact=True).click()
 
             expect(self.locate_bookmark("Bookmark 2")).not_to_have_class("unread")
             self.assertReloads(0)
@@ -155,8 +163,14 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             self.open(reverse("linkding:bookmarks.index"), p)
 
             expect(self.locate_bookmark("Bookmark 2")).to_have_class("shared")
-            self.locate_bookmark("Bookmark 2").get_by_text("Shared").click()
-            self.locate_bookmark("Bookmark 2").get_by_text("Yes").click()
+            self.page.wait_for_function(
+                """() => {
+                    const button = document.querySelector('button[name="unshare"]');
+                    return Boolean(button && button.__behaviors && button.__behaviors.length);
+                }"""
+            )
+            self.locate_bookmark("Bookmark 2").locator('button[name="unshare"]').click()
+            self.page.get_by_text("是", exact=True).click()
 
             expect(self.locate_bookmark("Bookmark 2")).not_to_have_class("shared")
             self.assertReloads(0)

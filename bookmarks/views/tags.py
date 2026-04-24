@@ -6,6 +6,7 @@ from django.db.models import Count
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
+from django.utils.translation import gettext as _, ngettext
 
 from bookmarks.forms import TagForm, TagMergeForm
 from bookmarks.models import Bookmark, Tag
@@ -19,7 +20,11 @@ def tags_index(request: HttpRequest):
         tag = get_object_or_404(Tag, id=tag_id, owner=request.user)
         tag_name = tag.name
         tag.delete()
-        messages.success(request, f'Tag "{tag_name}" deleted successfully.')
+        messages.success(
+            request,
+            _('Tag "%(tag_name)s" deleted successfully.')
+            % {"tag_name": tag_name},
+        )
 
         redirect_url = reverse("linkding:tags.index")
         if request.GET:
@@ -74,7 +79,11 @@ def tag_new(request: HttpRequest):
     if request.method == "POST":
         if form.is_valid():
             tag = form.save()
-            messages.success(request, f'Tag "{tag.name}" created successfully.')
+            messages.success(
+                request,
+                _('Tag "%(tag_name)s" created successfully.')
+                % {"tag_name": tag.name},
+            )
             return HttpResponseRedirect(reverse("linkding:tags.index"))
 
     status = 422 if request.method == "POST" and not form.is_valid() else 200
@@ -90,7 +99,11 @@ def tag_edit(request: HttpRequest, tag_id: int):
     if request.method == "POST":
         if form.is_valid():
             form.save()
-            messages.success(request, f'Tag "{tag.name}" updated successfully.')
+            messages.success(
+                request,
+                _('Tag "%(tag_name)s" updated successfully.')
+                % {"tag_name": tag.name},
+            )
             return HttpResponseRedirect(reverse("linkding:tags.index"))
 
     status = 422 if request.method == "POST" and not form.is_valid() else 200
@@ -142,7 +155,16 @@ def tag_merge(request: HttpRequest):
 
                 messages.success(
                     request,
-                    f'Successfully merged {len(merge_tags)} tags ({", ".join(tag_names)}) into "{target_tag.name}".',
+                    ngettext(
+                        'Successfully merged %(count)s tag (%(tag_names)s) into "%(target_tag)s".',
+                        'Successfully merged %(count)s tags (%(tag_names)s) into "%(target_tag)s".',
+                        len(merge_tags),
+                    )
+                    % {
+                        "count": len(merge_tags),
+                        "tag_names": ", ".join(tag_names),
+                        "target_tag": target_tag.name,
+                    },
                 )
 
             return HttpResponseRedirect(reverse("linkding:tags.index"))

@@ -1,8 +1,9 @@
 {% extends "bookmarks/layout.html" %}
-{% load shared %}
+{% load i18n shared %}
 
 {% block head %}
-  {% with page_title="编辑标签 - Linkding" %}
+  {% translate "Edit tag - Linkding" as page_title %}
+  {% with page_title=page_title %}
     {{ block.super }}
   {% endwith %}
 {% endblock %}
@@ -11,7 +12,7 @@
   <div class="tags-editor-page">
     <main aria-labelledby="main-heading">
       <div class="section-header">
-        <h1 id="main-heading">编辑标签</h1>
+        <h1 id="main-heading">{% translate "Edit tag" %}</h1>
       </div>
 
       <form method="post" novalidate>

@@ -1,5 +1,36 @@
 /* Shared components */
 
+.language-switcher-dropdown {
+  .language-switcher-trigger {
+    align-items: center;
+    gap: var(--unit-1);
+    height: auto;
+    padding: 0;
+  }
+
+  .language-switcher-trigger::after {
+    border-left: 0.32em solid transparent;
+    border-right: 0.32em solid transparent;
+    border-top: 0.4em solid currentColor;
+    content: "";
+    margin-top: 0.2em;
+    transition: transform 0.15s ease;
+  }
+
+  &.active .language-switcher-trigger::after,
+  &:focus-within .language-switcher-trigger::after {
+    transform: rotate(180deg);
+  }
+
+  .language-switcher-menu {
+    min-width: max-content;
+  }
+
+  .menu-item form {
+    margin: 0;
+  }
+}
+
 /* Section header component */
 .section-header {
   border-bottom: solid 1px var(--secondary-border-color);

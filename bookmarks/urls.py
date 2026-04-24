@@ -2,6 +2,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import path, include
 from django.urls import re_path
 from django.conf import settings
+from django.views.i18n import JavaScriptCatalog, set_language
 
 from bookmarks import feeds, views
 from bookmarks.admin import linkding_admin_site
@@ -122,6 +123,13 @@ urlpatterns += [
         "password-change-done/",
         auth_views.PasswordChangeDoneView.as_view(),
         name="password_change_done",
+    ),
+    path("i18n/language/", views.settings.update_language, name="language-update"),
+    path("i18n/setlang/", set_language, name="set_language"),
+    path(
+        "jsi18n/",
+        JavaScriptCatalog.as_view(packages=["bookmarks"]),
+        name="javascript-catalog",
     ),
 ]
 

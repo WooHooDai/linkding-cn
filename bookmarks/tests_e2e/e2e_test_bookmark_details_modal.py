@@ -165,15 +165,15 @@ class BookmarkDetailsModalE2ETestCase(LinkdingE2ETestCase):
             expect(snapshot).not_to_be_visible()
 
             # Create snapshot
-            details_modal.get_by_text("Create HTML snapshot", exact=False).click()
+            details_modal.get_by_text("生成HTML快照", exact=False).click()
             self.assertReloads(0)
 
             # Has new snapshots
             expect(snapshot).to_be_visible()
 
             # Remove snapshot
-            asset_list.get_by_text("Remove", exact=False).click()
-            asset_list.get_by_text("Confirm", exact=False).click()
+            asset_list.get_by_text("移除", exact=False).click()
+            asset_list.get_by_text("确认", exact=False).click()
 
             # Snapshot is removed
             expect(snapshot).not_to_be_visible()

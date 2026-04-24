@@ -1,4 +1,5 @@
 import { Behavior, registerBehavior } from "./index";
+import { gettext } from "./i18n";
 import { ModalBehavior } from "./modal";
 import { isKeyboardActive } from "./focus-utils";
 
@@ -23,8 +24,8 @@ class FilterDrawerTriggerBehavior extends Behavior {
       <div class="modal-overlay"></div>
       <div class="modal-container" role="dialog" aria-modal="true">
         <div class="modal-header">
-          <h2>筛选</h2>
-          <button class="btn btn-noborder close" aria-label="Close dialog">
+          <h2>${gettext("Filter")}</h2>
+          <button class="btn btn-noborder close" aria-label="${gettext("Close dialog")}">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
                  stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
               <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
@@ -36,7 +37,7 @@ class FilterDrawerTriggerBehavior extends Behavior {
         <div class="modal-body">
           <div class="content"></div>
         </div>
-      </div>    
+      </div>
     `;
     document.body.querySelector(".modals").appendChild(modal);
   }

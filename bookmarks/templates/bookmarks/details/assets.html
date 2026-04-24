@@ -1,3 +1,4 @@
+{% load i18n %}
 <div>
   {% if details.assets %}
     <div class="item-list assets">
@@ -18,14 +19,14 @@
           </div>
           <div class="list-item-actions">
             {% if asset.file %}
-              <a class="btn btn-link" href="{% url 'linkding:assets.view' asset.id %}" target="_blank">查看</a>
+              <a class="btn btn-link" href="{% url 'linkding:assets.view' asset.id %}" target="_blank">{% translate "View" %}</a>
             {% endif %}
             {% if details.is_editable %}
               <button ld-asset-rename type="button" name="rename_asset" value="{{ asset.id }}"  data-asset-id="{{ asset.id }}" class="btn btn-link">
-                重命名
+                {% translate "Rename" %}
               </button>
               <button ld-confirm-button type="submit" name="remove_asset" value="{{ asset.id }}" class="btn btn-link">
-                移除
+                {% translate "Remove" %}
               </button>
             {% endif %}
           </div>
@@ -38,12 +39,12 @@
     <div class="assets-actions">
       {% if details.snapshots_enabled %}
         <button type="submit" name="create_html_snapshot" value="{{ details.bookmark.id }}" class="btn btn-sm"
-                {% if details.has_pending_assets %}disabled{% endif %}>生成HTML快照
+                {% if details.has_pending_assets %}disabled{% endif %}>{% translate "Create HTML snapshot" %}
         </button>
       {% endif %}
       {% if details.uploads_enabled %}
         <button ld-upload-button id="upload-asset" name="upload_asset" value="{{ details.bookmark.id }}" type="submit"
-                class="btn btn-sm">上传文件
+                class="btn btn-sm">{% translate "Upload file" %}
         </button>
       {% endif %}
       <input id="upload-asset-file" name="upload_asset_file" type="file" class="d-hide">

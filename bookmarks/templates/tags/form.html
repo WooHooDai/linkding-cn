@@ -1,9 +1,9 @@
-{% load widget_tweaks %}
+{% load i18n widget_tweaks %}
 
 <div class="form-group {% if form.name.errors %}has-error{% endif %}">
-  <label class="form-label" for="{{ form.name.id_for_label }}">名称</label>
+  <label class="form-label" for="{{ form.name.id_for_label }}">{% translate "Name" %}</label>
   {{ form.name|add_class:"form-input"|attr:"autocomplete:off"|attr:"placeholder: " }}
-  <div class="form-input-hint">标签名称区分大小写，且不能包含空格（空格将被替换为连字符 `-`）</div>
+  <div class="form-input-hint">{% translate "Tag names are case-sensitive and cannot contain spaces. Spaces are replaced with hyphens (`-`)." %}</div>
   {% if form.name.errors %}
     <div class="form-input-hint">
       {{ form.name.errors }}
@@ -14,6 +14,6 @@
 <div class="divider"></div>
 
 <div class="form-group d-flex justify-between">
-  <button type="submit" class="btn btn-primary">保存</button>
-  <a href="{% url 'linkding:tags.index' %}" class="btn ml-auto">取消</a>
+  <button type="submit" class="btn btn-primary">{% translate "Save" %}</button>
+  <a href="{% url 'linkding:tags.index' %}" class="btn ml-auto">{% translate "Cancel" %}</a>
 </div>

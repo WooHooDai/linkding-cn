@@ -6,6 +6,7 @@ import shutil
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 from django.utils import timezone, formats
+from django.utils.translation import gettext as _
 
 from bookmarks.models import Bookmark, BookmarkAsset
 from bookmarks.services import snapshot_processor
@@ -23,7 +24,7 @@ def create_snapshot_asset(bookmark: Bookmark) -> BookmarkAsset:
         asset_type=BookmarkAsset.TYPE_SNAPSHOT,
         date_created=date_created,
         content_type=BookmarkAsset.CONTENT_TYPE_HTML,
-        display_name=f"HTML快照 {timestamp}",
+        display_name=_("HTML snapshot from %(timestamp)s") % {"timestamp": timestamp},
         status=BookmarkAsset.STATUS_PENDING,
     )
     return asset

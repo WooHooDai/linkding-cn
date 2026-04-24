@@ -11,9 +11,9 @@ from pathlib import Path
 
 from dateutil.relativedelta import relativedelta
 from django.http import HttpResponseRedirect
-from django.template.defaultfilters import pluralize
 from django.utils import timezone, formats
 from django.conf import settings
+from django.utils.translation import gettext as _, ngettext
 
 try:
     with open("version.txt", "r") as f:
@@ -28,14 +28,21 @@ def unique(elements, key):
 
 
 weekday_names = {
-    1: "周一",
-    2: "周二",
-    3: "周三",
-    4: "周四",
-    5: "周五",
-    6: "周六",
-    7: "周日",
+    1: _("Monday"),
+    2: _("Tuesday"),
+    3: _("Wednesday"),
+    4: _("Thursday"),
+    5: _("Friday"),
+    6: _("Saturday"),
+    7: _("Sunday"),
 }
+
+
+def _localize_datetime(value: datetime.datetime) -> datetime.datetime:
+    if timezone.is_aware(value):
+        value = timezone.localtime(value)
+        return value.replace(tzinfo=None)
+    return value
 
 
 def humanize_absolute_date(
@@ -43,20 +50,19 @@ def humanize_absolute_date(
 ):
     if not now:
         now = timezone.now()
-    # Convert to local time zone first
-    value_local = timezone.localtime(value)
-    now_local = timezone.localtime(now)
+    value_local = _localize_datetime(value)
+    now_local = _localize_datetime(now)
     delta = relativedelta(now_local, value_local)
     yesterday = now_local - relativedelta(days=1)
 
-    is_older_than_a_week = delta.years > 0 or delta.months > 0 or delta.weeks > 0 or delta.days > 0
+    is_older_than_a_week = delta.years > 0 or delta.months > 0 or delta.weeks > 0
 
     if is_older_than_a_week:
         return formats.date_format(value_local, "SHORT_DATE_FORMAT")
-    elif value_local.day == now_local.day:
-        return "今天"
-    elif value_local.day == yesterday.day:
-        return "昨天"
+    elif value_local.date() == now_local.date():
+        return _("Today")
+    elif value_local.date() == yesterday.date():
+        return _("Yesterday")
     else:
         return weekday_names[value_local.isoweekday()]
 
@@ -66,50 +72,50 @@ def humanize_relative_date(
 ):
     if not now:
         now = timezone.now()
-    # Convert to local time zone first
-    value_local = timezone.localtime(value)
-    now_local = timezone.localtime(now)
+    value_local = _localize_datetime(value)
+    now_local = _localize_datetime(now)
     delta = relativedelta(now_local, value_local)
-    is_current_week = value_local.isocalendar()[:2] == now_local.isocalendar()[:2]
 
     if delta.years > 0:
-        return f"{delta.years} 年前"
+        return ngettext("%(count)s year ago", "%(count)s years ago", delta.years) % {
+            "count": delta.years
+        }
     elif delta.months > 0:
-        return f"{delta.months} 月前"
+        return ngettext("%(count)s month ago", "%(count)s months ago", delta.months) % {
+            "count": delta.months
+        }
     elif delta.weeks > 0:
-        return f"{delta.weeks} 周前"
+        return ngettext("%(count)s week ago", "%(count)s weeks ago", delta.weeks) % {
+            "count": delta.weeks
+        }
     else:
         yesterday = now_local - relativedelta(days=1)
-        if value_local.day == now_local.day:
-            return "今天"
-        elif value_local.day == yesterday.day:
-            return "昨天"
-        elif is_current_week:
-            return weekday_names[value_local.isoweekday()]
+        if value_local.date() == now_local.date():
+            return _("Today")
+        elif value_local.date() == yesterday.date():
+            return _("Yesterday")
         else:
-            return "上" + weekday_names[value_local.isoweekday()]
+            return weekday_names[value_local.isoweekday()]
 
 def humanize_absolute_date_short(
     value: datetime.datetime, now: Optional[datetime.datetime] = None
 ):
     if not now:
         now = timezone.now()
-    value_local = timezone.localtime(value)
-    now_local = timezone.localtime(now)
+    value_local = _localize_datetime(value)
+    now_local = _localize_datetime(now)
     delta = relativedelta(now_local, value_local)
     yesterday = now_local - relativedelta(days=1)
 
     is_older_than_yesterday = delta.years > 0 or delta.months > 0 or delta.weeks > 0 or delta.days > 0
 
     if is_older_than_yesterday:
-        if value_local.year == now_local.year:
-            return f"{value_local.month}/{value_local.day}"
-        else:
-            return f"{value_local.year}/{value_local.month}/{value_local.day}"
-    elif value_local.day == now_local.day:
-        return "今天"
-    elif value_local.day == yesterday.day:
-        return "昨天"
+        return formats.date_format(value_local, "SHORT_DATE_FORMAT")
+    elif value_local.date() == now_local.date():
+        return _("Today")
+    elif value_local.date() == yesterday.date():
+        return _("Yesterday")
+    return formats.date_format(value_local, "SHORT_DATE_FORMAT")
 
 def parse_timestamp(value: str):
     """

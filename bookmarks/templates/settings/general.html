@@ -1,17 +1,17 @@
 {% extends "bookmarks/layout.html" %}
-{% load widget_tweaks %}
+{% load i18n widget_tweaks %}
 
 {% block head %}
-  {% with page_title="设置 - Linkding" %}
+  {% translate "Settings - Linkding" as page_title %}
+  {% with page_title=page_title %}
     {{ block.super }}
   {% endwith %}
 {% endblock %}
 
 {% block content %}
   <main class="settings-page" aria-labelledby="main-heading">
-    <h1 id="main-heading">设置</h1>
+    <h1 id="main-heading">{% translate "Settings" %}</h1>
 
-    {# Profile section #}
     {% if success_message %}
       <div class="toast toast-success mb-4">{{ success_message }}</div>
     {% endif %}
@@ -19,180 +19,185 @@
       <div class="toast toast-error mb-4">{{ error_message }}</div>
     {% endif %}
 
+    <section aria-labelledby="language-heading">
+      <h2 id="language-heading">{% translate "Language" %}</h2>
+      {% include 'shared/language_switcher.html' with language_switch_next=request.get_full_path language_switch_select_id='settings-language-switcher' %}
+      <div class="form-input-hint">
+        {% translate "Choose the interface language. After saving, the selected language takes precedence over the browser language." %}
+      </div>
+    </section>
+
     <section aria-labelledby="profile-heading">
-      <h2 id="profile-heading">个人资料</h2>
+      <h2 id="profile-heading">{% translate "Profile" %}</h2>
       <p>
-        <a href="{% url 'change_password' %}">更改密码</a>
+        <a href="{% url 'change_password' %}">{% translate "Change password" %}</a>
       </p>
       <form action="{% url 'linkding:settings.update' %}" method="post" novalidate data-turbo="false">
         {% csrf_token %}
         <div class="form-group">
-          <label for="{{ form.theme.id_for_label }}" class="form-label">主题</label>
+          <label for="{{ form.theme.id_for_label }}" class="form-label">{% translate "Theme" %}</label>
           {{ form.theme|add_class:"form-select width-25 width-sm-100" }}
           <div class="form-input-hint">
-            手动选择明暗主题，或基于系统设置自动切换。
+            {% translate "Choose a light or dark theme, or automatically follow your system setting." %}
           </div>
         </div>
         <div class="form-group">
-          <label for="{{ form.bookmark_date_display.id_for_label }}" class="form-label">书签日期格式</label>
+          <label for="{{ form.bookmark_date_display.id_for_label }}" class="form-label">{% translate "Bookmark date format" %}</label>
           {{ form.bookmark_date_display|add_class:"form-select width-25 width-sm-100" }}
           <div class="form-input-hint">
-            书签日期显示为相对日期（多久前），绝对日期，或隐藏。
+            {% translate "Show bookmark dates as relative dates, absolute dates, or hide them entirely." %}
           </div>
         </div>
         <div class="form-group">
-          <label for="{{ form.bookmark_description_display.id_for_label }}" class="form-label">书签描述
-          </label>
+          <label for="{{ form.bookmark_description_display.id_for_label }}" class="form-label">{% translate "Bookmark description" %}</label>
           {{ form.bookmark_description_display|add_class:"form-select width-25 width-sm-100" }}
           <div class="form-input-hint">
-            书签描述与标签同行显示，或另起一行显示。
+            {% translate "Show bookmark descriptions and tags in one line, or render them in separate blocks." %}
           </div>
         </div>
-        <div
-            class="form-group {% if request.user_profile.bookmark_description_display == 'inline' %}d-hide{% endif %}">
-          <label for="{{ form.bookmark_description_max_lines.id_for_label }}" class="form-label">书签描述最大行数</label>
+        <div class="form-group {% if request.user_profile.bookmark_description_display == 'inline' %}d-hide{% endif %}">
+          <label for="{{ form.bookmark_description_max_lines.id_for_label }}" class="form-label">{% translate "Bookmark description max lines" %}</label>
           {{ form.bookmark_description_max_lines|add_class:"form-input width-25 width-sm-100" }}
           <div class="form-input-hint">
-            限制书签描述最大显示行数
+            {% translate "Limit how many lines are shown for bookmark descriptions." %}
           </div>
         </div>
         <div class="form-group">
           <label for="{{ form.display_url.id_for_label }}" class="form-checkbox">
             {{ form.display_url }}
-            <i class="form-icon"></i> 显示书签URL
+            <i class="form-icon"></i> {% translate "Show bookmark URL" %}
           </label>
           <div class="form-input-hint">
-            勾选启用，将在书签标题下显示书签URL。
+            {% translate "Display the bookmark URL below the title." %}
           </div>
         </div>
         <div class="form-group">
           <label for="{{ form.permanent_notes.id_for_label }}" class="form-checkbox">
             {{ form.permanent_notes }}
-            <i class="form-icon"></i> 永久显示笔记
+            <i class="form-icon"></i> {% translate "Show notes permanently" %}
           </label>
           <div class="form-input-hint">
-            勾选启用，笔记将固定显示，而不用单独触发。
-            键盘快捷键 <code>e</code> 可以临时显示全部笔记。
+            {% translate "Keep notes expanded by default instead of toggling them individually." %}
+            {% translate "You can also temporarily show all notes with the keyboard shortcut" %} <code>e</code>.
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">书签动作</label>
+          <label class="form-label">{% translate "Bookmark actions" %}</label>
           <label for="{{ form.display_view_bookmark_action.id_for_label }}" class="form-checkbox">
             {{ form.display_view_bookmark_action }}
-            <i class="form-icon"></i> 查看
+            <i class="form-icon"></i> {% translate "View" %}
           </label>
           <label for="{{ form.display_edit_bookmark_action.id_for_label }}" class="form-checkbox">
             {{ form.display_edit_bookmark_action }}
-            <i class="form-icon"></i> 编辑
+            <i class="form-icon"></i> {% translate "Edit" %}
           </label>
           <label for="{{ form.display_archive_bookmark_action.id_for_label }}" class="form-checkbox">
             {{ form.display_archive_bookmark_action }}
-            <i class="form-icon"></i> 归档
+            <i class="form-icon"></i> {% translate "Archive" %}
           </label>
           <label for="{{ form.display_remove_bookmark_action.id_for_label }}" class="form-checkbox">
             {{ form.display_remove_bookmark_action }}
-            <i class="form-icon"></i> 删除
+            <i class="form-icon"></i> {% translate "Remove" %}
           </label>
           <div class="form-input-hint">
-            为每个书签显示勾选启用的动作
+            {% translate "Choose which actions are shown for each bookmark." %}
           </div>
         </div>
         <div class="form-group">
-          <label for="{{ form.bookmark_link_target.id_for_label }}" class="form-label">书签打开方式</label>
+          <label for="{{ form.bookmark_link_target.id_for_label }}" class="form-label">{% translate "Open bookmarks in" %}</label>
           {{ form.bookmark_link_target|add_class:"form-select width-25 width-sm-100" }}
           <div class="form-input-hint">
-            书签打开位置，当前页面，或新页面。
+            {% translate "Open bookmarks in the current page or in a new page." %}
           </div>
         </div>
         <div class="form-group{% if form.items_per_page.errors %} has-error{% endif %}">
-          <label for="{{ form.items_per_page.id_for_label }}" class="form-label">每页书签数量</label>
+          <label for="{{ form.items_per_page.id_for_label }}" class="form-label">{% translate "Items per page" %}</label>
           {{ form.items_per_page|add_class:"form-input width-25 width-sm-100"|attr:"min:10" }}
           {% if form.items_per_page.errors %}
             <div class="form-input-hint is-error">
               {{ form.items_per_page.errors }}
             </div>
-          {% else %}
           {% endif %}
           <div class="form-input-hint">
-            每页展示的书签数量。
+            {% translate "Choose how many bookmarks are shown on each page." %}
           </div>
         </div>
         <div class="form-group">
           <label for="{{ form.sticky_header_controls.id_for_label }}" class="form-checkbox">
             {{ form.sticky_header_controls }}
-            <i class="form-icon"></i> 粘性搜索栏
+            <i class="form-icon"></i> {% translate "Sticky search bar" %}
           </label>
           <div class="form-input-hint">
-            勾选启用，搜索栏将固定在屏幕顶部显示，而无需到页面顶部操作。
+            {% translate "Keep the search and action controls pinned to the top while you scroll." %}
           </div>
         </div>
         <div class="form-group">
           <label for="{{ form.sticky_pagination.id_for_label }}" class="form-checkbox">
             {{ form.sticky_pagination }}
-            <i class="form-icon"></i> 粘性分页
+            <i class="form-icon"></i> {% translate "Sticky pagination" %}
           </label>
           <div class="form-input-hint">
-            勾选启用，分页导航条将固定在屏幕底部显示，而无需到页面底部操作。
+            {% translate "Keep the pagination controls pinned to the bottom while you scroll." %}
           </div>
         </div>
         <div class="form-group">
           <label for="{{ form.sticky_side_panel.id_for_label }}" class="form-checkbox">
             {{ form.sticky_side_panel }}
-            <i class="form-icon"></i> 侧边栏跟随
+            <i class="form-icon"></i> {% translate "Sticky side panel" %}
           </label>
           <div class="form-input-hint">
-            勾选启用，屏幕宽度足够时侧边栏将跟随屏幕滚动，而无需到页面顶部操作。
-            若侧边栏被折叠，则该选项将自动关闭。
+            {% translate "Keep the side panel visible while scrolling on wider screens." %}
+            {% translate "This option is automatically disabled when the side panel is collapsed." %}
           </div>
         </div>
         <div class="form-group">
           <label for="{{ form.collapse_side_panel.id_for_label }}" class="form-checkbox">
             {{ form.collapse_side_panel }}
-            <i class="form-icon"></i> 折叠侧边栏
+            <i class="form-icon"></i> {% translate "Collapse side panel" %}
           </label>
           <div class="form-input-hint">
-            勾选启用，侧边栏将默认关闭，为书签列表提供更多空间。侧边栏将被隐藏到抽屉按钮中。
+            {% translate "Collapse the side panel by default to give the bookmark list more room." %}
           </div>
         </div>
         <div class="form-group">
           <label for="{{ form.hide_bundles.id_for_label }}" class="form-checkbox">
             {{ form.hide_bundles }}
-            <i class="form-icon"></i> 隐藏过滤器
+            <i class="form-icon"></i> {% translate "Hide bundles" %}
           </label>
           <div class="form-input-hint">
-            侧边栏中将隐藏过滤器面板（仅当你不使用过滤器时勾选此项）。
+            {% translate "Hide the bundles panel in the sidebar if you do not use bundles." %}
           </div>
         </div>
         <div class="form-group">
-          <label for="{{ form.tag_search.id_for_label }}" class="form-label">标签搜索</label>
+          <label for="{{ form.tag_search.id_for_label }}" class="form-label">{% translate "Tag search" %}</label>
           {{ form.tag_search|add_class:"form-select width-25 width-sm-100" }}
           <div class="form-input-hint">
-            Strict模式：标签必须有井号前缀  (#)。
-            Lax模式：没有井号前缀时，标签也会被搜索到。
-            注意，没有井号前缀时，标签和关键词难以区别，因此可能包含非该标签的搜索结果。
+            {% translate "In strict mode, tags must be prefixed with a hash character (#)." %}
+            {% translate "In lax mode, tags can also be found without the hash character." %}
+            {% translate "Without the hash character, tags are harder to distinguish from ordinary search terms, so unrelated results may also match." %}
           </div>
         </div>
         <div class="form-group">
-          <label for="{{ form.tag_grouping.id_for_label }}" class="form-label">标签聚合</label>
+          <label for="{{ form.tag_grouping.id_for_label }}" class="form-label">{% translate "Tag grouping" %}</label>
           {{ form.tag_grouping|add_class:"form-select width-25 width-sm-100" }}
           <div class="form-input-hint">
-            Alphabetical模式：标签将根据首字母聚合。
-            Disable模式：标签将不会被聚合。
+            {% translate "In alphabetical mode, tags are grouped by the first letter." %}
+            {% translate "If disabled, tags are shown without grouping." %}
           </div>
         </div>
         <div class="form-group">
           <details {% if form.auto_tagging_rules.value %}open{% endif %}>
             <summary>
-              <span class="form-label d-inline-block">自动标签</span>
+              <span class="form-label d-inline-block">{% translate "Auto Tagging" %}</span>
             </summary>
-            <label for="{{ form.auto_tagging_rules.id_for_label }}" class="text-assistive">自动标签</label>
+            <label for="{{ form.auto_tagging_rules.id_for_label }}" class="text-assistive">{% translate "Auto Tagging" %}</label>
             <div>
               {{ form.auto_tagging_rules|add_class:"form-input monospace"|attr:"rows:6" }}
             </div>
           </details>
           <div class="form-input-hint">
-            基于规则，为书签自动添加标签。
-            每行代表一条规则，可以将一个URL，与单个或多个标签进行匹配，例如：
+            {% translate "Automatically add tags to bookmarks based on custom rules." %}
+            {% translate "Each line is one rule that maps a URL to one or more tags. For example:" %}
             <pre>youtube.com video
 reddit.com/r/Music music reddit</pre>
           </div>
@@ -200,201 +205,187 @@ reddit.com/r/Music music reddit</pre>
         <div class="form-group">
           <label for="{{ form.enable_favicons.id_for_label }}" class="form-checkbox">
             {{ form.enable_favicons }}
-            <i class="form-icon"></i> 启用 Favicons
+            <i class="form-icon"></i> {% translate "Enable Favicons" %}
           </label>
           <div class="form-input-hint">
-            自动加载书签的Favicons，并在每条书签前展示。
-            勾选启用，将自动下载所有缺失的favicons。
-            该功能默认使用 <b>Google service</b> 下载 favicons.
-            如果你不想使用该服务，可以根据 <a
-              href="https://linkding.link/options/#ld_favicon_provider"
-              target="_blank">options documentation</a> 自定义.
-            Icons将在后台下载，可能需要一段时间才能展示。
+            {% translate "Automatically load favicons for bookmarked websites and display them next to each bookmark." %}
+            {% translate "Enabling this feature downloads all missing favicons in the background." %}
+            {% translate "By default, this feature uses a Google service to fetch favicons." %}
+            {% translate "If you prefer a different provider, check the" %} <a href="https://linkding.link/options/#ld_favicon_provider" target="_blank" rel="noopener">{% translate "options documentation" %}</a>.
           </div>
           {% if request.user_profile.enable_favicons and enable_refresh_favicons %}
-            <button class="btn mt-2" name="refresh_favicons">刷新 Favicons</button>
+            <button class="btn mt-2" name="refresh_favicons">{% translate "Refresh Favicons" %}</button>
           {% endif %}
         </div>
         <div class="form-group">
           <label for="{{ form.enable_preview_images.id_for_label }}" class="form-checkbox">
             {{ form.enable_preview_images }}
-            <i class="form-icon"></i> 启用图片预览
+            <i class="form-icon"></i> {% translate "Enable Preview Images" %}
           </label>
           <div class="form-input-hint">
-            自动加载书签预览图片，并在书签旁展示。
-            勾选启用，将自动下载缺失的预览图片。
+            {% translate "Automatically load preview images for bookmarked websites and display them next to each bookmark." %}
+            {% translate "Enabling this feature downloads missing preview images in the background." %}
           </div>
         </div>
         <div class="form-group">
-          <label for="{{ form.web_archive_integration.id_for_label }}" class="form-label">互联网归档集成（Internet Archive
-            integration）</label>
+          <label for="{{ form.web_archive_integration.id_for_label }}" class="form-label">{% translate "Internet Archive integration" %}</label>
           {{ form.web_archive_integration|add_class:"form-select width-25 width-sm-100" }}
           <div class="form-input-hint">
-            启用该功能，将自动在 <a
-              href="https://web.archive.org/" target="_blank" rel="noopener">Internet Archive Wayback
-            Machine</a>. 上创建快照。
-            这可以保存并在之后查看网站被收藏时间点的样子，以防内容失效或被修改。
-            若使用该功能，请考虑向 <a href="https://archive.org/donate" target="_blank"
-                                               rel="noopener">Internet Archive</a> 捐款。
+            {% translate "When enabled, snapshots of bookmarked websites are automatically created on the Internet Archive Wayback Machine." %}
+            {% translate "This helps preserve websites as they looked when you bookmarked them." %}
+            {% translate "Please consider supporting the Internet Archive if you rely on this feature." %}
           </div>
         </div>
         <div class="form-group">
           <label for="{{ form.enable_sharing.id_for_label }}" class="form-checkbox">
             {{ form.enable_sharing }}
-            <i class="form-icon"></i> 启用书签分享
+            <i class="form-icon"></i> {% translate "Enable bookmark sharing" %}
           </label>
           <div class="form-input-hint">
-            允许分享书签给其他用户，和查看其他用户分享的书签。
-            关闭该功能，将隐藏之前其他用户分享的书签。
+            {% translate "Allow bookmarks to be shared with other users and allow viewing bookmarks shared by others." %}
           </div>
         </div>
         <div class="form-group">
           <label for="{{ form.enable_public_sharing.id_for_label }}" class="form-checkbox">
             {{ form.enable_public_sharing }}
-            <i class="form-icon"></i> 启用书签公开分享
+            <i class="form-icon"></i> {% translate "Enable public bookmark sharing" %}
           </label>
           <div class="form-input-hint">
-            将书签完全公开，无需登录即可访问。
-            这意味着每个访问这个实例的人都能通过 <a
-              href="{% url 'linkding:bookmarks.shared' %}">shared bookmarks page</a> 页面查看书签。
+            {% translate "Make shared bookmarks visible without requiring a login." %}
+            {% translate "Anyone who can access this instance can then browse the" %} <a href="{% url 'linkding:bookmarks.shared' %}">{% translate "shared bookmarks page" %}</a>.
           </div>
         </div>
         {% if has_snapshot_support %}
           <div class="form-group">
             <label for="{{ form.enable_automatic_html_snapshots.id_for_label }}" class="form-checkbox">
               {{ form.enable_automatic_html_snapshots }}
-              <i class="form-icon"></i> 自动创建HTML快照
+              <i class="form-icon"></i> {% translate "Automatically create HTML snapshots" %}
             </label>
             <div class="form-input-hint">
-              添加书签时，自动创建HTML快照。关闭该功能，可以在书签的查看页面手动创建快照。
+              {% translate "Automatically create HTML snapshots when adding new bookmarks." %}
+              {% translate "If disabled, snapshots can still be created manually from the bookmark details view." %}
             </div>
-            <button class="btn mt-2" name="create_missing_html_snapshots">创建缺失的HTML快照</button>
+            <button class="btn mt-2" name="create_missing_html_snapshots">{% translate "Create missing HTML snapshots" %}</button>
           </div>
         {% endif %}
         <div class="form-group">
           <label for="{{ form.default_mark_unread.id_for_label }}" class="form-checkbox">
             {{ form.default_mark_unread }}
-            <i class="form-icon"></i> 新增书签默认未读
+            <i class="form-icon"></i> {% translate "Create bookmarks as unread by default" %}
           </label>
           <div class="form-input-hint">
-            添加书签时，默认设置书签为未读状态。
-            该设置可在添加书签时，手动修改覆盖。
+            {% translate "Set newly created bookmarks to unread by default." %}
           </div>
         </div>
         <div class="form-group">
           <label for="{{ form.default_mark_shared.id_for_label }}" class="form-checkbox">
             {{ form.default_mark_shared }}
-            <i class="form-icon"></i> 新增书签默认分享
+            <i class="form-icon"></i> {% translate "Create bookmarks as shared by default" %}
           </label>
           <div class="form-input-hint">
-            添加书签时，默认设置书签为分享状态。
-            该设置可在添加书签时，手动修改覆盖。
+            {% translate "Set newly created bookmarks to shared by default." %}
           </div>
         </div>
         <div class="form-group">
           <details {% if form.custom_css.value %}open{% endif %}>
             <summary>
-              <span class="form-label d-inline-block">自定义 CSS</span>
+              <span class="form-label d-inline-block">{% translate "Custom CSS" %}</span>
             </summary>
-            <label for="{{ form.custom_css.id_for_label }}" class="text-assistive">自定义 CSS</label>
+            <label for="{{ form.custom_css.id_for_label }}" class="text-assistive">{% translate "Custom CSS" %}</label>
             <div>
               {{ form.custom_css|add_class:"form-input monospace"|attr:"rows:6" }}
             </div>
           </details>
           <div class="form-input-hint">
-            允许添加自定义CSS。
+            {% translate "Add custom CSS that is loaded for your profile." %}
           </div>
         </div>
         <div class="form-group">
           <details {% if form.custom_domain_root.value %}open{% endif %}>
             <summary>
-              <span class="form-label d-inline-block">自定义域名归一化</span>
+              <span class="form-label d-inline-block">{% translate "Custom domain normalization" %}</span>
             </summary>
-            <label for="{{ form.custom_domain_root.id_for_label }}" class="text-assistive">自定义域名归一化</label>
+            <label for="{{ form.custom_domain_root.id_for_label }}" class="text-assistive">{% translate "Custom domain normalization" %}</label>
             <div>
               {{ form.custom_domain_root|add_class:"form-input monospace"|attr:"rows:6" }}
             </div>
           </details>
           <div class="form-input-hint">
-            每行一个域名。设置后，该域名下所有域名将被归一到指定域名，将影响点击favicon后的筛选结果。<br>
-            如：设置example.com，则a.example.com、b.example.com都将归一化到example.com。<br>
-            设置example.com和a.example.com，则在上个例子基础上，使a.example.com不被归一化到example.com，而保持a.example.com.
+            {% translate "Configure one root domain per line." %}
+            {% translate "All matching subdomains are normalized to the configured root domain, which affects favicon-based domain filters." %}<br>
+            {% translate "Example: setting example.com normalizes a.example.com and b.example.com to example.com." %}<br>
+            {% translate "If you also set a.example.com explicitly, that subdomain remains separate while other subdomains still normalize to example.com." %}
           </div>
         </div>
         <div class="form-group">
-          <input type="submit" name="update_profile" value="保存" class="btn btn-primary btn-wide mt-2">
+          <input type="submit" name="update_profile" value="{% translate 'Save' %}" class="btn btn-primary btn-wide mt-2">
         </div>
       </form>
     </section>
 
-    {# Global settings section #}
     {% if global_settings_form %}
       <section aria-labelledby="global-settings-heading">
-        <h2 id="global-settings-heading">全局设置</h2>
+        <h2 id="global-settings-heading">{% translate "Global settings" %}</h2>
         <form action="{% url 'linkding:settings.update' %}" method="post" novalidate data-turbo="false">
           {% csrf_token %}
           <div class="form-group">
-            <label for="{{ global_settings_form.landing_page.id_for_label }}" class="form-label">落地页</label>
+            <label for="{{ global_settings_form.landing_page.id_for_label }}" class="form-label">{% translate "Landing page" %}</label>
             {{ global_settings_form.landing_page|add_class:"form-select width-25 width-sm-100" }}
             <div class="form-input-hint">
-              访问URL根目录时，未登录用户将被重定向至该页面。
+              {% translate "Choose which page unauthenticated users are redirected to when they open the root URL." %}
             </div>
           </div>
           <div class="form-group">
-            <label for="{{ global_settings_form.guest_profile_user.id_for_label }}" class="form-label">访客资料</label>
+            <label for="{{ global_settings_form.guest_profile_user.id_for_label }}" class="form-label">{% translate "Guest user profile" %}</label>
             {{ global_settings_form.guest_profile_user|add_class:"form-select width-25 width-sm-100" }}
             <div class="form-input-hint">
-              用户未登录时使用的用户资料，将影响公开分享书签，包括主题、书签列表设置等。
-              你可以使用自己的用户资料，或者为此用途专门创建一个用户资料。
-              默认情况下，有着固定设置的标准用户资料将被使用。
+              {% translate "Choose which profile is used for anonymous visitors viewing publicly shared bookmarks." %}
             </div>
           </div>
           <div class="form-group">
             <label for="{{ global_settings_form.enable_link_prefetch.id_for_label }}" class="form-checkbox">
               {{ global_settings_form.enable_link_prefetch }}
-              <i class="form-icon"></i> 启用链接悬浮预取
+              <i class="form-icon"></i> {% translate "Enable hover prefetching for internal links" %}
             </label>
             <div class="form-input-hint">
-              鼠标悬浮在内部链接上时，会预取链接。这可以提高用户体验，但也增加了服务器的加载负担。
+              {% translate "Prefetch internal links when users hover over them. This improves perceived speed, but increases server load." %}
             </div>
           </div>
 
           <div class="form-group">
-            <input type="submit" name="update_global_settings" value="保存" class="btn btn-primary btn-wide mt-2">
+            <input type="submit" name="update_global_settings" value="{% translate 'Save' %}" class="btn btn-primary btn-wide mt-2">
           </div>
         </form>
       </section>
     {% endif %}
 
-    {# Import section #}
     <section aria-labelledby="import-heading">
-      <h2 id="import-heading">导入</h2>
-      <p>使用 Netscape HTML 格式导入书签和标签。若导入的书签已存在，原有的书签会被更新。</p>
+      <h2 id="import-heading">{% translate "Import" %}</h2>
+      <p>{% translate "Import bookmarks and tags from a Netscape HTML file. Existing bookmarks are updated when the imported URL already exists." %}</p>
       <form method="post" enctype="multipart/form-data" action="{% url 'linkding:settings.import' %}">
         {% csrf_token %}
         <div class="form-group">
           <label for="import_map_private_flag" class="form-checkbox">
             <input type="checkbox" id="import_map_private_flag" name="map_private_flag">
-            <i class="form-icon"></i> 将公开书签作为共享书签导入。
+            <i class="form-icon"></i> {% translate "Import public bookmarks as shared bookmarks" %}
           </label>
           <div class="form-input-hint">
-            勾选启用，若导入的书签支持标记书签为public或private（使用 <code>PRIVATE</code> 属性），那么所有非私有书签都会被导入为共享书签，所有私有书签会被导入为私有书签。
+            {% translate "If the imported file marks bookmarks as public or private using the PRIVATE attribute, non-private bookmarks are imported as shared bookmarks and private bookmarks remain private." %}
           </div>
         </div>
         <div class="form-group">
           <div class="input-group width-75 width-md-100">
             <input class="form-input" type="file" name="import_file">
-            <input type="submit" class="input-group-btn btn btn-primary" value="上传">
+            <input type="submit" class="input-group-btn btn btn-primary" value="{% translate 'Upload' %}">
           </div>
         </div>
       </form>
     </section>
 
-    {# Export section #}
     <section aria-labelledby="export-heading">
-      <h2 id="export-heading">导出</h2>
-      <p>以 Netscape HTML 格式导出全部书签</p>
-      <a class="btn btn-primary" target="_blank" href="{% url 'linkding:settings.export' %}">下载 (.html)</a>
+      <h2 id="export-heading">{% translate "Export" %}</h2>
+      <p>{% translate "Export all bookmarks as a Netscape HTML file." %}</p>
+      <a class="btn btn-primary" target="_blank" href="{% url 'linkding:settings.export' %}">{% translate "Download (.html)" %}</a>
       {% if export_error %}
         <div class="has-error">
           <p class="form-input-hint">
@@ -404,31 +395,27 @@ reddit.com/r/Music music reddit</pre>
       {% endif %}
     </section>
 
-    {# About section #}
     <section class="about" aria-labelledby="about-heading">
-      <h2 id="about-heading">关于</h2>
+      <h2 id="about-heading">{% translate "About" %}</h2>
       <table class="table">
         <tbody>
         <tr>
-          <td>版本</td>
+          <td>{% translate "Version" %}</td>
           <td>{{ version_info }}</td>
         </tr>
         <tr>
-          <td style="vertical-align: top">链接</td>
+          <td style="vertical-align: top">{% translate "Links" %}</td>
           <td>
             <div class="d-flex flex-column gap-2">
-              <a href="https://github.com/WooHooDai/linkding-cn"
-                 target="_blank">GitHub</a>
-              <a href="https://github.com/WooHooDai/linkding-cn/wiki"
-                 target="_blank">文档</a>
-              <a href="https://github.com/WooHooDai/linkding-cn/blob/main/CHANGELOG.md"
-                 target="_blank">更新日志</a>
+              <a href="https://github.com/WooHooDai/linkding-cn" target="_blank" rel="noopener">GitHub</a>
+              <a href="https://github.com/WooHooDai/linkding-cn/wiki" target="_blank" rel="noopener">Wiki</a>
+              <a href="https://github.com/WooHooDai/linkding-cn/blob/main/CHANGELOG.md" target="_blank" rel="noopener">{% translate "Changelog" %}</a>
             </div>
           </td>
         </tr>
         <tr>
-          <td style="vertical-align: top">致谢</td>
-          <td>基于 <a href="https://github.com/sissbruecker/linkding">linkding</a> 修改和增强</td>
+          <td style="vertical-align: top">{% translate "Credits" %}</td>
+          <td>{% translate "Built on top of" %} <a href="https://github.com/sissbruecker/linkding" target="_blank" rel="noopener">linkding</a> {% translate "with additional customizations." %}</td>
         </tr>
         </tbody>
       </table>
@@ -443,7 +430,6 @@ reddit.com/r/Music music reddit</pre>
       const bookmarkDescriptionDisplay = document.getElementById("{{ form.bookmark_description_display.id_for_label }}");
       const bookmarkDescriptionMaxLines = document.getElementById("{{ form.bookmark_description_max_lines.id_for_label }}");
 
-      // Automatically disable public bookmark sharing and default shared option if bookmark sharing is disabled
       function updateSharingOptions() {
         if (enableSharing.checked) {
           enablePublicSharing.disabled = false;
@@ -459,7 +445,6 @@ reddit.com/r/Music music reddit</pre>
       updateSharingOptions();
       enableSharing.addEventListener("change", updateSharingOptions);
 
-      // Automatically hide the bookmark description max lines input if the description display is set to inline
       function updateBookmarkDescriptionMaxLines() {
         if (bookmarkDescriptionDisplay.value === "inline") {
           bookmarkDescriptionMaxLines.closest(".form-group").classList.add("d-hide");
@@ -473,7 +458,7 @@ reddit.com/r/Music music reddit</pre>
 
       const collapseSidePanel = document.getElementById("{{ form.collapse_side_panel.id_for_label }}");
       const stickySidePanel = document.getElementById("{{ form.sticky_side_panel.id_for_label }}");
-      // Automatically disable the sticky side panel if the side panel is collapsed
+
       function updateStickySidePanel() {
         if (collapseSidePanel.checked) {
           stickySidePanel.disabled = true;

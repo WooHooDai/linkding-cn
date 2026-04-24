@@ -129,7 +129,7 @@ class BundleEditViewTestCase(TestCase, BookmarkFactoryMixin):
         bundle = self.setup_bundle(name="Test Bundle", all_tags=bundle_tag.name)
 
         response = self.client.get(reverse("linkding:bundles.edit", args=[bundle.id]))
-        self.assertContains(response, "Found 1 bookmarks matching this bundle")
+        self.assertContains(response, "Found 1 matching bookmark.")
         self.assertContains(response, bookmark1.title)
         self.assertNotContains(response, bookmark2.title)
         self.assertNotContains(response, bookmark3.title)
@@ -153,7 +153,7 @@ class BundleEditViewTestCase(TestCase, BookmarkFactoryMixin):
             reverse("linkding:bundles.edit", args=[bundle.id]), form_data
         )
         self.assertIn(
-            "Found 1 bookmarks matching this bundle", response.content.decode()
+            "Found 1 matching bookmark.", response.content.decode()
         )
         self.assertNotIn(bookmark1.title, response.content.decode())
         self.assertIn(bookmark2.title, response.content.decode())

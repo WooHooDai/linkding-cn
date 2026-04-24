@@ -16,13 +16,13 @@ class FilterDrawerE2ETestCase(LinkdingE2ETestCase):
             page.set_viewport_size({"width": 375, "height": 812})
 
             # open drawer
-            drawer_trigger = page.locator(".main").get_by_role("button", name="Filters")
+            drawer_trigger = page.locator(".main").get_by_role("button", name="筛选")
             drawer_trigger.click()
 
             # verify drawer is visible
             drawer = page.locator(".modal.drawer.filter-drawer")
             expect(drawer).to_be_visible()
-            expect(drawer.locator("h2")).to_have_text("Filters")
+            expect(drawer.locator("h2")).to_have_text("筛选")
 
             # close with close button
             drawer.locator("button.close").click()
@@ -47,7 +47,7 @@ class FilterDrawerE2ETestCase(LinkdingE2ETestCase):
             page.set_viewport_size({"width": 375, "height": 812})
 
             # open tag cloud modal
-            drawer_trigger = page.locator(".main").get_by_role("button", name="Filters")
+            drawer_trigger = page.locator(".main").get_by_role("button", name="筛选")
             drawer_trigger.click()
 
             # verify tags are displayed

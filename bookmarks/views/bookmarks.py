@@ -13,6 +13,7 @@ from django.http import (
 )
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils.translation import gettext as _
 
 from bookmarks import queries, utils
 from bookmarks.forms import BookmarkForm
@@ -66,7 +67,7 @@ def index(request: HttpRequest):
         request,
         "bookmarks/index.html",
         {
-            "page_title": "书签列表 - Linkding",
+            "page_title": _("Bookmarks - Linkding"),
             "bookmark_list": bookmark_list,
             "bundles": bundles,
             "tag_cloud": tag_cloud,
@@ -96,7 +97,7 @@ def archived(request: HttpRequest):
         request,
         "bookmarks/archive.html",
         {
-            "page_title": "已归档书签 - Linkding",
+            "page_title": _("Archived bookmarks - Linkding"),
             "bookmark_list": bookmark_list,
             "bundles": bundles,
             "tag_cloud": tag_cloud,
@@ -127,7 +128,7 @@ def shared(request: HttpRequest):
         request,
         "bookmarks/shared.html",
         {
-            "page_title": "已分享书签 - Linkding",
+            "page_title": _("Shared bookmarks - Linkding"),
             "bookmark_list": bookmark_list,
             "tag_cloud": tag_cloud,
             "details": bookmark_details,
@@ -162,7 +163,7 @@ def trashed(request: HttpRequest):
         request,
         "bookmarks/trash.html",
         {
-            "page_title": "回收站 - Linkding",
+            "page_title": _("Trash - Linkding"),
             "bookmark_list": bookmark_list,
             "bundles": bundles,
             "tag_cloud": tag_cloud,
@@ -174,7 +175,7 @@ def trashed(request: HttpRequest):
 
 def render_bookmarks_view(request: HttpRequest, template_name, context):
     if context["details"]:
-        context["page_title"] = "Bookmark details - Linkding"
+        context["page_title"] = _("Bookmark details - Linkding")
 
     if turbo.is_frame(request, "details-modal"):
         return render(
@@ -327,7 +328,7 @@ def prefetch_favicon(request: HttpRequest):
 
     url = request.GET.get("url")
     if not url:
-        return JsonResponse({"error": "URL parameter is missing"}, status=400)
+        return JsonResponse({"error": _("URL parameter is missing")}, status=400)
 
     favicon_file = favicon_loader.load_favicon(url, timeout=5)
 
@@ -335,14 +336,14 @@ def prefetch_favicon(request: HttpRequest):
         return JsonResponse({"status": "success", "favicon_file": favicon_file})
     else:
         return JsonResponse(
-            {"status": "error", "message": "Failed to prefetch favicon"}
+            {"status": "error", "message": _("Failed to prefetch favicon")}
         )
 
 
 def load_temporary_preview_image(request: HttpRequest):
     image_url = request.GET.get('url')
     if not image_url:
-        return HttpResponseBadRequest({'error': 'URL parameter is missing'})
+        return HttpResponseBadRequest(_("URL parameter is missing"))
     try:
         image_name = preview_image_loader.load_temporary_preview_image(image_url)
         image_path = preview_image_loader._get_temporary_image_path(image_name)
@@ -356,7 +357,9 @@ def load_temporary_preview_image(request: HttpRequest):
         print(JsonResponse(result))
         return JsonResponse(result)
     except Exception as e:
-        return HttpResponseBadRequest({'error': f'Failed to download image: {e}'})
+        return HttpResponseBadRequest(
+            _("Failed to download image: %(error)s") % {"error": e}
+        )
 
 def create_html_snapshot(request: HttpRequest, bookmark_id: int | str):
     bookmark = access.bookmark_write(request, bookmark_id)
@@ -365,12 +368,12 @@ def create_html_snapshot(request: HttpRequest, bookmark_id: int | str):
 
 def upload_asset(request: HttpRequest, bookmark_id: int | str):
     if settings.LD_DISABLE_ASSET_UPLOAD:
-        return HttpResponseForbidden("Asset upload is disabled")
+        return HttpResponseForbidden(_("Asset upload is disabled"))
 
     bookmark = access.bookmark_write(request, bookmark_id)
     file = request.FILES.get("upload_asset_file")
     if not file:
-        return HttpResponseBadRequest("No file provided")
+        return HttpResponseBadRequest(_("No file provided"))
 
     asset_actions.upload_asset(bookmark, file)
 
@@ -431,7 +434,7 @@ def archived_action(request: HttpRequest):
 @login_required
 def shared_action(request: HttpRequest):
     if "bulk_execute" in request.POST:
-        return HttpResponseBadRequest("View does not support bulk actions")
+        return HttpResponseBadRequest(_("View does not support bulk actions"))
 
     response = handle_action(request)
     if response:
@@ -552,7 +555,7 @@ def read(request: HttpRequest, bookmark_id: int):
     try:
         content = website_loader.load_full_page(bookmark.url)
     except Exception as e:
-        content = f"<html><body><p>无法加载页面内容：{str(e)}</p></body></html>"
+        content = f"<html><body><p>{_('Unable to load page content: %(error)s') % {'error': str(e)}}</p></body></html>"
     
     return render(
         request,

@@ -1,11 +1,12 @@
+{% load i18n %}
 <section aria-labelledby="tags-heading" ld-collapse-button="" data-toggle-storage-key="tagSectionState" data-toggle-target-selector=".section-content">
   <div class="section-header no-wrap">
     <div class="section-title">
-      <h2 id="tags-heading">标签</h2>
+      <h2 id="tags-heading">{% translate "Tags" %}</h2>
       {% if user.is_authenticated %}
         {% include "bookmarks/collapsed_button.html" with toggle_class="section-toggle" %}
         <div ld-dropdown class="dropdown dropdown-right ml-auto">
-          <button class="btn btn-noborder dropdown-toggle" aria-label="Tabs menu">
+          <button class="btn btn-noborder dropdown-toggle" aria-label="{% translate 'Tags menu' %}">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -16,7 +17,7 @@
           </button>
           <ul class="menu" role="list" tabindex="-1">
             <li class="menu-item">
-              <a href="{% url 'linkding:tags.index' %}" class="menu-link">管理标签</a>
+              <a href="{% url 'linkding:tags.index' %}" class="menu-link">{% translate "Manage tags" %}</a>
             </li>
           </ul>
         </div>

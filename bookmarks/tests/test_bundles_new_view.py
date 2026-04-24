@@ -141,7 +141,7 @@ class BundleNewViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         url = reverse("linkding:bundles.new") + "?" + urlencode({"q": query})
         response = self.client.get(url)
 
-        self.assertContains(response, "Found 1 bookmarks matching this bundle")
+        self.assertContains(response, "Found 1 matching bookmark.")
         self.assertContains(response, bookmark1.title)
         self.assertNotContains(response, bookmark2.title)
         self.assertNotContains(response, bookmark3.title)

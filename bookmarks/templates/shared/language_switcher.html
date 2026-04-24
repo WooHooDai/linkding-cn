@@ -1,0 +1,58 @@
+{% load i18n %}
+{% get_current_language as CURRENT_LANGUAGE %}
+{% if language_switcher_compact %}
+  <div ld-dropdown class="dropdown language-switcher language-switcher-dropdown">
+    <button
+      type="button"
+      class="btn btn-link dropdown-toggle language-switcher-trigger"
+      aria-label="{% translate 'Language' %}"
+      aria-haspopup="true"
+    >
+      {% for code, name in LANGUAGES %}
+        {% if code == CURRENT_LANGUAGE %}
+          <span class="language-switcher-label">{{ name }}</span>
+        {% endif %}
+      {% endfor %}
+    </button>
+    <ul class="menu language-switcher-menu" role="list" tabindex="-1">
+      {% for code, name in LANGUAGES %}
+        <li class="menu-item">
+          <form action="{% url 'language-update' %}" method="post" data-turbo="false">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ language_switch_next|default:request.get_full_path }}">
+            <button
+              type="submit"
+              name="language"
+              value="{{ code }}"
+              class="btn btn-link menu-link{% if code == CURRENT_LANGUAGE %} active{% endif %}"
+              {% if code == CURRENT_LANGUAGE %}aria-current="true"{% endif %}
+            >
+              {{ name }}
+            </button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% else %}
+  <form
+    class="language-switcher"
+    action="{% url 'language-update' %}"
+    method="post"
+    data-turbo="false"
+  >
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ language_switch_next|default:request.get_full_path }}">
+    <label class="text-assistive" for="{{ language_switch_select_id|default:'language-switcher-select' }}">{% translate "Language" %}</label>
+    <select
+      id="{{ language_switch_select_id|default:'language-switcher-select' }}"
+      name="language"
+      class="form-select width-25 width-sm-100"
+      onchange="this.form.submit()"
+    >
+      {% for code, name in LANGUAGES %}
+        <option value="{{ code }}"{% if code == CURRENT_LANGUAGE %} selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </form>
+{% endif %}

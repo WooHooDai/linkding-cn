@@ -1,42 +1,48 @@
 {% extends 'bookmarks/layout.html' %}
+{% load i18n %}
 {% load widget_tweaks %}
 
 {% block head %}
-  {% with page_title="登录 - Linkding" %}
+  {% translate "Login - Linkding" as page_title %}
+  {% with page_title=page_title %}
     {{ block.super }}
   {% endwith %}
+{% endblock %}
+
+{% block header_nav %}
+  {% include 'shared/language_switcher.html' with language_switcher_compact=True language_switch_next=request.get_full_path language_switch_select_id='login-language-switcher' %}
 {% endblock %}
 
 {% block content %}
   <main class="mx-auto width-50 width-md-100" aria-labelledby="main-heading">
     <div class="section-header">
-      <h1 id="main-heading">登录</h1>
+      <h1 id="main-heading">{% translate "Login" %}</h1>
     </div>
     <form method="post" action="{% url 'login' %}">
       {% csrf_token %}
       {% if form.errors %}
         <div class="form-group has-error">
-          <p class="form-input-hint">用户名和密码不匹配，请重试。</p>
+          <p class="form-input-hint">{% translate "Your username and password didn't match. Please try again." %}</p>
         </div>
       {% endif %}
       <div class="form-group">
-        <label class="form-label" for="{{ form.username.id_for_label }}">用户名</label>
+        <label class="form-label" for="{{ form.username.id_for_label }}">{% translate "Username" %}</label>
         {{ form.username|add_class:'form-input'|attr:'placeholder: ' }}
       </div>
       <div class="form-group">
-        <label class="form-label" for="{{ form.password.id_for_label }}">密码</label>
+        <label class="form-label" for="{{ form.password.id_for_label }}">{% translate "Password" %}</label>
         {{ form.password|add_class:'form-input'|attr:'placeholder: ' }}
       </div>
 
       <br/>
       <div class="d-flex justify-between">
-        <input type="submit" value="登录" class="btn btn-primary btn-wide"/>
+        <input type="submit" value="{% translate "Login" %}" class="btn btn-primary btn-wide"/>
         <input type="hidden" name="next" value="{{ next }}"/>
         {% if enable_oidc %}
-          <a class="btn btn-link" href="{% url 'oidc_authentication_init' %}" data-turbo="false">使用OIDC登录</a>
+          <a class="btn btn-link" href="{% url 'oidc_authentication_init' %}" data-turbo="false">{% translate "Login with OIDC" %}</a>
         {% endif %}
         {% if allow_registration %}
-          <a href="{% url 'django_registration_register' %}" class="btn btn-link">注册</a>
+          <a href="{% url 'django_registration_register' %}" class="btn btn-link">{% translate "Register" %}</a>
         {% endif %}
       </div>
     </form>

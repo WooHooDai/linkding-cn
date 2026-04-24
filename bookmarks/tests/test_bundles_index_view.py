@@ -25,8 +25,8 @@ class BundleIndexViewTestCase(TestCase, BookmarkFactoryMixin):
 
         for bundle in bundles:
             expected_list_item = f"""
-            <tr data-bundle-id="{bundle.id}" draggable="true">
-              <td>
+            <tr class="list-item" data-bundle-id="{bundle.id}" draggable="true" data-folder="True">
+              <td class="list-item-content">
                 <div class="d-flex align-center">
                   <svg xmlns="http://www.w3.org/2000/svg" class="text-secondary mr-1" width="16" height="16" viewBox="0 0 24 24" fill="none"
                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -38,12 +38,16 @@ class BundleIndexViewTestCase(TestCase, BookmarkFactoryMixin):
                     <path d="M15 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/>
                     <path d="M15 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/>
                   </svg>
-                  <span>{ bundle.name }</span>
+                  <div class="list-item-text">
+                    <span>{ bundle.name }</span>
+                  </div>
                 </div>
               </td>
               <td class="actions">
-                <a class="btn btn-link" href="{reverse("linkding:bundles.edit", args=[bundle.id])}">Edit</a>
-                <button ld-confirm-button type="submit" name="remove_bundle" value="{bundle.id}" class="btn btn-link">Remove</button>
+                <div>
+                  <a class="btn btn-link" href="{reverse("linkding:bundles.edit", args=[bundle.id])}">Edit</a>
+                  <button ld-confirm-button type="submit" name="remove_bundle" value="{bundle.id}" class="btn btn-link">Delete</button>
+                </div>
               </td>
             </tr>
             """
@@ -70,9 +74,9 @@ class BundleIndexViewTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(response.status_code, 200)
         html = response.content.decode()
 
-        self.assertInHTML('<p class="empty-title h5">You have no bundles yet</p>', html)
+        self.assertInHTML('<p class="empty-title h5">You do not have any filters yet</p>', html)
         self.assertInHTML(
-            '<p class="empty-subtitle">Create your first bundle to get started</p>',
+            '<p class="empty-subtitle">Try creating a filter</p>',
             html,
         )
 
@@ -83,7 +87,7 @@ class BundleIndexViewTestCase(TestCase, BookmarkFactoryMixin):
         html = response.content.decode()
 
         self.assertInHTML(
-            f'<a href="{reverse("linkding:bundles.new")}" class="btn">Add bundle</a>',
+            f'<a href="{reverse("linkding:bundles.new")}" class="btn">Add filter</a>',
             html,
         )
 

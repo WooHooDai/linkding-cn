@@ -1,4 +1,6 @@
-{% load static %}
+{% load i18n static %}
+{% translate "Self-hosted bookmark service" as meta_description %}
+{% translate "Linkding" as default_page_title %}
 
 <head>
   <meta charset="UTF-8">
@@ -10,10 +12,10 @@
   <link rel="search" type="application/opensearchdescription+xml" title="Linkding" href="{% url 'linkding:opensearch' %}"/>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimal-ui">
-  <meta name="description" content="Self-hosted bookmark service">
+  <meta name="description" content="{{ meta_description }}">
   <meta name="robots" content="index,follow">
   <meta name="author" content="Sascha Ißbrücker">
-  <title>{{ page_title|default:'Linkding' }}</title>
+  <title>{{ page_title|default:default_page_title }}</title>
   {# Include specific theme variant based on user profile setting #}
   {% if request.user_profile.theme == 'light' %}
     <link href="{% static 'theme-light.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css"/>
@@ -40,5 +42,6 @@
   {% if rss_feed_url %}
     <link rel="alternate" type="application/rss+xml" href="{{ rss_feed_url }}" />
   {% endif %}
+  <script src="{% url 'javascript-catalog' %}"></script>
   <script src="{% static "bundle.js" %}?v={{ app_version }}"></script>
 </head>

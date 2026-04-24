@@ -1,11 +1,12 @@
+{% load i18n %}
 {% if not request.user_profile.hide_bundles %}
   <section aria-labelledby="bundles-heading" ld-collapse-button data-toggle-storage-key="bundleSectionState" data-toggle-target-selector=".section-content">
     <div class="section-header no-wrap">
       <div class="section-title">
-        <h2 id="bundles-heading">过滤器</h2>
+        <h2 id="bundles-heading">{% translate "Bundles" %}</h2>
         {% include "bookmarks/collapsed_button.html" with toggle_class="section-toggle" %}
         <div ld-dropdown class="dropdown dropdown-right ml-auto">
-          <button class="btn btn-noborder dropdown-toggle" aria-label="Bundles menu">
+          <button class="btn btn-noborder dropdown-toggle" aria-label="{% translate 'Bundles menu' %}">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -16,11 +17,11 @@
           </button>
           <ul class="menu" role="list" tabindex="-1">
             <li class="menu-item">
-              <a href="{% url 'linkding:bundles.index' %}" class="menu-link">管理过滤器</a>
+              <a href="{% url 'linkding:bundles.index' %}" class="menu-link">{% translate "Manage bundles" %}</a>
             </li>
             {% if bookmark_list.search.q %}
               <li class="menu-item">
-                <a href="{% url 'linkding:bundles.new' %}?{{ create_bundle_query_string }}" class="menu-link">从搜索创建</a>
+                <a href="{% url 'linkding:bundles.new' %}?{{ create_bundle_query_string }}" class="menu-link">{% translate "Create bundle from search" %}</a>
               </li>
             {% endif %}
           </ul>

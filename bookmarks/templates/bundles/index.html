@@ -1,7 +1,9 @@
 {% extends "bookmarks/layout.html" %}
+{% load i18n %}
 
 {% block head %}
-  {% with page_title="过滤器 - Linkding" %}
+  {% translate "Filters - Linkding" as page_title %}
+  {% with page_title=page_title %}
     {{ block.super }}
   {% endwith %}
 {% endblock %}
@@ -9,8 +11,8 @@
 {% block content %}
   <main class="bundles-page crud-page" aria-labelledby="main-heading">
     <div class="crud-header">
-      <h1 id="main-heading">过滤器</h1>
-      <a href="{% url 'linkding:bundles.new' %}" class="btn">新增过滤器</a>
+      <h1 id="main-heading">{% translate "Filters" %}</h1>
+      <a href="{% url 'linkding:bundles.new' %}" class="btn">{% translate "Add filter" %}</a>
     </div>
 
     {% include 'shared/messages.html' %}
@@ -21,9 +23,9 @@
         <table class="table crud-table">
           <thead>
           <tr>
-            <th>名称</th>
+            <th>{% translate "Name" %}</th>
             <th class="actions">
-              <span class="text-assistive">操作</span>
+              <span class="text-assistive">{% translate "Actions" %}</span>
             </th>
           </tr>
           </thead>
@@ -49,9 +51,9 @@
               </td>
               <td class="actions">
                 <div>
-                  <a class="btn btn-link" href="{% url 'linkding:bundles.edit' bundle.id %}">编辑</a>
+                  <a class="btn btn-link" href="{% url 'linkding:bundles.edit' bundle.id %}">{% translate "Edit" %}</a>
                   <button ld-confirm-button type="submit" name="remove_bundle" value="{{ bundle.id }}"
-                          class="btn btn-link">删除
+                          class="btn btn-link">{% translate "Delete" %}
                   </button>
                 </div>
               </td>
@@ -65,8 +67,8 @@
       </form>
     {% else %}
       <div class="empty">
-        <p class="empty-title h5">你还没有过滤器</p>
-        <p class="empty-subtitle">尝试创建一个过滤器吧</p>
+        <p class="empty-title h5">{% translate "You do not have any filters yet" %}</p>
+        <p class="empty-subtitle">{% translate "Try creating a filter" %}</p>
       </div>
     {% endif %}
   </main>

@@ -1,5 +1,5 @@
 {% extends "bookmarks/layout.html" %}
-{% load static %}
+{% load i18n static %}
 {% load shared %}
 {% load bookmarks %}
 
@@ -10,11 +10,11 @@
     {# Bookmark list #}
     <main class="main col-2" aria-labelledby="main-heading">
       <div class="section-header mb-0">
-        <h1 id="main-heading">已分享</h1>
+        <h1 id="main-heading">{% translate "Shared bookmarks" %}</h1>
         <div class="header-controls" ld-header-controls data-sticky-on="{{ request.user_profile.sticky_header_controls|yesno:'true,false' }}">
           {% bookmark_search bookmark_list.search mode='shared' %}
           {% random_sort bookmark_list.search %}
-          <button ld-filter-drawer-trigger class="btn ml-2">筛选</button>
+          <button ld-filter-drawer-trigger class="btn ml-2">{% translate "Filters" %}</button>
         </div>
       </div>
 
@@ -32,7 +32,7 @@
     <div class="scrollbar side-panel col-1 hide-md" data-sticky-on="{{ request.user_profile.sticky_side_panel|yesno:'true,false' }}" ld-side-panel>
       <section aria-labelledby="user-heading">
         <div class="section-header">
-          <h2 id="user-heading">用户</h2>
+          <h2 id="user-heading">{% translate "User" %}</h2>
         </div>
         <div>
           {% user_select bookmark_list.search users %}

@@ -232,6 +232,10 @@ class BookmarkListContext:
         self.collapse_side_panel = user_profile.collapse_side_panel
         self.is_preview = False
         self.snapshot_feature_enabled = settings.LD_ENABLE_SNAPSHOTS
+        # The empty-state template expects these flags even when no parser error
+        # handling is active for the current bookmark search implementation.
+        self.query_is_valid = True
+        self.query_error_message = ""
 
     @staticmethod
     def generate_return_url(search: BookmarkSearch, base_url: str, page: int = None):

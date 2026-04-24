@@ -1,6 +1,7 @@
 from django import forms
 from django.forms.utils import ErrorList
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from bookmarks.models import (
     Bookmark,
@@ -105,7 +106,9 @@ class BookmarkForm(forms.ModelForm):
                 .exists()
             )
             if is_duplicate:
-                raise forms.ValidationError("A bookmark with this URL already exists.")
+                raise forms.ValidationError(
+                    _("A bookmark with this URL already exists.")
+                )
 
         return url
 
@@ -117,16 +120,52 @@ def convert_tag_string(tag_string: str):
 
 
 class BookmarkBundleForm(forms.ModelForm):
-    # 添加Search筛选项字段
-    sort = forms.ChoiceField(choices=BookmarkSearchForm.SORT_CHOICES, label="排序", required=False)
-    shared = forms.ChoiceField(choices=BookmarkSearchForm.FILTER_SHARED_CHOICES, widget=forms.RadioSelect, label="分享筛选", required=False)
-    unread = forms.ChoiceField(choices=BookmarkSearchForm.FILTER_UNREAD_CHOICES, widget=forms.RadioSelect, label="未读筛选", required=False)
-    tagged = forms.ChoiceField(choices=BookmarkSearchForm.FILTER_TAGGED_CHOICES, widget=forms.RadioSelect, label="标签筛选", required=False)
-    date_filter_by = forms.ChoiceField(choices=BookmarkSearchForm.FILTER_DATE_BY_CHOICES, widget=forms.RadioSelect, label="日期筛选", required=False)
-    date_filter_type = forms.ChoiceField(choices=BookmarkSearchForm.FILTER_DATE_TYPE_CHOICES, widget=forms.RadioSelect, label="日期筛选方式", required=False)
-    date_filter_start = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}), label="开始日期")
-    date_filter_end = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}), label="结束日期")
-    date_filter_relative_string = forms.CharField(required=False, label="相对日期字符串")
+    sort = forms.ChoiceField(
+        choices=BookmarkSearchForm.SORT_CHOICES, label=_("Sort"), required=False
+    )
+    shared = forms.ChoiceField(
+        choices=BookmarkSearchForm.FILTER_SHARED_CHOICES,
+        widget=forms.RadioSelect,
+        label=_("Shared filter"),
+        required=False,
+    )
+    unread = forms.ChoiceField(
+        choices=BookmarkSearchForm.FILTER_UNREAD_CHOICES,
+        widget=forms.RadioSelect,
+        label=_("Unread filter"),
+        required=False,
+    )
+    tagged = forms.ChoiceField(
+        choices=BookmarkSearchForm.FILTER_TAGGED_CHOICES,
+        widget=forms.RadioSelect,
+        label=_("Tagged filter"),
+        required=False,
+    )
+    date_filter_by = forms.ChoiceField(
+        choices=BookmarkSearchForm.FILTER_DATE_BY_CHOICES,
+        widget=forms.RadioSelect,
+        label=_("Date filter"),
+        required=False,
+    )
+    date_filter_type = forms.ChoiceField(
+        choices=BookmarkSearchForm.FILTER_DATE_TYPE_CHOICES,
+        widget=forms.RadioSelect,
+        label=_("Date filter type"),
+        required=False,
+    )
+    date_filter_start = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+        label=_("Start date"),
+    )
+    date_filter_end = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+        label=_("End date"),
+    )
+    date_filter_relative_string = forms.CharField(
+        required=False, label=_("Relative date string")
+    )
     
     class Meta:
         model = BookmarkBundle
@@ -198,7 +237,9 @@ class TagForm(forms.ModelForm):
             queryset = queryset.exclude(pk=self.instance.pk)
 
         if queryset.exists():
-            raise forms.ValidationError(f'Tag "{name}" already exists.')
+            raise forms.ValidationError(
+                _('Tag "%(tag_name)s" already exists.') % {"tag_name": name}
+            )
 
         return name
 
@@ -228,7 +269,7 @@ class TagMergeForm(forms.Form):
         target_tag_names = parse_tag_string(target_tag_name, " ")
         if len(target_tag_names) != 1:
             raise forms.ValidationError(
-                "Please enter only one tag name for the target tag."
+                _("Please enter only one tag name for the target tag.")
             )
 
         target_tag_name = target_tag_names[0]
@@ -236,7 +277,10 @@ class TagMergeForm(forms.Form):
         try:
             target_tag = Tag.objects.get(name__iexact=target_tag_name, owner=self.user)
         except Tag.DoesNotExist:
-            raise forms.ValidationError(f'Tag "{target_tag_name}" does not exist.')
+            raise forms.ValidationError(
+                _('Tag "%(tag_name)s" does not exist.')
+                % {"tag_name": target_tag_name}
+            )
 
         return target_tag
 
@@ -245,7 +289,7 @@ class TagMergeForm(forms.Form):
 
         merge_tag_names = parse_tag_string(merge_tags_string, " ")
         if not merge_tag_names:
-            raise forms.ValidationError("Please enter at least one tag to merge.")
+            raise forms.ValidationError(_("Please enter at least one tag to merge."))
 
         merge_tags = []
         for tag_name in merge_tag_names:
@@ -253,12 +297,15 @@ class TagMergeForm(forms.Form):
                 tag = Tag.objects.get(name__iexact=tag_name, owner=self.user)
                 merge_tags.append(tag)
             except Tag.DoesNotExist:
-                raise forms.ValidationError(f'Tag "{tag_name}" does not exist.')
+                raise forms.ValidationError(
+                    _('Tag "%(tag_name)s" does not exist.')
+                    % {"tag_name": tag_name}
+                )
 
         target_tag = self.cleaned_data.get("target_tag")
         if target_tag and target_tag in merge_tags:
             raise forms.ValidationError(
-                "The target tag cannot be selected for merging."
+                _("The target tag cannot be selected for merging.")
             )
 
         return merge_tags

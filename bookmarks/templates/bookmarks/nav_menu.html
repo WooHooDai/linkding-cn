@@ -1,49 +1,49 @@
-{% load shared %}
+{% load i18n shared %}
 {% htmlmin %}
   {# Basic menu list #}
   <div class="hide-md">
-    <a href="{% url 'linkding:bookmarks.new' %}" class="btn btn-primary mr-2">新增</a>
+    <a href="{% url 'linkding:bookmarks.new' %}" class="btn btn-primary mr-2">{% translate "Add bookmark" %}</a>
     <div ld-dropdown class="dropdown">
       <button class="btn btn-link dropdown-toggle" tabindex="0">
-        分类
+        {% translate "Bookmarks" %}
       </button>
       <ul class="menu" role="list" tabindex="-1">
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.index' %}" class="menu-link">全部</a>
+          <a href="{% url 'linkding:bookmarks.index' %}" class="menu-link">{% translate "Bookmarks" %}</a>
         </li>
         {% if request.user_profile.enable_sharing %}
           <li class="menu-item">
-            <a href="{% url 'linkding:bookmarks.shared' %}" class="menu-link">已分享</a>
+            <a href="{% url 'linkding:bookmarks.shared' %}" class="menu-link">{% translate "Shared bookmarks" %}</a>
           </li>
         {% endif %}
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.archived' %}" class="menu-link">已归档</a>
+          <a href="{% url 'linkding:bookmarks.archived' %}" class="menu-link">{% translate "Archived bookmarks" %}</a>
         </li>
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.trashed' %}" class="menu-link">回收站</a>
+          <a href="{% url 'linkding:bookmarks.trashed' %}" class="menu-link">{% translate "Trash" %}</a>
         </li>
       </ul>
     </div>
     <div ld-dropdown class="dropdown">
       <button class="btn btn-link dropdown-toggle" tabindex="0">
-        设置
+        {% translate "Settings" %}
       </button>
       <ul class="menu" role="list" tabindex="-1">
         <li class="menu-item">
-          <a href="{% url 'linkding:settings.general' %}" class="menu-link">通用</a>
+          <a href="{% url 'linkding:settings.general' %}" class="menu-link">{% translate "General" %}</a>
         </li>
         <li class="menu-item">
-          <a href="{% url 'linkding:settings.integrations' %}" class="menu-link">集成</a>
+          <a href="{% url 'linkding:settings.integrations' %}" class="menu-link">{% translate "Integrations" %}</a>
         </li>
         {% if request.user.is_superuser %}
           <li class="menu-item">
-            <a href="{% url 'admin:index' %}" class="menu-link" data-turbo="false">管理后台</a>
+            <a href="{% url 'admin:index' %}" class="menu-link" data-turbo="false">{% translate "Admin" %}</a>
           </li>
         {% endif %}
         <li class="menu-item">
           <form class="d-inline" action="{% url 'logout' %}" method="post" data-turbo="false">
             {% csrf_token %}
-            <button type="submit" class="btn btn-link menu-link">退出登录</button>
+            <button type="submit" class="btn btn-link menu-link">{% translate "Logout" %}</button>
           </form>
         </li>
       </ul>
@@ -68,36 +68,36 @@
       <!-- menu component -->
       <ul class="menu" role="list" tabindex="-1">
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.index' %}" class="menu-link">全部</a>
+          <a href="{% url 'linkding:bookmarks.index' %}" class="menu-link">{% translate "Bookmarks" %}</a>
         </li>
         {% if request.user_profile.enable_sharing %}
           <li class="menu-item">
-            <a href="{% url 'linkding:bookmarks.shared' %}" class="menu-link">已分享</a>
+            <a href="{% url 'linkding:bookmarks.shared' %}" class="menu-link">{% translate "Shared bookmarks" %}</a>
           </li>
         {% endif %}
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.archived' %}" class="menu-link">已归档</a>
+          <a href="{% url 'linkding:bookmarks.archived' %}" class="menu-link">{% translate "Archived bookmarks" %}</a>
         </li>
         <li class="menu-item">
-          <a href="{% url 'linkding:bookmarks.trashed' %}" class="menu-link">回收站</a>
+          <a href="{% url 'linkding:bookmarks.trashed' %}" class="menu-link">{% translate "Trash" %}</a>
         </li>
         <div class="divider"></div>
         <li class="menu-item">
-          <a href="{% url 'linkding:settings.general' %}" class="menu-link">通用设置</a>
+          <a href="{% url 'linkding:settings.general' %}" class="menu-link">{% translate "General" %}</a>
         </li>
         <li class="menu-item">
-          <a href="{% url 'linkding:settings.integrations' %}" class="menu-link">集成</a>
+          <a href="{% url 'linkding:settings.integrations' %}" class="menu-link">{% translate "Integrations" %}</a>
         </li>
         {% if request.user.is_superuser %}
           <li class="menu-item">
-            <a href="{% url 'admin:index' %}" class="menu-link" data-turbo="false">管理</a>
+            <a href="{% url 'admin:index' %}" class="menu-link" data-turbo="false">{% translate "Admin" %}</a>
           </li>
         {% endif %}
         <div class="divider"></div>
         <li class="menu-item">
           <form class="d-inline" action="{% url 'logout' %}" method="post" data-turbo="false">
             {% csrf_token %}
-            <button type="submit" class="btn btn-link menu-link">退出登录</button>
+            <button type="submit" class="btn btn-link menu-link">{% translate "Logout" %}</button>
           </form>
         </li>
       </ul>

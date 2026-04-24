@@ -1,11 +1,9 @@
-{% load static %}
-{% load shared %}
-{% load pagination %}
+{% load i18n static shared pagination %}
 
 {% if bookmark_list.is_empty %}
   {% include 'bookmarks/empty_bookmarks.html' %}
 {% else %}
-  <section aria-label="Bookmark list">
+  <section aria-label="{% translate 'Bookmark list' %}">
     <ul class="bookmark-list{% if bookmark_list.show_notes %} show-notes{% endif %}"
         role="list" tabindex="-1"
         style="--ld-bookmark-description-max-lines:{{ bookmark_list.description_max_lines }};"
@@ -93,33 +91,33 @@
                 {# View link is visible for both owned and shared bookmarks #}
                 {% if bookmark_list.show_view_action %}
                   <a href="{{ bookmark_item.details_url }}" class="view-action"
-                    data-turbo-action="replace" data-turbo-frame="details-modal">查看</a>
+                    data-turbo-action="replace" data-turbo-frame="details-modal">{% translate "View" %}</a>
                 {% endif %}
                 {% if bookmark_item.is_editable %}
                   {# Bookmark owner actions #}
                   {% if bookmark_list.show_edit_action and not bookmark_list.is_trash_page %}
-                    <a href="{% url 'linkding:bookmarks.edit' bookmark_item.id %}?return_url={{ bookmark_list.return_url|urlencode }}" class="edit-action">编辑</a>
+                    <a href="{% url 'linkding:bookmarks.edit' bookmark_item.id %}?return_url={{ bookmark_list.return_url|urlencode }}" class="edit-action">{% translate "Edit" %}</a>
                   {% endif %}
                   {% if bookmark_list.show_archive_action and not bookmark_list.is_trash_page %}
                     {% if bookmark_item.is_archived %}
                       <button ld-confirm-button type="submit" name="unarchive" value="{{ bookmark_item.id }}"
-                              class="btn btn-link btn-sm">取消归档
+                              class="btn btn-link btn-sm">{% translate "Unarchive" %}
                       </button>
                     {% else %}
                       <button ld-confirm-button type="submit" name="archive" value="{{ bookmark_item.id }}"
-                      class="btn btn-link btn-sm">归档
+                      class="btn btn-link btn-sm">{% translate "Archive" %}
                       </button>
                     {% endif %}
                   {% endif %}
                   {% if bookmark_list.is_trash_page %}
                     <button ld-confirm-button type="submit" name="restore" value="{{ bookmark_item.id }}"
-                            class="btn btn-link btn-sm">还原</button>
+                            class="btn btn-link btn-sm">{% translate "Restore" %}</button>
                     <button ld-confirm-button type="submit" name="remove" value="{{ bookmark_item.id }}"
-                    class="btn btn-link btn-sm">彻底删除</button>
+                    class="btn btn-link btn-sm">{% translate "Permanently delete" %}</button>
                   {% else %}
                     {% if bookmark_list.show_remove_action %}
                       <button ld-confirm-button type="submit" name="trash" value="{{ bookmark_item.id }}"
-                      class="btn btn-link btn-sm">删除</button>
+                      class="btn btn-link btn-sm">{% translate "Remove" %}</button>
                     {% endif %}
                   {% endif %}
                 {% else %}

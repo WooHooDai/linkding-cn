@@ -1,5 +1,5 @@
 {% extends "bookmarks/layout.html" %}
-{% load static %}
+{% load i18n static %}
 {% load shared %}
 {% load bookmarks %}
 
@@ -11,13 +11,13 @@
     <main class="main col-2" aria-labelledby="main-heading">
       <div class="section-header mb-0">
         <div id="bookmark-total">
-            <h1 id="main-heading">归档书签<span id="bookmark-list-total">({{ bookmark_list.bookmarks_total }})</span></h1>
+            <h1 id="main-heading">{% translate "Archived bookmarks" %}<span id="bookmark-list-total">({{ bookmark_list.bookmarks_total }})</span></h1>
         </div>
         <div class="header-controls" ld-header-controls data-sticky-on="{{ request.user_profile.sticky_header_controls|yesno:'true,false' }}">
           {% bookmark_search bookmark_list.search mode='archived' %}
           {% include 'bookmarks/bulk_edit/toggle.html' %}
           {% random_sort bookmark_list.search %}
-          <button ld-filter-drawer-trigger class="btn ml-2">筛选</button>
+          <button ld-filter-drawer-trigger class="btn ml-2">{% translate "Filters" %}</button>
         </div>
       </div>
 

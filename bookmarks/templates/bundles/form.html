@@ -1,7 +1,7 @@
-{% load widget_tweaks %}
+{% load i18n widget_tweaks %}
 
 <div class="form-group {% if form.name.errors %}has-error{% endif %}">
-  <label for="{{ form.name.id_for_label }}" class="form-label">过滤器名称</label>
+  <label for="{{ form.name.id_for_label }}" class="form-label">{% translate "Filter name" %}</label>
   {{ form.name|add_class:"form-input"|attr:"autocomplete:off"|attr:"placeholder: " }}
   {% if form.name.errors %}
     <div class="form-input-hint">
@@ -11,7 +11,7 @@
 </div>
 
 <div class="form-group {% if form.search.errors %}has-error{% endif %}">
-  <label for="{{ form.search.id_for_label }}" class="form-label">搜索词</label>
+  <label for="{{ form.search.id_for_label }}" class="form-label">{% translate "Search terms" %}</label>
   {{ form.search|add_class:"form-input"|attr:"autocomplete:off"|attr:"placeholder: " }}
   {% if form.search.errors %}
     <div class="form-input-hint">
@@ -19,62 +19,62 @@
     </div>
   {% endif %}
   <div class="form-input-hint">
-    书签中要出现的搜索词。
+    {% translate "Search terms that must appear in the bookmark." %}
   </div>
 </div>
 
 <div class="form-group" ld-tag-autocomplete>
-  <label for="{{ form.any_tags.id_for_label }}" class="form-label">标签</label>
+  <label for="{{ form.any_tags.id_for_label }}" class="form-label">{% translate "Tags" %}</label>
   {{ form.any_tags|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
   <div class="form-input-hint">
-    书签至少包含一个这里的标签。
+    {% translate "The bookmark must contain at least one of these tags." %}
   </div>
 </div>
 
 <div class="form-group" ld-tag-autocomplete>
-  <label for="{{ form.all_tags.id_for_label }}" class="form-label">必选标签</label>
+  <label for="{{ form.all_tags.id_for_label }}" class="form-label">{% translate "Required tags" %}</label>
   {{ form.all_tags|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
   <div class="form-input-hint">
-    书签必须包含所有这里的标签。
+    {% translate "The bookmark must contain all of these tags." %}
   </div>
 </div>
 
 <div class="form-group" ld-tag-autocomplete>
-  <label for="{{ form.excluded_tags.id_for_label }}" class="form-label">排除标签</label>
+  <label for="{{ form.excluded_tags.id_for_label }}" class="form-label">{% translate "Excluded tags" %}</label>
   {{ form.excluded_tags|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
   <div class="form-input-hint">
-    书签不包含任何一个这里的标签。
+    {% translate "The bookmark must not contain any of these tags." %}
   </div>
 </div>
 
 <div class="form-group">
   <label class="form-switch">
     {{ form.is_folder }}
-    <i class="form-icon"></i> 一级过滤器
+    <i class="form-icon"></i> {% translate "Top-level filter" %}
   </label>
   <div class="form-input-hint">
-    若关闭，则过滤器可被其上最近的一级过滤器折叠/展开。
+    {% translate "If disabled, this filter can be collapsed or expanded by the nearest top-level filter above it." %}
   </div>
 </div>
 
 <div class="form-group">
   <label class="form-switch">
     {{ form.show_count }}
-    <i class="form-icon"></i> 显示书签数
+    <i class="form-icon"></i> {% translate "Show bookmark count" %}
   </label>
   <div class="form-input-hint">
-    是否在侧边栏显示该分组下的书签数量。
+    {% translate "Show the number of bookmarks in this group in the sidebar." %}
   </div>
 </div>
 
-<!-- Search筛选项 -->
+{# Search filters #}
 <div class="form-group">
-  <label for="{{ form.sort.id_for_label }}" class="form-label">排序</label>
+  <label for="{{ form.sort.id_for_label }}" class="form-label">{% translate "Sort by" %}</label>
   {{ form.sort|add_class:"form-select select-sm" }}
 </div>
 
 <div class="form-group radio-group" role="radiogroup" aria-labelledby="bundle-shared-label">
-  <label id="bundle-shared-label" class="form-label">分享筛选</label>
+  <label id="bundle-shared-label" class="form-label">{% translate "Shared filter" %}</label>
   {% for radio in form.shared %}
     <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
       {{ radio.tag }}
@@ -85,7 +85,7 @@
 </div>
 
 <div class="form-group radio-group" role="radiogroup" aria-labelledby="bundle-unread-label">
-  <label id="bundle-unread-label" class="form-label">未读筛选</label>
+  <label id="bundle-unread-label" class="form-label">{% translate "Unread filter" %}</label>
   {% for radio in form.unread %}
     <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
       {{ radio.tag }}
@@ -96,7 +96,7 @@
 </div>
 
 <div class="form-group radio-group" role="radiogroup" aria-labelledby="bundle-tagged-label">
-  <label id="bundle-tagged-label" class="form-label">标签筛选</label>
+  <label id="bundle-tagged-label" class="form-label">{% translate "Tagged filter" %}</label>
   {% for radio in form.tagged %}
     <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
       {{ radio.tag }}
@@ -106,10 +106,10 @@
   {% endfor %}
 </div>
 
-<!-- 日期筛选相关表单项 -->
+{# Date filter fields #}
 <div ld-date-filter-fields>
   <div id="date-filter-by-group" class="form-group radio-group" role="radiogroup" aria-labelledby="date-filter-by-label">
-    <label id="date-filter-by-label" class="form-label">日期筛选</label>
+    <label id="date-filter-by-label" class="form-label">{% translate "Date filter" %}</label>
     {% for radio in form.date_filter_by %}
       <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
         {{ radio.tag }}
@@ -120,7 +120,7 @@
   </div>
 
   <div id="date-filter-type-fields" class="form-group radio-group" role="radiogroup" aria-labelledby="date-filter-type-label">
-    <label id="date-filter-type-label" class="form-label">筛选类型</label>
+    <label id="date-filter-type-label" class="form-label">{% translate "Filter type" %}</label>
     {% for radio in form.date_filter_type %}
       <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
         {{ radio.tag }}
@@ -133,13 +133,13 @@
   <div id="date-filter-absolute-fields">
     <div class="form-group">
       <div class="form-row-inline">
-        <label for="{{ form.date_filter_start.id_for_label }}" class="form-label-inline">开始日期</label>
+        <label for="{{ form.date_filter_start.id_for_label }}" class="form-label-inline">{% translate "Start date" %}</label>
         {{ form.date_filter_start|add_class:"form-input input-sm" }}
       </div>
     </div>
     <div class="form-group">
       <div class="form-row-inline">
-        <label for="{{ form.date_filter_end.id_for_label }}" class="form-label-inline">结束日期</label>
+        <label for="{{ form.date_filter_end.id_for_label }}" class="form-label-inline">{% translate "End date" %}</label>
         {{ form.date_filter_end|add_class:"form-input input-sm" }}
       </div>
     </div>
@@ -150,30 +150,30 @@
       <label class="form-radio form-inline">
         <input type="radio" name="relative_filter_mode" value="preset"{% if not bundle_date_filter_relative_value %} checked{% endif %}>
         <i class="form-icon"></i>
-        <span>预设</span>
+        <span>{% translate "Preset" %}</span>
       </label>
       <select name="date_filter_relative_preset" class="form-select select-sm">
-        <option value="yesterday"{% if form.date_filter_relative_string.value == 'yesterday' %} selected{% endif %}>昨天</option>
-        <option value="today"{% if form.date_filter_relative_string.value == 'today' %} selected{% endif %}>今天</option>
-        <option value="this_week"{% if form.date_filter_relative_string.value == 'this_week' %} selected{% endif %}>本周</option>
-        <option value="this_month"{% if form.date_filter_relative_string.value == 'this_month' %} selected{% endif %}>本月</option>
-        <option value="this_year"{% if form.date_filter_relative_string.value == 'this_year' %} selected{% endif %}>本年</option>
+        <option value="yesterday"{% if form.date_filter_relative_string.value == 'yesterday' %} selected{% endif %}>{% translate "Yesterday" %}</option>
+        <option value="today"{% if form.date_filter_relative_string.value == 'today' %} selected{% endif %}>{% translate "Today" %}</option>
+        <option value="this_week"{% if form.date_filter_relative_string.value == 'this_week' %} selected{% endif %}>{% translate "This week" %}</option>
+        <option value="this_month"{% if form.date_filter_relative_string.value == 'this_month' %} selected{% endif %}>{% translate "This month" %}</option>
+        <option value="this_year"{% if form.date_filter_relative_string.value == 'this_year' %} selected{% endif %}>{% translate "This year" %}</option>
       </select>
     </div>
     <div id="date-filter-relative-custom-fields" class="form-group">
       <label class="form-radio form-inline">
         <input type="radio" name="relative_filter_mode" value="custom"{% if bundle_date_filter_relative_value %} checked{% endif %}>
         <i class="form-icon"></i>
-        <span>自定义</span>
+        <span>{% translate "Custom" %}</span>
       </label>
       <div class="form-row-inline">
-        <span>近</span>
+        <span>{% translate "Last" %}</span>
         <input type="number" name="date_filter_relative_value" class="form-input input-sm" min="1" value="{{ bundle_date_filter_relative_value|default:'' }}">
         <select name="date_filter_relative_unit" class="form-select select-sm">
-          <option value="days"{% if bundle_date_filter_relative_unit == 'days' %} selected{% endif %}>天</option>
-          <option value="weeks"{% if bundle_date_filter_relative_unit == 'weeks' %} selected{% endif %}>周</option>
-          <option value="months"{% if bundle_date_filter_relative_unit == 'months' %} selected{% endif %}>月</option>
-          <option value="years"{% if bundle_date_filter_relative_unit == 'years' %} selected{% endif %}>年</option>
+          <option value="days"{% if bundle_date_filter_relative_unit == 'days' %} selected{% endif %}>{% translate "days" %}</option>
+          <option value="weeks"{% if bundle_date_filter_relative_unit == 'weeks' %} selected{% endif %}>{% translate "weeks" %}</option>
+          <option value="months"{% if bundle_date_filter_relative_unit == 'months' %} selected{% endif %}>{% translate "months" %}</option>
+          <option value="years"{% if bundle_date_filter_relative_unit == 'years' %} selected{% endif %}>{% translate "years" %}</option>
         </select>
       </div>
     </div>
@@ -182,8 +182,8 @@
 </div>
 
 <div class="form-footer d-flex mt-4">
-  <input type="submit" name="save" value="保存" class="btn btn-primary btn-wide">
-  <a href="{% url 'linkding:bundles.index' %}" class="btn btn-wide ml-auto">取消</a>
+  <input type="submit" name="save" value="{% translate 'Save' %}" class="btn btn-primary btn-wide">
+  <a href="{% url 'linkding:bundles.index' %}" class="btn btn-wide ml-auto">{% translate "Cancel" %}</a>
   <a href="{% url 'linkding:bundles.preview' %}" data-turbo-frame="preview" class="d-none" id="preview-link"></a>
 </div>
 
@@ -214,7 +214,7 @@
           }
         });
 
-        // 处理单选按钮
+        // Handle radio button groups
         const radioGroups = bundleForm.querySelectorAll('input[type="radio"]:checked');
         radioGroups.forEach(radio => {
           if (radio.name && radio.value) {
@@ -222,13 +222,13 @@
           }
         });
 
-        // 处理相对日期字符串
+        // Include relative date string when present
         const relativeStringInput = bundleForm.querySelector('input[name="date_filter_relative_string"]');
         if (relativeStringInput && relativeStringInput.value) {
           params.set('date_filter_relative_string', relativeStringInput.value);
         }
 
-        // 触发日期筛选字段的更新
+        // Keep hidden date filter state in sync before preview updates
         const dateFilterBehavior = window.dateFilterBehavior;
         if (dateFilterBehavior?.updateRelativeString) {
           try {

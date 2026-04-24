@@ -1,4 +1,4 @@
-{% load shared %}
+{% load i18n shared %}
 {% htmlmin %}
   <div class="bulk-edit-bar">
     <div class="bulk-edit-actions">
@@ -9,70 +9,70 @@
       <select name="bulk_action" class="form-select select-sm">
 
         {% if not 'bulk_read' in disable_actions %}
-          <option value="bulk_read">标为已读</option>
+          <option value="bulk_read">{% translate "Mark as read" %}</option>
         {% endif %}
         {% if not 'bulk_unread' in disable_actions %}
-          <option value="bulk_unread">标为未读</option>
+          <option value="bulk_unread">{% translate "Mark as unread" %}</option>
         {% endif %}
         {% if request.user_profile.enable_sharing %}
           {% if not 'bulk_share' in disable_actions %}
-            <option value="bulk_share">分享</option>
+            <option value="bulk_share">{% translate "Share" %}</option>
           {% endif %}
           {% if not 'bulk_unshare' in disable_actions %}  
-            <option value="bulk_unshare">取消分享</option>
+            <option value="bulk_unshare">{% translate "Unshare" %}</option>
           {% endif %}
         {% endif %}
 
         <hr>
         {% if not 'bulk_tag' in disable_actions %}
-          <option value="bulk_tag">新增标签</option>
+          <option value="bulk_tag">{% translate "Add tags" %}</option>
         {% endif %}
         {% if not 'bulk_untag' in disable_actions %}
-          <option value="bulk_untag">删除标签</option>
+          <option value="bulk_untag">{% translate "Remove tags" %}</option>
         {% endif %}
         {% if not 'bulk_refresh' in disable_actions %}
-          <option value="bulk_refresh">重新抓取</option>
+          <option value="bulk_refresh">{% translate "Refresh from website" %}</option>
         {% endif %}
         {% if bookmark_list.snapshot_feature_enabled %}
           {% if not 'bulk_snapshot' in disable_actions %}
-            <option value="bulk_snapshot">创建HTML快照</option>
+            <option value="bulk_snapshot">{% translate "Create HTML snapshot" %}</option>
           {% endif %}
         {% endif %}
         {% if not 'bulk_remove_snapshot' in disable_actions %}
-          <option value="bulk_remove_snapshot">移除全部快照</option>
+          <option value="bulk_remove_snapshot">{% translate "Remove all snapshots" %}</option>
         {% endif %}
 
         <hr>
         {% if not 'bulk_archive' in disable_actions %}
-          <option value="bulk_archive">归档</option>
+          <option value="bulk_archive">{% translate "Archive" %}</option>
         {% endif %}
         {% if not 'bulk_unarchive' in disable_actions %}
-          <option value="bulk_unarchive">取消归档</option>
+          <option value="bulk_unarchive">{% translate "Unarchive" %}</option>
         {% endif %}
         {% if not 'bulk_restore' in disable_actions %}
           <option value="bulk_restore"
             {% if default_bulk_action == 'bulk_restore' %}selected{% endif %}>
-            还原书签
+            {% translate "Restore bookmarks" %}
           </option>
         {% endif %}
         {% if not 'bulk_trash' in disable_actions %}
-          <option value="bulk_trash">移入回收站</option>
+          <option value="bulk_trash">{% translate "Move to trash" %}</option>
         {% endif %}
         {% if not 'bulk_delete' in disable_actions %}
-          <option value="bulk_delete">彻底删除</option>
+          <option value="bulk_delete">{% translate "Delete permanently" %}</option>
         {% endif %}
       </select>
       <div class="tag-autocomplete d-none" ld-tag-autocomplete>
-        <input name="bulk_tag_string" class="form-input input-sm" placeholder="标签名" variant="small">
+        <input name="bulk_tag_string" class="form-input input-sm" placeholder="{% translate 'Tag names' %}" variant="small">
       </div>
       <button ld-confirm-button type="submit" name="bulk_execute" class="btn btn-link btn-sm">
-        <span>执行</span>
+        <span>{% translate "Execute" %}</span>
       </button>
 
       <label class="form-checkbox select-across d-none">
         <input type="checkbox" name="bulk_select_across">
         <i class="form-icon"></i>
-        全部页面 (<span class="total">{{ bookmark_list.bookmarks_total }}</span> 个书签)
+        {% translate "All pages" %} (<span class="total">{{ bookmark_list.bookmarks_total }}</span> {% translate "bookmarks" %})
       </label>
     </div>
   </div>

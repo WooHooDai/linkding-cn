@@ -1,3 +1,4 @@
+from django.utils import translation
 from django.conf import settings
 from django.contrib.auth.middleware import RemoteUserMiddleware
 
@@ -6,6 +7,24 @@ from bookmarks.models import UserProfile, GlobalSettings
 
 class CustomRemoteUserMiddleware(RemoteUserMiddleware):
     header = settings.LD_AUTH_PROXY_USERNAME_HEADER
+
+
+class UserLanguageMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = getattr(request, "user", None)
+        if user and user.is_authenticated:
+            profile = getattr(user, "profile", None)
+            language = getattr(profile, "language", None)
+            if language:
+                translation.activate(language)
+                request.LANGUAGE_CODE = translation.get_language()
+
+        response = self.get_response(request)
+
+        return response
 
 
 default_global_settings = GlobalSettings()
