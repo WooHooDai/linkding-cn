@@ -100,8 +100,10 @@ class TagCloudTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
                     "오리",
                 ],
                 [
-                    "家鴨",
                     "感じ",
+                ],
+                [
+                    "家鴨",
                 ],
             ],
         )
