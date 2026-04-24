@@ -6,7 +6,7 @@ from bleach_allowlist import markdown_tags, markdown_attrs
 from django import template
 from django.utils.safestring import mark_safe
 
-from bookmarks import utils
+from bookmarks import queries, utils
 from bookmarks.models import UserProfile
 
 register = template.Library()
@@ -27,9 +27,18 @@ def update_query_string(context, **kwargs):
 def add_tag_to_query(context, tag_name: str):
     params = context.request.GET.copy()
 
-    # Append to or create query string
     query_string = params.get("q", "")
-    query_string = (query_string + " #" + tag_name).strip()
+    parsed_query = queries.parse_query_string(query_string)
+    selected_tags = parsed_query["tag_names"]
+
+    # Lax tag search also treats unprefixed search terms as selected tags.
+    if context.request.user_profile.tag_search == UserProfile.TAG_SEARCH_LAX:
+        selected_tags = selected_tags + parsed_query["search_terms"]
+
+    selected_tags = [selected_tag.lower() for selected_tag in selected_tags]
+    if tag_name.lower() not in selected_tags:
+        query_string = (query_string + " #" + tag_name).strip()
+
     params.setlist("q", [query_string])
 
     # Remove details ID and page number

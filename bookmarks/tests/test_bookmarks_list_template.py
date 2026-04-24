@@ -472,6 +472,32 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertEqual(tag_links[1].text, "#tag2")
         self.assertEqual(tag_links[2].text, "#tag3")
 
+    def test_bookmark_tag_link_does_not_duplicate_existing_tag_filter(self):
+        tag = self.setup_tag(name="tag1")
+        self.setup_bookmark(tags=[tag])
+
+        html = self.render_template(url="/bookmarks?q=%23tag1&sort=title_asc")
+        soup = self.make_soup(html)
+        tag_link = soup.select_one(".tags a")
+
+        self.assertIsNotNone(tag_link)
+        self.assertEqual(tag_link["href"], "?q=%23tag1&sort=title_asc")
+
+    def test_bookmark_tag_link_does_not_duplicate_existing_lax_tag_filter(self):
+        user = self.get_or_create_test_user()
+        user.profile.tag_search = UserProfile.TAG_SEARCH_LAX
+        user.profile.save()
+
+        tag = self.setup_tag(name="tag1", user=user)
+        self.setup_bookmark(tags=[tag], user=user)
+
+        html = self.render_template(url="/bookmarks?q=tag1&sort=title_asc", user=user)
+        soup = self.make_soup(html)
+        tag_link = soup.select_one(".tags a")
+
+        self.assertIsNotNone(tag_link)
+        self.assertEqual(tag_link["href"], "?q=tag1&sort=title_asc")
+
     def test_should_render_web_archive_link_with_absolute_date_setting(self):
         bookmark = self.setup_date_format_test(
             UserProfile.BOOKMARK_DATE_DISPLAY_ABSOLUTE,
