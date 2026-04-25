@@ -247,6 +247,10 @@ class BookmarkSearch:
     FILTER_TAGGED_TAGGED = "yes"
     FILTER_TAGGED_UNTAGGED = "no"
 
+    FILTER_ASSET_OFF = "off"
+    FILTER_ASSET_YES = "yes"
+    FILTER_ASSET_NO = "no"
+
     FILTER_DATE_OFF = "off"
     FILTER_DATE_BY_ADDED = "added"
     FILTER_DATE_BY_MODIFIED = "modified"
@@ -271,6 +275,9 @@ class BookmarkSearch:
         "date_filter_relative_string",
         "date_filter_start",
         "date_filter_end",
+        "html_snapshot",
+        "preview_image",
+        "favicon",
     ]
     preferences = ["sort", "shared", "unread", "tagged", "date_filter_by", "date_filter_type", "date_filter_relative_string"]
     defaults = {
@@ -289,6 +296,9 @@ class BookmarkSearch:
         "date_filter_relative_string": None,
         "date_filter_start": None,
         "date_filter_end": None,
+        "html_snapshot": FILTER_ASSET_OFF,
+        "preview_image": FILTER_ASSET_OFF,
+        "favicon": FILTER_ASSET_OFF,
     }
 
     @staticmethod
@@ -351,6 +361,9 @@ class BookmarkSearch:
         date_filter_relative_string: str = None,
         date_filter_start = None,
         date_filter_end = None,
+        html_snapshot: str = None,
+        preview_image: str = None,
+        favicon: str = None,
         preferences: dict = None,
         request: any = None,
     ):
@@ -365,7 +378,8 @@ class BookmarkSearch:
             'unread': unread, 'tagged': tagged, 'modified_since': modified_since, 'added_since': added_since,
             'deleted_since': deleted_since, 'date_filter_by': date_filter_by,
             'date_filter_type': date_filter_type, 'date_filter_relative_string': date_filter_relative_string,
-            'date_filter_start': date_filter_start, 'date_filter_end': date_filter_end
+            'date_filter_start': date_filter_start, 'date_filter_end': date_filter_end,
+            'html_snapshot': html_snapshot, 'preview_image': preview_image, 'favicon': favicon,
         }
         bundle_params = {}
         if bundle:
@@ -537,6 +551,11 @@ class BookmarkSearchForm(forms.Form):
         (BookmarkSearch.FILTER_TAGGED_TAGGED, _("Tagged")),
         (BookmarkSearch.FILTER_TAGGED_UNTAGGED, _("Untagged")),
     ]
+    FILTER_ASSET_CHOICES = [
+        (BookmarkSearch.FILTER_ASSET_OFF, _("Off")),
+        (BookmarkSearch.FILTER_ASSET_YES, _("Has")),
+        (BookmarkSearch.FILTER_ASSET_NO, _("Missing")),
+    ]
     FILTER_DATE_BY_CHOICES = [
         (BookmarkSearch.FILTER_DATE_OFF, _("Off")),
         (BookmarkSearch.FILTER_DATE_BY_ADDED, _("Added")),
@@ -562,6 +581,21 @@ class BookmarkSearchForm(forms.Form):
     date_filter_start = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
     date_filter_end = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
     date_filter_relative_string = forms.CharField(required=False)
+    html_snapshot = forms.ChoiceField(
+        choices=FILTER_ASSET_CHOICES,
+        widget=forms.RadioSelect,
+        required=False,
+    )
+    preview_image = forms.ChoiceField(
+        choices=FILTER_ASSET_CHOICES,
+        widget=forms.RadioSelect,
+        required=False,
+    )
+    favicon = forms.ChoiceField(
+        choices=FILTER_ASSET_CHOICES,
+        widget=forms.RadioSelect,
+        required=False,
+    )
 
     def __init__(
         self,

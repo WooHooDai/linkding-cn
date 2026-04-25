@@ -1665,6 +1665,117 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         query = queries.query_bookmarks(self.user, self.profile, search)
         self.assertQueryResult(query, [untagged_read_bookmarks])
 
+    def test_query_bookmarks_with_bundle_html_snapshot_filter(self):
+        with_snapshot = self.setup_bookmark(title="With HTML snapshot")
+        snapshot = self.setup_asset(bookmark=with_snapshot)
+        with_snapshot.latest_snapshot = snapshot
+        with_snapshot.save(update_fields=["latest_snapshot"])
+
+        without_snapshot = self.setup_bookmark(title="Without HTML snapshot")
+
+        bundle = self.setup_bundle()
+        bundle.search_params = {"html_snapshot": BookmarkSearch.FILTER_ASSET_YES}
+        bundle.save()
+
+        search = BookmarkSearch(q="", bundle=bundle)
+        query = queries.query_bookmarks(self.user, self.profile, search)
+        self.assertQueryResult(query, [[with_snapshot]])
+
+        bundle.search_params = {"html_snapshot": BookmarkSearch.FILTER_ASSET_NO}
+        bundle.save()
+
+        search = BookmarkSearch(q="", bundle=bundle)
+        query = queries.query_bookmarks(self.user, self.profile, search)
+        self.assertQueryResult(query, [[without_snapshot]])
+
+    def test_query_bookmarks_with_bundle_preview_image_filter(self):
+        local_preview = self.setup_bookmark(
+            title="Local preview",
+            preview_image_file="preview-local.png",
+        )
+        remote_preview = self.setup_bookmark(title="Remote preview")
+        remote_preview.preview_image_remote_url = "https://example.com/preview-remote.png"
+        remote_preview.save(update_fields=["preview_image_remote_url"])
+        no_preview = self.setup_bookmark(title="No preview")
+
+        bundle = self.setup_bundle()
+        bundle.search_params = {"preview_image": BookmarkSearch.FILTER_ASSET_YES}
+        bundle.save()
+
+        search = BookmarkSearch(q="", bundle=bundle)
+        query = queries.query_bookmarks(self.user, self.profile, search)
+        self.assertQueryResult(query, [[local_preview, remote_preview]])
+
+        bundle.search_params = {"preview_image": BookmarkSearch.FILTER_ASSET_NO}
+        bundle.save()
+
+        search = BookmarkSearch(q="", bundle=bundle)
+        query = queries.query_bookmarks(self.user, self.profile, search)
+        self.assertQueryResult(query, [[no_preview]])
+
+    def test_query_bookmarks_with_bundle_favicon_filter(self):
+        with_favicon = self.setup_bookmark(
+            title="With favicon",
+            favicon_file="favicon.png",
+        )
+        without_favicon = self.setup_bookmark(title="Without favicon")
+
+        bundle = self.setup_bundle()
+        bundle.search_params = {"favicon": BookmarkSearch.FILTER_ASSET_YES}
+        bundle.save()
+
+        search = BookmarkSearch(q="", bundle=bundle)
+        query = queries.query_bookmarks(self.user, self.profile, search)
+        self.assertQueryResult(query, [[with_favicon]])
+
+        bundle.search_params = {"favicon": BookmarkSearch.FILTER_ASSET_NO}
+        bundle.save()
+
+        search = BookmarkSearch(q="", bundle=bundle)
+        query = queries.query_bookmarks(self.user, self.profile, search)
+        self.assertQueryResult(query, [[without_favicon]])
+
+    def test_query_bookmarks_with_bundle_asset_filters_and_unread_filter(self):
+        matching = self.setup_bookmark(
+            title="Needs review",
+            unread=True,
+            favicon_file="favicon.png",
+            preview_image_file="preview.png",
+        )
+        snapshot = self.setup_asset(bookmark=matching)
+        matching.latest_snapshot = snapshot
+        matching.save(update_fields=["latest_snapshot"])
+
+        wrong_unread = self.setup_bookmark(
+            title="Read item",
+            unread=False,
+            favicon_file="favicon.png",
+            preview_image_file="preview.png",
+        )
+        snapshot = self.setup_asset(bookmark=wrong_unread)
+        wrong_unread.latest_snapshot = snapshot
+        wrong_unread.save(update_fields=["latest_snapshot"])
+
+        missing_snapshot = self.setup_bookmark(
+            title="Missing snapshot",
+            unread=True,
+            favicon_file="favicon.png",
+            preview_image_file="preview.png",
+        )
+
+        bundle = self.setup_bundle()
+        bundle.search_params = {
+            "html_snapshot": BookmarkSearch.FILTER_ASSET_YES,
+            "preview_image": BookmarkSearch.FILTER_ASSET_YES,
+            "favicon": BookmarkSearch.FILTER_ASSET_YES,
+            "unread": BookmarkSearch.FILTER_UNREAD_YES,
+        }
+        bundle.save()
+
+        search = BookmarkSearch(q="", bundle=bundle)
+        query = queries.query_bookmarks(self.user, self.profile, search)
+        self.assertQueryResult(query, [[matching]])
+
     def test_sort_by_deleted_asc(self):
         search = BookmarkSearch(sort=BookmarkSearch.SORT_DELETED_ASC)
 

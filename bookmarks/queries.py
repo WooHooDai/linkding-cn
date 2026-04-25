@@ -178,6 +178,28 @@ def _apply_filters(query_set: QuerySet, user: Optional[User], profile: UserProfi
     elif search.tagged == BookmarkSearch.FILTER_TAGGED_UNTAGGED:
         query_set = query_set.filter(tags__isnull=True)
 
+    # Asset presence filters
+    if search.html_snapshot == BookmarkSearch.FILTER_ASSET_YES:
+        query_set = query_set.filter(latest_snapshot__isnull=False)
+    elif search.html_snapshot == BookmarkSearch.FILTER_ASSET_NO:
+        query_set = query_set.filter(latest_snapshot__isnull=True)
+
+    if search.preview_image == BookmarkSearch.FILTER_ASSET_YES:
+        query_set = query_set.exclude(
+            preview_image_file="",
+            preview_image_remote_url="",
+        )
+    elif search.preview_image == BookmarkSearch.FILTER_ASSET_NO:
+        query_set = query_set.filter(
+            preview_image_file="",
+            preview_image_remote_url="",
+        )
+
+    if search.favicon == BookmarkSearch.FILTER_ASSET_YES:
+        query_set = query_set.exclude(favicon_file="")
+    elif search.favicon == BookmarkSearch.FILTER_ASSET_NO:
+        query_set = query_set.filter(favicon_file="")
+
     # Filter by bundle
     if search.bundle:
         query_set = _filter_bundle(query_set, search.bundle)

@@ -569,6 +569,18 @@ msgstr "描述"
 msgid "Preview image"
 msgstr "预览图"
 
+msgid "Has"
+msgstr "有"
+
+msgid "Missing"
+msgstr "无"
+
+msgid "HTML snapshot"
+msgstr "HTML 快照"
+
+msgid "Favicon"
+msgstr "Favicon"
+
 #: bookmarks/templates/bookmarks/details/modal.html:8
 msgid "Close dialog"
 msgstr "关闭对话框"

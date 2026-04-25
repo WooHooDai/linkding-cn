@@ -166,6 +166,24 @@ class BookmarkBundleForm(forms.ModelForm):
     date_filter_relative_string = forms.CharField(
         required=False, label=_("Relative date string")
     )
+    html_snapshot = forms.ChoiceField(
+        choices=BookmarkSearchForm.FILTER_ASSET_CHOICES,
+        widget=forms.RadioSelect,
+        label=_("HTML snapshot"),
+        required=False,
+    )
+    preview_image = forms.ChoiceField(
+        choices=BookmarkSearchForm.FILTER_ASSET_CHOICES,
+        widget=forms.RadioSelect,
+        label=_("Preview image"),
+        required=False,
+    )
+    favicon = forms.ChoiceField(
+        choices=BookmarkSearchForm.FILTER_ASSET_CHOICES,
+        widget=forms.RadioSelect,
+        label=_("Favicon"),
+        required=False,
+    )
     
     class Meta:
         model = BookmarkBundle
@@ -173,7 +191,8 @@ class BookmarkBundleForm(forms.ModelForm):
             "name", "search", "any_tags", "all_tags", "excluded_tags", 
             "show_count", "is_folder", "sort", "shared", "unread", "tagged",
             "date_filter_by", "date_filter_type", "date_filter_start", 
-            "date_filter_end", "date_filter_relative_string"
+            "date_filter_end", "date_filter_relative_string", "html_snapshot",
+            "preview_image", "favicon"
         ]
     
     def __init__(self, *args, **kwargs):
@@ -189,7 +208,10 @@ class BookmarkBundleForm(forms.ModelForm):
         
         # 否则，使用默认值
         defaults = BookmarkSearch.defaults
-        for field_name in ['sort', 'shared', 'unread', 'tagged', 'date_filter_by', 'date_filter_type']:
+        for field_name in [
+            'sort', 'shared', 'unread', 'tagged', 'date_filter_by',
+            'date_filter_type', 'html_snapshot', 'preview_image', 'favicon'
+        ]:
             if field_name in self.fields:
                 self.fields[field_name].initial = defaults.get(field_name)
     
@@ -199,7 +221,8 @@ class BookmarkBundleForm(forms.ModelForm):
         search_params = {}
         search_field_names = [
             'sort', 'shared', 'unread', 'tagged', 'date_filter_by', 'date_filter_type',
-            'date_filter_start', 'date_filter_end', 'date_filter_relative_string'
+            'date_filter_start', 'date_filter_end', 'date_filter_relative_string',
+            'html_snapshot', 'preview_image', 'favicon'
         ]
         
         for field_name in search_field_names:

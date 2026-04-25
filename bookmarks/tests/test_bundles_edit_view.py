@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 
+from bookmarks.models import BookmarkSearch
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 
 
@@ -158,3 +159,28 @@ class BundleEditViewTestCase(TestCase, BookmarkFactoryMixin):
         self.assertNotIn(bookmark1.title, response.content.decode())
         self.assertIn(bookmark2.title, response.content.decode())
         self.assertNotIn(bookmark3.title, response.content.decode())
+
+    def test_should_render_edit_form_with_prefilled_asset_filter_fields(self):
+        bundle = self.setup_bundle(name="Asset Bundle")
+        bundle.search_params = {
+            "html_snapshot": BookmarkSearch.FILTER_ASSET_NO,
+            "preview_image": BookmarkSearch.FILTER_ASSET_YES,
+            "favicon": BookmarkSearch.FILTER_ASSET_NO,
+        }
+        bundle.save()
+
+        response = self.client.get(reverse("linkding:bundles.edit", args=[bundle.id]))
+        html = response.content.decode()
+
+        self.assertInHTML(
+            '<input type="radio" name="html_snapshot" value="no" checked id="id_html_snapshot_2">',
+            html,
+        )
+        self.assertInHTML(
+            '<input type="radio" name="preview_image" value="yes" checked id="id_preview_image_1">',
+            html,
+        )
+        self.assertInHTML(
+            '<input type="radio" name="favicon" value="no" checked id="id_favicon_2">',
+            html,
+        )

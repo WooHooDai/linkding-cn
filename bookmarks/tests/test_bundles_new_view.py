@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 from urllib.parse import urlencode
 
-from bookmarks.models import BookmarkBundle
+from bookmarks.models import BookmarkBundle, BookmarkSearch
 from bookmarks.tests.helpers import BookmarkFactoryMixin, HtmlTestMixin
 
 
@@ -145,3 +145,39 @@ class BundleNewViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertContains(response, bookmark1.title)
         self.assertNotContains(response, bookmark2.title)
         self.assertNotContains(response, bookmark3.title)
+
+    def test_should_default_bundle_asset_filters_to_off_in_expected_order(self):
+        response = self.client.get(reverse("linkding:bundles.new"))
+        soup = self.make_soup(response.content.decode())
+
+        html = response.content.decode()
+        self.assertLess(html.index("HTML snapshot"), html.index("Preview image"))
+        self.assertLess(html.index("Preview image"), html.index("Favicon"))
+
+        self.assertTrue(
+            soup.select_one('input[name="html_snapshot"][value="off"]').has_attr("checked")
+        )
+        self.assertTrue(
+            soup.select_one('input[name="preview_image"][value="off"]').has_attr("checked")
+        )
+        self.assertTrue(
+            soup.select_one('input[name="favicon"][value="off"]').has_attr("checked")
+        )
+
+    def test_should_persist_asset_filters_in_search_params(self):
+        form_data = self.create_form_data(
+            {
+                "html_snapshot": BookmarkSearch.FILTER_ASSET_NO,
+                "preview_image": BookmarkSearch.FILTER_ASSET_YES,
+                "favicon": BookmarkSearch.FILTER_ASSET_NO,
+            }
+        )
+
+        response = self.client.post(reverse("linkding:bundles.new"), form_data)
+
+        self.assertRedirects(response, reverse("linkding:bundles.index"))
+
+        bundle = BookmarkBundle.objects.get(name=form_data["name"])
+        self.assertEqual(bundle.search_params["html_snapshot"], BookmarkSearch.FILTER_ASSET_NO)
+        self.assertEqual(bundle.search_params["preview_image"], BookmarkSearch.FILTER_ASSET_YES)
+        self.assertEqual(bundle.search_params["favicon"], BookmarkSearch.FILTER_ASSET_NO)
