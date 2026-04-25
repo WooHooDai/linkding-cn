@@ -174,7 +174,7 @@ HUEY = {
     "store_none": False,
     "utc": True,
     "consumer": {
-        "workers": 2,
+        "workers": 3,
         "worker_type": "thread",
         "initial_delay": 5,
         "backoff": 1.15,
@@ -331,6 +331,15 @@ LD_SINGLEFILE_UBLOCK_OPTIONS = os.getenv(
 )
 LD_SINGLEFILE_OPTIONS = os.getenv("LD_SINGLEFILE_OPTIONS", "")
 LD_SINGLEFILE_TIMEOUT_SEC = float(os.getenv("LD_SINGLEFILE_TIMEOUT_SEC", 120))
+LD_SNAPSHOT_DOMAIN_COOLDOWN_MIN_SEC = int(
+    os.getenv("LD_SNAPSHOT_DOMAIN_COOLDOWN_MIN_SEC", 5)
+)
+LD_SNAPSHOT_DOMAIN_COOLDOWN_MAX_SEC = int(
+    os.getenv("LD_SNAPSHOT_DOMAIN_COOLDOWN_MAX_SEC", 10)
+)
+LD_SNAPSHOT_DISPATCHER_TICK_SEC = int(
+    os.getenv("LD_SNAPSHOT_DISPATCHER_TICK_SEC", 1)
+)
 
 # Monolith isn't used at the moment, as the local snapshot implementation
 # switched to single-file after the prototype. Keeping this around in case

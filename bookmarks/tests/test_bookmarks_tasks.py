@@ -1,8 +1,10 @@
+from datetime import timedelta
 from unittest import mock
 
 import waybackpy
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
+from django.utils import timezone
 from huey.contrib.djhuey import HUEY as huey
 from waybackpy.exceptions import WaybackError
 
@@ -50,6 +52,11 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
         )
         self.mock_assets_create_snapshot = (
             self.mock_assets_create_snapshot_patcher.start()
+        )
+        self.mock_assets_create_snapshot.side_effect = (
+            lambda asset: BookmarkAsset.objects.filter(id=asset.id).update(
+                status=BookmarkAsset.STATUS_COMPLETE
+            )
         )
 
         self.mock_load_preview_image_patcher = mock.patch(
@@ -382,7 +389,7 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
 
         # update bookmark during API call to check that saving
         # the image does not overwrite updated bookmark data
-        def mock_load_preview_image_impl(url):
+        def mock_load_preview_image_impl(url, bookmark_obj):
             bookmark.title = "Updated title"
             bookmark.save()
             return "test.png"
@@ -468,11 +475,14 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(self.executed_count(), 0)
 
     @override_settings(LD_ENABLE_SNAPSHOTS=True)
-    def test_create_html_snapshot_should_create_pending_asset(self):
+    def test_create_html_snapshot_should_create_pending_asset_and_kick_dispatcher(
+        self,
+    ):
         bookmark = self.setup_bookmark()
 
-        # Mock the task function to avoid running it immediately
-        with mock.patch("bookmarks.services.tasks._create_html_snapshot_task"):
+        with mock.patch(
+            "bookmarks.services.tasks._kick_html_snapshot_dispatcher"
+        ) as mock_kick_html_snapshot_dispatcher:
             tasks.create_html_snapshot(bookmark)
             self.assertEqual(BookmarkAsset.objects.count(), 1)
 
@@ -487,25 +497,239 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
                 self.assertIn("HTML snapshot", asset.display_name)
                 self.assertEqual(asset.status, BookmarkAsset.STATUS_PENDING)
 
+            self.assertEqual(mock_kick_html_snapshot_dispatcher.call_count, 2)
             self.mock_assets_create_snapshot.assert_not_called()
 
     @override_settings(LD_ENABLE_SNAPSHOTS=True)
-    def test_schedule_html_snapshots_should_create_snapshots(self):
+    def test_create_html_snapshots_should_kick_dispatcher_once(self):
+        bookmarks = [
+            self.setup_bookmark(url="https://example.com/1"),
+            self.setup_bookmark(url="https://example.com/2"),
+            self.setup_bookmark(url="https://example.com/3"),
+        ]
+
+        with mock.patch(
+            "bookmarks.services.tasks._kick_html_snapshot_dispatcher"
+        ) as mock_kick_html_snapshot_dispatcher:
+            tasks.create_html_snapshots(bookmarks)
+
+        self.assertEqual(BookmarkAsset.objects.count(), 3)
+        self.assertEqual(mock_kick_html_snapshot_dispatcher.call_count, 1)
+
+    @override_settings(LD_ENABLE_SNAPSHOTS=True)
+    def test_schedule_html_snapshots_should_kick_dispatcher_for_pending_assets(self):
         bookmark = self.setup_bookmark(url="https://example.com")
+        self.setup_asset(
+            bookmark=bookmark,
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            status=BookmarkAsset.STATUS_PENDING,
+        )
 
-        tasks.create_html_snapshot(bookmark)
-        tasks.create_html_snapshot(bookmark)
-        tasks.create_html_snapshot(bookmark)
+        with mock.patch(
+            "bookmarks.services.tasks._kick_html_snapshot_dispatcher"
+        ) as mock_kick_html_snapshot_dispatcher:
+            tasks._schedule_html_snapshots_task()
 
-        assets = BookmarkAsset.objects.filter(bookmark=bookmark)
+        mock_kick_html_snapshot_dispatcher.assert_called_once_with()
 
-        tasks._schedule_html_snapshots_task()
+    @override_settings(LD_ENABLE_SNAPSHOTS=True)
+    def test_schedule_html_snapshots_should_not_kick_dispatcher_when_no_pending_assets(
+        self,
+    ):
+        bookmark = self.setup_bookmark(url="https://example.com")
+        self.setup_asset(
+            bookmark=bookmark,
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            status=BookmarkAsset.STATUS_COMPLETE,
+        )
 
-        # should call create_snapshot for each pending asset
-        self.assertEqual(self.mock_assets_create_snapshot.call_count, 3)
+        with mock.patch(
+            "bookmarks.services.tasks._kick_html_snapshot_dispatcher"
+        ) as mock_kick_html_snapshot_dispatcher:
+            tasks._schedule_html_snapshots_task()
 
-        for asset in assets:
-            self.mock_assets_create_snapshot.assert_any_call(asset)
+        mock_kick_html_snapshot_dispatcher.assert_not_called()
+
+    @override_settings(LD_ENABLE_SNAPSHOTS=True)
+    def test_select_next_html_snapshot_asset_should_prefer_newest_eligible_asset(self):
+        now = timezone.now()
+        old_bookmark = self.setup_bookmark(url="https://old.example.com/1")
+        new_bookmark = self.setup_bookmark(url="https://new.example.org/1")
+        old_asset = self.setup_asset(
+            bookmark=old_bookmark,
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            status=BookmarkAsset.STATUS_PENDING,
+            date_created=now - timedelta(minutes=2),
+        )
+        new_asset = self.setup_asset(
+            bookmark=new_bookmark,
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            status=BookmarkAsset.STATUS_PENDING,
+            date_created=now - timedelta(minutes=1),
+        )
+
+        asset, next_wake_at = tasks._select_next_html_snapshot_asset(now, {})
+
+        self.assertEqual(asset.id, new_asset.id)
+        self.assertNotEqual(asset.id, old_asset.id)
+        self.assertIsNone(next_wake_at)
+
+    @override_settings(LD_ENABLE_SNAPSHOTS=True)
+    def test_select_next_html_snapshot_asset_should_skip_cooling_down_domain(self):
+        now = timezone.now()
+        newest_bookmark = self.setup_bookmark(url="https://docs.example.com/1")
+        older_bookmark = self.setup_bookmark(url="https://example.org/1")
+        newest_asset = self.setup_asset(
+            bookmark=newest_bookmark,
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            status=BookmarkAsset.STATUS_PENDING,
+            date_created=now - timedelta(minutes=1),
+        )
+        older_asset = self.setup_asset(
+            bookmark=older_bookmark,
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            status=BookmarkAsset.STATUS_PENDING,
+            date_created=now - timedelta(minutes=2),
+        )
+
+        asset, next_wake_at = tasks._select_next_html_snapshot_asset(
+            now,
+            {"example.com": now + timedelta(seconds=10)},
+        )
+
+        self.assertEqual(asset.id, older_asset.id)
+        self.assertNotEqual(asset.id, newest_asset.id)
+        self.assertIsNone(next_wake_at)
+
+    @override_settings(LD_ENABLE_SNAPSHOTS=True)
+    def test_select_next_html_snapshot_asset_should_share_cooldown_across_subdomains(
+        self,
+    ):
+        now = timezone.now()
+        newer_asset = self.setup_asset(
+            bookmark=self.setup_bookmark(url="https://docs.example.com/1"),
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            status=BookmarkAsset.STATUS_PENDING,
+            date_created=now - timedelta(minutes=1),
+        )
+        older_asset = self.setup_asset(
+            bookmark=self.setup_bookmark(url="https://www.example.com/2"),
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            status=BookmarkAsset.STATUS_PENDING,
+            date_created=now - timedelta(minutes=2),
+        )
+
+        asset, next_wake_at = tasks._select_next_html_snapshot_asset(
+            now,
+            {"example.com": now + timedelta(seconds=10)},
+        )
+
+        self.assertIsNone(asset)
+        self.assertEqual(next_wake_at, now + timedelta(seconds=10))
+        self.assertNotEqual(newer_asset.id, older_asset.id)
+
+    @override_settings(LD_ENABLE_SNAPSHOTS=True)
+    @override_settings(
+        LD_SNAPSHOT_DOMAIN_COOLDOWN_MIN_SEC=7,
+        LD_SNAPSHOT_DOMAIN_COOLDOWN_MAX_SEC=7,
+    )
+    def test_get_html_snapshot_cooldown_seconds_should_use_settings_range(self):
+        self.assertEqual(tasks._get_html_snapshot_cooldown_seconds(), 7)
+
+    @override_settings(LD_ENABLE_SNAPSHOTS=True)
+    @override_settings(LD_SNAPSHOT_DISPATCHER_TICK_SEC=1)
+    def test_run_html_snapshot_dispatcher_loop_should_process_assets_until_queue_empty(
+        self,
+    ):
+        now = timezone.now()
+        first_asset = self.setup_asset(
+            bookmark=self.setup_bookmark(url="https://old.example.com/1"),
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            status=BookmarkAsset.STATUS_PENDING,
+            date_created=now - timedelta(minutes=2),
+        )
+        second_asset = self.setup_asset(
+            bookmark=self.setup_bookmark(url="https://new.example.org/1"),
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            status=BookmarkAsset.STATUS_PENDING,
+            date_created=now - timedelta(minutes=1),
+        )
+        processed_asset_ids = []
+        current_time = {"value": now}
+
+        def mark_asset_complete(asset_id):
+            processed_asset_ids.append(asset_id)
+            asset = BookmarkAsset.objects.get(id=asset_id)
+            asset.status = BookmarkAsset.STATUS_COMPLETE
+            asset.save(update_fields=["status"])
+
+        def fake_now():
+            return current_time["value"]
+
+        def fake_sleep(seconds):
+            current_time["value"] += timedelta(seconds=seconds)
+
+        with mock.patch(
+            "bookmarks.services.tasks._create_html_snapshot_task",
+            side_effect=mark_asset_complete,
+        ):
+            tasks._run_html_snapshot_dispatcher_loop(
+                now_func=fake_now,
+                sleep_func=fake_sleep,
+                cooldown_func=lambda: 5,
+            )
+
+        self.assertEqual(processed_asset_ids, [second_asset.id, first_asset.id])
+
+    @override_settings(LD_ENABLE_SNAPSHOTS=True)
+    @override_settings(LD_SNAPSHOT_DISPATCHER_TICK_SEC=1)
+    def test_run_html_snapshot_dispatcher_loop_should_tick_while_waiting_for_domain_cooldown(
+        self,
+    ):
+        now = timezone.now()
+        first_asset = self.setup_asset(
+            bookmark=self.setup_bookmark(url="https://docs.example.com/1"),
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            status=BookmarkAsset.STATUS_PENDING,
+            date_created=now - timedelta(minutes=2),
+        )
+        second_asset = self.setup_asset(
+            bookmark=self.setup_bookmark(url="https://www.example.com/2"),
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            status=BookmarkAsset.STATUS_PENDING,
+            date_created=now - timedelta(minutes=1),
+        )
+        processed_asset_ids = []
+        sleep_calls = []
+        current_time = {"value": now}
+
+        def mark_asset_complete(asset_id):
+            processed_asset_ids.append(asset_id)
+            asset = BookmarkAsset.objects.get(id=asset_id)
+            asset.status = BookmarkAsset.STATUS_COMPLETE
+            asset.save(update_fields=["status"])
+
+        def fake_now():
+            return current_time["value"]
+
+        def fake_sleep(seconds):
+            sleep_calls.append(seconds)
+            current_time["value"] += timedelta(seconds=seconds)
+
+        with mock.patch(
+            "bookmarks.services.tasks._create_html_snapshot_task",
+            side_effect=mark_asset_complete,
+        ):
+            tasks._run_html_snapshot_dispatcher_loop(
+                now_func=fake_now,
+                sleep_func=fake_sleep,
+                cooldown_func=lambda: 5,
+            )
+
+        self.assertEqual(processed_asset_ids, [second_asset.id, first_asset.id])
+        self.assertTrue(sleep_calls)
+        self.assertTrue(all(seconds <= 1 for seconds in sleep_calls))
+        self.assertEqual(sum(sleep_calls), 5)
 
     @override_settings(LD_ENABLE_SNAPSHOTS=True)
     def test_create_html_snapshot_should_handle_missing_asset(self):

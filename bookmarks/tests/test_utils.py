@@ -7,6 +7,7 @@ from django.utils import timezone
 from bookmarks.utils import (
     build_domain_filter_value,
     canonicalize_domain_filter_value,
+    get_registrable_domain,
     get_sidebar_domain_filter_value,
     humanize_absolute_date,
     humanize_relative_date,
@@ -17,6 +18,17 @@ from bookmarks.utils import (
 
 
 class UtilsTestCase(TestCase):
+    def test_get_registrable_domain_groups_subdomains(self):
+        self.assertEqual(
+            get_registrable_domain("https://docs.example.com/path"),
+            get_registrable_domain("https://www.example.com/other"),
+        )
+
+    def test_get_registrable_domain_handles_multi_part_suffixes(self):
+        self.assertEqual(
+            get_registrable_domain("https://api.service.example.co.uk/path"),
+            "example.co.uk",
+        )
 
     def test_humanize_absolute_date(self):
         test_cases = [

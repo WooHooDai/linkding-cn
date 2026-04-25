@@ -14,6 +14,7 @@ from django.http import HttpResponseRedirect
 from django.utils import timezone, formats
 from django.conf import settings
 from django.utils.translation import gettext as _, ngettext
+import tldextract
 
 try:
     with open("version.txt", "r") as f:
@@ -195,6 +196,24 @@ def generate_username(email, claims):
 
 def get_domain(url: str) -> str:
     return urllib.parse.urlparse(url).netloc
+
+
+_registrable_domain_extractor = tldextract.TLDExtract(suffix_list_urls=None)
+
+
+def get_registrable_domain(url: str) -> str:
+    hostname = urllib.parse.urlparse(url).hostname or ""
+    if not hostname:
+        return ""
+
+    extracted = _registrable_domain_extractor(hostname)
+    if extracted.domain and extracted.suffix:
+        return f"{extracted.domain}.{extracted.suffix}".lower()
+
+    if extracted.domain:
+        return extracted.domain.lower()
+
+    return hostname.lower()
 
 def search_config_for_domain(url, settings_path, settings_cache=None):
     config = None

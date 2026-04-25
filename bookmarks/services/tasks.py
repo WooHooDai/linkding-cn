@@ -1,7 +1,10 @@
 import functools
 import logging
 import os
-from typing import List
+import random
+import time
+from datetime import timedelta
+from typing import Callable, List
 
 import waybackpy
 from django.conf import settings
@@ -15,9 +18,11 @@ from waybackpy.exceptions import WaybackError, TooManyRequestsError
 
 from bookmarks.models import Bookmark, BookmarkAsset, UserProfile
 from bookmarks.services import assets, favicon_loader, preview_image_loader
+from bookmarks.utils import get_registrable_domain
 from bookmarks.services.website_loader import load_website_metadata
 
 logger = logging.getLogger(__name__)
+HTML_SNAPSHOT_DISPATCHER_LOCK = huey.lock_task("html-snapshot-dispatcher-lock")
 
 
 # Create custom decorator for Huey tasks that implements exponential backoff
@@ -288,12 +293,99 @@ def is_html_snapshot_feature_active() -> bool:
     return settings.LD_ENABLE_SNAPSHOTS and not settings.LD_DISABLE_BACKGROUND_TASKS
 
 
+def _kick_html_snapshot_dispatcher():
+    _html_snapshot_dispatcher_task()
+
+
+def _get_html_snapshot_cooldown_seconds(
+    randint_func: Callable[[int, int], int] | None = None,
+) -> int:
+    min_seconds = settings.LD_SNAPSHOT_DOMAIN_COOLDOWN_MIN_SEC
+    max_seconds = settings.LD_SNAPSHOT_DOMAIN_COOLDOWN_MAX_SEC
+    if max_seconds < min_seconds:
+        min_seconds, max_seconds = max_seconds, min_seconds
+
+    randint = randint_func or random.randint
+    return randint(min_seconds, max_seconds)
+
+
+def _get_html_snapshot_dispatcher_tick_seconds() -> int:
+    return max(settings.LD_SNAPSHOT_DISPATCHER_TICK_SEC, 1)
+
+
+def _select_next_html_snapshot_asset(now, next_eligible_at: dict[str, object]):
+    pending_assets = (
+        BookmarkAsset.objects.filter(
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            status=BookmarkAsset.STATUS_PENDING,
+        )
+        .select_related("bookmark")
+        .order_by("-date_created", "-id")
+    )
+
+    next_wake_at = None
+    for asset in pending_assets:
+        domain = get_registrable_domain(asset.bookmark.url)
+        eligible_at = next_eligible_at.get(domain)
+        if eligible_at is None or eligible_at <= now:
+            return asset, None
+        if next_wake_at is None or eligible_at < next_wake_at:
+            next_wake_at = eligible_at
+
+    return None, next_wake_at
+
+
+def _get_html_snapshot_dispatcher_sleep_seconds(now, next_wake_at) -> float:
+    remaining_seconds = max((next_wake_at - now).total_seconds(), 0)
+    if remaining_seconds == 0:
+        return 0
+    return min(remaining_seconds, _get_html_snapshot_dispatcher_tick_seconds())
+
+
+def _run_html_snapshot_dispatcher_loop(
+    now_func: Callable[[], object] | None = None,
+    sleep_func: Callable[[float], None] | None = None,
+    cooldown_func: Callable[[], int] | None = None,
+):
+    now_func = now_func or timezone.now
+    sleep_func = sleep_func or time.sleep
+    cooldown_func = cooldown_func or _get_html_snapshot_cooldown_seconds
+    next_eligible_at: dict[str, object] = {}
+
+    while True:
+        now = now_func()
+        asset, next_wake_at = _select_next_html_snapshot_asset(now, next_eligible_at)
+        if asset is None:
+            if next_wake_at is None:
+                return
+            sleep_seconds = _get_html_snapshot_dispatcher_sleep_seconds(
+                now, next_wake_at
+            )
+            if sleep_seconds > 0:
+                sleep_func(sleep_seconds)
+            continue
+
+        domain = get_registrable_domain(asset.bookmark.url)
+        _create_html_snapshot_task(asset.id)
+        next_eligible_at[domain] = now_func() + timedelta(seconds=cooldown_func())
+
+
+@task(retries=0, retry_delay=0)
+def _html_snapshot_dispatcher_task():
+    try:
+        with HTML_SNAPSHOT_DISPATCHER_LOCK:
+            _run_html_snapshot_dispatcher_loop()
+    except TaskLockedException:
+        logger.debug("HTML snapshot dispatcher already running.")
+
+
 def create_html_snapshot(bookmark: Bookmark):
     if not is_html_snapshot_feature_active():
         return
 
     asset = assets.create_snapshot_asset(bookmark)
     asset.save()
+    _kick_html_snapshot_dispatcher()
 
 
 def create_html_snapshots(bookmark_list: List[Bookmark]):
@@ -305,24 +397,23 @@ def create_html_snapshots(bookmark_list: List[Bookmark]):
         asset = assets.create_snapshot_asset(bookmark)
         assets_to_create.append(asset)
 
+    if not assets_to_create:
+        return
+
     BookmarkAsset.objects.bulk_create(assets_to_create)
+    _kick_html_snapshot_dispatcher()
 
 
-# singe-file does not support running multiple instances in parallel, so we can
-# not queue up multiple snapshot tasks at once. Instead, schedule a periodic
-# task that grabs a number of pending assets and creates snapshots for them in
-# sequence. The task uses a lock to ensure that a new task isn't scheduled
-# before the previous one has finished.
+# SingleFile does not support running multiple snapshot captures in parallel.
+# Keep a periodic fallback that can re-kick the dispatcher if pending work was
+# missed due to an interrupted worker or process restart.
 @huey.periodic_task(crontab(minute="*"))
-@huey.lock_task("schedule-html-snapshots-lock")
 def _schedule_html_snapshots_task():
-    # Get five pending assets
-    assets = BookmarkAsset.objects.filter(status=BookmarkAsset.STATUS_PENDING).order_by(
-        "date_created"
-    )[:5]
-
-    for asset in assets:
-        _create_html_snapshot_task(asset.id)
+    if BookmarkAsset.objects.filter(
+        asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+        status=BookmarkAsset.STATUS_PENDING,
+    ).exists():
+        _kick_html_snapshot_dispatcher()
 
 
 def _create_html_snapshot_task(asset_id: int):
