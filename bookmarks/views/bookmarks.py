@@ -342,6 +342,12 @@ def prefetch_favicon(request: HttpRequest):
     if not url:
         return JsonResponse({"error": _("URL parameter is missing")}, status=400)
 
+    cached_favicon = favicon_loader.get_cached_favicon(url)
+    if cached_favicon:
+        return JsonResponse(
+            {"status": "success", "favicon_file": cached_favicon.filename}
+        )
+
     favicon_file = favicon_loader.load_favicon(url, timeout=5)
 
     if favicon_file:

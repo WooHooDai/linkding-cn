@@ -1,7 +1,10 @@
+from unittest import mock
+
 from django.test import TestCase
 from django.urls import reverse
 
 from bookmarks.models import Bookmark
+from bookmarks.services import favicon_loader
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 
 
@@ -79,7 +82,7 @@ class BookmarkNewViewTestCase(TestCase, BookmarkFactoryMixin):
 
         self.assertInHTML(
             """
-            <input type="text" name="url" aria-invalid="false" autofocus class="form-input" required id="id_url" value="http://example.com">
+            <input type="text" name="url" value="http://example.com" aria-invalid="false" class="form-input" required id="id_url">
             """,
             html,
         )
@@ -133,14 +136,14 @@ class BookmarkNewViewTestCase(TestCase, BookmarkFactoryMixin):
 
         self.assertInHTML(
             """
-            <details class="notes" open="">
+            <details class="notes" open>
                 <summary>
                     <span class="form-label d-inline-block">Notes</span>
                 </summary>
                 <label for="id_notes" class="text-assistive">Notes</label>
-                <textarea name="notes" cols="40" rows="8" class="form-input" id="id_notes" aria-describedby="id_notes_help">**Find** more info [here](http://example.com)</textarea>
+                <textarea name="notes" cols="40" rows="8" aria-describedby="id_notes_help" class="form-input" id="id_notes">**Find** more info [here](http://example.com)</textarea>
                 <div id="id_notes_help" class="form-input-hint">
-                    Additional notes, supports Markdown.
+                    Additional notes. Markdown is supported.
                 </div>
             </details>
             """,
@@ -224,6 +227,50 @@ class BookmarkNewViewTestCase(TestCase, BookmarkFactoryMixin):
             count=1,
         )
 
+    def test_prefetch_favicon_should_return_cached_stale_file_without_downloading(self):
+        self.user.profile.enable_favicons = True
+        self.user.profile.save()
+        with mock.patch.object(
+            favicon_loader, "get_cached_favicon"
+        ) as mock_get_cached_favicon, mock.patch.object(
+            favicon_loader, "load_favicon"
+        ) as mock_load_favicon:
+            mock_get_cached_favicon.return_value = favicon_loader.CachedFavicon(
+                filename="https_example_com.png",
+                is_stale=True,
+            )
+
+            response = self.client.get(
+                reverse("linkding:bookmarks.prefetch_favicon")
+                + "?url=https://example.com"
+            )
+
+            self.assertEqual(response.status_code, 200)
+            payload = response.json()
+            self.assertEqual(payload["status"], "success")
+            self.assertEqual(payload["favicon_file"], "https_example_com.png")
+            mock_load_favicon.assert_not_called()
+
+    def test_prefetch_favicon_should_download_when_cache_is_missing(self):
+        self.user.profile.enable_favicons = True
+        self.user.profile.save()
+        with mock.patch.object(
+            favicon_loader, "get_cached_favicon", return_value=None
+        ) as mock_get_cached_favicon, mock.patch.object(
+            favicon_loader, "load_favicon", return_value="https_example_com.png"
+        ) as mock_load_favicon:
+            response = self.client.get(
+                reverse("linkding:bookmarks.prefetch_favicon")
+                + "?url=https://example.com"
+            )
+
+            self.assertEqual(response.status_code, 200)
+            payload = response.json()
+            self.assertEqual(payload["status"], "success")
+            self.assertEqual(payload["favicon_file"], "https_example_com.png")
+            mock_get_cached_favicon.assert_called_once_with("https://example.com")
+            mock_load_favicon.assert_called_once_with("https://example.com", timeout=5)
+
     def test_should_show_respective_share_hint(self):
         self.user.profile.enable_sharing = True
         self.user.profile.save()
@@ -233,7 +280,7 @@ class BookmarkNewViewTestCase(TestCase, BookmarkFactoryMixin):
         self.assertInHTML(
             """
               <div id="id_shared_help" class="form-input-hint">
-                  Share this bookmark with other registered users.
+                  Share this bookmark with registered users.
               </div>
             """,
             html,
@@ -247,7 +294,7 @@ class BookmarkNewViewTestCase(TestCase, BookmarkFactoryMixin):
         self.assertInHTML(
             """
               <div id="id_shared_help" class="form-input-hint">
-                  Share this bookmark with other registered users and anonymous users.
+                  Share this bookmark with registered users and anonymous visitors.
               </div>
             """,
             html,

@@ -7,6 +7,7 @@ from unittest import mock
 
 from django.conf import settings
 from django.test import TestCase, override_settings
+import requests
 
 from bookmarks.services import favicon_loader
 
@@ -20,6 +21,9 @@ class MockStreamingResponse:
 
     def iter_content(self, **kwargs):
         return self.chunks
+
+    def raise_for_status(self):
+        pass
 
     def __enter__(self):
         return self
@@ -154,6 +158,67 @@ class FaviconLoaderTestCase(TestCase):
                 updated_mock_icon_data, self.get_icon_data("https_example_com.png")
             )
 
+    def test_get_cached_favicon_returns_stale_icon(self):
+        with mock.patch("requests.get") as mock_get:
+            mock_get.return_value = self.create_mock_response()
+            favicon_loader.load_favicon("https://example.com")
+
+        icon_path = self.get_icon_path("https_example_com.png")
+        one_day_ago = time.time() - 60 * 60 * 24
+        os.utime(icon_path.absolute(), (one_day_ago, one_day_ago))
+
+        cached_favicon = favicon_loader.get_cached_favicon("https://example.com")
+
+        self.assertIsNotNone(cached_favicon)
+        self.assertEqual(cached_favicon.filename, "https_example_com.png")
+        self.assertTrue(cached_favicon.is_stale)
+
+    def test_get_cached_favicon_can_skip_stale_icon(self):
+        with mock.patch("requests.get") as mock_get:
+            mock_get.return_value = self.create_mock_response()
+            favicon_loader.load_favicon("https://example.com")
+
+        icon_path = self.get_icon_path("https_example_com.png")
+        one_day_ago = time.time() - 60 * 60 * 24
+        os.utime(icon_path.absolute(), (one_day_ago, one_day_ago))
+
+        cached_favicon = favicon_loader.get_cached_favicon(
+            "https://example.com", include_stale=False
+        )
+
+        self.assertIsNone(cached_favicon)
+
+    def test_refresh_favicon_replaces_existing_variant(self):
+        with mock.patch("requests.get") as mock_get:
+            mock_get.return_value = self.create_mock_response(
+                content_type="image/x-icon",
+                icon_data=b"original_icon",
+            )
+            favicon_loader.load_favicon("https://example.com")
+
+        self.assertTrue(self.icon_exists("https_example_com.ico"))
+        self.assertEqual(self.count_icons(), 1)
+
+        with mock.patch("requests.get") as mock_get:
+            mock_get.return_value = self.create_mock_response(
+                content_type="image/png",
+                icon_data=b"updated_icon",
+            )
+            refreshed_favicon = favicon_loader.refresh_favicon("https://example.com")
+
+        self.assertEqual(refreshed_favicon, "https_example_com.png")
+        self.assertTrue(self.icon_exists("https_example_com.png"))
+        self.assertFalse(self.icon_exists("https_example_com.ico"))
+        self.assertEqual(self.count_icons(), 1)
+        self.assertEqual(self.get_icon_data("https_example_com.png"), b"updated_icon")
+
+    def test_refresh_favicon_raises_on_request_error(self):
+        with mock.patch(
+            "requests.get", side_effect=requests.exceptions.RequestException("boom")
+        ):
+            with self.assertRaises(requests.exceptions.RequestException):
+                favicon_loader.refresh_favicon("https://example.com")
+
     @override_settings(LD_FAVICON_PROVIDER="https://custom.icons.com/?url={url}")
     def test_custom_provider_with_url_param(self):
         with mock.patch("requests.get") as mock_get:
@@ -161,7 +226,9 @@ class FaviconLoaderTestCase(TestCase):
 
             favicon_loader.load_favicon("https://example.com/foo?bar=baz")
             mock_get.assert_called_with(
-                "https://custom.icons.com/?url=https://example.com", stream=True
+                "https://custom.icons.com/?url=https://example.com",
+                stream=True,
+                timeout=10,
             )
 
     @override_settings(LD_FAVICON_PROVIDER="https://custom.icons.com/?url={domain}")
@@ -171,7 +238,9 @@ class FaviconLoaderTestCase(TestCase):
 
             favicon_loader.load_favicon("https://example.com/foo?bar=baz")
             mock_get.assert_called_with(
-                "https://custom.icons.com/?url=example.com", stream=True
+                "https://custom.icons.com/?url=example.com",
+                stream=True,
+                timeout=10,
             )
 
     def test_guess_file_extension(self):

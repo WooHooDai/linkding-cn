@@ -38,9 +38,8 @@ def create_bookmark(
     bookmark.save()
     # Create snapshot on web archive
     tasks.create_web_archive_snapshot(current_user, bookmark, False)
-    # Load favicon, unless it was pre-filled
-    if not bookmark.favicon_file:
-        tasks.load_favicon(current_user, bookmark)
+    # Load favicon and let task logic decide whether to reuse cached state
+    tasks.load_favicon(current_user, bookmark)
     # Load preview image
     tasks.load_preview_image(current_user, bookmark)
     # Create HTML snapshot
@@ -243,7 +242,7 @@ def refresh_bookmarks_metadata(bookmark_ids: [Union[int, str]], current_user: Us
     for bookmark in owned_bookmarks:
         tasks.refresh_metadata(bookmark)
         tasks.load_preview_image(current_user, bookmark)
-        tasks.load_favicon(current_user, bookmark)
+        tasks.refresh_favicon(current_user, bookmark)
 
 
 def create_html_snapshots(bookmark_ids: list[Union[int, str]], current_user: User):

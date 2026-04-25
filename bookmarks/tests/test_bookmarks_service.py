@@ -45,10 +45,15 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
             "bookmarks.services.bookmarks.tasks.load_preview_image"
         )
         self.mock_load_preview_image = self.mock_load_preview_image_patcher.start()
+        self.mock_refresh_favicon_patcher = patch(
+            "bookmarks.services.bookmarks.tasks.refresh_favicon", create=True
+        )
+        self.mock_refresh_favicon = self.mock_refresh_favicon_patcher.start()
 
     def tearDown(self):
         self.mock_schedule_refresh_metadata_patcher.stop()
         self.mock_load_preview_image_patcher.stop()
+        self.mock_refresh_favicon_patcher.stop()
 
     def test_create_should_not_update_website_metadata(self):
         with patch.object(
@@ -188,6 +193,16 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
     def test_create_should_load_favicon(self):
         with patch.object(tasks, "load_favicon") as mock_load_favicon:
             bookmark_data = Bookmark(url="https://example.com")
+            bookmark = create_bookmark(bookmark_data, "tag1,tag2", self.user)
+
+            mock_load_favicon.assert_called_once_with(self.user, bookmark)
+
+    def test_create_should_load_favicon_even_when_prefilled(self):
+        with patch.object(tasks, "load_favicon") as mock_load_favicon:
+            bookmark_data = Bookmark(
+                url="https://example.com",
+                favicon_file="https_example_com.png",
+            )
             bookmark = create_bookmark(bookmark_data, "tag1,tag2", self.user)
 
             mock_load_favicon.assert_called_once_with(self.user, bookmark)
@@ -999,6 +1014,7 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
 
         self.assertEqual(self.mock_schedule_refresh_metadata.call_count, 3)
         self.assertEqual(self.mock_load_preview_image.call_count, 3)
+        self.assertEqual(self.mock_refresh_favicon.call_count, 3)
 
     def test_refresh_bookmarks_metadata_should_only_refresh_specified_bookmarks(self):
         bookmark1 = self.setup_bookmark()

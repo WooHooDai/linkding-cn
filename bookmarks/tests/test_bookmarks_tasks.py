@@ -2,6 +2,7 @@ from datetime import timedelta
 from unittest import mock
 
 import waybackpy
+import requests
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -9,7 +10,7 @@ from huey.contrib.djhuey import HUEY as huey
 from waybackpy.exceptions import WaybackError
 
 from bookmarks.models import BookmarkAsset, UserProfile
-from bookmarks.services import tasks
+from bookmarks.services import tasks, favicon_loader
 from bookmarks.services.website_loader import WebsiteMetadata
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 
@@ -41,11 +42,23 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
         )
         self.mock_save_api_patcher.start()
 
-        self.mock_load_favicon_patcher = mock.patch(
+        self.mock_download_favicon_patcher = mock.patch(
             "bookmarks.services.favicon_loader.load_favicon"
+        )
+        self.mock_download_favicon = self.mock_download_favicon_patcher.start()
+        self.mock_download_favicon.return_value = "https_example_com.png"
+
+        self.mock_load_favicon_patcher = mock.patch(
+            "bookmarks.services.favicon_loader.refresh_favicon"
         )
         self.mock_load_favicon = self.mock_load_favicon_patcher.start()
         self.mock_load_favicon.return_value = "https_example_com.png"
+
+        self.mock_get_cached_favicon_patcher = mock.patch(
+            "bookmarks.services.favicon_loader.get_cached_favicon"
+        )
+        self.mock_get_cached_favicon = self.mock_get_cached_favicon_patcher.start()
+        self.mock_get_cached_favicon.return_value = None
 
         self.mock_assets_create_snapshot_patcher = mock.patch(
             "bookmarks.services.assets.create_snapshot",
@@ -75,7 +88,9 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
 
     def tearDown(self):
         self.mock_save_api_patcher.stop()
+        self.mock_download_favicon_patcher.stop()
         self.mock_load_favicon_patcher.stop()
+        self.mock_get_cached_favicon_patcher.stop()
         self.mock_assets_create_snapshot_patcher.stop()
         self.mock_load_preview_image_patcher.stop()
         huey.storage.flush_results()
@@ -183,6 +198,54 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(self.executed_count(), 1)
         self.assertEqual(bookmark.favicon_file, "https_example_com.png")
 
+    def test_load_favicon_should_use_fresh_cached_favicon_without_refresh(self):
+        bookmark = self.setup_bookmark()
+        self.mock_get_cached_favicon.return_value = favicon_loader.CachedFavicon(
+            filename="https_example_com.png",
+            is_stale=False,
+        )
+
+        tasks.load_favicon(self.get_or_create_test_user(), bookmark)
+        bookmark.refresh_from_db()
+
+        self.assertEqual(self.executed_count(), 0)
+        self.mock_load_favicon.assert_not_called()
+        self.assertEqual(bookmark.favicon_file, "https_example_com.png")
+
+    def test_load_favicon_should_use_stale_cached_favicon_and_refresh_in_background(
+        self,
+    ):
+        bookmark = self.setup_bookmark()
+        self.mock_get_cached_favicon.return_value = favicon_loader.CachedFavicon(
+            filename="https_example_com.png",
+            is_stale=True,
+        )
+
+        def mock_refresh_favicon(url, timeout=10):
+            bookmark.refresh_from_db()
+            self.assertEqual(bookmark.favicon_file, "https_example_com.png")
+            return "https_example_updated_com.png"
+
+        self.mock_load_favicon.side_effect = mock_refresh_favicon
+
+        tasks.load_favicon(self.get_or_create_test_user(), bookmark)
+        bookmark.refresh_from_db()
+
+        self.assertEqual(self.executed_count(), 1)
+        self.mock_load_favicon.assert_called_once()
+        self.assertEqual(bookmark.favicon_file, "https_example_updated_com.png")
+
+    def test_load_favicon_should_refresh_when_cache_is_missing(self):
+        bookmark = self.setup_bookmark()
+        self.mock_get_cached_favicon.return_value = None
+
+        tasks.load_favicon(self.get_or_create_test_user(), bookmark)
+        bookmark.refresh_from_db()
+
+        self.assertEqual(self.executed_count(), 1)
+        self.mock_load_favicon.assert_called_once()
+        self.assertEqual(bookmark.favicon_file, "https_example_com.png")
+
     def test_load_favicon_should_update_favicon_file(self):
         bookmark = self.setup_bookmark(favicon_file="https_example_com.png")
 
@@ -215,6 +278,20 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
         bookmark.refresh_from_db()
 
         self.assertEqual(bookmark.title, "Updated title")
+        self.assertEqual(bookmark.favicon_file, "https_example_com.png")
+
+    def test_refresh_favicon_should_retry_and_keep_existing_file_on_failure(self):
+        bookmark = self.setup_bookmark(favicon_file="https_example_com.png")
+
+        self.mock_load_favicon.side_effect = requests.exceptions.RequestException(
+            "boom"
+        )
+
+        tasks.refresh_favicon(self.get_or_create_test_user(), bookmark)
+        bookmark.refresh_from_db()
+
+        self.assertEqual(tasks._load_favicon_task.task_class.default_retries, 3)
+        self.assertEqual(self.mock_load_favicon.call_count, 1)
         self.assertEqual(bookmark.favicon_file, "https_example_com.png")
 
     @override_settings(LD_DISABLE_BACKGROUND_TASKS=True)
