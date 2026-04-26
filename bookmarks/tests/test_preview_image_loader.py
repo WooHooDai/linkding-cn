@@ -101,6 +101,14 @@ class PreviewImageLoaderTestCase(TestCase):
             self.assertIsNone(file)
             self.assertNoImageExists()
 
+    def test_load_preview_image_returns_none_if_metadata_loader_returns_none(self):
+        self.mock_load_website_metadata.return_value = None
+
+        file = preview_image_loader.load_preview_image("https://example.com")
+
+        self.assertIsNone(file)
+        self.assertNoImageExists()
+
     def test_load_preview_image_returns_none_for_invalid_status_code(self):
         invalid_status_codes = [199, 300, 400, 500]
 

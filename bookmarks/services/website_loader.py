@@ -52,6 +52,43 @@ _loaders_module_cache = {}  # {loader_path: (module, mtime)}
 def _empty_metadata(url: str):
     return WebsiteMetadata(url=url, title=None, description=None, preview_image=None)
 
+
+def _normalize_metadata_result(url: str, metadata, source: str):
+    if isinstance(metadata, WebsiteMetadata):
+        return metadata
+
+    if metadata is None:
+        logger.warning(
+            f"Metadata loader returned no result. url={url} source={source}"
+        )
+    else:
+        logger.warning(
+            f"Metadata loader returned invalid result. url={url} source={source} type={type(metadata).__name__}"
+        )
+
+    return _empty_metadata(url)
+
+
+def _call_metadata_loader(loader, url: str, config: dict = None, source: str = "default"):
+    try:
+        metadata = loader(url, config)
+    except RetryableMetadataError:
+        raise
+    except NonRetryableMetadataError as exc:
+        logger.info(
+            f"Metadata request failed without retry. url={url} source={source}",
+            exc_info=exc,
+        )
+        return _empty_metadata(url)
+    except Exception as exc:
+        logger.error(
+            f"Unexpected metadata request failure. url={url} source={source}",
+            exc_info=exc,
+        )
+        return _empty_metadata(url)
+
+    return _normalize_metadata_result(url, metadata, source)
+
 # 获取网站标题、描述、首图
 # TODO: 目前一旦用户有自定义字段，就会失去缓存，暂时没考虑好传递config dict时的缓存方案
 def load_website_metadata(url: str, ignore_cache: bool = False):
@@ -65,7 +102,7 @@ def load_website_metadata(url: str, ignore_cache: bool = False):
             if loader_path and os.path.exists(loader_path):
                 module = load_module(loader_path, _loaders_module_cache)
                 func = getattr(module, "_load_website_metadata")
-                return func(url, config)
+                return _call_metadata_loader(func, url, config, source=loader_path)
         else:
             return _load_website_metadata(url, config)
 

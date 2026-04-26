@@ -21,6 +21,12 @@ def _ensure_temp_preview_folder():
     _ensure_preview_folder()
     Path(settings.LD_PREVIEW_FOLDER).joinpath("tmp").mkdir(parents=True, exist_ok=True)
 
+
+def _cleanup_empty_temp_preview_folder():
+    temp_dir = Path(settings.LD_PREVIEW_FOLDER).joinpath("tmp")
+    if temp_dir.exists() and not any(temp_dir.iterdir()):
+        temp_dir.rmdir()
+
 def _get_permanent_image_path(file_name: str) -> Path:
     _ensure_preview_folder()
     return Path(settings.LD_PREVIEW_FOLDER) / file_name
@@ -74,6 +80,7 @@ def _download_and_save_image(image_url: str, referer_url: str = None) -> str | N
                 return None
 
             image_file_name = f"{_url_to_filename(image_url)}{file_extension}"
+            _ensure_temp_preview_folder()
             image_file_path = _get_temporary_image_path(image_file_name)
 
             logger.debug(f"Downloading image: {image_url}")
@@ -97,6 +104,7 @@ def _download_and_save_image(image_url: str, referer_url: str = None) -> str | N
                     if should_end_download:
                         file.close()
                         image_file_path.unlink()
+                        _cleanup_empty_temp_preview_folder()
                         return None
                     
                     file.write(chunk)
@@ -137,9 +145,8 @@ def load_temporary_preview_image(image_url: str) -> str | None:
     return None
 
 
-def load_preview_image(url: str, bookmark: Bookmark) -> str | None:
+def load_preview_image(url: str, bookmark: Bookmark | None = None) -> str | None:
     _ensure_preview_folder()
-    _ensure_temp_preview_folder()
 
     image_url = (
         bookmark.preview_image_remote_url
@@ -155,7 +162,7 @@ def load_preview_image(url: str, bookmark: Bookmark) -> str | None:
         except website_loader.RetryableMetadataError as exc:
             logger.warning(f"Retryable metadata failure while loading preview image. url={url}", exc_info=exc)
             return None
-        if not metadata.preview_image:
+        if not metadata or not metadata.preview_image:
             logger.debug(f"Could not find preview image in metadata: {url}")
             return None
         image_url = metadata.preview_image
@@ -164,11 +171,13 @@ def load_preview_image(url: str, bookmark: Bookmark) -> str | None:
     image_file_name_without_ext = _url_to_filename(image_url)
 
     temporary_file_path = None
-    for ext in settings.LD_PREVIEW_ALLOWED_EXTENSIONS:
-        potential_path = _get_temporary_image_path(image_file_name_without_ext + ext)
-        if potential_path.exists():
-            temporary_file_path = potential_path # 优先使用缓存
-            break
+    temp_dir = Path(settings.LD_PREVIEW_FOLDER).joinpath("tmp")
+    if temp_dir.exists():
+        for ext in settings.LD_PREVIEW_ALLOWED_EXTENSIONS:
+            potential_path = _get_temporary_image_path(image_file_name_without_ext + ext)
+            if potential_path.exists():
+                temporary_file_path = potential_path # 优先使用缓存
+                break
     if not temporary_file_path:
         temporary_file_name = _download_and_save_image(image_url, referer_url=url) # 没有缓存再下载
         if temporary_file_name: 

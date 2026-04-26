@@ -217,6 +217,26 @@ class WebsiteLoaderTestCase(TestCase):
             self.assertEqual("test title", metadata.title)
             self.assertEqual("test description", metadata.description)
 
+    def test_load_website_metadata_returns_empty_metadata_when_custom_loader_returns_none(
+        self,
+    ):
+        custom_loader_module = mock.Mock()
+        custom_loader_module._load_website_metadata.return_value = None
+
+        with mock.patch(
+            "bookmarks.services.website_loader.search_config_for_domain",
+            return_value={"loader": "custom.py"},
+        ), mock.patch("os.path.exists", return_value=True), mock.patch(
+            "bookmarks.services.website_loader.load_module",
+            return_value=custom_loader_module,
+        ):
+            metadata = website_loader.load_website_metadata("https://x.com/example")
+
+        self.assertEqual("https://x.com/example", metadata.url)
+        self.assertIsNone(metadata.title)
+        self.assertIsNone(metadata.description)
+        self.assertIsNone(metadata.preview_image)
+
     def test_website_metadata_ignore_cache(self):
         expected_html = '<html><head><title>Test Title</title><meta name="description" content="Test Description"><meta property="og:image" content="/images/test.jpg"></head></html>'
 
