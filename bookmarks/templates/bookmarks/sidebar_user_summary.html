@@ -1,0 +1,419 @@
+{% load i18n %}
+
+<section class="sidebar-user-summary"
+         aria-labelledby="sidebar-user-summary-heading"
+         ld-sidebar-user-summary
+         ld-collapse-button
+         data-toggle-storage-key="userSummarySectionState"
+         data-toggle-target-selector=".section-content"
+         data-summary-mode="{{ sidebar_summary.mode }}"
+         data-summary-month="{{ sidebar_summary.visible_month_key }}"
+         data-summary-week="{{ sidebar_summary.visible_week_key }}"
+         data-summary-show-weekdays="{{ sidebar_summary.show_weekdays|yesno:'1,0' }}"
+         data-summary-show-details="{{ sidebar_summary.show_details|yesno:'1,0' }}"
+         data-summary-range-url="{{ sidebar_summary.absolute_range_url }}"
+         data-summary-selected-start="{{ sidebar_summary.selected_start_iso }}"
+         data-summary-selected-end="{{ sidebar_summary.selected_end_iso }}">
+  <div class="section-header no-wrap">
+    <div class="section-title">
+      <h2 id="sidebar-user-summary-heading">{{ sidebar_summary.username }}</h2>
+      {% include "bookmarks/collapsed_button.html" with toggle_class="section-toggle" %}
+      <div ld-dropdown class="dropdown dropdown-right ml-auto">
+        <button class="btn btn-noborder dropdown-toggle"
+                aria-label="{% translate 'User summary menu' %}">
+          <svg xmlns="http://www.w3.org/2000/svg"
+               width="20"
+               height="20"
+               viewBox="0 0 24 24"
+               fill="none"
+               stroke="currentColor"
+               stroke-width="2"
+               stroke-linecap="round"
+               stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <path d="M4 6l16 0"/>
+            <path d="M4 12l16 0"/>
+            <path d="M4 18l16 0"/>
+          </svg>
+        </button>
+        <ul class="menu" role="list" tabindex="-1">
+          {% for option in sidebar_summary.settings_options %}
+            <li class="menu-item">
+              <a href="{{ option.url }}"
+                 class="menu-link"
+                 data-summary-setting="{{ option.key }}"
+                 {% if option.target_show_weekdays %}data-summary-target-show-weekdays="{{ option.target_show_weekdays }}"{% endif %}
+                 {% if option.target_show_details %}data-summary-target-show-details="{{ option.target_show_details }}"{% endif %}>{{ option.label }}</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-content">
+    <div class="summary-primary-stats-block">
+      <div class="summary-collection-start-summary"
+           data-summary-collection-start-summary
+           hidden>
+        <span class="summary-collection-start-prefix">{{ sidebar_summary.collection_start_prefix }}</span>
+        <span class="summary-collection-start-value">{{ sidebar_summary.collection_start_label }}</span>
+      </div>
+
+      <div class="summary-primary-stats">
+        {% for stat in sidebar_summary.primary_stats %}
+          {% if stat.key == 'collection-days' %}
+            <details class="summary-metric summary-metric-toggle"
+                     data-summary-stat="{{ stat.key }}"
+                     data-summary-collection-toggle
+                     data-summary-collection-start="{{ sidebar_summary.collection_start_label }}"
+                     data-summary-collection-prefix="{{ sidebar_summary.collection_start_prefix }}">
+              <summary class="summary-metric-toggle-trigger">
+                <span class="summary-metric-face">
+                  <span class="summary-metric-value">{{ stat.value }}</span>
+                  <span class="summary-metric-label">{{ stat.label }}</span>
+                </span>
+              </summary>
+            </details>
+          {% elif stat.url %}
+            <a class="summary-metric"
+               data-summary-stat="{{ stat.key }}"
+               href="{{ stat.url }}">
+              <span class="summary-metric-value">{{ stat.value }}</span>
+              <span class="summary-metric-label">{{ stat.label }}</span>
+            </a>
+          {% else %}
+            <div class="summary-metric"
+                 data-summary-stat="{{ stat.key }}">
+              <span class="summary-metric-value">{{ stat.value }}</span>
+              <span class="summary-metric-label">{{ stat.label }}</span>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="summary-activity-disclosure"
+         ld-collapse-button
+         data-summary-activity-disclosure
+         data-toggle-storage-key="userSummaryActivityState"
+         data-toggle-target-selector=".summary-activity-body">
+      <button class="summary-panel-separator"
+              type="button"
+              aria-expanded="true"
+              data-summary-activity-toggle
+              title="{% translate 'Expand or collapse activity panel' %}">
+        <span class="summary-panel-separator-line"></span>
+        <span class="summary-panel-separator-mark">
+          <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+            <path d="M4.5 6.25 8 9.75l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </span>
+        <span class="summary-panel-separator-line"></span>
+      </button>
+
+      <div class="summary-activity-body">
+        <div class="summary-activity-panel"
+             data-summary-range-url="{{ sidebar_summary.absolute_range_url }}"
+             data-summary-selected-start="{{ sidebar_summary.selected_start_iso }}"
+             data-summary-selected-end="{{ sidebar_summary.selected_end_iso }}">
+      <div class="summary-activity-toolbar">
+        {% if sidebar_summary.toolbar_action %}
+          <a class="summary-toolbar-action"
+             data-summary-toolbar-action="{{ sidebar_summary.toolbar_action.key }}"
+             href="{{ sidebar_summary.toolbar_action.url }}"
+             {% if sidebar_summary.toolbar_action.target_mode %}data-summary-target-mode="{{ sidebar_summary.toolbar_action.target_mode }}"{% endif %}
+             {% if sidebar_summary.toolbar_action.target_month %}data-summary-target-month="{{ sidebar_summary.toolbar_action.target_month }}"{% endif %}
+             {% if sidebar_summary.toolbar_action.target_week %}data-summary-target-week="{{ sidebar_summary.toolbar_action.target_week }}"{% endif %}
+             aria-label="{{ sidebar_summary.toolbar_action.title }}"
+             title="{{ sidebar_summary.toolbar_action.title }}">
+            {% if sidebar_summary.toolbar_action.icon == "reset" %}
+              <svg viewBox="0 0 1024 1024"
+                   class="summary-toolbar-icon-reset"
+                   aria-hidden="true"
+                   focusable="false">
+                <path d="M808 602.9c-23.6 164.2-181.8 285.5-358.7 248.3C336.9 827.6 245.6 736.8 222 624.4c-40.3-192 92-361.8 290.4-361.8v99.2l248-148.8-248-148.8v99.2c-248 0-438 222.4-388.6 476.5 30.1 154.7 155 279.4 309.7 309.5C668 995 875.6 833.9 906.2 616.1c4.2-29.6-19.7-55.8-49.5-55.8h0.1c-24.7 0-45.3 18.2-48.8 42.6z"></path>
+              </svg>
+            {% else %}
+              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <circle cx="8" cy="8" r="4.4" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
+                <path d="M8 1.8v2.1M8 12.1v2.1M1.8 8h2.1M12.1 8h2.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+              </svg>
+            {% endif %}
+          </a>
+        {% else %}
+          <div class="summary-activity-toolbar-spacer" aria-hidden="true"></div>
+        {% endif %}
+
+        {% if sidebar_summary.mode == 'calendar' %}
+          <div class="summary-month-controls">
+            {% if sidebar_summary.previous_month_url %}
+              <a class="summary-month-nav-link"
+                 data-summary-month-nav="previous"
+                 href="{{ sidebar_summary.previous_month_url }}"
+                 data-summary-target-mode="calendar"
+                 data-summary-target-month="{{ sidebar_summary.previous_month_key }}"
+                 aria-label="{% translate 'Previous month' %}">&lt;</a>
+            {% else %}
+              <span class="summary-month-nav-link is-disabled" aria-hidden="true">&lt;</span>
+            {% endif %}
+
+            <div class="summary-week-pickers summary-month-pickers">
+              <div ld-dropdown class="summary-week-picker summary-month-year-picker dropdown">
+                <button type="button"
+                        class="summary-month-picker-trigger summary-week-picker-trigger dropdown-toggle"
+                        data-summary-month-year-picker-trigger>
+                  {{ sidebar_summary.visible_year }}
+                </button>
+                <ul class="menu summary-week-picker-menu" role="list" tabindex="-1">
+                  {% for option in sidebar_summary.calendar_year_options %}
+                    <li class="menu-item">
+                      <a class="menu-link{% if option.is_selected %} is-selected{% endif %}"
+                         data-summary-month-year-option="{{ option.value }}"
+                         href="{{ option.url }}"
+                         data-summary-target-mode="calendar"
+                         data-summary-target-month="{{ option.target_month }}"{% if option.is_selected %} aria-current="true"{% endif %}>
+                        {{ option.label }}
+                      </a>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+
+              <span class="summary-week-separator" aria-hidden="true">/</span>
+
+              <div ld-dropdown class="summary-week-picker summary-month-number-picker dropdown dropdown-right">
+                <button type="button"
+                        class="summary-month-picker-trigger summary-week-picker-trigger dropdown-toggle"
+                        data-summary-month-number-picker-trigger>
+                  {{ sidebar_summary.visible_month_number|stringformat:"02d" }}
+                </button>
+                <ul class="menu summary-week-picker-menu" role="list" tabindex="-1">
+                  {% for option in sidebar_summary.calendar_month_options %}
+                    <li class="menu-item">
+                      <a class="menu-link{% if option.is_selected %} is-selected{% endif %}"
+                         data-summary-month-option="{{ option.value }}"
+                         href="{{ option.url }}"
+                         data-summary-target-mode="calendar"
+                         data-summary-target-month="{{ option.target_month }}"{% if option.is_selected %} aria-current="true"{% endif %}>
+                        {{ option.label }}
+                      </a>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+
+            {% if sidebar_summary.next_month_url %}
+              <a class="summary-month-nav-link"
+                 data-summary-month-nav="next"
+                 href="{{ sidebar_summary.next_month_url }}"
+                 data-summary-target-mode="calendar"
+                 data-summary-target-month="{{ sidebar_summary.next_month_key }}"
+                 aria-label="{% translate 'Next month' %}">&gt;</a>
+            {% else %}
+              <span class="summary-month-nav-link is-disabled" aria-hidden="true">&gt;</span>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="summary-month-controls summary-week-controls">
+            {% if sidebar_summary.previous_week_url %}
+              <a class="summary-month-nav-link"
+                 data-summary-week-nav="previous"
+                 href="{{ sidebar_summary.previous_week_url }}"
+                 data-summary-target-mode="heatmap"
+                 data-summary-target-week="{{ sidebar_summary.previous_week_key }}"
+                 aria-label="{% translate 'Previous week' %}">&lt;</a>
+            {% else %}
+              <span class="summary-month-nav-link is-disabled" aria-hidden="true">&lt;</span>
+            {% endif %}
+
+            <div class="summary-week-pickers">
+              <div ld-dropdown class="summary-week-picker summary-week-year-picker dropdown">
+                <button type="button"
+                        class="summary-month-picker-trigger summary-week-picker-trigger dropdown-toggle"
+                        data-summary-week-year-picker-trigger>
+                  {{ sidebar_summary.visible_week_year }}
+                </button>
+                <ul class="menu summary-week-picker-menu" role="list" tabindex="-1">
+                  {% for option in sidebar_summary.heatmap_year_options %}
+                    <li class="menu-item">
+                      <a class="menu-link{% if option.is_selected %} is-selected{% endif %}"
+                         data-summary-week-year-option="{{ option.value }}"
+                         href="{{ option.url }}"
+                         data-summary-target-mode="heatmap"
+                         data-summary-target-week="{{ option.target_week }}"{% if option.is_selected %} aria-current="true"{% endif %}>
+                        {{ option.label }}
+                      </a>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+
+              <span class="summary-week-separator" aria-hidden="true">/</span>
+
+              <div ld-dropdown class="summary-week-picker summary-week-number-picker dropdown dropdown-right">
+                <button type="button"
+                        class="summary-month-picker-trigger summary-week-picker-trigger dropdown-toggle"
+                        data-summary-week-number-picker-trigger>
+                  W{{ sidebar_summary.visible_week_number|stringformat:"02d" }}
+                </button>
+                <ul class="menu summary-week-picker-menu" role="list" tabindex="-1">
+                  {% for option in sidebar_summary.heatmap_week_options %}
+                    <li class="menu-item">
+                      <a class="menu-link{% if option.is_selected %} is-selected{% endif %}"
+                         data-summary-week-option="{{ option.value }}"
+                         href="{{ option.url }}"
+                         data-summary-target-mode="heatmap"
+                         data-summary-target-week="{{ option.target_week }}"{% if option.is_selected %} aria-current="true"{% endif %}>
+                        {{ option.label }}
+                      </a>
+                    </li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
+
+            {% if sidebar_summary.next_week_url %}
+              <a class="summary-month-nav-link"
+                 data-summary-week-nav="next"
+                 href="{{ sidebar_summary.next_week_url }}"
+                 data-summary-target-mode="heatmap"
+                 data-summary-target-week="{{ sidebar_summary.next_week_key }}"
+                 aria-label="{% translate 'Next week' %}">&gt;</a>
+            {% else %}
+              <span class="summary-month-nav-link is-disabled" aria-hidden="true">&gt;</span>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        <a class="summary-mode-switch"
+           data-summary-mode-toggle="{{ sidebar_summary.mode_switch.key }}"
+           href="{{ sidebar_summary.mode_switch.url }}"
+           data-summary-target-mode="{{ sidebar_summary.mode_switch.target_mode }}"
+           {% if sidebar_summary.mode_switch.target_month %}data-summary-target-month="{{ sidebar_summary.mode_switch.target_month }}"{% endif %}
+           {% if sidebar_summary.mode_switch.target_week %}data-summary-target-week="{{ sidebar_summary.mode_switch.target_week }}"{% endif %}
+           aria-label="{{ sidebar_summary.mode_switch.title }}"
+           title="{{ sidebar_summary.mode_switch.title }}">
+          {% if sidebar_summary.mode == 'calendar' %}
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <rect x="2" y="2" width="4" height="4" rx="1" fill="currentColor" stroke="none"></rect>
+              <rect x="10" y="2" width="4" height="4" rx="1" fill="currentColor" stroke="none"></rect>
+              <rect x="2" y="10" width="4" height="4" rx="1" fill="currentColor" stroke="none"></rect>
+              <rect x="10" y="10" width="4" height="4" rx="1" fill="currentColor" stroke="none"></rect>
+            </svg>
+          {% else %}
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <rect x="2" y="3" width="12" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+              <path d="M2 6.5h12" stroke="currentColor" stroke-width="1.5"></path>
+              <path d="M5 1.75v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+              <path d="M11 1.75v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+            </svg>
+          {% endif %}
+        </a>
+      </div>
+
+      {% if sidebar_summary.mode == 'calendar' %}
+        <div class="summary-calendar{% if sidebar_summary.show_weekdays %} has-weekdays{% else %} is-weekdays-hidden{% endif %}"
+             data-summary-calendar>
+          <div class="summary-calendar-grid">
+            {% for week in sidebar_summary.calendar_weeks %}
+              {% for day in week %}
+                {% if day.url %}
+                    <a class="summary-day{% if not day.is_current_month %} is-outside-month{% endif %}{% if day.is_today %} is-today{% endif %}{% if day.is_selected %} is-selected{% endif %}{% if day.is_in_range %} is-in-range{% endif %}{% if day.is_range_start %} is-range-start{% endif %}{% if day.is_range_end %} is-range-end{% endif %}{% if day.is_current_month and not day.has_bookmarks %} is-empty-day{% endif %}"
+                       href="{{ day.url }}"
+                       data-summary-target-mode="calendar"
+                       data-summary-target-month="{{ sidebar_summary.visible_month_key }}"
+                     data-summary-day="{{ day.iso_value }}"
+                     data-summary-calendar-day="{{ day.iso_value }}"
+                     data-summary-activity-level="{{ day.level }}"
+                     title="{{ day.title }}">
+                    <span class="summary-day-number">{{ day.day_number }}</span>
+                    <span class="summary-day-dot{% if not day.has_bookmarks %} is-empty{% endif %}"
+                          data-summary-day-dot></span>
+                  </a>
+                {% else %}
+                  <span class="summary-day is-disabled{% if not day.is_current_month %} is-outside-month{% endif %}{% if day.is_today %} is-today{% endif %}{% if day.is_selected %} is-selected{% endif %}{% if day.is_in_range %} is-in-range{% endif %}{% if day.is_range_start %} is-range-start{% endif %}{% if day.is_range_end %} is-range-end{% endif %}{% if day.is_current_month and not day.has_bookmarks %} is-empty-day{% endif %}"
+                        data-summary-day="{{ day.iso_value }}"
+                        data-summary-calendar-day="{{ day.iso_value }}"
+                        data-summary-activity-level="{{ day.level }}"
+                        title="{{ day.title }}"
+                        aria-disabled="true">
+                    <span class="summary-day-number">{{ day.day_number }}</span>
+                    <span class="summary-day-dot{% if not day.has_bookmarks %} is-empty{% endif %}"
+                          data-summary-day-dot></span>
+                  </span>
+                {% endif %}
+              {% endfor %}
+            {% endfor %}
+          </div>
+
+          {% if sidebar_summary.show_weekdays %}
+            <div class="summary-weekdays" aria-hidden="true">
+              {% for label in sidebar_summary.weekday_labels %}
+                <span class="summary-weekday">{{ label }}</span>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="summary-heatmap{% if sidebar_summary.show_weekdays %} has-weekdays{% else %} is-weekdays-hidden{% endif %}"
+             data-summary-heatmap
+             data-summary-heatmap-total-columns="{{ sidebar_summary.heatmap_weeks|length }}">
+          <div class="summary-heatmap-weeks" data-summary-heatmap-weeks>
+            {% for week in sidebar_summary.heatmap_weeks %}
+              <div class="summary-heatmap-week">
+                {% for day in week %}
+                  {% if day.url %}
+                    <a class="summary-heatmap-cell level-{{ day.level }}{% if not day.is_current_month %} is-outside-month{% endif %}{% if day.is_selected %} is-selected{% endif %}{% if day.is_in_range %} is-in-range{% endif %}{% if day.is_range_start %} is-range-start{% endif %}{% if day.is_range_end %} is-range-end{% endif %}{% if day.is_today %} is-today{% endif %}"
+                       href="{{ day.url }}"
+                       data-summary-target-mode="heatmap"
+                       data-summary-target-week="{{ day.target_week }}"
+                       data-summary-heatmap-day="{{ day.iso_value }}"
+                       data-summary-activity-level="{{ day.level }}"
+                       title="{{ day.title }}"></a>
+                  {% else %}
+                    <span class="summary-heatmap-cell level-{{ day.level }} is-disabled{% if not day.is_current_month %} is-outside-month{% endif %}{% if day.is_selected %} is-selected{% endif %}{% if day.is_in_range %} is-in-range{% endif %}{% if day.is_range_start %} is-range-start{% endif %}{% if day.is_range_end %} is-range-end{% endif %}{% if day.is_today %} is-today{% endif %}"
+                          data-summary-heatmap-day="{{ day.iso_value }}"
+                          data-summary-activity-level="{{ day.level }}"
+                          title="{{ day.title }}"
+                          aria-disabled="true"></span>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endfor %}
+          </div>
+          {% if sidebar_summary.show_weekdays %}
+            <div class="summary-heatmap-weekday-labels" aria-hidden="true">
+              {% for label in sidebar_summary.heatmap_weekday_labels %}
+                <span class="summary-heatmap-weekday">{{ label }}</span>
+              {% endfor %}
+            </div>
+          {% endif %}
+          <div class="summary-heatmap-week-headers"
+               data-summary-heatmap-week-headers
+               aria-hidden="true">
+            {% for header in sidebar_summary.heatmap_week_headers %}
+              <span class="summary-heatmap-week-number{% if header.is_anchor %} is-anchor{% endif %}"
+                    title="{{ header.full_label }}">{{ header.label }}</span>
+            {% endfor %}
+          </div>
+          <div class="summary-heatmap-corner" aria-hidden="true"></div>
+        </div>
+      {% endif %}
+
+        {% if sidebar_summary.show_details %}
+          <p class="summary-activity-summary"
+             data-summary-activity-summary
+             aria-label="{{ sidebar_summary.activity_summary.text }}">
+            <span class="summary-activity-summary-inner">
+              <span class="summary-activity-summary-lead">{{ sidebar_summary.activity_summary.lead }}</span>
+              <span class="summary-activity-summary-copy">{{ sidebar_summary.activity_summary.copy_html }}</span>
+            </span>
+          </p>
+        {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

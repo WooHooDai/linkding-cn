@@ -57,6 +57,7 @@ def index(request: HttpRequest):
     )
     create_bundle_query_string = _get_create_bundle_query_string(search)
     bookmark_list = contexts.ActiveBookmarkListContext(request, search)
+    sidebar_summary = contexts.SidebarUserSummaryContext(request, search)
     bundles = contexts.BundlesContext(request)
     domains = contexts.ActiveDomainsContext(request, search)
     tag_cloud = contexts.ActiveTagCloudContext(request, search)
@@ -70,6 +71,7 @@ def index(request: HttpRequest):
         {
             "page_title": _("Bookmarks - Linkding"),
             "bookmark_list": bookmark_list,
+            "sidebar_summary": sidebar_summary,
             "bundles": bundles,
             "domains": domains,
             "tag_cloud": tag_cloud,
@@ -190,6 +192,17 @@ def render_bookmarks_view(request: HttpRequest, template_name, context):
             request,
             "bookmarks/updates/details-modal-frame.html",
             context,
+        )
+
+    if turbo.accept(request) and template_name == "bookmarks/index.html":
+        return partials.render_bookmark_update(
+            request,
+            context["bookmark_list"],
+            context["tag_cloud"],
+            context["details"],
+            context["bundles"],
+            context["domains"],
+            context.get("sidebar_summary"),
         )
 
     return render(

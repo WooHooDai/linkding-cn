@@ -1,8 +1,10 @@
+import calendar
 import urllib.parse
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone, translation
 
 from bookmarks.models import BookmarkSearch, UserProfile
 from bookmarks.tests.helpers import (
@@ -53,6 +55,39 @@ class BookmarkIndexViewTestCase(
 
             self.assertEqual(bundle.name, list_item.text.strip())
             self.assertEqual(f"?bundle={bundle.id}", href)
+
+    def get_summary_headers(
+        self,
+        *,
+        mode=None,
+        month=None,
+        week=None,
+        show_weekdays=None,
+        show_details=None,
+    ):
+        headers = {}
+        if mode is not None:
+            headers["HTTP_X_LINKDING_SUMMARY_MODE"] = mode
+        if month is not None:
+            headers["HTTP_X_LINKDING_SUMMARY_MONTH"] = month
+        if week is not None:
+            headers["HTTP_X_LINKDING_SUMMARY_WEEK"] = week
+        if show_weekdays is not None:
+            headers["HTTP_X_LINKDING_SUMMARY_SHOW_WEEKDAYS"] = (
+                "1" if show_weekdays else "0"
+            )
+        if show_details is not None:
+            headers["HTTP_X_LINKDING_SUMMARY_SHOW_DETAILS"] = (
+                "1" if show_details else "0"
+            )
+        return headers
+
+    def set_profile_language(self, language: str):
+        user = self.get_or_create_test_user()
+        user.profile.language = language
+        user.profile.save(update_fields=["language"])
+        self.client.cookies["django_language"] = language
+        return user
 
     def test_should_list_unarchived_and_user_owned_bookmarks(self):
         other_user = User.objects.create_user(
@@ -743,7 +778,9 @@ class BookmarkIndexViewTestCase(
         soup = self.make_soup(response.content.decode())
         root_link = soup.select_one('li[data-domain-host="feishu.cn"] a')
         self.assertIsNotNone(root_link)
-        self.assertEqual(root_link.attrs["href"], "?q=hello+domain%3A%28feishu.cn+%7C+.feishu.cn%29")
+        self.assertEqual(
+            root_link.attrs["href"], "?q=hello+domain%3A%28feishu.cn+%7C+.feishu.cn%29"
+        )
 
     def test_domain_groups_are_sorted_by_root_bookmark_count_desc(self):
         profile = self.get_or_create_test_user().profile
@@ -843,7 +880,9 @@ class BookmarkIndexViewTestCase(
         self.assertIsNotNone(root_item)
         self.assertEqual(root_item.attrs["data-domain-level"], "0")
 
-        toggle_button = root_item.select_one(":scope > .domain-row .domain-action .folder-toggle")
+        toggle_button = root_item.select_one(
+            ":scope > .domain-row .domain-action .folder-toggle"
+        )
         self.assertIsNotNone(toggle_button)
 
         nested_children = root_item.select_one(":scope > ul.domain-children")
@@ -888,7 +927,9 @@ class BookmarkIndexViewTestCase(
         menu = soup.select_one('[aria-label="Domains menu"]')
         self.assertIsNotNone(menu)
 
-        menu_links = soup.select("section[aria-labelledby='domains-heading'] .menu-link")
+        menu_links = soup.select(
+            "section[aria-labelledby='domains-heading'] .menu-link"
+        )
         menu_texts = [link.text.strip() for link in menu_links]
 
         self.assertEqual(menu_texts, ["Icon mode", "All domains"])
@@ -903,12 +944,16 @@ class BookmarkIndexViewTestCase(
         )
         soup = self.make_soup(response.content.decode())
 
-        menu_links = soup.select("section[aria-labelledby='domains-heading'] .menu-link")
+        menu_links = soup.select(
+            "section[aria-labelledby='domains-heading'] .menu-link"
+        )
         menu_texts = [link.text.strip() for link in menu_links]
 
         self.assertEqual(menu_texts, ["Full mode", "All domains"])
         self.assertEqual(menu_links[0].attrs["href"], "?")
-        self.assertEqual(menu_links[1].attrs["href"], "?domain_view=icon&domain_compact=0")
+        self.assertEqual(
+            menu_links[1].attrs["href"], "?domain_view=icon&domain_compact=0"
+        )
 
         domain_list = soup.select_one("ul.domain-menu")
         self.assertIsNotNone(domain_list)
@@ -1015,7 +1060,9 @@ class BookmarkIndexViewTestCase(
         ]
         self.assertEqual(root_hosts[-1], "__other__")
 
-        menu_links = soup.select("section[aria-labelledby='domains-heading'] .menu-link")
+        menu_links = soup.select(
+            "section[aria-labelledby='domains-heading'] .menu-link"
+        )
         menu_texts = [link.text.strip() for link in menu_links]
         self.assertEqual(menu_texts, ["Icon mode", "All domains"])
 
@@ -1035,10 +1082,1128 @@ class BookmarkIndexViewTestCase(
         other_item = soup.select_one('li[data-domain-host="__other__"]')
         self.assertIsNotNone(other_item)
 
-        other_children = other_item.select_one(":scope > ul.domain-children.domain-children-icon")
+        other_children = other_item.select_one(
+            ":scope > ul.domain-children.domain-children-icon"
+        )
         self.assertIsNotNone(other_children)
 
-        other_child = other_children.select_one('li[data-domain-host="domain-10.example.com"]')
+        other_child = other_children.select_one(
+            'li[data-domain-host="domain-10.example.com"]'
+        )
         self.assertIsNotNone(other_child)
-        self.assertIsNotNone(other_child.select_one(":scope > .domain-row.domain-row-icon"))
-        self.assertIsNotNone(other_child.select_one(":scope > .domain-row .domain-root-icon-summary"))
+        self.assertIsNotNone(
+            other_child.select_one(":scope > .domain-row.domain-row-icon")
+        )
+        self.assertIsNotNone(
+            other_child.select_one(":scope > .domain-row .domain-root-icon-summary")
+        )
+
+    def test_sidebar_summary_renders_compact_stats_and_calendar_shell(self):
+        with translation.override("zh-hans"):
+            self.set_profile_language("zh-hans")
+            today = timezone.localdate()
+            joined_at = timezone.make_aware(
+                timezone.datetime(today.year, today.month, max(today.day - 20, 1), 12, 0)
+            ) - timezone.timedelta(days=70)
+            self.user.date_joined = joined_at
+            self.user.save(update_fields=["date_joined"])
+
+            oldest_day = today - timezone.timedelta(days=30)
+            recent_day = today.replace(day=max(today.day - 4, 1))
+            oldest_added = timezone.make_aware(
+                timezone.datetime(oldest_day.year, oldest_day.month, oldest_day.day, 12, 0)
+            )
+            recent_added = timezone.make_aware(
+                timezone.datetime(recent_day.year, recent_day.month, recent_day.day, 12, 0)
+            )
+
+            alpha = self.setup_tag(name="alpha")
+            self.setup_tag(name="beta")
+            self.setup_bookmark(
+                title="Old bookmark",
+                tags=[alpha],
+                added=oldest_added,
+                modified=oldest_added,
+            )
+            self.setup_bookmark(
+                title="Unread bookmark",
+                unread=True,
+                added=recent_added,
+                modified=recent_added,
+            )
+
+            response = self.client.get(reverse("linkding:bookmarks.index"))
+            soup = self.make_soup(response.content.decode())
+
+            summary = soup.select_one("section[ld-sidebar-user-summary]")
+            self.assertIsNotNone(summary)
+            self.assertTrue(summary.has_attr("ld-collapse-button"))
+            self.assertEqual(summary.attrs["data-toggle-storage-key"], "userSummarySectionState")
+            self.assertEqual(summary.attrs["data-summary-mode"], "calendar")
+            self.assertEqual(summary.attrs["data-summary-month"], today.strftime("%Y-%m"))
+
+            heading = summary.select_one("#sidebar-user-summary-heading")
+            self.assertIsNotNone(heading)
+            self.assertEqual(heading.text.strip(), self.user.username)
+            self.assertIsNotNone(summary.select_one(".section-header .section-toggle"))
+            self.assertIsNotNone(summary.select_one(".section-header .dropdown"))
+            self.assertIsNone(summary.select_one(".summary-avatar"))
+            self.assertNotIn("Collection overview", summary.get_text(" ", strip=True))
+            menu_links = [
+                item.text.strip()
+                for item in summary.select(".section-header .dropdown .menu-link")
+            ]
+            self.assertIn("显示星期", menu_links)
+            self.assertIn("显示总结", menu_links)
+
+            expected_collection_days = max(
+                (today - timezone.localtime(self.user.date_joined).date()).days,
+                (today - oldest_day).days,
+            )
+            primary_stats = summary.select(".summary-primary-stats [data-summary-stat]")
+            self.assertEqual(
+                [item.attrs["data-summary-stat"] for item in primary_stats],
+                ["bookmarks", "tags", "collection-days"],
+            )
+            self.assertEqual(len(primary_stats), 3)
+            self.assertEqual(
+                summary.select_one("[data-summary-stat='bookmarks']")
+                .select_one(".summary-metric-value")
+                .text.strip(),
+                "2",
+            )
+            self.assertEqual(
+                summary.select_one("[data-summary-stat='tags']")
+                .select_one(".summary-metric-value")
+                .text.strip(),
+                "2",
+            )
+            self.assertEqual(
+                summary.select_one("[data-summary-stat='collection-days']")
+                .select_one(".summary-metric-value")
+                .text.strip(),
+                str(expected_collection_days),
+            )
+            self.assertEqual(
+                summary.select_one("[data-summary-stat='collection-days']")
+                .select_one(".summary-metric-label")
+                .text.strip(),
+                "天",
+            )
+            collection_days_toggle = summary.select_one("[data-summary-collection-toggle]")
+            self.assertIsNotNone(collection_days_toggle)
+            self.assertEqual(
+                collection_days_toggle.attrs["data-summary-collection-start"],
+                timezone.localtime(self.user.date_joined).date().strftime("%Y/%m/%d"),
+            )
+            self.assertEqual(
+                collection_days_toggle.attrs["data-summary-collection-prefix"],
+                "自",
+            )
+            collection_start_summary = summary.select_one(
+                "[data-summary-collection-start-summary]"
+            )
+            self.assertIsNotNone(collection_start_summary)
+            self.assertEqual(
+                collection_start_summary.get_text("", strip=True),
+                f"自{timezone.localtime(self.user.date_joined).date().strftime('%Y/%m/%d')}",
+            )
+            self.assertIsNone(
+                collection_days_toggle.select_one(".summary-metric-face-alternate")
+            )
+            self.assertIsNone(collection_days_toggle.select_one(".summary-info-popover"))
+            self.assertIsNone(summary.select_one("[data-summary-stat='unread']"))
+            self.assertIsNone(summary.select_one("[data-summary-stat='untagged']"))
+
+            self.assertIsNone(summary.select_one("[data-summary-mode-toggle='calendar']"))
+            self.assertIsNotNone(summary.select_one("[data-summary-mode-toggle='heatmap']"))
+            self.assertIsNone(summary.select_one("[data-summary-month-picker-trigger]"))
+            year_picker_trigger = summary.select_one(
+                "[data-summary-month-year-picker-trigger]"
+            )
+            month_picker_trigger = summary.select_one(
+                "[data-summary-month-number-picker-trigger]"
+            )
+            self.assertIsNotNone(year_picker_trigger)
+            self.assertIsNotNone(month_picker_trigger)
+            self.assertEqual(year_picker_trigger.text.strip(), str(today.year))
+            self.assertEqual(month_picker_trigger.text.strip(), f"{today.month:02d}")
+            self.assertIsNone(
+                summary.select_one("form[data-summary-month-picker] select[name='summary_month']")
+            )
+            self.assertIsNone(summary.select_one("form[data-summary-month-picker]"))
+            year_picker_options = summary.select("[data-summary-month-year-option]")
+            month_picker_options = summary.select("[data-summary-month-option]")
+            self.assertTrue(
+                any(option.text.strip() == str(today.year) for option in year_picker_options)
+            )
+            self.assertTrue(
+                any(option.text.strip() == f"{today.month:02d}" for option in month_picker_options)
+            )
+            self.assertIsNotNone(summary.select_one("[data-summary-range-url]"))
+            self.assertIsNone(summary.select_one("[data-summary-range-hint]"))
+            activity_disclosure = summary.select_one("[data-summary-activity-disclosure]")
+            self.assertIsNotNone(activity_disclosure)
+            self.assertTrue(activity_disclosure.has_attr("ld-collapse-button"))
+            self.assertEqual(
+                activity_disclosure.attrs["data-toggle-storage-key"],
+                "userSummaryActivityState",
+            )
+            self.assertIsNotNone(summary.select_one("[data-summary-activity-toggle]"))
+            self.assertIsNotNone(summary.select_one("[data-summary-calendar]"))
+            self.assertIsNone(summary.select_one("[data-summary-heatmap]"))
+            self.assertIsNone(summary.select_one("[data-summary-activity-summary]"))
+            self.assertIsNone(summary.select_one("[data-summary-toolbar-action]"))
+            self.assertEqual(summary.select(".summary-weekday"), [])
+
+            recent_day_iso = recent_day.isoformat()
+            bookmarked_day = summary.select_one(
+                f"[data-summary-calendar-day='{recent_day_iso}']"
+            )
+            self.assertIsNotNone(bookmarked_day)
+            self.assertIsNotNone(bookmarked_day.select_one(".summary-day-number"))
+            self.assertIsNotNone(bookmarked_day.select_one("[data-summary-day-dot]"))
+            self.assertEqual(
+                bookmarked_day["title"],
+                f"1 个书签 - {recent_day.strftime('%Y/%m/%d')}",
+            )
+
+            empty_day = next(
+                (
+                    day
+                    for day in summary.select("[data-summary-calendar-day][title]")
+                    if day["title"].startswith("0 个书签 - ")
+                    and "is-outside-month" not in day.get("class", [])
+                ),
+                None,
+            )
+            self.assertIsNotNone(empty_day)
+            self.assertIn("is-empty-day", empty_day.get("class", []))
+            empty_day_dot = empty_day.select_one("[data-summary-day-dot]")
+            self.assertIsNotNone(empty_day_dot)
+            self.assertIn("is-empty", empty_day_dot.get("class", []))
+
+    def test_sidebar_summary_builds_shortcut_and_calendar_urls(self):
+        today = timezone.localdate()
+        current_day = today.replace(day=max(today.day - 2, 1))
+        current_added = timezone.make_aware(
+            timezone.datetime(
+                current_day.year,
+                current_day.month,
+                current_day.day,
+                12,
+                0,
+            )
+        )
+        self.setup_bookmark(
+            title="Sidebar bookmark",
+            unread=True,
+            added=current_added,
+            modified=current_added,
+        )
+
+        response = self.client.get(
+            reverse("linkding:bookmarks.index") + "?domain_view=icon",
+            HTTP_X_LINKDING_SUMMARY_SHOW_WEEKDAYS="1",
+            HTTP_X_LINKDING_SUMMARY_SHOW_DETAILS="1",
+        )
+        soup = self.make_soup(response.content.decode())
+        summary = soup.select_one("section[ld-sidebar-user-summary]")
+        self.assertIsNotNone(summary)
+
+        bookmarks_link = summary.select_one("[data-summary-stat='bookmarks'][href]")
+        self.assertIsNotNone(bookmarks_link)
+        bookmarks_query = urllib.parse.parse_qs(
+            urllib.parse.urlsplit(bookmarks_link["href"]).query
+        )
+        self.assertEqual(bookmarks_query["domain_view"], ["icon"])
+        self.assertNotIn("unread", bookmarks_query)
+        self.assertNotIn("tagged", bookmarks_query)
+        self.assertNotIn("summary_mode", bookmarks_query)
+        self.assertNotIn("summary_month", bookmarks_query)
+        self.assertNotIn("summary_week", bookmarks_query)
+        self.assertNotIn("summary_show_weekdays", bookmarks_query)
+        self.assertNotIn("summary_show_details", bookmarks_query)
+
+        day_link = summary.select_one(
+            f"[data-summary-calendar-day='{current_day.isoformat()}'][href]"
+        )
+        self.assertIsNotNone(day_link)
+        day_query = urllib.parse.parse_qs(urllib.parse.urlsplit(day_link["href"]).query)
+        self.assertEqual(
+            day_query["date_filter_by"], [BookmarkSearch.FILTER_DATE_BY_ADDED]
+        )
+        self.assertEqual(
+            day_query["date_filter_type"], [BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE]
+        )
+        self.assertEqual(day_query["date_filter_start"], [current_day.isoformat()])
+        self.assertEqual(day_query["date_filter_end"], [current_day.isoformat()])
+        self.assertNotIn("summary_mode", day_query)
+        self.assertNotIn("summary_month", day_query)
+        self.assertNotIn("summary_week", day_query)
+        self.assertNotIn("summary_show_weekdays", day_query)
+        self.assertNotIn("summary_show_details", day_query)
+        self.assertEqual(
+            day_link["data-summary-target-month"], current_day.strftime("%Y-%m")
+        )
+
+        range_url = summary.select_one("[data-summary-range-url]")["data-summary-range-url"]
+        range_query = urllib.parse.parse_qs(urllib.parse.urlsplit(range_url).query)
+        self.assertEqual(
+            range_query["date_filter_by"], [BookmarkSearch.FILTER_DATE_BY_ADDED]
+        )
+        self.assertEqual(
+            range_query["date_filter_type"], [BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE]
+        )
+        self.assertNotIn("summary_mode", range_query)
+        self.assertNotIn("summary_month", range_query)
+        self.assertNotIn("summary_week", range_query)
+        self.assertNotIn("summary_show_weekdays", range_query)
+        self.assertNotIn("summary_show_details", range_query)
+
+    def test_sidebar_summary_renders_month_heatmap_mode(self):
+        with translation.override("zh-hans"):
+            self.set_profile_language("zh-hans")
+            today = timezone.localdate()
+            earliest_day = today - timezone.timedelta(days=400)
+            oldest_visible_day = today - timezone.timedelta(days=40)
+            selected_day = today - timezone.timedelta(days=10)
+            earliest_added = timezone.make_aware(
+                timezone.datetime(
+                    earliest_day.year,
+                    earliest_day.month,
+                    earliest_day.day,
+                    12,
+                    0,
+                )
+            )
+            oldest_visible_added = timezone.make_aware(
+                timezone.datetime(
+                    oldest_visible_day.year,
+                    oldest_visible_day.month,
+                    oldest_visible_day.day,
+                    12,
+                    0,
+                )
+            )
+            self.setup_bookmark(
+                title="Earliest heatmap bookmark",
+                added=earliest_added,
+                modified=earliest_added,
+            )
+            self.setup_bookmark(
+                title="Older visible heatmap bookmark",
+                added=oldest_visible_added,
+                modified=oldest_visible_added,
+            )
+            activity_levels = [
+                (today - timezone.timedelta(days=5), 1, 1),
+                (today - timezone.timedelta(days=4), 4, 2),
+                (today - timezone.timedelta(days=3), 7, 3),
+                (today - timezone.timedelta(days=2), 10, 4),
+                (today - timezone.timedelta(days=1), 16, 5),
+                (today, 21, 6),
+            ]
+            for value, count, _expected_level in activity_levels:
+                added = timezone.make_aware(
+                    timezone.datetime(value.year, value.month, value.day, 12, 0)
+                )
+                for index in range(count):
+                    self.setup_bookmark(
+                        title=f"Heatmap bookmark {value.isoformat()} #{index}",
+                        added=added,
+                        modified=added,
+                    )
+
+            response = self.client.get(
+                reverse("linkding:bookmarks.index"),
+                **self.get_summary_headers(mode="heatmap"),
+            )
+            soup = self.make_soup(response.content.decode())
+            summary = soup.select_one("section[ld-sidebar-user-summary]")
+            self.assertIsNotNone(summary)
+            self.assertEqual(summary.attrs["data-summary-mode"], "heatmap")
+
+            self.assertIsNone(summary.select_one("[data-summary-mode-toggle='heatmap']"))
+            self.assertIsNotNone(summary.select_one("[data-summary-mode-toggle='calendar']"))
+            self.assertIsNone(summary.select_one("[data-summary-month-picker-trigger]"))
+            self.assertIsNone(summary.select_one(".summary-week-label"))
+            current_week_start = today - timezone.timedelta(
+                days=((today.weekday() + 1) % 7)
+            )
+            current_week_key_date = current_week_start + timezone.timedelta(days=1)
+            expected_year = str(current_week_key_date.isocalendar().year)
+            expected_week = f"W{current_week_key_date.isocalendar().week:02d}"
+            self.assertEqual(
+                summary.select_one("[data-summary-week-year-picker-trigger]").text.strip(),
+                expected_year,
+            )
+            self.assertEqual(
+                summary.select_one("[data-summary-week-number-picker-trigger]").text.strip(),
+                expected_week,
+            )
+
+            self.assertIsNotNone(summary.select_one("[data-summary-heatmap]"))
+            self.assertIsNone(summary.select_one("[data-summary-calendar]"))
+            self.assertIsNone(summary.select_one("[data-summary-toolbar-action]"))
+            self.assertEqual(
+                summary.select_one("[data-summary-heatmap]").attrs[
+                    "data-summary-heatmap-total-columns"
+                ],
+                "15",
+            )
+            self.assertIsNone(summary.select_one("[data-summary-activity-summary]"))
+            self.assertEqual(len(summary.select(".summary-heatmap-week")), 15)
+            self.assertEqual(len(summary.select(".summary-heatmap-week-number")), 15)
+            self.assertEqual(summary.select(".summary-heatmap-weekday"), [])
+            self.assertEqual(
+                summary.select(".summary-heatmap-week-number")[-1].text.strip(),
+                f"{current_week_key_date.isocalendar().week:02d}",
+            )
+
+            year_options = summary.select("[data-summary-week-year-option]")
+            year_option_values = [item.text.strip() for item in year_options]
+            self.assertIn(expected_year, year_option_values)
+            self.assertIn(str(earliest_day.isocalendar().year), year_option_values)
+
+            older_year_option = next(
+                item
+                for item in year_options
+                if item.text.strip() == str(earliest_day.isocalendar().year)
+            )
+            older_year_query = urllib.parse.parse_qs(
+                urllib.parse.urlsplit(older_year_option["href"]).query
+            )
+            self.assertNotIn("summary_mode", older_year_query)
+            self.assertNotIn("summary_week", older_year_query)
+            self.assertTrue(
+                older_year_option["data-summary-target-week"].startswith(
+                    f"{earliest_day.isocalendar().year}-W"
+                )
+            )
+
+            week_options = summary.select("[data-summary-week-option]")
+            self.assertTrue(any(item.text.strip() == expected_week for item in week_options))
+
+            oldest_visible_heatmap_day = summary.select_one(
+                f"[data-summary-heatmap-day='{oldest_visible_day.isoformat()}']"
+            )
+            self.assertIsNotNone(oldest_visible_heatmap_day)
+
+            for value, count, expected_level in activity_levels:
+                heatmap_day = summary.select_one(
+                    f"[data-summary-heatmap-day='{value.isoformat()}']"
+                )
+                self.assertIsNotNone(heatmap_day)
+                self.assertEqual(
+                    heatmap_day.attrs["data-summary-activity-level"],
+                    str(expected_level),
+                )
+                self.assertIsNone(heatmap_day.select_one(".summary-day-number"))
+                self.assertIsNone(heatmap_day.select_one("[data-summary-day-dot]"))
+                self.assertEqual(
+                    heatmap_day["title"],
+                    f"{count} 个书签 - {value.strftime('%Y/%m/%d')}",
+                )
+
+            heatmap_day = summary.select_one(
+                f"[data-summary-heatmap-day='{selected_day.isoformat()}']"
+            )
+
+            heatmap_query = urllib.parse.parse_qs(
+                urllib.parse.urlsplit(heatmap_day["href"]).query
+            )
+            selected_week_start = selected_day - timezone.timedelta(
+                days=((selected_day.weekday() + 1) % 7)
+            )
+            selected_week_year, selected_week_number, _ = (
+                selected_week_start + timezone.timedelta(days=1)
+            ).isocalendar()
+            self.assertNotIn("summary_mode", heatmap_query)
+            self.assertNotIn("summary_week", heatmap_query)
+            self.assertEqual(
+                heatmap_query["date_filter_start"],
+                [selected_week_start.isoformat()],
+            )
+            self.assertEqual(
+                heatmap_query["date_filter_end"],
+                [(selected_week_start + timezone.timedelta(days=6)).isoformat()],
+            )
+            self.assertEqual(
+                heatmap_day["data-summary-target-week"],
+                f"{selected_week_year}-W{selected_week_number:02d}",
+            )
+
+    def test_sidebar_summary_shows_calendar_and_heatmap_toolbar_actions(self):
+        today = timezone.localdate()
+        previous_month_day = today - timezone.timedelta(days=40)
+        previous_month_added = timezone.make_aware(
+            timezone.datetime(
+                previous_month_day.year,
+                previous_month_day.month,
+                previous_month_day.day,
+                12,
+                0,
+            )
+        )
+        current_day = today - timezone.timedelta(days=2)
+        current_added = timezone.make_aware(
+            timezone.datetime(
+                current_day.year,
+                current_day.month,
+                current_day.day,
+                12,
+                0,
+            )
+        )
+        self.setup_bookmark(
+            title="Previous month bookmark",
+            added=previous_month_added,
+            modified=previous_month_added,
+        )
+        self.setup_bookmark(
+            title="Current bookmark",
+            added=current_added,
+            modified=current_added,
+        )
+
+        calendar_response = self.client.get(
+            reverse("linkding:bookmarks.index"),
+            **self.get_summary_headers(month=previous_month_day.strftime("%Y-%m")),
+        )
+        calendar_summary = self.make_soup(calendar_response.content.decode()).select_one(
+            "section[ld-sidebar-user-summary]"
+        )
+        self.assertIsNotNone(calendar_summary)
+        current_month_action = calendar_summary.select_one(
+            "[data-summary-toolbar-action='current-month']"
+        )
+        self.assertIsNotNone(current_month_action)
+        current_month_query = urllib.parse.parse_qs(
+            urllib.parse.urlsplit(current_month_action["href"]).query
+        )
+        self.assertNotIn("summary_month", current_month_query)
+        self.assertNotIn("summary_mode", current_month_query)
+        self.assertEqual(
+            current_month_action["data-summary-target-month"], today.strftime("%Y-%m")
+        )
+        self.assertEqual(current_month_action["data-summary-target-mode"], "calendar")
+
+        previous_week = (
+            today
+            - timezone.timedelta(days=((today.weekday() + 1) % 7))
+            - timezone.timedelta(days=7)
+        )
+        previous_week_year, previous_week_number, _ = (
+            previous_week + timezone.timedelta(days=1)
+        ).isocalendar()
+        heatmap_response = self.client.get(
+            reverse("linkding:bookmarks.index"),
+            **self.get_summary_headers(
+                mode="heatmap",
+                week=f"{previous_week_year}-W{previous_week_number:02d}",
+            ),
+        )
+        heatmap_summary = self.make_soup(heatmap_response.content.decode()).select_one(
+            "section[ld-sidebar-user-summary]"
+        )
+        self.assertIsNotNone(heatmap_summary)
+        current_week_action = heatmap_summary.select_one(
+            "[data-summary-toolbar-action='current-week']"
+        )
+        self.assertIsNotNone(current_week_action)
+        current_week_query = urllib.parse.parse_qs(
+            urllib.parse.urlsplit(current_week_action["href"]).query
+        )
+        self.assertNotIn("summary_mode", current_week_query)
+        current_week_start = today - timezone.timedelta(
+            days=((today.weekday() + 1) % 7)
+        )
+        current_week_key_date = current_week_start + timezone.timedelta(days=1)
+        self.assertNotIn("summary_week", current_week_query)
+        self.assertEqual(current_week_action["data-summary-target-mode"], "heatmap")
+        self.assertEqual(
+            current_week_action["data-summary-target-week"],
+            (
+                f"{current_week_key_date.isocalendar().year}-W"
+                f"{current_week_key_date.isocalendar().week:02d}"
+            ),
+        )
+
+    def test_sidebar_summary_marks_selected_absolute_range(self):
+        today = timezone.localdate()
+        start_day = today.replace(day=max(today.day - 5, 1))
+        end_day = today.replace(day=max(today.day - 3, 1))
+
+        for offset in range(6, 1, -1):
+            bookmark_day = today - timezone.timedelta(days=offset)
+            bookmark_added = timezone.make_aware(
+                timezone.datetime(
+                    bookmark_day.year,
+                    bookmark_day.month,
+                    bookmark_day.day,
+                    12,
+                    0,
+                )
+            )
+            self.setup_bookmark(
+                title=f"Bookmark {offset}",
+                added=bookmark_added,
+                modified=bookmark_added,
+            )
+
+        response = self.client.get(
+            reverse("linkding:bookmarks.index")
+            + "?"
+            + urllib.parse.urlencode(
+                {
+                    "date_filter_by": BookmarkSearch.FILTER_DATE_BY_ADDED,
+                    "date_filter_type": BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE,
+                    "date_filter_start": start_day.isoformat(),
+                    "date_filter_end": end_day.isoformat(),
+                }
+            ),
+            **self.get_summary_headers(month=today.strftime("%Y-%m")),
+        )
+        soup = self.make_soup(response.content.decode())
+        summary = soup.select_one("section[ld-sidebar-user-summary]")
+        self.assertIsNotNone(summary)
+
+        start_cell = summary.select_one(
+            f"[data-summary-calendar-day='{start_day.isoformat()}']"
+        )
+        end_cell = summary.select_one(
+            f"[data-summary-calendar-day='{end_day.isoformat()}']"
+        )
+        middle_day = start_day + timezone.timedelta(days=1)
+        middle_cell = summary.select_one(
+            f"[data-summary-calendar-day='{middle_day.isoformat()}']"
+        )
+
+        self.assertIsNotNone(start_cell)
+        self.assertIsNotNone(end_cell)
+        self.assertIsNotNone(middle_cell)
+        self.assertIn("is-range-start", start_cell.attrs["class"])
+        self.assertIn("is-range-end", end_cell.attrs["class"])
+        self.assertIn("is-in-range", middle_cell.attrs["class"])
+
+        reset_action = summary.select_one("[data-summary-toolbar-action='reset-range']")
+        self.assertIsNotNone(reset_action)
+        reset_query = urllib.parse.parse_qs(
+            urllib.parse.urlsplit(reset_action["href"]).query
+        )
+        self.assertNotIn("summary_mode", reset_query)
+        self.assertNotIn("summary_month", reset_query)
+        self.assertNotIn("date_filter_by", reset_query)
+        self.assertNotIn("date_filter_type", reset_query)
+        self.assertNotIn("date_filter_start", reset_query)
+        self.assertNotIn("date_filter_end", reset_query)
+
+        heatmap_response = self.client.get(
+            reverse("linkding:bookmarks.index")
+            + "?"
+            + urllib.parse.urlencode(
+                {
+                    "date_filter_by": BookmarkSearch.FILTER_DATE_BY_ADDED,
+                    "date_filter_type": BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE,
+                    "date_filter_start": start_day.isoformat(),
+                    "date_filter_end": end_day.isoformat(),
+                }
+            ),
+            **self.get_summary_headers(mode="heatmap"),
+        )
+        heatmap_summary = self.make_soup(heatmap_response.content.decode()).select_one(
+            "section[ld-sidebar-user-summary]"
+        )
+        self.assertIsNotNone(heatmap_summary)
+        heatmap_reset_action = heatmap_summary.select_one(
+            "[data-summary-toolbar-action='reset-range']"
+        )
+        self.assertIsNotNone(heatmap_reset_action)
+        heatmap_reset_query = urllib.parse.parse_qs(
+            urllib.parse.urlsplit(heatmap_reset_action["href"]).query
+        )
+        self.assertNotIn("summary_mode", heatmap_reset_query)
+        self.assertNotIn("date_filter_by", heatmap_reset_query)
+        self.assertNotIn("date_filter_type", heatmap_reset_query)
+        self.assertNotIn("date_filter_start", heatmap_reset_query)
+        self.assertNotIn("date_filter_end", heatmap_reset_query)
+
+    def test_sidebar_summary_toggles_weekdays_and_monthly_summary(self):
+        with translation.override("zh-hans"):
+            self.set_profile_language("zh-hans")
+            today = timezone.localdate()
+            activity_days = [
+                today.replace(day=max(today.day - 5, 1)),
+                today.replace(day=max(today.day - 4, 1)),
+                today.replace(day=max(today.day - 2, 1)),
+            ]
+
+            for index, bookmark_day in enumerate(activity_days):
+                bookmark_added = timezone.make_aware(
+                    timezone.datetime(
+                        bookmark_day.year,
+                        bookmark_day.month,
+                        bookmark_day.day,
+                        12,
+                        0,
+                    )
+                )
+                self.setup_bookmark(
+                    title=f"Monthly summary bookmark {index}",
+                    added=bookmark_added,
+                    modified=bookmark_added,
+                )
+
+            response = self.client.get(
+                reverse("linkding:bookmarks.index"),
+                **self.get_summary_headers(
+                    month=today.strftime("%Y-%m"),
+                    show_weekdays=True,
+                    show_details=True,
+                ),
+            )
+            summary = self.make_soup(response.content.decode()).select_one(
+                "section[ld-sidebar-user-summary]"
+            )
+            self.assertIsNotNone(summary)
+            self.assertEqual(
+                [item.text.strip() for item in summary.select(".summary-weekday")],
+                ["日", "一", "二", "三", "四", "五", "六"],
+            )
+            activity_summary = summary.select_one("[data-summary-activity-summary]")
+            self.assertIsNotNone(activity_summary)
+            self.assertEqual(
+                activity_summary.select_one(".summary-activity-summary-lead").get_text(
+                    "", strip=True
+                ),
+                (
+                    f"本月（{today.replace(day=1).strftime('%Y/%m/%d')} - "
+                    f"{today.replace(day=calendar.monthrange(today.year, today.month)[1]).strftime('%Y/%m/%d')}）："
+                ),
+            )
+            self.assertEqual(
+                activity_summary.select_one(".summary-activity-summary-copy").get_text(
+                    "", strip=True
+                ),
+                "收藏书签3个，共活跃3天，最高连续活跃2天。",
+            )
+            self.assertEqual(
+                [item.text.strip() for item in activity_summary.select(".summary-activity-summary-value")],
+                ["3", "3", "2"],
+            )
+
+            menu_links = [
+                item.text.strip()
+                for item in summary.select(".section-header .dropdown .menu-link")
+            ]
+            self.assertIn("隐藏星期", menu_links)
+            self.assertIn("隐藏总结", menu_links)
+
+            week_start = today - timezone.timedelta(days=((today.weekday() + 1) % 7))
+            week_key_date = week_start + timezone.timedelta(days=1)
+
+            heatmap_response = self.client.get(
+                reverse("linkding:bookmarks.index"),
+                **self.get_summary_headers(
+                    mode="heatmap",
+                    week=(
+                        f"{week_key_date.isocalendar().year}-W"
+                        f"{week_key_date.isocalendar().week:02d}"
+                    ),
+                    show_weekdays=True,
+                    show_details=True,
+                ),
+            )
+            heatmap_summary = self.make_soup(heatmap_response.content.decode()).select_one(
+                "section[ld-sidebar-user-summary]"
+            )
+            self.assertIsNotNone(heatmap_summary)
+            self.assertEqual(
+                [item.text.strip() for item in heatmap_summary.select(".summary-heatmap-weekday")],
+                ["日", "一", "二", "三", "四", "五", "六"],
+            )
+            week_end = week_start + timezone.timedelta(days=6)
+            week_activity_days = [
+                day for day in activity_days if week_start <= day <= week_end
+            ]
+            expected_longest_streak = 0
+            current_streak = 0
+            current_day = week_start
+            while current_day <= week_end:
+                if current_day in week_activity_days:
+                    current_streak += 1
+                    expected_longest_streak = max(
+                        expected_longest_streak, current_streak
+                    )
+                else:
+                    current_streak = 0
+                current_day += timezone.timedelta(days=1)
+            heatmap_activity_summary = heatmap_summary.select_one(
+                "[data-summary-activity-summary]"
+            )
+            self.assertEqual(
+                heatmap_activity_summary.select_one(
+                    ".summary-activity-summary-lead"
+                ).get_text("", strip=True),
+                (
+                    f"本周（{week_start.strftime('%Y/%m/%d')} - "
+                    f"{week_end.strftime('%Y/%m/%d')}）："
+                ),
+            )
+            self.assertEqual(
+                heatmap_activity_summary.select_one(
+                    ".summary-activity-summary-copy"
+                ).get_text("", strip=True),
+                (
+                    f"收藏书签{len(week_activity_days)}个，"
+                    f"共活跃{len(week_activity_days)}天，"
+                    f"最高连续活跃{expected_longest_streak}天。"
+                ),
+            )
+
+    def test_sidebar_summary_follows_selected_date_filter_without_explicit_period(self):
+        self.set_profile_language("zh-hans")
+        today = timezone.localdate()
+        start_day = today - timezone.timedelta(days=70)
+        end_day = start_day + timezone.timedelta(days=2)
+
+        for offset in range(3):
+            bookmark_day = start_day + timezone.timedelta(days=offset)
+            bookmark_added = timezone.make_aware(
+                timezone.datetime(
+                    bookmark_day.year,
+                    bookmark_day.month,
+                    bookmark_day.day,
+                    12,
+                    0,
+                )
+            )
+            self.setup_bookmark(
+                title=f"Filtered bookmark {offset}",
+                added=bookmark_added,
+                modified=bookmark_added,
+            )
+
+        query_string = urllib.parse.urlencode(
+            {
+                "date_filter_by": BookmarkSearch.FILTER_DATE_BY_ADDED,
+                "date_filter_type": BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE,
+                "date_filter_start": start_day.isoformat(),
+                "date_filter_end": end_day.isoformat(),
+            }
+        )
+
+        calendar_response = self.client.get(
+            reverse("linkding:bookmarks.index") + "?" + query_string,
+            **self.get_summary_headers(show_details=True),
+        )
+        calendar_summary = self.make_soup(calendar_response.content.decode()).select_one(
+            "section[ld-sidebar-user-summary]"
+        )
+        self.assertIsNotNone(calendar_summary)
+        self.assertEqual(
+            calendar_summary.attrs["data-summary-month"],
+            end_day.strftime("%Y-%m"),
+        )
+        self.assertIn(
+            "is-range-start",
+            calendar_summary.select_one(
+                f"[data-summary-calendar-day='{start_day.isoformat()}']"
+            ).attrs["class"],
+        )
+        self.assertIn(
+            "is-range-end",
+            calendar_summary.select_one(
+                f"[data-summary-calendar-day='{end_day.isoformat()}']"
+            ).attrs["class"],
+        )
+        calendar_activity_summary = calendar_summary.select_one(
+            "[data-summary-activity-summary]"
+        )
+        self.assertEqual(
+            calendar_activity_summary.select_one(
+                ".summary-activity-summary-lead"
+            ).get_text("", strip=True),
+            (
+                f"所选周期（{start_day.strftime('%Y/%m/%d')} - "
+                f"{end_day.strftime('%Y/%m/%d')}）："
+            ),
+        )
+        self.assertEqual(
+            calendar_activity_summary.select_one(
+                ".summary-activity-summary-copy"
+            ).get_text("", strip=True),
+            "收藏书签3个，共活跃3天，最高连续活跃3天。",
+        )
+
+        heatmap_response = self.client.get(
+            reverse("linkding:bookmarks.index") + "?" + query_string,
+            **self.get_summary_headers(mode="heatmap", show_details=True),
+        )
+        heatmap_summary = self.make_soup(heatmap_response.content.decode()).select_one(
+            "section[ld-sidebar-user-summary]"
+        )
+        self.assertIsNotNone(heatmap_summary)
+        expected_week_start = end_day - timezone.timedelta(
+            days=((end_day.weekday() + 1) % 7)
+        )
+        expected_week_year, expected_week_number, _ = (
+            expected_week_start + timezone.timedelta(days=1)
+        ).isocalendar()
+        self.assertEqual(
+            heatmap_summary.select_one("[data-summary-week-year-picker-trigger]").text.strip(),
+            str(expected_week_year),
+        )
+        self.assertEqual(
+            heatmap_summary.select_one("[data-summary-week-number-picker-trigger]").text.strip(),
+            f"W{expected_week_number:02d}",
+        )
+        heatmap_activity_summary = heatmap_summary.select_one(
+            "[data-summary-activity-summary]"
+        )
+        self.assertEqual(
+            heatmap_activity_summary.select_one(
+                ".summary-activity-summary-lead"
+            ).get_text("", strip=True),
+            (
+                f"所选周期（{start_day.strftime('%Y/%m/%d')} - "
+                f"{end_day.strftime('%Y/%m/%d')}）："
+            ),
+        )
+        self.assertEqual(
+            heatmap_activity_summary.select_one(
+                ".summary-activity-summary-copy"
+            ).get_text("", strip=True),
+            "收藏书签3个，共活跃3天，最高连续活跃3天。",
+        )
+        start_heatmap_day = heatmap_summary.select_one(
+            f"[data-summary-heatmap-day='{start_day.isoformat()}']"
+        )
+        end_heatmap_day = heatmap_summary.select_one(
+            f"[data-summary-heatmap-day='{end_day.isoformat()}']"
+        )
+        self.assertIsNotNone(start_heatmap_day)
+        self.assertIsNotNone(end_heatmap_day)
+        self.assertIn("is-range-start", start_heatmap_day.attrs["class"])
+        self.assertIn("is-range-end", end_heatmap_day.attrs["class"])
+
+    def test_sidebar_summary_turbo_stream_updates_search_date_filters(self):
+        tag = self.setup_tag(name="alpha")
+        selected_day = timezone.localdate() - timezone.timedelta(days=2)
+        selected_added = timezone.make_aware(
+            timezone.datetime(
+                selected_day.year,
+                selected_day.month,
+                selected_day.day,
+                12,
+                0,
+            )
+        )
+        self.setup_bookmark(
+            title="Turbo summary bookmark",
+            tags=[tag],
+            added=selected_added,
+            modified=selected_added,
+        )
+
+        initial_response = self.client.get(
+            reverse("linkding:bookmarks.index")
+            + "?"
+            + urllib.parse.urlencode(
+                {
+                    "q": "#alpha",
+                    "date_filter_by": BookmarkSearch.FILTER_DATE_BY_ADDED,
+                    "date_filter_type": BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE,
+                    "date_filter_start": selected_day.isoformat(),
+                    "date_filter_end": selected_day.isoformat(),
+                }
+            ),
+            **self.get_summary_headers(
+                mode="heatmap",
+                week=(
+                    f"{selected_day.isocalendar().year}-W"
+                    f"{selected_day.isocalendar().week:02d}"
+                ),
+            ),
+        )
+        initial_summary = self.make_soup(initial_response.content.decode()).select_one(
+            "section[ld-sidebar-user-summary]"
+        )
+        self.assertIsNotNone(initial_summary)
+        day_link = initial_summary.select_one(
+            f"[data-summary-heatmap-day='{selected_day.isoformat()}'][href]"
+        )
+        self.assertIsNotNone(day_link)
+        day_query = urllib.parse.parse_qs(urllib.parse.urlsplit(day_link["href"]).query)
+
+        response = self.client.get(
+            day_link["href"],
+            HTTP_ACCEPT="text/vnd.turbo-stream.html",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        soup = self.make_soup(response.content.decode())
+        search_stream = soup.select_one(
+            "turbo-stream[action='update'][target='bookmark-search-container']"
+        )
+        self.assertIsNotNone(search_stream)
+
+        template_soup = self.make_soup(search_stream.template.decode_contents())
+        search_form = template_soup.select_one("form#search")
+        self.assertIsNotNone(search_form)
+        self.assertEqual(
+            search_form.select_one("input[name='q']").attrs["value"],
+            "",
+        )
+
+        search_preferences = template_soup.select_one("form#search_preferences")
+        self.assertIsNotNone(search_preferences)
+
+        selected_by = search_preferences.select_one(
+            f"input[name='date_filter_by'][value='{BookmarkSearch.FILTER_DATE_BY_ADDED}']"
+        )
+        self.assertIsNotNone(selected_by)
+        self.assertTrue(selected_by.has_attr("checked"))
+
+        selected_type = search_preferences.select_one(
+            f"input[name='date_filter_type'][value='{BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE}']"
+        )
+        self.assertIsNotNone(selected_type)
+        self.assertTrue(selected_type.has_attr("checked"))
+
+        self.assertEqual(
+            search_preferences.select_one("input[name='date_filter_start']").attrs["value"],
+            day_query["date_filter_start"][0],
+        )
+        self.assertEqual(
+            search_preferences.select_one("input[name='date_filter_end']").attrs["value"],
+            day_query["date_filter_end"][0],
+        )
+
+    def test_sidebar_summary_state_is_not_rendered_into_search_forms(self):
+        today = timezone.localdate()
+        response = self.client.get(
+            reverse("linkding:bookmarks.index"),
+            **self.get_summary_headers(
+                mode="heatmap",
+                week=f"{today.isocalendar().year}-W{today.isocalendar().week:02d}",
+                show_weekdays=True,
+                show_details=True,
+            ),
+        )
+
+        soup = self.make_soup(response.content.decode())
+        search_form = soup.select_one("form#search")
+        self.assertIsNotNone(search_form)
+        search_preferences = soup.select_one("form#search_preferences")
+        self.assertIsNotNone(search_preferences)
+
+        for selector in (
+            "input[name='summary_mode']",
+            "input[name='summary_month']",
+            "input[name='summary_week']",
+            "input[name='summary_show_weekdays']",
+            "input[name='summary_show_details']",
+        ):
+            self.assertIsNone(search_form.select_one(selector))
+            self.assertIsNone(search_preferences.select_one(selector))
+
+    def test_sidebar_summary_accepts_state_from_headers(self):
+        self.set_profile_language("zh-hans")
+        today = timezone.localdate()
+        bookmark_added = timezone.make_aware(
+            timezone.datetime(today.year, today.month, today.day, 12, 0)
+        )
+        self.setup_bookmark(
+            title="Header driven summary bookmark",
+            added=bookmark_added,
+            modified=bookmark_added,
+        )
+
+        week_start = today - timezone.timedelta(days=((today.weekday() + 1) % 7))
+        week_key_date = week_start + timezone.timedelta(days=1)
+        response = self.client.get(
+            reverse("linkding:bookmarks.index"),
+            HTTP_X_LINKDING_SUMMARY_MODE="heatmap",
+            HTTP_X_LINKDING_SUMMARY_WEEK=(
+                f"{week_key_date.isocalendar().year}-W"
+                f"{week_key_date.isocalendar().week:02d}"
+            ),
+            HTTP_X_LINKDING_SUMMARY_SHOW_WEEKDAYS="1",
+            HTTP_X_LINKDING_SUMMARY_SHOW_DETAILS="1",
+        )
+
+        summary = self.make_soup(response.content.decode()).select_one(
+            "section[ld-sidebar-user-summary]"
+        )
+        self.assertIsNotNone(summary)
+        self.assertEqual(summary["data-summary-mode"], "heatmap")
+        self.assertEqual(
+            summary["data-summary-week"],
+            (
+                f"{week_key_date.isocalendar().year}-W"
+                f"{week_key_date.isocalendar().week:02d}"
+            ),
+        )
+        self.assertEqual(
+            [item.text.strip() for item in summary.select(".summary-heatmap-weekday")],
+            ["日", "一", "二", "三", "四", "五", "六"],
+        )
+        self.assertIsNotNone(summary.select_one("[data-summary-activity-summary]"))
+
+    def test_sidebar_summary_ignores_summary_state_query_params(self):
+        today = timezone.localdate()
+        bookmark_added = timezone.make_aware(
+            timezone.datetime(today.year, today.month, today.day, 12, 0)
+        )
+        self.setup_bookmark(
+            title="Query driven summary bookmark",
+            added=bookmark_added,
+            modified=bookmark_added,
+        )
+
+        previous_month = (today - timezone.timedelta(days=40)).strftime("%Y-%m")
+        response = self.client.get(
+            reverse("linkding:bookmarks.index")
+            + "?"
+            + urllib.parse.urlencode(
+                {
+                    "summary_mode": "heatmap",
+                    "summary_month": previous_month,
+                    "summary_week": "2020-W03",
+                    "summary_show_weekdays": "1",
+                    "summary_show_details": "1",
+                }
+            )
+        )
+
+        summary = self.make_soup(response.content.decode()).select_one(
+            "section[ld-sidebar-user-summary]"
+        )
+        self.assertIsNotNone(summary)
+        self.assertEqual(summary["data-summary-mode"], "calendar")
+        self.assertEqual(summary["data-summary-month"], today.strftime("%Y-%m"))
+        self.assertEqual(summary.select(".summary-weekday"), [])
+        self.assertIsNone(summary.select_one("[data-summary-activity-summary]"))
+
+    def test_search_action_does_not_preserve_summary_state_query_params(self):
+        response = self.client.post(
+            reverse("linkding:bookmarks.index"),
+            {
+                "q": "#alpha",
+                "summary_mode": "heatmap",
+                "summary_week": "2026-W17",
+                "summary_show_weekdays": "1",
+                "summary_show_details": "1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        query = urllib.parse.parse_qs(urllib.parse.urlsplit(response["Location"]).query)
+        self.assertEqual(query["q"], ["#alpha"])
+        self.assertNotIn("summary_mode", query)
+        self.assertNotIn("summary_month", query)
+        self.assertNotIn("summary_week", query)
+        self.assertNotIn("summary_show_weekdays", query)
+        self.assertNotIn("summary_show_details", query)

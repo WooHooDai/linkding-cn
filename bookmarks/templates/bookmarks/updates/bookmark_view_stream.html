@@ -1,4 +1,4 @@
-{% load static %}
+{% load static bookmarks %}
 <turbo-stream action="update" target="bookmark-list-container">
   <template>
     {% include 'bookmarks/bookmark_list.html' %}
@@ -22,6 +22,20 @@
 <turbo-stream action="update" target="bookmark-list-total">
   <template>({{ bookmark_list.bookmarks_total }})</template>
 </turbo-stream>
+
+<turbo-stream action="update" target="bookmark-search-container">
+  <template>
+    {% bookmark_search bookmark_list.search %}
+  </template>
+</turbo-stream>
+
+{% if sidebar_summary %}
+  <turbo-stream action="update" target="sidebar-user-summary-container">
+    <template>
+      {% include "bookmarks/sidebar_user_summary.html" %}
+    </template>
+  </turbo-stream>
+{% endif %}
 
 {% for bundle in bundles.bundles %}
   <turbo-stream action="update" target="bundle-total-{{ bundle.id }}">

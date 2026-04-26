@@ -1,5 +1,8 @@
+import calendar
+
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 from bs4 import BeautifulSoup
 
 from bookmarks.tests.helpers import BookmarkFactoryMixin
@@ -172,6 +175,84 @@ class I18nTestCase(TestCase, BookmarkFactoryMixin):
         self.assertIn("Filters", index_html)
         self.assertIn(">Bundles<", index_html)
         self.assertIn(">Tags<", index_html)
+
+    def test_sidebar_summary_uses_english_labels_for_english_profile(self):
+        user = self.login_user_with_english_profile()
+        today = timezone.localdate()
+        activity_days = [
+            today.replace(day=max(today.day - 5, 1)),
+            today.replace(day=max(today.day - 4, 1)),
+            today.replace(day=max(today.day - 2, 1)),
+        ]
+
+        for index, bookmark_day in enumerate(activity_days):
+            bookmark_added = timezone.make_aware(
+                timezone.datetime(
+                    bookmark_day.year,
+                    bookmark_day.month,
+                    bookmark_day.day,
+                    12,
+                    0,
+                )
+            )
+            self.setup_bookmark(
+                user=user,
+                title=f"English summary bookmark {index}",
+                added=bookmark_added,
+                modified=bookmark_added,
+            )
+
+        response = self.client.get(
+            reverse("linkding:bookmarks.index"),
+            HTTP_X_LINKDING_SUMMARY_SHOW_WEEKDAYS="1",
+            HTTP_X_LINKDING_SUMMARY_SHOW_DETAILS="1",
+        )
+
+        soup = BeautifulSoup(response.content.decode(), "html.parser")
+        summary = soup.select_one("section[ld-sidebar-user-summary]")
+        self.assertIsNotNone(summary)
+        self.assertEqual(
+            summary.select_one("[data-summary-stat='collection-days'] .summary-metric-label")
+            .get_text(strip=True),
+            "Days",
+        )
+        self.assertEqual(
+            summary.select_one("[data-summary-collection-toggle]")[
+                "data-summary-collection-prefix"
+            ],
+            "Since",
+        )
+        self.assertEqual(
+            [item.get_text(strip=True) for item in summary.select(".summary-weekday")],
+            ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        )
+
+        activity_summary = summary.select_one("[data-summary-activity-summary]")
+        self.assertIsNotNone(activity_summary)
+        self.assertEqual(
+            activity_summary.select_one(".summary-activity-summary-lead").get_text(
+                strip=True
+            ),
+            (
+                f"This month ({today.replace(day=1).strftime('%Y/%m/%d')} - "
+                f"{today.replace(day=calendar.monthrange(today.year, today.month)[1]).strftime('%Y/%m/%d')}):"
+            ),
+        )
+        self.assertEqual(
+            activity_summary.select_one(".summary-activity-summary-copy").get_text(
+                " ", strip=True
+            ),
+            "Bookmarked 3 items, active on 3 days, longest streak 2 days.",
+        )
+
+        first_bookmarked_day = summary.select_one(
+            f"[data-summary-calendar-day='{activity_days[0].isoformat()}']"
+        )
+        self.assertIsNotNone(first_bookmarked_day)
+        self.assertEqual(
+            first_bookmarked_day["title"],
+            f"1 bookmark - {activity_days[0].strftime('%Y/%m/%d')}",
+        )
 
     def test_trash_page_filter_labels_are_english(self):
         self.login_user_with_english_profile()

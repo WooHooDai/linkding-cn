@@ -9,6 +9,7 @@ import "./behaviors/filter-drawer";
 import "./behaviors/form";
 import "./behaviors/global-shortcuts";
 import "./behaviors/search-autocomplete";
+import "./behaviors/sidebar-user-summary";
 import "./behaviors/tag-autocomplete";
 import "./behaviors/date-filter-fields";
 

@@ -2,7 +2,7 @@ from bookmarks.models import BookmarkSearch
 from bookmarks.views import contexts, turbo
 
 
-def render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles, domains):
+def render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles, domains, sidebar_summary=None):
     return turbo.stream(
         request,
         "bookmarks/updates/bookmark_view_stream.html",
@@ -12,6 +12,7 @@ def render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles, 
             "details": details,
             "bundles": bundles,
             "domains": domains,
+            "sidebar_summary": sidebar_summary,
         },
     )
 
@@ -27,8 +28,9 @@ def active_bookmark_update(request):
     )
     bundles = contexts.BundlesContext(request)
     domains = contexts.ActiveDomainsContext(request, search)
+    sidebar_summary = contexts.SidebarUserSummaryContext(request, search)
     return render_bookmark_update(
-        request, bookmark_list, tag_cloud, details, bundles, domains
+        request, bookmark_list, tag_cloud, details, bundles, domains, sidebar_summary
     )
 
 

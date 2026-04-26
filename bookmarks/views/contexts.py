@@ -1,13 +1,18 @@
+import calendar
 import re
 import urllib.parse
+from datetime import date, datetime, timedelta
 from typing import Set, List
 
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.db import models
-from django.http import Http404
+from django.db.models.functions import TruncDate
+from django.http import Http404, QueryDict
 from django.urls import reverse
-from django.utils.translation import gettext as _
+from django.utils.html import format_html
+from django.utils import timezone
+from django.utils.translation import gettext as _, ngettext
 
 from bookmarks import queries
 from bookmarks import utils
@@ -187,6 +192,933 @@ class BookmarkItem:
         self.has_extra_actions = (
             self.show_notes_button or self.show_mark_as_read or self.show_unshare
         )
+
+
+class SidebarSummaryStat:
+    def __init__(
+        self,
+        key: str,
+        label: str,
+        value: int,
+        url: str | None = None,
+    ) -> None:
+        self.key = key
+        self.label = label
+        self.value = value
+        self.url = url
+
+
+class SidebarCalendarDay:
+    def __init__(
+        self,
+        value,
+        day_number: int,
+        count: int | None,
+        url: str | None,
+        level: int,
+        title: str,
+        is_available: bool = False,
+        is_current_month: bool = True,
+        is_selected: bool = False,
+        is_in_range: bool = False,
+        is_range_start: bool = False,
+        is_range_end: bool = False,
+        is_today: bool = False,
+        has_bookmarks: bool = False,
+        target_week: str | None = None,
+    ) -> None:
+        self.value = value
+        self.day_number = day_number
+        self.count = count
+        self.url = url
+        self.level = level
+        self.title = title
+        self.is_available = is_available
+        self.is_current_month = is_current_month
+        self.is_selected = is_selected
+        self.is_in_range = is_in_range
+        self.is_range_start = is_range_start
+        self.is_range_end = is_range_end
+        self.is_today = is_today
+        self.has_bookmarks = has_bookmarks
+        self.iso_value = value.isoformat()
+        self.target_week = target_week
+
+
+class SidebarUserSummaryContext:
+    MODE_CALENDAR = "calendar"
+    MODE_HEATMAP = "heatmap"
+    SUMMARY_QUERY_PARAMS = (
+        "summary_mode",
+        "summary_month",
+        "summary_week",
+        "summary_year",
+        "summary_month_number",
+        "summary_show_weekdays",
+        "summary_show_details",
+    )
+    PRESERVED_QUERY_PARAMS = ("domain_view", "domain_compact")
+    SUMMARY_HEADER_NAMES = {
+        "summary_mode": "X-Linkding-Summary-Mode",
+        "summary_month": "X-Linkding-Summary-Month",
+        "summary_week": "X-Linkding-Summary-Week",
+        "summary_show_weekdays": "X-Linkding-Summary-Show-Weekdays",
+        "summary_show_details": "X-Linkding-Summary-Show-Details",
+    }
+    RESET_SEARCH_PARAMS = (
+        "q",
+        "bundle",
+        "shared",
+        "unread",
+        "tagged",
+        "date_filter_by",
+        "date_filter_type",
+        "date_filter_relative_string",
+        "date_filter_start",
+        "date_filter_end",
+    )
+    def __init__(self, request: HttpRequest, search: BookmarkSearch) -> None:
+        self.request = request
+        self.search = search
+        self.username = request.user.username
+        self.mode = self._coerce_mode(self._get_summary_value("summary_mode"))
+
+        active_bookmarks = Bookmark.objects.filter(
+            owner=request.user,
+            is_archived=False,
+            is_deleted=False,
+        )
+        oldest_bookmark = active_bookmarks.order_by("date_added").first()
+
+        today = timezone.localdate()
+        user_joined_day = timezone.localtime(request.user.date_joined).date()
+        oldest_bookmark_day = (
+            timezone.localtime(oldest_bookmark.date_added).date()
+            if oldest_bookmark
+            else None
+        )
+        self.selectable_start_day = oldest_bookmark_day or today
+        self.collection_start_day = (
+            min(user_joined_day, oldest_bookmark_day)
+            if oldest_bookmark_day
+            else user_joined_day
+        )
+        self.collection_days = (today - self.collection_start_day).days
+        self.collection_start_label = self.collection_start_day.strftime("%Y/%m/%d")
+        self.collection_start_prefix = _("Since")
+        self.has_bookmarks = oldest_bookmark is not None
+        self.show_weekdays = self._is_toggle_enabled("summary_show_weekdays")
+        self.show_details = self._is_toggle_enabled("summary_show_details")
+        self.selected_start, self.selected_end = self._get_selected_range()
+        self.selected_start_iso = (
+            self.selected_start.isoformat() if self.selected_start else ""
+        )
+        self.selected_end_iso = self.selected_end.isoformat() if self.selected_end else ""
+
+        current_month_start = today.replace(day=1)
+        earliest_month_start = self.selectable_start_day.replace(day=1)
+        self.visible_month_start = self._resolve_visible_month(
+            self._get_requested_month_value(),
+            earliest_month_start,
+            current_month_start,
+        )
+        self.visible_month_key = self.visible_month_start.strftime("%Y-%m")
+        self.visible_month_label = self.visible_month_start.strftime("%Y/%m")
+        self.visible_year = self.visible_month_start.year
+        self.visible_month_number = self.visible_month_start.month
+        self.current_month_key = current_month_start.strftime("%Y-%m")
+        self.weekday_labels = self._build_weekday_labels()
+        self.heatmap_weekday_labels = self._build_weekday_labels()
+        self.calendar_year_options = self._build_calendar_year_options(
+            earliest_month_start,
+            current_month_start,
+        )
+        self.calendar_month_options = self._build_calendar_month_options(
+            earliest_month_start,
+            current_month_start,
+        )
+        self.current_week_start = today - timedelta(days=((today.weekday() + 1) % 7))
+        self.earliest_week_start = self.selectable_start_day - timedelta(
+            days=((self.selectable_start_day.weekday() + 1) % 7)
+        )
+        self.visible_week_start = self._resolve_visible_week(
+            self._get_requested_week_value(),
+            self.earliest_week_start,
+            self.current_week_start,
+        )
+        self.visible_week_key = self._format_week_key(self.visible_week_start)
+        self.visible_week_label = self._format_week_label(self.visible_week_start)
+        self.current_week_key = self._format_week_key(self.current_week_start)
+        self.visible_week_year, self.visible_week_number, _visible_weekday = (
+            self.visible_week_start + timedelta(days=1)
+        ).isocalendar()
+        self.heatmap_year_groups = self._build_heatmap_year_groups()
+        self.heatmap_year_options = self._build_heatmap_year_options()
+        self.heatmap_week_options = self._build_heatmap_week_options()
+
+        bookmarks_total = active_bookmarks.count()
+        tags_total = Tag.objects.filter(owner=request.user).count()
+
+        self.primary_stats = [
+            SidebarSummaryStat(
+                "bookmarks",
+                _("Bookmarks"),
+                bookmarks_total,
+                self._build_url(reset_search=True),
+            ),
+            SidebarSummaryStat("tags", _("Tags"), tags_total),
+            SidebarSummaryStat("collection-days", _("Days"), self.collection_days),
+        ]
+        self.settings_options = self._build_settings_options()
+
+        if self.mode == self.MODE_CALENDAR:
+            target_week = self._format_week_key(
+                self._get_calendar_mode_switch_week_start(today)
+            )
+            self.mode_switch = {
+                "key": self.MODE_HEATMAP,
+                "url": self._build_url(),
+                "title": _("Heatmap"),
+                "target_mode": self.MODE_HEATMAP,
+                "target_week": target_week,
+            }
+        else:
+            target_month = self._get_visible_heatmap_month_start(today).strftime("%Y-%m")
+            self.mode_switch = {
+                "key": self.MODE_CALENDAR,
+                "url": self._build_url(),
+                "title": _("Calendar"),
+                "target_mode": self.MODE_CALENDAR,
+                "target_month": target_month,
+            }
+
+        previous_month = self._shift_month(self.visible_month_start, -1)
+        next_month = self._shift_month(self.visible_month_start, 1)
+        self.previous_month_url = (
+            self._build_url()
+            if previous_month >= earliest_month_start
+            else None
+        )
+        self.previous_month_key = (
+            previous_month.strftime("%Y-%m")
+            if previous_month >= earliest_month_start
+            else None
+        )
+        self.next_month_url = (
+            self._build_url()
+            if next_month <= current_month_start
+            else None
+        )
+        self.next_month_key = (
+            next_month.strftime("%Y-%m") if next_month <= current_month_start else None
+        )
+        previous_week = self.visible_week_start - timedelta(days=7)
+        next_week = self.visible_week_start + timedelta(days=7)
+        self.previous_week_url = (
+            self._build_url()
+            if previous_week >= self.earliest_week_start
+            else None
+        )
+        self.previous_week_key = (
+            self._format_week_key(previous_week)
+            if previous_week >= self.earliest_week_start
+            else None
+        )
+        self.next_week_url = (
+            self._build_url()
+            if next_week <= self.current_week_start
+            else None
+        )
+        self.next_week_key = (
+            self._format_week_key(next_week) if next_week <= self.current_week_start else None
+        )
+
+        self.absolute_range_url = self._build_absolute_range_url()
+        self.clear_range_url = self._build_url(
+            reset_search=True,
+            date_filter_by=None,
+            date_filter_type=None,
+            date_filter_relative_string=None,
+            date_filter_start=None,
+            date_filter_end=None,
+        )
+        self.current_month_url = self._build_url()
+        self.current_week_url = self._build_url()
+        self.calendar_weeks = self._build_calendar_weeks(active_bookmarks, today)
+        self.heatmap_weeks = self._build_heatmap_weeks(active_bookmarks, today)
+        self.heatmap_week_headers = self._build_heatmap_week_headers()
+        self.toolbar_action = self._build_toolbar_action(current_month_start)
+        self.activity_summary = self._build_activity_summary(active_bookmarks, today)
+
+    def _build_calendar_weeks(self, active_bookmarks, today):
+        calendar_weeks = calendar.Calendar(firstweekday=6).monthdatescalendar(
+            self.visible_month_start.year,
+            self.visible_month_start.month,
+        )
+        start_day = calendar_weeks[0][0]
+        end_day = calendar_weeks[-1][-1]
+        daily_counts = self._load_daily_counts(active_bookmarks, start_day, end_day)
+
+        weeks = []
+        for week_days in calendar_weeks:
+            week = []
+            for value in week_days:
+                is_current_month = (
+                    value.year == self.visible_month_start.year
+                    and value.month == self.visible_month_start.month
+                )
+                is_available = (
+                    is_current_month
+                    and self.selectable_start_day <= value <= today
+                    and self.has_bookmarks
+                )
+                count = daily_counts.get(value, 0)
+                week.append(
+                    SidebarCalendarDay(
+                        value=value,
+                        day_number=value.day,
+                        count=count,
+                        url=self._build_absolute_day_url(value) if is_available else None,
+                        level=self._heatmap_level(count) if is_current_month else 0,
+                        title=self._build_day_title(value, count),
+                        is_available=is_available,
+                        is_current_month=is_current_month,
+                        is_selected=self._is_selected_day(value),
+                        is_in_range=self._is_in_selected_range(value, is_current_month),
+                        is_range_start=self.selected_start == value,
+                        is_range_end=self.selected_end == value,
+                        is_today=value == today,
+                        has_bookmarks=count > 0,
+                    )
+                )
+            weeks.append(week)
+
+        return weeks
+
+    def _build_heatmap_weeks(self, active_bookmarks, today):
+        if not self.has_bookmarks:
+            return []
+
+        heatmap_end = self.visible_week_start + timedelta(days=6)
+        heatmap_start = self.visible_week_start - timedelta(days=(7 * 14))
+        daily_counts = self._load_daily_counts(active_bookmarks, heatmap_start, heatmap_end)
+
+        weeks = []
+        week_start = heatmap_start
+        while week_start <= heatmap_end:
+            week_url = (
+                self._build_absolute_week_url(week_start, today)
+                if self.selectable_start_day <= min(today, week_start + timedelta(days=6))
+                else None
+            )
+            week = []
+            for offset in range(7):
+                value = week_start + timedelta(days=offset)
+                is_available = self.selectable_start_day <= value <= today
+                count = daily_counts.get(value, 0) if is_available else 0
+                week.append(
+                    SidebarCalendarDay(
+                        value=value,
+                        day_number=value.day,
+                        count=count,
+                        url=week_url if is_available else None,
+                        level=self._heatmap_level(count) if is_available else 0,
+                        title=self._build_day_title(value, count),
+                        is_available=is_available,
+                        is_current_month=is_available,
+                        is_selected=self._is_selected_day(value),
+                        is_in_range=self._is_in_selected_range(value, is_available),
+                        is_range_start=self.selected_start == value,
+                        is_range_end=self.selected_end == value,
+                        is_today=value == today,
+                        has_bookmarks=count > 0,
+                        target_week=self._format_week_key(week_start),
+                    )
+                )
+            weeks.append(week)
+            week_start += timedelta(days=7)
+
+        return weeks
+
+    @staticmethod
+    def _load_daily_counts(active_bookmarks, start_day: date, end_day: date) -> dict[date, int]:
+        return {
+            row["day"]: row["total"]
+            for row in (
+                active_bookmarks.filter(
+                    date_added__date__gte=start_day,
+                    date_added__date__lte=end_day,
+                )
+                .annotate(day=TruncDate("date_added", tzinfo=timezone.get_current_timezone()))
+                .values("day")
+                .annotate(total=models.Count("id"))
+                .order_by("day")
+            )
+        }
+
+    @staticmethod
+    def _heatmap_level(count: int) -> int:
+        if count <= 0:
+            return 0
+        if count <= 3:
+            return 1
+        if count <= 6:
+            return 2
+        if count <= 9:
+            return 3
+        if count <= 15:
+            return 4
+        if count <= 20:
+            return 5
+        return 6
+
+    @staticmethod
+    def _coerce_mode(value: str | None) -> str:
+        if value == SidebarUserSummaryContext.MODE_HEATMAP:
+            return SidebarUserSummaryContext.MODE_HEATMAP
+        return SidebarUserSummaryContext.MODE_CALENDAR
+
+    def _get_requested_month_value(self) -> str | None:
+        summary_month = self._get_summary_value("summary_month")
+        if summary_month:
+            return summary_month
+
+        if self.selected_end:
+            return self.selected_end.strftime("%Y-%m")
+
+        return None
+
+    def _get_requested_week_value(self) -> str | None:
+        summary_week = self._get_summary_value("summary_week")
+        if summary_week:
+            return summary_week
+
+        if self.selected_end:
+            return self._format_week_key(self._start_of_week(self.selected_end))
+
+        return None
+
+    def _resolve_visible_month(
+        self, value: str | None, earliest_month_start: date, current_month_start: date
+    ) -> date:
+        parsed_month = self._parse_month(value) or current_month_start
+        if parsed_month < earliest_month_start:
+            return earliest_month_start
+        if parsed_month > current_month_start:
+            return current_month_start
+        return parsed_month
+
+    def _resolve_visible_week(
+        self, value: str | None, earliest_week_start: date, current_week_start: date
+    ) -> date:
+        parsed_week = self._parse_week(value) or current_week_start
+        if parsed_week < earliest_week_start:
+            return earliest_week_start
+        if parsed_week > current_week_start:
+            return current_week_start
+        return parsed_week
+
+    def _is_selected_day(self, value) -> bool:
+        return self.selected_start == value and self.selected_end == value
+
+    def _is_in_selected_range(self, value: date, is_current_month: bool) -> bool:
+        return bool(
+            is_current_month
+            and self.selected_start
+            and self.selected_end
+            and self.selected_start <= value <= self.selected_end
+        )
+
+    def _get_selected_range(self) -> tuple[date | None, date | None]:
+        start = self._coerce_date(self.search.date_filter_start)
+        end = self._coerce_date(self.search.date_filter_end)
+        if not (
+            self.search.date_filter_by == BookmarkSearch.FILTER_DATE_BY_ADDED
+            and start
+            and end
+        ):
+            return None, None
+        if start <= end:
+            return start, end
+        return end, start
+
+    @staticmethod
+    def _coerce_date(value):
+        if hasattr(value, "isoformat") and not isinstance(value, str):
+            return value
+        if isinstance(value, str) and value:
+            try:
+                return datetime.strptime(value, "%Y-%m-%d").date()
+            except ValueError:
+                return None
+        return None
+
+    @staticmethod
+    def _parse_month(value: str | None) -> date | None:
+        if not value:
+            return None
+        try:
+            return datetime.strptime(value, "%Y-%m").date().replace(day=1)
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _parse_week(value: str | None) -> date | None:
+        if not value:
+            return None
+        try:
+            year, week = value.split("-W", maxsplit=1)
+            return datetime.fromisocalendar(int(year), int(week), 1).date() - timedelta(
+                days=1
+            )
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _start_of_week(value: date) -> date:
+        return value - timedelta(days=((value.weekday() + 1) % 7))
+
+    @staticmethod
+    def _shift_month(month_start: date, offset: int) -> date:
+        month_index = (month_start.year * 12) + (month_start.month - 1) + offset
+        year, month_offset = divmod(month_index, 12)
+        return date(year, month_offset + 1, 1)
+
+    @staticmethod
+    def _format_week_key(value: date) -> str:
+        iso_year, iso_week, _ = (value + timedelta(days=1)).isocalendar()
+        return f"{iso_year}-W{iso_week:02d}"
+
+    @staticmethod
+    def _format_week_label(value: date) -> str:
+        iso_year, iso_week, _ = (value + timedelta(days=1)).isocalendar()
+        return f"{iso_year}/W{iso_week:02d}"
+
+    def _build_day_title(self, value: date, count: int) -> str:
+        day_label = value.strftime("%Y/%m/%d")
+        return ngettext(
+            "%(count)s bookmark - %(date)s",
+            "%(count)s bookmarks - %(date)s",
+            count,
+        ) % {"count": count, "date": day_label}
+
+    def _build_absolute_day_url(self, value: date) -> str:
+        return self._build_url(
+            reset_search=True,
+            date_filter_by=BookmarkSearch.FILTER_DATE_BY_ADDED,
+            date_filter_type=BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE,
+            date_filter_relative_string=None,
+            date_filter_start=value.isoformat(),
+            date_filter_end=value.isoformat(),
+        )
+
+    def _build_absolute_week_url(self, week_start: date, today: date) -> str:
+        range_start = max(self.selectable_start_day, week_start)
+        range_end = min(today, week_start + timedelta(days=6))
+        return self._build_url(
+            reset_search=True,
+            date_filter_by=BookmarkSearch.FILTER_DATE_BY_ADDED,
+            date_filter_type=BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE,
+            date_filter_relative_string=None,
+            date_filter_start=range_start.isoformat(),
+            date_filter_end=range_end.isoformat(),
+        )
+
+    def _build_absolute_range_url(self) -> str:
+        return self._build_url(
+            reset_search=True,
+            date_filter_by=BookmarkSearch.FILTER_DATE_BY_ADDED,
+            date_filter_type=BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE,
+            date_filter_relative_string=None,
+            date_filter_start=None,
+            date_filter_end=None,
+        )
+
+    def _build_calendar_year_options(
+        self, earliest_month_start: date, current_month_start: date
+    ):
+        options = []
+        for year in range(current_month_start.year, earliest_month_start.year - 1, -1):
+            target_month = self._pick_month_for_year(
+                year,
+                earliest_month_start,
+                current_month_start,
+            )
+            options.append(
+                {
+                    "value": year,
+                    "label": str(year),
+                    "url": self._build_url(),
+                    "target_month": target_month.strftime("%Y-%m"),
+                    "is_selected": year == self.visible_year,
+                }
+            )
+        return options
+
+    def _build_calendar_month_options(
+        self, earliest_month_start: date, current_month_start: date
+    ):
+        options = []
+        for month in range(1, 13):
+            month_start = date(self.visible_year, month, 1)
+            if not earliest_month_start <= month_start <= current_month_start:
+                continue
+            options.append(
+                {
+                    "value": month,
+                    "label": f"{month:02d}",
+                    "url": self._build_url(),
+                    "target_month": month_start.strftime("%Y-%m"),
+                    "is_selected": month == self.visible_month_number,
+                }
+            )
+        return options
+
+    def _pick_month_for_year(
+        self,
+        year: int,
+        earliest_month_start: date,
+        current_month_start: date,
+    ) -> date:
+        available_months = [
+            date(year, month, 1)
+            for month in range(1, 13)
+            if earliest_month_start <= date(year, month, 1) <= current_month_start
+        ]
+        if not available_months:
+            return self.visible_month_start
+
+        for month_start in available_months:
+            if month_start.month == self.visible_month_number:
+                return month_start
+
+        earlier_months = [
+            month_start
+            for month_start in available_months
+            if month_start.month < self.visible_month_number
+        ]
+        if earlier_months:
+            return earlier_months[-1]
+        return available_months[0]
+
+    def _build_heatmap_week_headers(self):
+        headers = []
+        week_start = self.visible_week_start - timedelta(days=(7 * 14))
+        for _ in range(15):
+            iso_year, iso_week, _ = (week_start + timedelta(days=1)).isocalendar()
+            headers.append(
+                {
+                    "label": f"{iso_week:02d}",
+                    "full_label": f"{iso_year}/W{iso_week:02d}",
+                    "is_anchor": week_start == self.visible_week_start,
+                }
+            )
+            week_start += timedelta(days=7)
+        return headers
+
+    def _build_heatmap_year_groups(self):
+        groups: dict[int, list[dict]] = {}
+        week_start = self.earliest_week_start
+        while week_start <= self.current_week_start:
+            iso_year, iso_week, _ = (week_start + timedelta(days=1)).isocalendar()
+            groups.setdefault(iso_year, []).append(
+                {
+                    "year": iso_year,
+                    "week_number": iso_week,
+                    "label": f"W{iso_week:02d}",
+                    "start": week_start,
+                    "key": self._format_week_key(week_start),
+                }
+            )
+            week_start += timedelta(days=7)
+        return groups
+
+    def _build_heatmap_year_options(self):
+        options = []
+        for year in sorted(self.heatmap_year_groups.keys(), reverse=True):
+            target_week = self._pick_week_for_year(year)
+            options.append(
+                {
+                    "value": year,
+                    "label": str(year),
+                    "url": self._build_url(),
+                    "target_week": self._format_week_key(target_week),
+                    "is_selected": year == self.visible_week_year,
+                }
+            )
+        return options
+
+    def _build_heatmap_week_options(self):
+        options = []
+        for week in reversed(self.heatmap_year_groups.get(self.visible_week_year, [])):
+            options.append(
+                {
+                    "value": week["week_number"],
+                    "label": week["label"],
+                    "url": self._build_url(),
+                    "target_week": week["key"],
+                    "is_selected": week["start"] == self.visible_week_start,
+                }
+            )
+        return options
+
+    def _pick_week_for_year(self, year: int) -> date:
+        year_weeks = self.heatmap_year_groups.get(year, [])
+        if not year_weeks:
+            return self.visible_week_start
+
+        for week in year_weeks:
+            if week["week_number"] == self.visible_week_number:
+                return week["start"]
+
+        earlier_weeks = [
+            week for week in year_weeks if week["week_number"] < self.visible_week_number
+        ]
+        if earlier_weeks:
+            return earlier_weeks[-1]["start"]
+        return year_weeks[0]["start"]
+
+    def _build_toolbar_action(self, current_month_start: date):
+        if self.selected_start and self.selected_end:
+            return {
+                "key": "reset-range",
+                "url": self.clear_range_url,
+                "title": _("Reset date range"),
+                "icon": "reset",
+            }
+
+        if self.mode == self.MODE_CALENDAR:
+            if self.visible_month_start != current_month_start:
+                return {
+                    "key": "current-month",
+                    "url": self.current_month_url,
+                    "title": _("Go to current month"),
+                    "icon": "target",
+                    "target_mode": self.MODE_CALENDAR,
+                    "target_month": self.current_month_key,
+                }
+            return None
+
+        if self.visible_week_start != self.current_week_start:
+            return {
+                "key": "current-week",
+                "url": self.current_week_url,
+                "title": _("Go to current week"),
+                "icon": "target",
+                "target_mode": self.MODE_HEATMAP,
+                "target_week": self.current_week_key,
+            }
+        return None
+
+    def _build_weekday_labels(self) -> tuple[str, ...]:
+        return (
+            _("Sun"),
+            _("Mon"),
+            _("Tue"),
+            _("Wed"),
+            _("Thu"),
+            _("Fri"),
+            _("Sat"),
+        )
+
+    def _build_settings_options(self):
+        return [
+            {
+                "key": "weekdays",
+                "label": _("Hide weekdays") if self.show_weekdays else _("Show weekdays"),
+                "url": self._build_url(),
+                "target_show_weekdays": "0" if self.show_weekdays else "1",
+            },
+            {
+                "key": "details",
+                "label": _("Hide summary") if self.show_details else _("Show summary"),
+                "url": self._build_url(),
+                "target_show_details": "0" if self.show_details else "1",
+            },
+        ]
+
+    def _is_toggle_enabled(self, key: str) -> bool:
+        return self._get_summary_value(key) == "1"
+
+    def _get_summary_value(self, key: str) -> str | None:
+        header_name = self.SUMMARY_HEADER_NAMES.get(key)
+        header_value = self.request.headers.get(header_name) if header_name else None
+        if header_value not in (None, ""):
+            return header_value
+        return None
+
+    def _get_visible_heatmap_month_start(self, today: date) -> date:
+        reference_day = min(today, self.visible_week_start + timedelta(days=6))
+        return reference_day.replace(day=1)
+
+    def _get_calendar_mode_switch_week_start(self, today: date) -> date:
+        if self.selected_end:
+            return self._start_of_week(self.selected_end)
+
+        _, visible_month_last_day = calendar.monthrange(
+            self.visible_month_start.year, self.visible_month_start.month
+        )
+        reference_day = min(
+            today,
+            self.visible_month_start.replace(day=visible_month_last_day),
+        )
+        return self._start_of_week(reference_day)
+
+    @staticmethod
+    def _calculate_longest_streak(
+        daily_counts: dict[date, int], period_start: date, period_end: date
+    ) -> int:
+        longest_streak = 0
+        current_streak = 0
+        current_day = period_start
+        while current_day <= period_end:
+            if daily_counts.get(current_day, 0) > 0:
+                current_streak += 1
+                longest_streak = max(longest_streak, current_streak)
+            else:
+                current_streak = 0
+            current_day += timedelta(days=1)
+        return longest_streak
+
+    def _resolve_activity_summary_period(self, today: date) -> tuple[date, date, str]:
+        if self.selected_start and self.selected_end:
+            period_start = self.selected_start
+            period_end = self.selected_end
+            lead = _("Selected range ({start} - {end}):").format(
+                start=period_start.strftime("%Y/%m/%d"),
+                end=period_end.strftime("%Y/%m/%d"),
+            )
+            return period_start, period_end, lead
+
+        if self.mode == self.MODE_HEATMAP:
+            period_start = self.visible_week_start
+            period_end = self.visible_week_start + timedelta(days=6)
+            lead_template = (
+                _("This week ({start} - {end}):")
+                if self.visible_week_start == self.current_week_start
+                else _("Shown week ({start} - {end}):")
+            )
+            lead = lead_template.format(
+                start=period_start.strftime("%Y/%m/%d"),
+                end=period_end.strftime("%Y/%m/%d"),
+            )
+            return period_start, period_end, lead
+
+        period_start = self.visible_month_start
+        _weekday_index, last_day = calendar.monthrange(
+            period_start.year, period_start.month
+        )
+        period_end = period_start.replace(day=last_day)
+        lead_template = (
+            _("This month ({start} - {end}):")
+            if period_start == today.replace(day=1)
+            else _("Shown month ({start} - {end}):")
+        )
+        lead = lead_template.format(
+            start=period_start.strftime("%Y/%m/%d"),
+            end=period_end.strftime("%Y/%m/%d"),
+        )
+        return period_start, period_end, lead
+
+    @staticmethod
+    def _build_activity_count_fragment(
+        singular: str, plural: str, count: int
+    ) -> dict[str, str | int]:
+        count_token = "__count__"
+        template = ngettext(singular, plural, count) % {"count": count_token}
+        prefix, _separator, suffix = template.partition(count_token)
+        return {
+            "count": count,
+            "prefix": prefix,
+            "suffix": suffix,
+            "text": ngettext(singular, plural, count) % {"count": count},
+        }
+
+    @staticmethod
+    def _build_activity_count_html(fragment: dict[str, str | int]):
+        return format_html(
+            '{}<strong class="summary-activity-summary-value">{}</strong>{}',
+            fragment["prefix"],
+            fragment["count"],
+            fragment["suffix"],
+        )
+
+    def _build_activity_summary(self, active_bookmarks, today: date):
+        period_start, period_end, lead = self._resolve_activity_summary_period(today)
+        daily_counts = self._load_daily_counts(active_bookmarks, period_start, period_end)
+        bookmark_total = sum(daily_counts.values())
+        active_days = sum(1 for count in daily_counts.values() if count > 0)
+        longest_streak = self._calculate_longest_streak(
+            daily_counts, period_start, period_end
+        )
+        bookmark_fragment = self._build_activity_count_fragment(
+            "Bookmarked %(count)s item",
+            "Bookmarked %(count)s items",
+            bookmark_total,
+        )
+        active_days_fragment = self._build_activity_count_fragment(
+            "active on %(count)s day",
+            "active on %(count)s days",
+            active_days,
+        )
+        longest_streak_fragment = self._build_activity_count_fragment(
+            "longest streak %(count)s day",
+            "longest streak %(count)s days",
+            longest_streak,
+        )
+        copy_text = _("{bookmarks}, {days}, {streak}.").format(
+            bookmarks=bookmark_fragment["text"],
+            days=active_days_fragment["text"],
+            streak=longest_streak_fragment["text"],
+        )
+        text = _("{lead} {copy}").format(
+            lead=lead,
+            copy=copy_text,
+        )
+        return {
+            "lead": lead,
+            "bookmark_total": bookmark_total,
+            "active_days": active_days,
+            "longest_streak": longest_streak,
+            "copy_html": format_html(
+                _("{bookmarks}, {days}, {streak}."),
+                bookmarks=self._build_activity_count_html(bookmark_fragment),
+                days=self._build_activity_count_html(active_days_fragment),
+                streak=self._build_activity_count_html(longest_streak_fragment),
+            ),
+            "text": text,
+        }
+
+    def _build_url(self, reset_search: bool = False, **updates) -> str:
+        if reset_search:
+            query_params = QueryDict("", mutable=True)
+            for key in self.PRESERVED_QUERY_PARAMS:
+                value = self.request.GET.get(key)
+                if value:
+                    query_params[key] = value
+        else:
+            query_params = self.request.GET.copy()
+
+        for key in ("page", "details"):
+            query_params.pop(key, None)
+
+        if reset_search:
+            for key in self.RESET_SEARCH_PARAMS:
+                query_params.pop(key, None)
+        for key in self.SUMMARY_QUERY_PARAMS:
+            query_params.pop(key, None)
+
+        for key, value in updates.items():
+            if key in self.SUMMARY_QUERY_PARAMS:
+                continue
+            if value in (None, ""):
+                query_params.pop(key, None)
+            else:
+                query_params[key] = value
+
+        encoded_params = query_params.urlencode()
+        base_url = reverse("linkding:bookmarks.index")
+        return base_url + "?" + encoded_params if encoded_params else base_url
 
 
 class BookmarkListContext:
