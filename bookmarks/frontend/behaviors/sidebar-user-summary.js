@@ -1,6 +1,6 @@
 import { Behavior, registerBehavior } from "./index";
 import {
-  buildPagePreferenceRequestHeaders,
+  buildBookmarkPageStreamRequestHeaders,
   stripPagePreferenceParams,
 } from "../state/page-preferences";
 import {
@@ -210,16 +210,8 @@ class SidebarUserSummaryBehavior extends Behavior {
     const requestUrl = stripPagePreferenceParams(url);
 
     try {
-      const headers = {
-        Accept: "text/vnd.turbo-stream.html",
-      };
-      const pageHeaders = buildPagePreferenceRequestHeaders();
-      if (pageHeaders) {
-        Object.assign(headers, pageHeaders);
-      }
-
       const response = await fetch(requestUrl, {
-        headers,
+        headers: buildBookmarkPageStreamRequestHeaders(),
         credentials: "same-origin",
       });
 

@@ -1,12 +1,18 @@
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render as django_render
 
+BOOKMARK_PAGE_STREAM_HEADER = "X-Linkding-Bookmark-Page-Stream"
+
 
 def accept(request: HttpRequest):
     is_turbo_request = "text/vnd.turbo-stream.html" in request.headers.get("Accept", "")
     disable_turbo = request.POST.get("disable_turbo", "false") == "true"
 
     return is_turbo_request and not disable_turbo
+
+
+def accept_bookmark_page_stream(request: HttpRequest):
+    return accept(request) and request.headers.get(BOOKMARK_PAGE_STREAM_HEADER) == "1"
 
 
 def is_frame(request: HttpRequest, frame: str) -> bool:

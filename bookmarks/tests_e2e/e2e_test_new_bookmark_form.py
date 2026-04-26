@@ -335,3 +335,14 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
         bookmark = Bookmark.objects.first()
         self.assertEqual("https://example.com", bookmark.url)
         self.assertEqual("Example Domain", bookmark.title)
+
+    def test_save_navigates_to_bookmark_index(self):
+        with sync_playwright() as p:
+            page = self.open(reverse("linkding:bookmarks.new"), p)
+
+            page.get_by_label("URL").fill("https://example.com")
+            page.locator("input[type='submit']").click()
+
+            expect(page).to_have_url(
+                self.live_server_url + reverse("linkding:bookmarks.index")
+            )

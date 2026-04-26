@@ -194,7 +194,7 @@ def render_bookmarks_view(request: HttpRequest, template_name, context):
             context,
         )
 
-    if turbo.accept(request):
+    if turbo.accept_bookmark_page_stream(request):
         turbo_renderers = {
             "bookmarks/index.html": lambda: partials.render_bookmark_update(
                 request,

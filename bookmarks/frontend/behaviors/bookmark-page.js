@@ -1,19 +1,11 @@
 import { Behavior, registerBehavior, applyBehaviors } from "./index";
 import {
-  applySummaryRequestHeaders,
-  buildSummaryRequestHeaders,
-  getRenderedSummaryState,
-  getStoredSummaryState,
-} from "../state/summary-preferences";
-import {
-  applyDomainRequestHeaders,
-  buildDomainRequestHeaders,
-  getRenderedDomainState,
   getStoredDomainState,
   storeDomainPreferenceTargets,
   storeRenderedDomainPreferences,
   stripDomainPreferenceParams,
 } from "../state/domain-preferences";
+import { buildBookmarkPageStreamRequestHeaders } from "../state/page-preferences";
 import { persistOpenDrawerState } from "../state/filter-drawer-state";
 
 class BookmarkPagination extends Behavior {
@@ -515,27 +507,8 @@ function shouldBypassDomainPreferenceClick(event) {
 
 async function visitDomainPreferenceStream(requestUrl) {
   try {
-    const headers = {
-      Accept: "text/vnd.turbo-stream.html",
-    };
-    const summaryHeaders = buildSummaryRequestHeaders({
-      ...getRenderedSummaryState(),
-      ...getStoredSummaryState(),
-    });
-    const domainHeaders = buildDomainRequestHeaders({
-      ...getRenderedDomainState(),
-      ...getStoredDomainState(),
-    });
-
-    if (summaryHeaders) {
-      applySummaryRequestHeaders(headers, summaryHeaders);
-    }
-    if (domainHeaders) {
-      applyDomainRequestHeaders(headers, domainHeaders);
-    }
-
     const response = await fetch(requestUrl, {
-      headers,
+      headers: buildBookmarkPageStreamRequestHeaders(),
       credentials: "same-origin",
     });
 

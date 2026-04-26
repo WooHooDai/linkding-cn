@@ -90,6 +90,13 @@ class BookmarkIndexViewTestCase(
             headers["HTTP_X_LINKDING_DOMAIN_COMPACT"] = compact_mode
         return headers
 
+    def get_bookmark_page_stream_headers(self, **headers):
+        return {
+            "HTTP_ACCEPT": "text/vnd.turbo-stream.html",
+            "HTTP_X_LINKDING_BOOKMARK_PAGE_STREAM": "1",
+            **headers,
+        }
+
     def set_profile_language(self, language: str):
         user = self.get_or_create_test_user()
         user.profile.language = language
@@ -2105,7 +2112,7 @@ class BookmarkIndexViewTestCase(
 
         response = self.client.get(
             day_link["href"],
-            HTTP_ACCEPT="text/vnd.turbo-stream.html",
+            **self.get_bookmark_page_stream_headers(),
         )
 
         self.assertEqual(response.status_code, 200)
@@ -2146,6 +2153,20 @@ class BookmarkIndexViewTestCase(
             search_preferences.select_one("input[name='date_filter_end']").attrs["value"],
             day_query["date_filter_end"][0],
         )
+
+    def test_accepting_turbo_stream_without_partial_intent_renders_full_page(self):
+        response = self.client.get(
+            reverse("linkding:bookmarks.index"),
+            HTTP_ACCEPT="text/vnd.turbo-stream.html",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("text/vnd.turbo-stream.html", response["Content-Type"])
+
+        soup = self.make_soup(response.content.decode())
+        self.assertIsNone(soup.select_one("turbo-stream"))
+        self.assertIsNotNone(soup.select_one("form#search"))
+        self.assertIsNotNone(soup.select_one("#bookmark-list-container"))
 
     def test_sidebar_summary_state_is_not_rendered_into_search_forms(self):
         today = timezone.localdate()

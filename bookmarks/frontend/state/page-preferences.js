@@ -12,6 +12,8 @@ import {
   stripSummaryPreferenceParams,
 } from "./summary-preferences";
 
+const BOOKMARK_PAGE_STREAM_HEADER = "X-Linkding-Bookmark-Page-Stream";
+
 export function buildPagePreferenceRequestHeaders() {
   const headers = {};
   const summaryHeaders = buildSummaryRequestHeaders({
@@ -31,6 +33,20 @@ export function buildPagePreferenceRequestHeaders() {
   }
 
   return Object.keys(headers).length > 0 ? headers : null;
+}
+
+export function buildBookmarkPageStreamRequestHeaders() {
+  const headers = {
+    Accept: "text/vnd.turbo-stream.html",
+    [BOOKMARK_PAGE_STREAM_HEADER]: "1",
+  };
+  const pageHeaders = buildPagePreferenceRequestHeaders();
+
+  if (pageHeaders) {
+    applyRequestHeaders(headers, pageHeaders);
+  }
+
+  return headers;
 }
 
 export function stripPagePreferenceParams(href) {

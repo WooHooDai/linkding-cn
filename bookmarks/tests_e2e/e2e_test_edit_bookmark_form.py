@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from urllib.parse import quote
 
 from django.urls import reverse
 from playwright.sync_api import sync_playwright, expect
@@ -72,3 +73,18 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
 
             refresh_button = page.get_by_text("Refresh from website")
             expect(refresh_button).to_be_visible()
+
+    def test_save_navigates_to_return_url(self):
+        bookmark = self.setup_bookmark(title="Bookmark for edit save")
+        return_url = reverse("linkding:bookmarks.index") + "?q=Bookmark"
+
+        with sync_playwright() as p:
+            page = self.open(
+                reverse("linkding:bookmarks.edit", args=[bookmark.id])
+                + f"?return_url={quote(return_url)}",
+                p,
+            )
+
+            page.locator("input[type='submit']").click()
+
+            expect(page).to_have_url(self.live_server_url + return_url)
