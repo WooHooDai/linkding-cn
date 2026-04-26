@@ -594,20 +594,44 @@ li[ld-bookmark-item] {
 }
 
 .domain-link-main {
-  display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
-  column-gap: var(--unit-2);
-  align-items: start;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--unit-2);
+  min-width: 0;
+}
+
+.domain-link-main-icon {
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
 .domain-text {
   min-width: 0;
   overflow-wrap: anywhere;
+  flex: 1 1 auto;
+}
+
+.domain-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.15rem;
+}
+
+.domain-selection-prefix {
+  color: var(--error-color);
+  font-weight: 600;
+  flex: 0 0 auto;
 }
 
 .domain-menu-item.selected > .domain-row .domain-link {
-  background: var(--primary-color);
-  color: var(--contrast-text-color);
+  background: transparent;
+  color: var(--error-color);
+}
+
+.domain-menu-item.selected > .domain-row .domain-link:visited,
+.domain-menu-item.selected > .domain-row .domain-link:hover {
+  color: var(--error-color);
 }
 
 .domain-menu-item .favicon {
@@ -662,7 +686,7 @@ li[ld-bookmark-item] {
   flex-direction: column;
   align-items: center;
   gap: var(--unit-1);
-  width: 100%;
+  min-width: 0;
 }
 
 .domain-text-icon {

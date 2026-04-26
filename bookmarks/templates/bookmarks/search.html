@@ -11,12 +11,6 @@
            data-unread="{{ search.unread }}"
            data-tagged="{{ search.tagged }}">
     <input type="submit" value="Search" class="d-none">
-    {% if domains.is_icon_mode %}
-      <input type="hidden" name="domain_view" value="icon">
-    {% endif %}
-    {% if not domains.is_compact_mode %}
-      <input type="hidden" name="domain_compact" value="0">
-    {% endif %}
     {% for hidden_field in search_form.hidden_fields %}
       {{ hidden_field }}
     {% endfor %}
@@ -41,12 +35,6 @@
     <div class="menu" tabindex="0">
       <form id="search_preferences" ld-date-filter-fields action="" method="post">
         {% csrf_token %}
-        {% if domains.is_icon_mode %}
-          <input type="hidden" name="domain_view" value="icon">
-        {% endif %}
-        {% if not domains.is_compact_mode %}
-          <input type="hidden" name="domain_compact" value="0">
-        {% endif %}
         {% if 'sort' in preferences_form.editable_fields %}
           <div class="form-group">
             <label for="{{ preferences_form.sort.id_for_label }}"

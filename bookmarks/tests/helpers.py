@@ -381,8 +381,12 @@ class DomainSidebarTestMixin(TestCase, HtmlTestMixin):
 
             primary = list_item.select_one("[data-domain-primary]")
             self.assertIsNotNone(primary)
+            label = primary.select_one(".domain-label-text") or primary.select_one(
+                ".domain-label"
+            )
+            self.assertIsNotNone(label)
             self.assertEqual(
-                primary.select_one(".domain-label").text.strip(), expected["label"]
+                label.text.strip(), expected["label"]
             )
             self.assertEqual(
                 primary.select_one(".count").text.strip(), f"({expected['count']})"

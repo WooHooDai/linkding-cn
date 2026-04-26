@@ -16,26 +16,49 @@
       {% else %}
         <div class="domain-link domain-link-static" data-domain-primary title="{{ domain.label }}">
       {% endif %}
-        <span class="{% if domains.is_icon_mode and domain.prefers_icon_layout %}domain-root-icon-summary{% else %}domain-link-main{% endif %}">
-          {% if domain.is_group_node %}
-            <span class="favicon favicon-group" aria-hidden="true">
-              <svg class="icon" width="12" height="12" viewBox="0 0 20 20" fill="none">
-                <circle cx="4" cy="10" r="1.5" fill="currentColor"/>
-                <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
-                <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
-              </svg>
+        <span class="domain-link-main{% if domains.is_icon_mode and domain.prefers_icon_layout %} domain-link-main-icon{% endif %}">
+          {% if domain.is_selected %}
+            <span class="domain-selection-prefix" aria-hidden="true">-</span>
+          {% endif %}
+          {% if domains.is_icon_mode and domain.prefers_icon_layout %}
+            <span class="domain-root-icon-summary">
+              {% if domain.is_group_node %}
+                <span class="favicon favicon-group" aria-hidden="true">
+                  <svg class="icon" width="12" height="12" viewBox="0 0 20 20" fill="none">
+                    <circle cx="4" cy="10" r="1.5" fill="currentColor"/>
+                    <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
+                    <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
+                  </svg>
+                </span>
+              {% else %}
+                <img class="favicon" src="{% static domain.favicon_file %}" alt="" width="16" height="16">
+              {% endif %}
+              <span class="domain-text domain-text-icon">
+                <span class="domain-label">
+                  <span class="domain-label-text">{{ domain.label }}</span>
+                </span>
+                <span class="count domain-count-icon">{{ domain.count }}</span>
+              </span>
             </span>
           {% else %}
-            <img class="favicon" src="{% static domain.favicon_file %}" alt="" width="16" height="16">
-          {% endif %}
-          <span class="domain-text{% if domains.is_icon_mode and domain.prefers_icon_layout %} domain-text-icon{% endif %}">
-            <span class="domain-label">{{ domain.label }}</span>
-            {% if domains.is_icon_mode and domain.prefers_icon_layout %}
-              <span class="count domain-count-icon">{{ domain.count }}</span>
+            {% if domain.is_group_node %}
+              <span class="favicon favicon-group" aria-hidden="true">
+                <svg class="icon" width="12" height="12" viewBox="0 0 20 20" fill="none">
+                  <circle cx="4" cy="10" r="1.5" fill="currentColor"/>
+                  <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
+                  <circle cx="16" cy="10" r="1.5" fill="currentColor"/>
+                </svg>
+              </span>
             {% else %}
-              <span class="count">({{ domain.count }})</span>
+              <img class="favicon" src="{% static domain.favicon_file %}" alt="" width="16" height="16">
             {% endif %}
-          </span>
+            <span class="domain-text">
+              <span class="domain-label">
+                <span class="domain-label-text">{{ domain.label }}</span>
+              </span>
+              <span class="count">({{ domain.count }})</span>
+            </span>
+          {% endif %}
         </span>
       {% if domain.url %}
         </a>

@@ -82,6 +82,14 @@ class BookmarkIndexViewTestCase(
             )
         return headers
 
+    def get_domain_headers(self, *, view_mode=None, compact_mode=None):
+        headers = {}
+        if view_mode is not None:
+            headers["HTTP_X_LINKDING_DOMAIN_VIEW"] = view_mode
+        if compact_mode is not None:
+            headers["HTTP_X_LINKDING_DOMAIN_COMPACT"] = compact_mode
+        return headers
+
     def set_profile_language(self, language: str):
         user = self.get_or_create_test_user()
         user.profile.language = language
@@ -782,6 +790,38 @@ class BookmarkIndexViewTestCase(
             root_link.attrs["href"], "?q=hello+domain%3A%28feishu.cn+%7C+.feishu.cn%29"
         )
 
+        selected_link = soup.select_one('li[data-domain-host="docs.feishu.cn"] a')
+        self.assertIsNotNone(selected_link)
+        self.assertEqual(selected_link.attrs["href"], "?q=hello")
+        selected_prefix = selected_link.select_one(".domain-selection-prefix")
+        self.assertIsNotNone(selected_prefix)
+        self.assertEqual(selected_prefix.text.strip(), "-")
+
+    def test_selected_parent_domain_renders_prefix_before_favicon(self):
+        profile = self.get_or_create_test_user().profile
+        profile.custom_domain_root = "docs.feishu.cn\nfeishu.cn"
+        profile.save()
+
+        self.setup_bookmark(url="https://docs.feishu.cn/123", title="hello docs")
+        self.setup_bookmark(url="https://feishu.cn/blog", title="hello root")
+
+        response = self.client.get(
+            reverse("linkding:bookmarks.index")
+            + "?q=domain:(feishu.cn+|+.feishu.cn)"
+        )
+
+        soup = self.make_soup(response.content.decode())
+        selected_main = soup.select_one(
+            'li[data-domain-host="feishu.cn"] [data-domain-primary] .domain-link-main'
+        )
+        self.assertIsNotNone(selected_main)
+
+        child_classes = [
+            child.attrs.get("class", [None])[0]
+            for child in selected_main.find_all(recursive=False)
+        ]
+        self.assertEqual(child_classes[0], "domain-selection-prefix")
+
     def test_domain_groups_are_sorted_by_root_bookmark_count_desc(self):
         profile = self.get_or_create_test_user().profile
         profile.custom_domain_root = "docs.feishu.cn\nfeishu.cn\ngithub.com"
@@ -933,14 +973,36 @@ class BookmarkIndexViewTestCase(
         menu_texts = [link.text.strip() for link in menu_links]
 
         self.assertEqual(menu_texts, ["Icon mode", "All domains"])
-        self.assertEqual(menu_links[0].attrs["href"], "?domain_view=icon")
-        self.assertEqual(menu_links[1].attrs["href"], "?domain_compact=0")
+        self.assertEqual(menu_links[0].attrs["href"], reverse("linkding:bookmarks.index"))
+        self.assertEqual(menu_links[1].attrs["href"], reverse("linkding:bookmarks.index"))
+
+    def test_domain_search_forms_do_not_render_domain_state_inputs(self):
+        response = self.client.get(
+            reverse("linkding:bookmarks.index"),
+            **self.get_domain_headers(view_mode="icon", compact_mode="0"),
+        )
+        soup = self.make_soup(response.content.decode())
+
+        search_form = soup.select_one("form#search")
+        self.assertIsNotNone(search_form)
+        self.assertIsNone(search_form.select_one('input[name="domain_view"]'))
+        self.assertIsNone(search_form.select_one('input[name="domain_compact"]'))
+
+        search_preferences_form = soup.select_one("form#search_preferences")
+        self.assertIsNotNone(search_preferences_form)
+        self.assertIsNone(
+            search_preferences_form.select_one('input[name="domain_view"]')
+        )
+        self.assertIsNone(
+            search_preferences_form.select_one('input[name="domain_compact"]')
+        )
 
     def test_domain_menu_shows_full_mode_action_when_icon_mode_is_enabled(self):
         self.setup_bookmark(url="https://example.com/alpha")
 
         response = self.client.get(
-            reverse("linkding:bookmarks.index") + "?domain_view=icon"
+            reverse("linkding:bookmarks.index"),
+            **self.get_domain_headers(view_mode="icon"),
         )
         soup = self.make_soup(response.content.decode())
 
@@ -950,14 +1012,15 @@ class BookmarkIndexViewTestCase(
         menu_texts = [link.text.strip() for link in menu_links]
 
         self.assertEqual(menu_texts, ["Full mode", "All domains"])
-        self.assertEqual(menu_links[0].attrs["href"], "?")
-        self.assertEqual(
-            menu_links[1].attrs["href"], "?domain_view=icon&domain_compact=0"
-        )
+        self.assertEqual(menu_links[0].attrs["href"], reverse("linkding:bookmarks.index"))
+        self.assertEqual(menu_links[1].attrs["href"], reverse("linkding:bookmarks.index"))
 
         domain_list = soup.select_one("ul.domain-menu")
         self.assertIsNotNone(domain_list)
         self.assertEqual(domain_list.attrs["data-domain-view-mode"], "icon")
+
+        self.assertEqual(menu_links[0].attrs["data-domain-target-view-mode"], "full")
+        self.assertEqual(menu_links[1].attrs["data-domain-target-compact-mode"], "0")
 
         root_item = domain_list.select_one('li[data-domain-host="example.com"]')
         self.assertIsNotNone(root_item)
@@ -1075,7 +1138,8 @@ class BookmarkIndexViewTestCase(
                 )
 
         response = self.client.get(
-            reverse("linkding:bookmarks.index") + "?domain_view=icon"
+            reverse("linkding:bookmarks.index"),
+            **self.get_domain_headers(view_mode="icon"),
         )
         soup = self.make_soup(response.content.decode())
 
@@ -1303,9 +1367,10 @@ class BookmarkIndexViewTestCase(
         )
 
         response = self.client.get(
-            reverse("linkding:bookmarks.index") + "?domain_view=icon",
+            reverse("linkding:bookmarks.index"),
             HTTP_X_LINKDING_SUMMARY_SHOW_WEEKDAYS="1",
             HTTP_X_LINKDING_SUMMARY_SHOW_DETAILS="1",
+            **self.get_domain_headers(view_mode="icon"),
         )
         soup = self.make_soup(response.content.decode())
         summary = soup.select_one("section[ld-sidebar-user-summary]")
@@ -1316,7 +1381,8 @@ class BookmarkIndexViewTestCase(
         bookmarks_query = urllib.parse.parse_qs(
             urllib.parse.urlsplit(bookmarks_link["href"]).query
         )
-        self.assertEqual(bookmarks_query["domain_view"], ["icon"])
+        self.assertNotIn("domain_view", bookmarks_query)
+        self.assertNotIn("domain_compact", bookmarks_query)
         self.assertNotIn("unread", bookmarks_query)
         self.assertNotIn("tagged", bookmarks_query)
         self.assertNotIn("summary_mode", bookmarks_query)
@@ -2207,3 +2273,19 @@ class BookmarkIndexViewTestCase(
         self.assertNotIn("summary_week", query)
         self.assertNotIn("summary_show_weekdays", query)
         self.assertNotIn("summary_show_details", query)
+
+    def test_search_action_does_not_preserve_domain_state_query_params(self):
+        response = self.client.post(
+            reverse("linkding:bookmarks.index"),
+            {
+                "q": "#alpha",
+                "domain_view": "icon",
+                "domain_compact": "0",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        query = urllib.parse.parse_qs(urllib.parse.urlsplit(response["Location"]).query)
+        self.assertEqual(query["q"], ["#alpha"])
+        self.assertNotIn("domain_view", query)
+        self.assertNotIn("domain_compact", query)

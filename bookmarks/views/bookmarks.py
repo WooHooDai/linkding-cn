@@ -194,16 +194,45 @@ def render_bookmarks_view(request: HttpRequest, template_name, context):
             context,
         )
 
-    if turbo.accept(request) and template_name == "bookmarks/index.html":
-        return partials.render_bookmark_update(
-            request,
-            context["bookmark_list"],
-            context["tag_cloud"],
-            context["details"],
-            context["bundles"],
-            context["domains"],
-            context.get("sidebar_summary"),
-        )
+    if turbo.accept(request):
+        turbo_renderers = {
+            "bookmarks/index.html": lambda: partials.render_bookmark_update(
+                request,
+                context["bookmark_list"],
+                context["tag_cloud"],
+                context["details"],
+                context["bundles"],
+                context["domains"],
+                context.get("sidebar_summary"),
+            ),
+            "bookmarks/archive.html": lambda: partials.render_bookmark_update(
+                request,
+                context["bookmark_list"],
+                context["tag_cloud"],
+                context["details"],
+                context["bundles"],
+                context["domains"],
+            ),
+            "bookmarks/shared.html": lambda: partials.render_bookmark_update(
+                request,
+                context["bookmark_list"],
+                context["tag_cloud"],
+                context["details"],
+                context["bundles"],
+                context["domains"],
+            ),
+            "bookmarks/trash.html": lambda: partials.render_bookmark_update(
+                request,
+                context["bookmark_list"],
+                context["tag_cloud"],
+                context["details"],
+                context["bundles"],
+                context["domains"],
+            ),
+        }
+        renderer = turbo_renderers.get(template_name)
+        if renderer:
+            return renderer()
 
     return render(
         request,
@@ -262,10 +291,6 @@ def search_action(request: HttpRequest):
     )
     base_url = request.path
     query_params = search.query_params
-    for param in ("domain_view", "domain_compact"):
-        value = request.POST.get(param) or request.GET.get(param)
-        if value:
-            query_params[param] = value
     query_string = urllib.parse.urlencode(query_params)
     url = base_url if not query_string else base_url + "?" + query_string
     return HttpResponseRedirect(url)

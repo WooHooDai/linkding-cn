@@ -37,6 +37,7 @@ CJK_RE = re.compile(r"[\u4e00-\u9fff]+")
 class RequestContext:
     index_view = "linkding:bookmarks.index"
     action_view = "linkding:bookmarks.index.action"
+    DOMAIN_PREFERENCE_QUERY_PARAMS = ("domain_view", "domain_compact")
 
     def __init__(self, request: HttpRequest):
         self.request = request
@@ -44,6 +45,8 @@ class RequestContext:
         self.action_url = reverse(self.action_view)
         self.query_params = request.GET.copy()
         self.query_params.pop("details", None)
+        for key in self.DOMAIN_PREFERENCE_QUERY_PARAMS:
+            self.query_params.pop(key, None)
 
     def get_url(self, view_url: str, add: dict = None, remove: dict = None) -> str:
         query_params = self.query_params.copy()
@@ -257,7 +260,7 @@ class SidebarUserSummaryContext:
         "summary_show_weekdays",
         "summary_show_details",
     )
-    PRESERVED_QUERY_PARAMS = ("domain_view", "domain_compact")
+    PRESERVED_QUERY_PARAMS = ()
     SUMMARY_HEADER_NAMES = {
         "summary_mode": "X-Linkding-Summary-Mode",
         "summary_month": "X-Linkding-Summary-Month",
@@ -1391,9 +1394,10 @@ class DomainItem:
         request_context: RequestContext,
         search_query: str,
         node: DomainTreeNode,
-        selected_domain_filters: set[str],
+        selected_domain_terms: list[str],
         children: list["DomainItem"],
     ) -> None:
+        selected_domain_filters = set(selected_domain_terms)
         self.node_id = node.node_id
         self.host = node.hostname
         self.label = node.label
@@ -1417,9 +1421,16 @@ class DomainItem:
         self.url = None
 
         if self.filter_value:
-            query_string = queries.replace_field_terms(
-                search_query, "domain", [self.filter_value]
+            next_domain_terms = (
+                [
+                    value
+                    for value in selected_domain_terms
+                    if value != self.filter_value
+                ]
+                if self.filter_value in selected_domain_filters
+                else [self.filter_value]
             )
+            query_string = queries.replace_field_terms(search_query, "domain", next_domain_terms)
             query_params = request_context.query_params.copy()
             query_params.setlist("q", [query_string])
             query_params.pop("page", None)
@@ -1430,6 +1441,8 @@ class DomainItem:
 class DomainsContext:
     request_context = RequestContext
     TOP_ROOT_LIMIT = 10
+    VIEW_MODE_HEADER = "X-Linkding-Domain-View"
+    COMPACT_MODE_HEADER = "X-Linkding-Domain-Compact"
 
     def __init__(self, request: HttpRequest, search: BookmarkSearch) -> None:
         request_context = self.request_context(request)
@@ -1437,29 +1450,24 @@ class DomainsContext:
         self.view_mode = self._parse_view_mode(request)
         self.is_icon_mode = self.view_mode == "icon"
         self.is_compact_mode = self._parse_compact_mode(request)
+        self.menu_url = self._build_menu_url(request)
         self.toggle_view_mode_label = (
             _("Full mode") if self.is_icon_mode else _("Icon mode")
         )
-        self.toggle_view_mode_url = self._build_menu_url(
-            request,
-            {"domain_view": None if self.is_icon_mode else "icon"},
-        )
+        self.toggle_view_mode_target = "full" if self.is_icon_mode else "icon"
         self.toggle_compact_mode_label = (
             _("All domains")
             if self.is_compact_mode
             else _("Only important domains")
         )
-        self.toggle_compact_mode_url = self._build_menu_url(
-            request,
-            {"domain_compact": "0" if self.is_compact_mode else None},
-        )
+        self.toggle_compact_mode_target = "0" if self.is_compact_mode else "1"
 
         parsed_query = queries.parse_query_string(search.q)
-        selected_domain_filters = {
+        selected_domain_terms = [
             utils.canonicalize_domain_filter_value(value)
             for value in parsed_query["field_terms"]["domain"]
             if value
-        }
+        ]
 
         bookmarks = list(
             request_context.get_bookmark_query_set(search).values("url", "favicon_file")
@@ -1473,7 +1481,7 @@ class DomainsContext:
             root_nodes,
             request_context,
             search.q,
-            selected_domain_filters,
+            selected_domain_terms,
         )
         self.items = self._flatten_items(self.roots)
         self.is_empty = len(self.items) == 0
@@ -1517,24 +1525,26 @@ class DomainsContext:
 
     @staticmethod
     def _parse_view_mode(request: HttpRequest) -> str:
+        header_value = request.headers.get(DomainsContext.VIEW_MODE_HEADER)
+        if header_value in ("icon", "full"):
+            return header_value
         return "icon" if request.GET.get("domain_view") == "icon" else "full"
 
     @staticmethod
     def _parse_compact_mode(request: HttpRequest) -> bool:
+        header_value = request.headers.get(DomainsContext.COMPACT_MODE_HEADER)
+        if header_value in ("0", "1"):
+            return header_value != "0"
         return request.GET.get("domain_compact") != "0"
 
     @staticmethod
-    def _build_menu_url(request: HttpRequest, updates: dict[str, str | None]) -> str:
+    def _build_menu_url(request: HttpRequest) -> str:
         query_params = request.GET.copy()
-
-        for key, value in updates.items():
-            if value is None:
-                query_params.pop(key, None)
-            else:
-                query_params.setlist(key, [value])
+        for key in RequestContext.DOMAIN_PREFERENCE_QUERY_PARAMS:
+            query_params.pop(key, None)
 
         encoded_query = query_params.urlencode()
-        return "?" + encoded_query if encoded_query else "?"
+        return request.path + ("?" + encoded_query if encoded_query else "")
 
     @classmethod
     def _compact_root_nodes(cls, root_nodes: list[DomainTreeNode]) -> list[DomainTreeNode]:
@@ -1580,7 +1590,7 @@ class DomainsContext:
         nodes: list[DomainTreeNode],
         request_context: RequestContext,
         search_query: str,
-        selected_domain_filters: set[str],
+        selected_domain_terms: list[str],
     ) -> list[DomainItem]:
         items = []
 
@@ -1589,14 +1599,14 @@ class DomainsContext:
                 cls._sorted_nodes(node.children.values()),
                 request_context,
                 search_query,
-                selected_domain_filters,
+                selected_domain_terms,
             )
             items.append(
                 DomainItem(
                     request_context,
                     search_query,
                     node,
-                    selected_domain_filters,
+                    selected_domain_terms,
                     children,
                 )
             )

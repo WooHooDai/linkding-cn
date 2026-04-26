@@ -1,5 +1,5 @@
 {% load i18n static %}
-<section aria-labelledby="domains-heading" ld-collapse-button data-toggle-storage-key="domainSectionState" data-toggle-target-selector=".section-content">
+<section id="domain-section-container" aria-labelledby="domains-heading" ld-collapse-button data-toggle-storage-key="domainSectionState" data-toggle-target-selector=".section-content">
   <div class="section-header no-wrap">
     <div class="section-title">
       <h2 id="domains-heading">{% translate "Domains" %}</h2>
@@ -16,10 +16,10 @@
         </button>
         <ul class="menu" role="list" tabindex="-1">
           <li class="menu-item">
-            <a href="{{ domains.toggle_view_mode_url }}" class="menu-link">{{ domains.toggle_view_mode_label }}</a>
+            <a href="{{ domains.menu_url }}" class="menu-link" data-domain-target-view-mode="{{ domains.toggle_view_mode_target }}" onclick="return window.ldHandleDomainPreferenceClick ? window.ldHandleDomainPreferenceClick(event) : true">{{ domains.toggle_view_mode_label }}</a>
           </li>
           <li class="menu-item">
-            <a href="{{ domains.toggle_compact_mode_url }}" class="menu-link">{{ domains.toggle_compact_mode_label }}</a>
+            <a href="{{ domains.menu_url }}" class="menu-link" data-domain-target-compact-mode="{{ domains.toggle_compact_mode_target }}" onclick="return window.ldHandleDomainPreferenceClick ? window.ldHandleDomainPreferenceClick(event) : true">{{ domains.toggle_compact_mode_label }}</a>
           </li>
         </ul>
       </div>

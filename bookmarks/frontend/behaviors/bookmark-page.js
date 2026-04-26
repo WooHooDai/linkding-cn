@@ -1,4 +1,20 @@
 import { Behavior, registerBehavior, applyBehaviors } from "./index";
+import {
+  applySummaryRequestHeaders,
+  buildSummaryRequestHeaders,
+  getRenderedSummaryState,
+  getStoredSummaryState,
+} from "../state/summary-preferences";
+import {
+  applyDomainRequestHeaders,
+  buildDomainRequestHeaders,
+  getRenderedDomainState,
+  getStoredDomainState,
+  storeDomainPreferenceTargets,
+  storeRenderedDomainPreferences,
+  stripDomainPreferenceParams,
+} from "../state/domain-preferences";
+import { persistOpenDrawerState } from "../state/filter-drawer-state";
 
 class BookmarkPagination extends Behavior {
   constructor(element) {
@@ -487,12 +503,91 @@ class BundleCollapseButton extends CollapseButtonBehavior {
 
 registerBehavior('ld-bundle-menu', BundleCollapseButton);
 
+function shouldBypassDomainPreferenceClick(event) {
+  return (
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  );
+}
+
+async function visitDomainPreferenceStream(requestUrl) {
+  try {
+    const headers = {
+      Accept: "text/vnd.turbo-stream.html",
+    };
+    const summaryHeaders = buildSummaryRequestHeaders({
+      ...getRenderedSummaryState(),
+      ...getStoredSummaryState(),
+    });
+    const domainHeaders = buildDomainRequestHeaders({
+      ...getRenderedDomainState(),
+      ...getStoredDomainState(),
+    });
+
+    if (summaryHeaders) {
+      applySummaryRequestHeaders(headers, summaryHeaders);
+    }
+    if (domainHeaders) {
+      applyDomainRequestHeaders(headers, domainHeaders);
+    }
+
+    const response = await fetch(requestUrl, {
+      headers,
+      credentials: "same-origin",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Unexpected status ${response.status}`);
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    const html = await response.text();
+    if (!contentType.includes("text/vnd.turbo-stream.html")) {
+      throw new Error("Expected turbo stream response");
+    }
+
+    Turbo.renderStreamMessage(html);
+    window.history.replaceState({}, "", requestUrl);
+  } catch (_error) {
+    persistOpenDrawerState();
+    Turbo.visit(requestUrl);
+  }
+}
+
+window.ldHandleDomainPreferenceClick = (event) => {
+  const link = event.currentTarget;
+  if (!link || shouldBypassDomainPreferenceClick(event)) {
+    return true;
+  }
+  const targetViewMode = link.dataset.domainTargetViewMode;
+  const targetCompactMode = link.dataset.domainTargetCompactMode;
+  if (!targetViewMode && targetCompactMode === undefined) {
+    return true;
+  }
+
+  event.preventDefault();
+  storeDomainPreferenceTargets({
+    targetViewMode,
+    targetCompactMode,
+  });
+  visitDomainPreferenceStream(stripDomainPreferenceParams(link.href));
+  return false;
+};
+
 class DomainTreeBehavior extends Behavior {
   constructor(element) {
     super(element);
     this.onTreeClick = this.onTreeClick.bind(this);
     this.element.addEventListener("click", this.onTreeClick);
     this.restoreTreeState();
+    if (this.applyStoredDisplayPreferences()) {
+      return;
+    }
+    this.syncStoredDisplayPreferencesFromDom();
+    this.stripDomainPreferenceParamsFromLocation();
   }
 
   destroy() {
@@ -576,6 +671,43 @@ class DomainTreeBehavior extends Behavior {
         button.setAttribute("aria-expanded", expanded);
         childList.style.display = expanded ? "" : "none";
       });
+  }
+
+  applyStoredDisplayPreferences() {
+    const currentViewMode = this.element.dataset.domainViewMode;
+    const currentCompactMode = this.element.dataset.domainCompactMode !== "false";
+    const { storedViewMode, storedCompactMode } = getStoredDomainState();
+
+    if (
+      storedViewMode === currentViewMode &&
+      (storedCompactMode === null || storedCompactMode === currentCompactMode)
+    ) {
+      return false;
+    }
+
+    if (!storedViewMode && storedCompactMode === null) {
+      return false;
+    }
+
+    persistOpenDrawerState();
+    Turbo.visit(stripDomainPreferenceParams(window.location.href), {
+      action: "replace",
+    });
+    return true;
+  }
+
+  syncStoredDisplayPreferencesFromDom() {
+    storeRenderedDomainPreferences({
+      currentViewMode: this.element.dataset.domainViewMode,
+      currentCompactMode: this.element.dataset.domainCompactMode !== "false",
+    });
+  }
+
+  stripDomainPreferenceParamsFromLocation() {
+    const cleanedUrl = stripDomainPreferenceParams(window.location.href);
+    if (cleanedUrl !== window.location.href) {
+      window.history.replaceState({}, "", cleanedUrl);
+    }
   }
 }
 
