@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from bookmarks.models import Bookmark
+import bookmarks.forms
 from bookmarks.services import favicon_loader
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 
@@ -48,6 +49,23 @@ class BookmarkNewViewTestCase(TestCase, BookmarkFactoryMixin):
         tags = bookmark.tags.order_by("name").all()
         self.assertEqual(tags[0].name, "tag1")
         self.assertEqual(tags[1].name, "tag2")
+
+    def test_should_use_fast_metadata_enrichment_flow_for_new_bookmarks(self):
+        form_data = self.create_form_data({"title": "", "description": ""})
+
+        with mock.patch.object(
+            bookmarks.forms,
+            "create_bookmark",
+            wraps=bookmarks.forms.create_bookmark,
+        ) as mock_create_bookmark:
+            self.client.post(reverse("linkding:bookmarks.new"), form_data)
+
+        mock_create_bookmark.assert_called_once_with(
+            mock.ANY,
+            "tag1,tag2",
+            self.user,
+            schedule_metadata_enrichment=True,
+        )
 
     def test_should_return_422_with_invalid_form(self):
         form_data = self.create_form_data({"url": ""})

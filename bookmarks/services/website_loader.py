@@ -18,6 +18,14 @@ from json.decoder import JSONDecodeError
 logger = logging.getLogger(__name__)
 
 
+class RetryableMetadataError(Exception):
+    pass
+
+
+class NonRetryableMetadataError(Exception):
+    pass
+
+
 @dataclass
 class WebsiteMetadata:
     url: str
@@ -39,6 +47,10 @@ class WebsiteMetadata:
 # 缓存规则设置与解析规则（function）
 _settings_cache = None
 _loaders_module_cache = {}  # {loader_path: (module, mtime)}
+
+
+def _empty_metadata(url: str):
+    return WebsiteMetadata(url=url, title=None, description=None, preview_image=None)
 
 # 获取网站标题、描述、首图
 # TODO: 目前一旦用户有自定义字段，就会失去缓存，暂时没考虑好传递config dict时的缓存方案
@@ -71,15 +83,21 @@ def _load_website_metadata_cached(url: str):
 
 
 def _load_website_metadata(url: str, config: dict = None):
-    title = None
-    description = None
-    preview_image = None
     try:
         start = timezone.now()
         page_text = load_page(url, config)
         end = timezone.now()
         logger.debug(f"Load duration: {end - start}")
+    except RetryableMetadataError:
+        raise
+    except NonRetryableMetadataError as exc:
+        logger.info(f"Metadata request failed without retry. url={url}", exc_info=exc)
+        return _empty_metadata(url)
+    except Exception as exc:
+        logger.error(f"Unexpected metadata request failure. url={url}", exc_info=exc)
+        return _empty_metadata(url)
 
+    try:
         start = timezone.now()
         soup = BeautifulSoup(page_text, "html.parser")
 
@@ -129,10 +147,13 @@ def _load_website_metadata(url: str, config: dict = None):
 
         end = timezone.now()
         logger.debug(f"Parsing duration: {end - start}")
-    finally:
-        return WebsiteMetadata(
-            url=url, title=title, description=description, preview_image=preview_image
-        )
+    except Exception as exc:
+        logger.error(f"Unexpected metadata parsing failure. url={url}", exc_info=exc)
+        return _empty_metadata(url)
+
+    return WebsiteMetadata(
+        url=url, title=title, description=description, preview_image=preview_image
+    )
 
 
 def load_page(url: str, config: dict = None):
@@ -148,30 +169,41 @@ def load_page(url: str, config: dict = None):
     size = 0
     content = None
     iteration = 0
-    # Use with to ensure request gets closed even if it's only read partially
-    with requests.get(url, timeout=timeout, headers=headers, cookies=cookies, proxies=proxies, stream=True) as r:
-        for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
-            size += len(chunk)
-            iteration = iteration + 1
-            if content is None:
-                content = chunk
-            else:
-                content = content + chunk
+    try:
+        # Use with to ensure request gets closed even if it's only read partially
+        with requests.get(url, timeout=timeout, headers=headers, cookies=cookies, proxies=proxies, stream=True) as r:
+            status_code = getattr(r, "status_code", 200)
+            if status_code == 429 or status_code >= 500:
+                raise RetryableMetadataError(f"Retryable metadata response: {status_code}")
+            if status_code >= 400:
+                raise NonRetryableMetadataError(f"Non-retryable metadata response: {status_code}")
 
-            logger.debug(f"Loaded chunk (iteration={iteration}, total={size / 1024})")
+            for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
+                size += len(chunk)
+                iteration = iteration + 1
+                if content is None:
+                    content = chunk
+                else:
+                    content = content + chunk
 
-            # Stop reading if we have parsed end of head tag
-            end_of_head = "</head>".encode("utf-8")
-            if end_of_head in content:
-                logger.debug(f"Found closing head tag after {size} bytes")
-                content = content.split(end_of_head)[0] + end_of_head
-                break
-            # Stop reading if we exceed limit
-            if size > MAX_CONTENT_LIMIT:
-                logger.debug(f"Cancel reading document after {size} bytes")
-                break
-        if hasattr(r, "_content_consumed"):
-            logger.debug(f"Request consumed: {r._content_consumed}")
+                logger.debug(f"Loaded chunk (iteration={iteration}, total={size / 1024})")
+
+                # Stop reading if we have parsed end of head tag
+                end_of_head = "</head>".encode("utf-8")
+                if end_of_head in content:
+                    logger.debug(f"Found closing head tag after {size} bytes")
+                    content = content.split(end_of_head)[0] + end_of_head
+                    break
+                # Stop reading if we exceed limit
+                if size > MAX_CONTENT_LIMIT:
+                    logger.debug(f"Cancel reading document after {size} bytes")
+                    break
+            if hasattr(r, "_content_consumed"):
+                logger.debug(f"Request consumed: {r._content_consumed}")
+    except (RetryableMetadataError, NonRetryableMetadataError):
+        raise
+    except requests.exceptions.RequestException as exc:
+        raise RetryableMetadataError(f"Retryable metadata request failure for {url}") from exc
 
     # Use charset_normalizer to determine encoding that best matches the response content
     # Several sites seem to specify the response encoding incorrectly, so we ignore it and use custom logic instead

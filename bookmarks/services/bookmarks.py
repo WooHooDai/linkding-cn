@@ -17,6 +17,7 @@ def create_bookmark(
     tag_string: str,
     current_user: User,
     disable_html_snapshot: bool = False,
+    schedule_metadata_enrichment: bool = False,
 ):
     # If URL is already bookmarked, then update it
     existing_bookmark: Bookmark = Bookmark.query_existing(
@@ -48,6 +49,9 @@ def create_bookmark(
         and not disable_html_snapshot
     ):
         tasks.create_html_snapshot(bookmark)
+
+    if schedule_metadata_enrichment and _needs_metadata_enrichment(bookmark):
+        tasks.schedule_metadata_enrichment(bookmark)
 
     return bookmark
 
@@ -97,6 +101,14 @@ def enhance_with_website_metadata(bookmark: Bookmark):
         bookmark.date_modified = timezone.now()
         update_fields.append("date_modified")
         bookmark.save(update_fields=update_fields)
+
+
+def _needs_metadata_enrichment(bookmark: Bookmark):
+    return (
+        not bookmark.title
+        or not bookmark.description
+        or not bookmark.preview_image_remote_url
+    )
 
 
 def archive_bookmark(bookmark: Bookmark):

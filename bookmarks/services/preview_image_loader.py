@@ -150,7 +150,11 @@ def load_preview_image(url: str, bookmark: Bookmark) -> str | None:
     # 如无预览图链接，尝试获取
     if not image_url:
         logger.debug("No remote preview image URL, trying to load website metadata.")
-        metadata = website_loader.load_website_metadata(url)
+        try:
+            metadata = website_loader.load_website_metadata(url)
+        except website_loader.RetryableMetadataError as exc:
+            logger.warning(f"Retryable metadata failure while loading preview image. url={url}", exc_info=exc)
+            return None
         if not metadata.preview_image:
             logger.debug(f"Could not find preview image in metadata: {url}")
             return None

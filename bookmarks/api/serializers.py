@@ -12,6 +12,7 @@ from bookmarks.models import (
     BookmarkBundle,
 )
 from bookmarks.services import bookmarks, bundles
+from bookmarks.services import tasks, website_loader
 from bookmarks.services.tags import get_or_create_tag
 from bookmarks.services.wayback import generate_fallback_webarchive_url
 from bookmarks.utils import app_version
@@ -139,18 +140,23 @@ class BookmarkSerializer(serializers.ModelSerializer):
 
         disable_scraping = self.context.get("disable_scraping", False)
         disable_html_snapshot = self.context.get("disable_html_snapshot", False)
+        prefer_async_metadata = self.context.get("prefer_async_metadata", False)
 
         saved_bookmark = bookmarks.create_bookmark(
             bookmark,
             tag_string,
             self.context["user"],
             disable_html_snapshot=disable_html_snapshot,
+            schedule_metadata_enrichment=prefer_async_metadata and not disable_scraping,
         )
         # Unless scraping is explicitly disabled, enhance bookmark with website
         # metadata to preserve backwards compatibility with clients that expect
         # title and description to be populated automatically when left empty
-        if not disable_scraping:
-            bookmarks.enhance_with_website_metadata(saved_bookmark)
+        if not disable_scraping and not prefer_async_metadata:
+            try:
+                bookmarks.enhance_with_website_metadata(saved_bookmark)
+            except website_loader.RetryableMetadataError:
+                tasks.schedule_metadata_enrichment(saved_bookmark)
         return saved_bookmark
 
     def update(self, instance: Bookmark, validated_data):

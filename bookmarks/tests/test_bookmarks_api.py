@@ -11,8 +11,10 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
+from rest_framework.test import APIRequestFactory
 
 import bookmarks.services.bookmarks
+from bookmarks.api.serializers import BookmarkSerializer
 from bookmarks.models import Bookmark, BookmarkSearch, UserProfile
 from bookmarks.services import website_loader
 from bookmarks.services.wayback import generate_fallback_webarchive_url
@@ -42,41 +44,15 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
 
     def assertBookmarkListEqual(self, data_list, bookmarks):
         expectations = []
+        request_factory = APIRequestFactory()
         for bookmark in bookmarks:
-            tag_names = [tag.name for tag in bookmark.tags.all()]
-            tag_names.sort(key=str.lower)
-            expectation = OrderedDict()
-            expectation["id"] = bookmark.id
-            expectation["url"] = bookmark.url
-            expectation["title"] = bookmark.title
-            expectation["description"] = bookmark.description
-            expectation["notes"] = bookmark.notes
-            expectation["web_archive_snapshot_url"] = (
-                bookmark.web_archive_snapshot_url
-                or generate_fallback_webarchive_url(bookmark.url, bookmark.date_added)
-            )
-            expectation["favicon_url"] = (
-                f"http://testserver/static/{bookmark.favicon_file}"
-                if bookmark.favicon_file
-                else None
-            )
-            expectation["preview_image_url"] = (
-                f"http://testserver/static/{bookmark.preview_image_file}"
-                if bookmark.preview_image_file
-                else None
-            )
-            expectation["is_archived"] = bookmark.is_archived
-            expectation["unread"] = bookmark.unread
-            expectation["shared"] = bookmark.shared
-            expectation["tag_names"] = tag_names
-            expectation["date_added"] = bookmark.date_added.isoformat().replace(
-                "+00:00", "Z"
-            )
-            expectation["date_modified"] = bookmark.date_modified.isoformat().replace(
-                "+00:00", "Z"
-            )
-            expectation["website_title"] = None
-            expectation["website_description"] = None
+            request = request_factory.get("/")
+            request.user = bookmark.owner
+            expectation = BookmarkSerializer(
+                bookmark,
+                context={"request": request, "user": bookmark.owner},
+            ).data
+            expectation["tag_names"].sort(key=str.lower)
             expectations.append(expectation)
 
         for data in data_list:
@@ -230,12 +206,12 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
             expected_status_code=status.HTTP_200_OK,
         )
         result_bookmarks = response.data["results"]
-        
+
         # 验证返回的书签数量正确
         self.assertEqual(len(result_bookmarks), len(bookmarks))
-        
+
         # 验证所有书签都被返回（内容相同，顺序可能不同）
-        self.assertCountEqual(result_bookmarks, bookmarks)
+        self.assertBookmarkListEqual(result_bookmarks, bookmarks)
 
     def test_list_archived_bookmarks_does_not_return_unarchived_bookmarks(self):
         self.authenticate()
@@ -498,6 +474,46 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
         self.assertEqual(bookmark.title, "")
         self.assertEqual(bookmark.description, "")
 
+    def test_create_bookmark_can_schedule_preferred_async_metadata_enrichment(self):
+        self.authenticate()
+
+        data = {"url": "https://example.com/"}
+        with patch.object(
+            website_loader, "load_website_metadata"
+        ) as mock_load_website_metadata, patch(
+            "bookmarks.services.bookmarks.tasks.schedule_metadata_enrichment"
+        ) as mock_schedule_metadata_enrichment:
+            self.post(
+                reverse("linkding:bookmark-list") + "?prefer_async_metadata=true",
+                data,
+                status.HTTP_201_CREATED,
+            )
+
+        bookmark = Bookmark.objects.get(url=data["url"])
+        self.assertEqual(bookmark.title, "")
+        self.assertEqual(bookmark.description, "")
+        mock_load_website_metadata.assert_not_called()
+        mock_schedule_metadata_enrichment.assert_called_once_with(bookmark)
+
+    def test_create_bookmark_schedules_background_enrichment_on_retryable_failure(self):
+        self.authenticate()
+
+        data = {"url": "https://example.com/"}
+        with patch.object(
+            website_loader,
+            "load_website_metadata",
+            side_effect=website_loader.RetryableMetadataError("boom"),
+        ) as mock_load_website_metadata, patch(
+            "bookmarks.api.serializers.tasks.schedule_metadata_enrichment"
+        ) as mock_schedule_metadata_enrichment:
+            self.post(reverse("linkding:bookmark-list"), data, status.HTTP_201_CREATED)
+
+        bookmark = Bookmark.objects.get(url=data["url"])
+        self.assertEqual(bookmark.title, "")
+        self.assertEqual(bookmark.description, "")
+        mock_load_website_metadata.assert_called_once()
+        mock_schedule_metadata_enrichment.assert_called_once_with(bookmark)
+
     def test_create_bookmark_creates_html_snapshot_by_default(self):
         self.authenticate()
 
@@ -510,7 +526,11 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
             self.post(reverse("linkding:bookmark-list"), data, status.HTTP_201_CREATED)
 
             mock_create_bookmark.assert_called_with(
-                ANY, "", self.get_or_create_test_user(), disable_html_snapshot=False
+                ANY,
+                "",
+                self.get_or_create_test_user(),
+                disable_html_snapshot=False,
+                schedule_metadata_enrichment=False,
             )
 
     def test_create_bookmark_does_not_create_html_snapshot_if_disabled(self):
@@ -529,7 +549,11 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
             )
 
             mock_create_bookmark.assert_called_with(
-                ANY, "", self.get_or_create_test_user(), disable_html_snapshot=True
+                ANY,
+                "",
+                self.get_or_create_test_user(),
+                disable_html_snapshot=True,
+                schedule_metadata_enrichment=False,
             )
 
     def test_create_bookmark_with_same_url_updates_existing_bookmark(self):
@@ -1151,6 +1175,26 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
                 "https://example.com", ignore_cache=True
             )
 
+    def test_check_returns_empty_metadata_on_retryable_failure(self):
+        self.authenticate()
+
+        with patch.object(
+            website_loader,
+            "load_website_metadata",
+            side_effect=website_loader.RetryableMetadataError("boom"),
+        ):
+            url = reverse("linkding:bookmark-check")
+            check_url = urllib.parse.quote_plus("https://example.com")
+            response = self.get(
+                f"{url}?url={check_url}", expected_status_code=status.HTTP_200_OK
+            )
+
+        metadata = response.data["metadata"]
+        self.assertEqual(metadata["url"], "https://example.com")
+        self.assertIsNone(metadata["title"])
+        self.assertIsNone(metadata["description"])
+        self.assertIsNone(metadata["preview_image"])
+
     def test_can_only_access_own_bookmarks(self):
         self.authenticate()
         self.setup_bookmark()
@@ -1349,7 +1393,9 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
     def test_singlefile_creates_bookmark_without_creating_snapshot(self):
         with patch(
             "bookmarks.services.bookmarks.create_bookmark"
-        ) as mock_create_bookmark:
+        ) as mock_create_bookmark, patch(
+            "bookmarks.services.bookmarks.enhance_with_website_metadata"
+        ):
             self.authenticate()
             self.client.post(
                 reverse("linkding:bookmark-singlefile"),

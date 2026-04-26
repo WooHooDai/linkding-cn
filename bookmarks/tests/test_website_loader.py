@@ -1,12 +1,20 @@
 from unittest import mock
+import requests
 from bookmarks.services import website_loader
 
 from django.test import TestCase
 
 
 class MockStreamingResponse:
-    def __init__(self, num_chunks, chunk_size, insert_head_after_chunk=None):
+    def __init__(
+        self,
+        num_chunks,
+        chunk_size,
+        insert_head_after_chunk=None,
+        status_code=200,
+    ):
         self.chunks = []
+        self.status_code = status_code
         for index in range(num_chunks):
             chunk = "".zfill(chunk_size)
             self.chunks.append(chunk.encode("utf-8"))
@@ -100,6 +108,31 @@ class WebsiteLoaderTestCase(TestCase):
 
             # verify that byte after head was removed, content parsed as utf-8
             self.assertEqual(content, "<head>人</head>")
+
+    def test_load_page_raises_retryable_error_on_timeout(self):
+        with mock.patch(
+            "requests.get", side_effect=requests.exceptions.Timeout("boom")
+        ):
+            with self.assertRaises(website_loader.RetryableMetadataError):
+                website_loader.load_page("https://example.com")
+
+    def test_load_page_raises_retryable_error_on_rate_limit(self):
+        with mock.patch("requests.get") as mock_get:
+            mock_get.return_value = MockStreamingResponse(
+                num_chunks=1, chunk_size=128, status_code=429
+            )
+
+            with self.assertRaises(website_loader.RetryableMetadataError):
+                website_loader.load_page("https://example.com")
+
+    def test_load_page_raises_retryable_error_on_server_error(self):
+        with mock.patch("requests.get") as mock_get:
+            mock_get.return_value = MockStreamingResponse(
+                num_chunks=1, chunk_size=128, status_code=500
+            )
+
+            with self.assertRaises(website_loader.RetryableMetadataError):
+                website_loader.load_page("https://example.com")
 
     def test_load_website_metadata(self):
         with mock.patch(

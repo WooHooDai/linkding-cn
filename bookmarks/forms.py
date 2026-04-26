@@ -90,7 +90,12 @@ class BookmarkForm(forms.ModelForm):
         if self.instance.pk:
             return update_bookmark(bookmark, tag_string, self.request.user)
         else:
-            return create_bookmark(bookmark, tag_string, self.request.user)
+            return create_bookmark(
+                bookmark,
+                tag_string,
+                self.request.user,
+                schedule_metadata_enrichment=True,
+            )
 
     def clean_url(self):
         # When creating a bookmark, the service logic prevents duplicate URLs by

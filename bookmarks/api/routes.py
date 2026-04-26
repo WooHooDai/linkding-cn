@@ -26,7 +26,7 @@ from bookmarks.models import (
     User,
     BookmarkBundle,
 )
-from bookmarks.services import assets, bookmarks, bundles, auto_tagging, website_loader
+from bookmarks.services import assets, bookmarks, bundles, auto_tagging, website_loader, tasks
 from bookmarks.type_defs import HttpRequest
 from bookmarks.views import access
 from bookmarks.utils import normalize_url
@@ -77,11 +77,15 @@ class BookmarkViewSet(
     def get_serializer_context(self):
         disable_scraping = "disable_scraping" in self.request.GET
         disable_html_snapshot = "disable_html_snapshot" in self.request.GET
+        prefer_async_metadata = self.request.GET.get(
+            "prefer_async_metadata", False
+        ) in ["true"]
         return {
             "request": self.request,
             "user": self.request.user,
             "disable_scraping": disable_scraping,
             "disable_html_snapshot": disable_html_snapshot,
+            "prefer_async_metadata": prefer_async_metadata,
         }
 
     @action(methods=["get"], detail=False)
@@ -120,7 +124,19 @@ class BookmarkViewSet(
         # URL 可能会被自定义脚本改变
         # 当被改变时，进行二次检查
         normalized_url = normalize_url(url)
-        metadata = website_loader.load_website_metadata(url, ignore_cache=ignore_cache)
+        try:
+            metadata = website_loader.load_website_metadata(url, ignore_cache=ignore_cache)
+        except website_loader.RetryableMetadataError as exc:
+            logger.warning(
+                f"Retryable metadata failure during bookmark check. url={url}",
+                exc_info=exc,
+            )
+            metadata = website_loader.WebsiteMetadata(
+                url=url,
+                title=None,
+                description=None,
+                preview_image=None,
+            )
         if not bookmark and metadata.url and normalize_url(metadata.url) != normalized_url:
             normalized_metadata_url = normalize_url(metadata.url)
             bookmark = Bookmark.query_existing(request.user, normalized_metadata_url).first()
@@ -173,7 +189,10 @@ class BookmarkViewSet(
             bookmark = bookmarks.create_bookmark(
                 bookmark, "", request.user, disable_html_snapshot=True
             )
-            bookmarks.enhance_with_website_metadata(bookmark)
+            try:
+                bookmarks.enhance_with_website_metadata(bookmark)
+            except website_loader.RetryableMetadataError:
+                tasks.schedule_metadata_enrichment(bookmark)
 
         assets.upload_snapshot(bookmark, file.read())
 

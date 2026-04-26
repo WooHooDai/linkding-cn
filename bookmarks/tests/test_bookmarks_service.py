@@ -45,6 +45,12 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
             "bookmarks.services.bookmarks.tasks.load_preview_image"
         )
         self.mock_load_preview_image = self.mock_load_preview_image_patcher.start()
+        self.mock_schedule_metadata_enrichment_patcher = patch(
+            "bookmarks.services.bookmarks.tasks.schedule_metadata_enrichment"
+        )
+        self.mock_schedule_metadata_enrichment = (
+            self.mock_schedule_metadata_enrichment_patcher.start()
+        )
         self.mock_refresh_favicon_patcher = patch(
             "bookmarks.services.bookmarks.tasks.refresh_favicon", create=True
         )
@@ -53,6 +59,7 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
     def tearDown(self):
         self.mock_schedule_refresh_metadata_patcher.stop()
         self.mock_load_preview_image_patcher.stop()
+        self.mock_schedule_metadata_enrichment_patcher.stop()
         self.mock_refresh_favicon_patcher.stop()
 
     def test_create_should_not_update_website_metadata(self):
@@ -75,6 +82,39 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
             self.assertEqual("Initial Title", created_bookmark.title)
             self.assertEqual("Initial description", created_bookmark.description)
             mock_load_website_metadata.assert_not_called()
+
+    def test_create_should_schedule_metadata_enrichment_for_fast_create_flow(self):
+        bookmark_data = Bookmark(
+            url="https://example.com",
+            title="",
+            description="",
+        )
+
+        created_bookmark = create_bookmark(
+            bookmark_data,
+            "",
+            self.get_or_create_test_user(),
+            schedule_metadata_enrichment=True,
+        )
+
+        self.mock_schedule_metadata_enrichment.assert_called_once_with(created_bookmark)
+
+    def test_create_should_skip_metadata_enrichment_when_all_fields_present(self):
+        bookmark_data = Bookmark(
+            url="https://example.com",
+            title="Initial title",
+            description="Initial description",
+            preview_image_remote_url="https://example.com/preview.png",
+        )
+
+        create_bookmark(
+            bookmark_data,
+            "",
+            self.get_or_create_test_user(),
+            schedule_metadata_enrichment=True,
+        )
+
+        self.mock_schedule_metadata_enrichment.assert_not_called()
 
     def test_create_should_update_existing_bookmark_with_same_url(self):
         original_bookmark = self.setup_bookmark(

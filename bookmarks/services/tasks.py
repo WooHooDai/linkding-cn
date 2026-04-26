@@ -36,17 +36,19 @@ def task(retries=5, retry_delay=15, retry_backoff=4):
     def deco(fn):
         @functools.wraps(fn)
         def inner(*args, **kwargs):
-            task = kwargs.pop("task")
+            task = kwargs.pop("task", None)
             try:
                 return fn(*args, **kwargs)
             except TaskLockedException as exc:
                 # Task locks are currently only used as workaround to enforce
                 # running specific types of tasks (e.g. singlefile snapshots)
                 # sequentially. In that case don't reduce the number of retries.
-                task.retries = retries
+                if task is not None:
+                    task.retries = retries
                 raise exc
             except Exception as exc:
-                task.retry_delay *= retry_backoff
+                if task is not None:
+                    task.retry_delay *= retry_backoff
                 raise exc
 
         return huey.task(retries=retries, retry_delay=retry_delay, context=True)(inner)
@@ -254,6 +256,57 @@ def _schedule_bookmarks_without_previews_task(user_id: int):
 def refresh_metadata(bookmark: Bookmark):
     if not settings.LD_DISABLE_BACKGROUND_TASKS:
         _refresh_metadata_task(bookmark.id)
+
+
+def schedule_metadata_enrichment(
+    bookmark: Bookmark,
+    overwrite: bool = False,
+    ignore_cache: bool = True,
+):
+    if not settings.LD_DISABLE_BACKGROUND_TASKS:
+        _enrich_metadata_task(
+            bookmark.id,
+            overwrite=overwrite,
+            ignore_cache=ignore_cache,
+        )
+
+
+@task(retries=3)
+def _enrich_metadata_task(
+    bookmark_id: int,
+    overwrite: bool = False,
+    ignore_cache: bool = True,
+):
+    try:
+        bookmark = Bookmark.objects.get(id=bookmark_id)
+    except Bookmark.DoesNotExist:
+        return
+
+    logger.info(f"Enrich metadata for bookmark. url={bookmark.url}")
+
+    metadata = load_website_metadata(bookmark.url, ignore_cache=ignore_cache)
+    update_fields = []
+
+    if overwrite or not bookmark.title:
+        if metadata.title is not None and metadata.title != bookmark.title:
+            bookmark.title = metadata.title
+            update_fields.append("title")
+
+    if overwrite or not bookmark.description:
+        if metadata.description is not None and metadata.description != bookmark.description:
+            bookmark.description = metadata.description
+            update_fields.append("description")
+
+    if overwrite or not bookmark.preview_image_remote_url:
+        if metadata.preview_image and metadata.preview_image != bookmark.preview_image_remote_url:
+            bookmark.preview_image_remote_url = metadata.preview_image
+            update_fields.append("preview_image_remote_url")
+
+    if update_fields:
+        bookmark.date_modified = timezone.now()
+        update_fields.append("date_modified")
+        bookmark.save(update_fields=update_fields)
+        logger.info(f"Successfully enriched metadata for bookmark. url={bookmark.url}")
 
 
 @task()

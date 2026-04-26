@@ -10,7 +10,7 @@ from huey.contrib.djhuey import HUEY as huey
 from waybackpy.exceptions import WaybackError
 
 from bookmarks.models import BookmarkAsset, UserProfile
-from bookmarks.services import tasks, favicon_loader
+from bookmarks.services import tasks, favicon_loader, website_loader
 from bookmarks.services.website_loader import WebsiteMetadata
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 
@@ -936,11 +936,41 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
             tasks.refresh_metadata(bookmark)
             mock_refresh_metadata_task.assert_called_once()
 
+    @override_settings(LD_DISABLE_BACKGROUND_TASKS=True)
+    def test_schedule_metadata_enrichment_not_called_when_background_tasks_disabled(
+        self,
+    ):
+        bookmark = self.setup_bookmark()
+        with mock.patch(
+            "bookmarks.services.tasks._enrich_metadata_task"
+        ) as mock_enrich_metadata_task:
+            tasks.schedule_metadata_enrichment(bookmark)
+            mock_enrich_metadata_task.assert_not_called()
+
+    @override_settings(LD_DISABLE_BACKGROUND_TASKS=False)
+    def test_schedule_metadata_enrichment_called_when_background_tasks_enabled(self):
+        bookmark = self.setup_bookmark()
+        with mock.patch(
+            "bookmarks.services.tasks._enrich_metadata_task"
+        ) as mock_enrich_metadata_task:
+            tasks.schedule_metadata_enrichment(bookmark)
+            mock_enrich_metadata_task.assert_called_once_with(
+                bookmark.id, overwrite=False, ignore_cache=True
+            )
+
     def test_refresh_metadata_task_should_handle_missing_bookmark(self):
         with mock.patch(
             "bookmarks.services.website_loader.load_website_metadata"
         ) as mock_load_website_metadata:
             tasks._refresh_metadata_task(123)
+
+            mock_load_website_metadata.assert_not_called()
+
+    def test_enrich_metadata_task_should_handle_missing_bookmark(self):
+        with mock.patch(
+            "bookmarks.services.tasks.load_website_metadata"
+        ) as mock_load_website_metadata:
+            tasks._enrich_metadata_task(123)
 
             mock_load_website_metadata.assert_not_called()
 
@@ -966,3 +996,71 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
             bookmark.refresh_from_db()
             self.assertEqual(bookmark.title, "New title")
             self.assertEqual(bookmark.description, "New description")
+
+    def test_enrich_metadata_updates_blank_fields_only(self):
+        bookmark = self.setup_bookmark(title="", description="")
+        bookmark.preview_image_remote_url = ""
+        bookmark.save(update_fields=["preview_image_remote_url"])
+        mock_website_metadata = WebsiteMetadata(
+            url=bookmark.url,
+            title="New title",
+            description="New description",
+            preview_image="https://example.com/preview.png",
+        )
+
+        with mock.patch(
+            "bookmarks.services.tasks.load_website_metadata"
+        ) as mock_load_website_metadata:
+            mock_load_website_metadata.return_value = mock_website_metadata
+
+            tasks.schedule_metadata_enrichment(bookmark)
+
+            bookmark.refresh_from_db()
+            self.assertEqual(bookmark.title, "New title")
+            self.assertEqual(bookmark.description, "New description")
+            self.assertEqual(
+                bookmark.preview_image_remote_url,
+                "https://example.com/preview.png",
+            )
+
+    def test_enrich_metadata_does_not_overwrite_existing_fields_by_default(self):
+        bookmark = self.setup_bookmark(
+            title="Initial title",
+            description="Initial description",
+        )
+        bookmark.preview_image_remote_url = ""
+        bookmark.save(update_fields=["preview_image_remote_url"])
+        mock_website_metadata = WebsiteMetadata(
+            url=bookmark.url,
+            title="New title",
+            description="New description",
+            preview_image="https://example.com/preview.png",
+        )
+
+        with mock.patch(
+            "bookmarks.services.tasks.load_website_metadata"
+        ) as mock_load_website_metadata:
+            mock_load_website_metadata.return_value = mock_website_metadata
+
+            tasks.schedule_metadata_enrichment(bookmark)
+
+            bookmark.refresh_from_db()
+            self.assertEqual(bookmark.title, "Initial title")
+            self.assertEqual(bookmark.description, "Initial description")
+            self.assertEqual(
+                bookmark.preview_image_remote_url,
+                "https://example.com/preview.png",
+            )
+
+    def test_enrich_metadata_task_propagates_retryable_loader_errors(self):
+        bookmark = self.setup_bookmark()
+
+        with mock.patch(
+            "bookmarks.services.tasks.load_website_metadata"
+        ) as mock_load_website_metadata:
+            mock_load_website_metadata.side_effect = (
+                website_loader.RetryableMetadataError("boom")
+            )
+
+            with self.assertRaises(website_loader.RetryableMetadataError):
+                tasks._enrich_metadata_task.call_local(bookmark.id)
