@@ -4,6 +4,7 @@ import "./behaviors/bulk-edit";
 import "./behaviors/clear-button";
 import "./behaviors/confirm-button";
 import "./behaviors/details-modal";
+import "./state/registry";
 import "./behaviors/dropdown";
 import "./behaviors/filter-drawer";
 import "./behaviors/form";

@@ -1,144 +1,20 @@
 import { Behavior, registerBehavior } from "./index";
+import {
+  buildPagePreferenceRequestHeaders,
+  stripPagePreferenceParams,
+} from "../state/page-preferences";
+import {
+  buildStoredSummaryPreferenceState,
+  getStoredSummaryState,
+  getSummaryStateFromElement,
+  storeRenderedSummaryPreferences,
+  storeSummaryPreferenceTargets,
+  storeSummaryPreferences,
+} from "../state/summary-preferences";
+import { persistOpenDrawerState } from "../state/filter-drawer-state";
 
-const FILTER_DRAWER_REOPEN_KEY = "ld:reopen-filter-drawer";
 const DEFAULT_HEATMAP_MIN_COLUMN_WIDTH = 18;
 const DEFAULT_HEATMAP_MIN_VISIBLE_COLUMNS = 8;
-const SUMMARY_MODE_STORAGE_KEY = "ld:user-summary-mode";
-const SUMMARY_MONTH_STORAGE_KEY = "ld:user-summary-month";
-const SUMMARY_WEEK_STORAGE_KEY = "ld:user-summary-week";
-const SUMMARY_WEEKDAYS_STORAGE_KEY = "ld:user-summary-show-weekdays";
-const SUMMARY_DETAILS_STORAGE_KEY = "ld:user-summary-show-details";
-const SUMMARY_SELECTOR = "[ld-sidebar-user-summary]";
-const SUMMARY_QUERY_PARAMS = [
-  "summary_mode",
-  "summary_month",
-  "summary_week",
-  "summary_year",
-  "summary_month_number",
-  "summary_show_weekdays",
-  "summary_show_details",
-];
-
-export function parseStoredBooleanPreference(value) {
-  if (value === "1") {
-    return true;
-  }
-  if (value === "0") {
-    return false;
-  }
-  return null;
-}
-
-function stripSummaryPreferenceParams(href) {
-  const visibleUrl = new URL(href, "http://localhost");
-
-  SUMMARY_QUERY_PARAMS.forEach((key) => {
-    visibleUrl.searchParams.delete(key);
-  });
-
-  return visibleUrl.toString();
-}
-
-function buildStoredSummaryPreferenceState({
-  currentMode,
-  currentMonth,
-  currentWeek,
-  currentShowWeekdays,
-  currentShowDetails,
-  hasSelectedRange,
-  storedMode,
-  storedMonth,
-  storedWeek,
-  storedShowWeekdays,
-  storedShowDetails,
-}) {
-  let changed = false;
-  const targetState = {
-    mode: currentMode,
-    month: currentMonth,
-    week: currentWeek,
-    showWeekdays: currentShowWeekdays,
-    showDetails: currentShowDetails,
-  };
-
-  if (storedMode && storedMode !== currentMode) {
-    targetState.mode = storedMode;
-    changed = true;
-  }
-
-  if (!hasSelectedRange) {
-    if (
-      targetState.mode === "calendar" &&
-      storedMonth &&
-      storedMonth !== currentMonth
-    ) {
-      targetState.month = storedMonth;
-      changed = true;
-    }
-
-    if (
-      targetState.mode === "heatmap" &&
-      storedWeek &&
-      storedWeek !== currentWeek
-    ) {
-      targetState.week = storedWeek;
-      changed = true;
-    }
-  }
-
-  if (storedShowWeekdays !== null && storedShowWeekdays !== currentShowWeekdays) {
-    targetState.showWeekdays = storedShowWeekdays;
-    changed = true;
-  }
-
-  if (storedShowDetails !== null && storedShowDetails !== currentShowDetails) {
-    targetState.showDetails = storedShowDetails;
-    changed = true;
-  }
-
-  return changed ? targetState : null;
-}
-
-export function buildSummaryRequestHeaders({
-  currentMode,
-  currentMonth,
-  currentWeek,
-  currentShowWeekdays,
-  currentShowDetails,
-  storedMode,
-  storedMonth,
-  storedWeek,
-  storedShowWeekdays,
-  storedShowDetails,
-}) {
-  const mode = storedMode || currentMode;
-  const month = storedMonth || currentMonth;
-  const week = storedWeek || currentWeek;
-  const showWeekdays = storedShowWeekdays ?? currentShowWeekdays;
-  const showDetails = storedShowDetails ?? currentShowDetails;
-
-  if (!mode) {
-    return null;
-  }
-
-  const headers = {
-    "X-Linkding-Summary-Mode": mode,
-    "X-Linkding-Summary-Show-Weekdays": showWeekdays ? "1" : "0",
-    "X-Linkding-Summary-Show-Details": showDetails ? "1" : "0",
-  };
-
-  if (mode === "heatmap") {
-    if (week) {
-      headers["X-Linkding-Summary-Week"] = week;
-    }
-    return headers;
-  }
-
-  if (month) {
-    headers["X-Linkding-Summary-Month"] = month;
-  }
-  return headers;
-}
 
 function computeVisibleHeatmapColumns({
   availableWidth,
@@ -184,46 +60,6 @@ function buildHeatmapColumnVisibility(totalColumns, visibleColumns) {
   );
 }
 
-function getRenderedSummaryState() {
-  const summaryElement = document.querySelector(SUMMARY_SELECTOR);
-  if (!summaryElement) {
-    return null;
-  }
-
-  return {
-    currentMode: summaryElement.dataset.summaryMode,
-    currentMonth: summaryElement.dataset.summaryMonth,
-    currentWeek: summaryElement.dataset.summaryWeek,
-    currentShowWeekdays: summaryElement.dataset.summaryShowWeekdays === "1",
-    currentShowDetails: summaryElement.dataset.summaryShowDetails === "1",
-  };
-}
-
-function getStoredSummaryState() {
-  return {
-    storedMode: window.localStorage.getItem(SUMMARY_MODE_STORAGE_KEY),
-    storedMonth: window.localStorage.getItem(SUMMARY_MONTH_STORAGE_KEY),
-    storedWeek: window.localStorage.getItem(SUMMARY_WEEK_STORAGE_KEY),
-    storedShowWeekdays: parseStoredBooleanPreference(
-      window.localStorage.getItem(SUMMARY_WEEKDAYS_STORAGE_KEY),
-    ),
-    storedShowDetails: parseStoredBooleanPreference(
-      window.localStorage.getItem(SUMMARY_DETAILS_STORAGE_KEY),
-    ),
-  };
-}
-
-function applyRequestHeaders(headerBag, summaryHeaders) {
-  if (headerBag instanceof Headers) {
-    Object.entries(summaryHeaders).forEach(([key, value]) => {
-      headerBag.set(key, value);
-    });
-    return;
-  }
-
-  Object.assign(headerBag, summaryHeaders);
-}
-
 class SidebarUserSummaryBehavior extends Behavior {
   constructor(element) {
     super(element);
@@ -247,32 +83,11 @@ class SidebarUserSummaryBehavior extends Behavior {
       this.handleCollectionToggle();
     }
 
-    SidebarUserSummaryBehavior.installDrawerReopenHook();
     if (this.applyStoredDisplayPreferences()) {
       return;
     }
     this.syncStoredDisplayPreferencesFromDom();
     this.initializeHeatmapLayout();
-  }
-
-  static installDrawerReopenHook() {
-    if (SidebarUserSummaryBehavior.drawerHookInstalled) {
-      return;
-    }
-
-    document.addEventListener("turbo:load", () => {
-      if (window.sessionStorage.getItem(FILTER_DRAWER_REOPEN_KEY) !== "1") {
-        return;
-      }
-
-      window.sessionStorage.removeItem(FILTER_DRAWER_REOPEN_KEY);
-      const trigger = document.querySelector("[ld-filter-drawer-trigger]");
-      if (trigger && !document.querySelector(".filter-drawer.active")) {
-        trigger.click();
-      }
-    });
-
-    SidebarUserSummaryBehavior.drawerHookInstalled = true;
   }
 
   destroy() {
@@ -392,14 +207,19 @@ class SidebarUserSummaryBehavior extends Behavior {
   }
 
   async visitStream(url) {
-    const requestUrl = stripSummaryPreferenceParams(url);
+    const requestUrl = stripPagePreferenceParams(url);
 
     try {
+      const headers = {
+        Accept: "text/vnd.turbo-stream.html",
+      };
+      const pageHeaders = buildPagePreferenceRequestHeaders();
+      if (pageHeaders) {
+        Object.assign(headers, pageHeaders);
+      }
+
       const response = await fetch(requestUrl, {
-        headers: {
-          Accept: "text/vnd.turbo-stream.html",
-          ...this.buildSummaryRequestHeaders(),
-        },
+        headers,
         credentials: "same-origin",
       });
 
@@ -417,131 +237,39 @@ class SidebarUserSummaryBehavior extends Behavior {
       window.history.pushState({}, "", requestUrl);
       this.draftStart = null;
     } catch (_error) {
-      this.persistDrawerState();
+      persistOpenDrawerState();
       Turbo.visit(requestUrl);
-    }
-  }
-
-  persistDrawerState() {
-    if (document.querySelector(".filter-drawer.active")) {
-      window.sessionStorage.setItem(FILTER_DRAWER_REOPEN_KEY, "1");
     }
   }
 
   applyStoredDisplayPreferences() {
     const preferenceState = buildStoredSummaryPreferenceState({
-      currentMode: this.element.dataset.summaryMode,
-      currentMonth: this.element.dataset.summaryMonth,
-      currentWeek: this.element.dataset.summaryWeek,
-      currentShowWeekdays: this.element.dataset.summaryShowWeekdays === "1",
-      currentShowDetails: this.element.dataset.summaryShowDetails === "1",
+      ...getSummaryStateFromElement(this.element),
       hasSelectedRange: this.hasCommittedRange(),
-      storedMode: window.localStorage.getItem(SUMMARY_MODE_STORAGE_KEY),
-      storedMonth: window.localStorage.getItem(SUMMARY_MONTH_STORAGE_KEY),
-      storedWeek: window.localStorage.getItem(SUMMARY_WEEK_STORAGE_KEY),
-      storedShowWeekdays: parseStoredBooleanPreference(
-        window.localStorage.getItem(SUMMARY_WEEKDAYS_STORAGE_KEY),
-      ),
-      storedShowDetails: parseStoredBooleanPreference(
-        window.localStorage.getItem(SUMMARY_DETAILS_STORAGE_KEY),
-      ),
+      ...getStoredSummaryState(),
     });
 
     if (!preferenceState) {
       return false;
     }
 
-    if (preferenceState.mode) {
-      window.localStorage.setItem(SUMMARY_MODE_STORAGE_KEY, preferenceState.mode);
-    }
-    if (preferenceState.month) {
-      window.localStorage.setItem(SUMMARY_MONTH_STORAGE_KEY, preferenceState.month);
-    }
-    if (preferenceState.week) {
-      window.localStorage.setItem(SUMMARY_WEEK_STORAGE_KEY, preferenceState.week);
-    }
-    window.localStorage.setItem(
-      SUMMARY_WEEKDAYS_STORAGE_KEY,
-      preferenceState.showWeekdays ? "1" : "0",
-    );
-    window.localStorage.setItem(
-      SUMMARY_DETAILS_STORAGE_KEY,
-      preferenceState.showDetails ? "1" : "0",
-    );
+    storeSummaryPreferences(preferenceState);
 
     this.visitStream(window.location.href);
     return true;
   }
 
   syncStoredDisplayPreferencesFromDom() {
-    window.localStorage.setItem(
-      SUMMARY_MODE_STORAGE_KEY,
-      this.element.dataset.summaryMode,
-    );
-    window.localStorage.setItem(
-      SUMMARY_MONTH_STORAGE_KEY,
-      this.element.dataset.summaryMonth || "",
-    );
-    window.localStorage.setItem(
-      SUMMARY_WEEK_STORAGE_KEY,
-      this.element.dataset.summaryWeek || "",
-    );
-    window.localStorage.setItem(
-      SUMMARY_WEEKDAYS_STORAGE_KEY,
-      this.element.dataset.summaryShowWeekdays === "1" ? "1" : "0",
-    );
-    window.localStorage.setItem(
-      SUMMARY_DETAILS_STORAGE_KEY,
-      this.element.dataset.summaryShowDetails === "1" ? "1" : "0",
-    );
+    storeRenderedSummaryPreferences(getSummaryStateFromElement(this.element));
   }
 
   persistDisplayPreferenceFromLink(link) {
-    const targetMode = link.dataset.summaryTargetMode;
-    const targetMonth = link.dataset.summaryTargetMonth;
-    const targetWeek = link.dataset.summaryTargetWeek;
-    const targetShowWeekdays = link.dataset.summaryTargetShowWeekdays;
-    const targetShowDetails = link.dataset.summaryTargetShowDetails;
-
-    if (targetMode) {
-      window.localStorage.setItem(SUMMARY_MODE_STORAGE_KEY, targetMode);
-    }
-    if (targetMonth) {
-      window.localStorage.setItem(SUMMARY_MONTH_STORAGE_KEY, targetMonth);
-    }
-    if (targetWeek) {
-      window.localStorage.setItem(SUMMARY_WEEK_STORAGE_KEY, targetWeek);
-    }
-    if (targetShowWeekdays === "1" || targetShowWeekdays === "0") {
-      window.localStorage.setItem(
-        SUMMARY_WEEKDAYS_STORAGE_KEY,
-        targetShowWeekdays,
-      );
-    }
-    if (targetShowDetails === "1" || targetShowDetails === "0") {
-      window.localStorage.setItem(
-        SUMMARY_DETAILS_STORAGE_KEY,
-        targetShowDetails,
-      );
-    }
-  }
-
-  buildSummaryRequestHeaders() {
-    return buildSummaryRequestHeaders({
-      currentMode: this.element.dataset.summaryMode,
-      currentMonth: this.element.dataset.summaryMonth,
-      currentWeek: this.element.dataset.summaryWeek,
-      currentShowWeekdays: this.element.dataset.summaryShowWeekdays === "1",
-      currentShowDetails: this.element.dataset.summaryShowDetails === "1",
-      storedMode: window.localStorage.getItem(SUMMARY_MODE_STORAGE_KEY),
-      storedMonth: window.localStorage.getItem(SUMMARY_MONTH_STORAGE_KEY),
-      storedWeek: window.localStorage.getItem(SUMMARY_WEEK_STORAGE_KEY),
-      storedShowWeekdays: parseStoredBooleanPreference(
-        window.localStorage.getItem(SUMMARY_WEEKDAYS_STORAGE_KEY),
-      ),
-      storedShowDetails: parseStoredBooleanPreference(
-        window.localStorage.getItem(SUMMARY_DETAILS_STORAGE_KEY),
-      ),
+    storeSummaryPreferenceTargets({
+      targetMode: link.dataset.summaryTargetMode,
+      targetMonth: link.dataset.summaryTargetMonth,
+      targetWeek: link.dataset.summaryTargetWeek,
+      targetShowWeekdays: link.dataset.summaryTargetShowWeekdays,
+      targetShowDetails: link.dataset.summaryTargetShowDetails,
     });
   }
 
@@ -626,20 +354,4 @@ class SidebarUserSummaryBehavior extends Behavior {
   }
 }
 
-SidebarUserSummaryBehavior.drawerHookInstalled = false;
-
 registerBehavior("ld-sidebar-user-summary", SidebarUserSummaryBehavior);
-
-document.addEventListener("turbo:before-fetch-request", (event) => {
-  const summaryHeaders = buildSummaryRequestHeaders({
-    ...getRenderedSummaryState(),
-    ...getStoredSummaryState(),
-  });
-
-  if (!summaryHeaders) {
-    return;
-  }
-
-  event.detail.fetchOptions.headers ||= {};
-  applyRequestHeaders(event.detail.fetchOptions.headers, summaryHeaders);
-});

@@ -2,6 +2,9 @@ import { Behavior, registerBehavior } from "./index";
 import { gettext } from "./i18n";
 import { ModalBehavior } from "./modal";
 import { isKeyboardActive } from "./focus-utils";
+import { installDrawerReopenHook } from "../state/filter-drawer-state";
+
+installDrawerReopenHook();
 
 class FilterDrawerTriggerBehavior extends Behavior {
   constructor(element) {
