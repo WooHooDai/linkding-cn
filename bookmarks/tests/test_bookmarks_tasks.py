@@ -461,6 +461,15 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
 
         self.mock_load_preview_image.assert_not_called()
 
+    def test_load_preview_image_task_propagates_retryable_loader_errors(self):
+        bookmark = self.setup_bookmark()
+        self.mock_load_preview_image.side_effect = website_loader.RetryableMetadataError(
+            "boom"
+        )
+
+        with self.assertRaises(website_loader.RetryableMetadataError):
+            tasks._load_preview_image_task.call_local(bookmark.id)
+
     def test_load_preview_image_should_not_save_stale_bookmark_data(self):
         bookmark = self.setup_bookmark()
 
