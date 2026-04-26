@@ -221,10 +221,10 @@ def search_config_for_domain(url, settings_path, settings_cache=None):
     if os.path.exists(settings_path):
         domain_map = load_settings(settings_path,settings_cache)
         if domain_map == '__JSON_ERROR__':
-            logging.error(f"【错误】配置文件解析失败：{settings.path}")
+            logging.error(f"【错误】配置文件解析失败：{settings_path}")
             return config
     else:
-        logging.error(f"【错误】配置文件路径不存在：{settings.path}")
+        logging.error(f"【错误】配置文件路径不存在：{settings_path}")
         return config
 
     domain = get_domain(url)
