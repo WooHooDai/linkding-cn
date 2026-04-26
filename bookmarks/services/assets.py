@@ -16,6 +16,10 @@ MAX_ASSET_FILENAME_LENGTH = 192
 logger = logging.getLogger(__name__)
 
 
+def _save_bookmark_updates(bookmark: Bookmark, update_fields: list[str]):
+    bookmark.save(update_fields=update_fields)
+
+
 def create_snapshot_asset(bookmark: Bookmark) -> BookmarkAsset:
     date_created = timezone.now()
     timestamp = formats.date_format(date_created, "SHORT_DATE_FORMAT")
@@ -55,7 +59,7 @@ def create_snapshot(asset: BookmarkAsset):
 
         asset.bookmark.latest_snapshot = asset
         asset.bookmark.date_modified = timezone.now()
-        asset.bookmark.save()
+        _save_bookmark_updates(asset.bookmark, ["latest_snapshot", "date_modified"])
     except Exception as error:
         asset.status = BookmarkAsset.STATUS_FAILURE
         asset.save()
@@ -78,7 +82,7 @@ def upload_snapshot(bookmark: Bookmark, html: bytes):
 
     asset.bookmark.latest_snapshot = asset
     asset.bookmark.date_modified = timezone.now()
-    asset.bookmark.save()
+    _save_bookmark_updates(asset.bookmark, ["latest_snapshot", "date_modified"])
 
     return asset
 
@@ -120,7 +124,7 @@ def upload_asset(bookmark: Bookmark, upload_file: UploadedFile):
         asset.save()
 
         asset.bookmark.date_modified = timezone.now()
-        asset.bookmark.save()
+        _save_bookmark_updates(asset.bookmark, ["date_modified"])
 
         logger.info(
             f"Successfully uploaded asset file. bookmark={bookmark} file={upload_file.name}"
@@ -137,6 +141,7 @@ def upload_asset(bookmark: Bookmark, upload_file: UploadedFile):
 def remove_asset(asset: BookmarkAsset):
     # If this asset is the latest_snapshot for a bookmark, try to find the next most recent snapshot
     bookmark = asset.bookmark
+    update_fields = ["date_modified"]
     if bookmark and bookmark.latest_snapshot == asset:
         latest = (
             BookmarkAsset.objects.filter(
@@ -150,10 +155,11 @@ def remove_asset(asset: BookmarkAsset):
         )
 
         bookmark.latest_snapshot = latest
+        update_fields.append("latest_snapshot")
 
     asset.delete()
     bookmark.date_modified = timezone.now()
-    bookmark.save()
+    _save_bookmark_updates(bookmark, update_fields)
 
 
 def rename_asset(asset: BookmarkAsset, new_display_name: str):
@@ -163,7 +169,7 @@ def rename_asset(asset: BookmarkAsset, new_display_name: str):
     asset.save()
 
     asset.bookmark.date_modified = timezone.now()
-    asset.bookmark.save()
+    _save_bookmark_updates(asset.bookmark, ["date_modified"])
     
     logger.info(
         f"Successfully renamed asset. asset_id={asset.id} new_name={new_display_name}"

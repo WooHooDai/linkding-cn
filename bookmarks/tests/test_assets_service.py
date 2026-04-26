@@ -8,7 +8,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.utils import timezone
 
-from bookmarks.models import BookmarkAsset
+from bookmarks.models import Bookmark, BookmarkAsset
 from bookmarks.services import assets
 from bookmarks.tests.helpers import BookmarkFactoryMixin, disable_logging
 
@@ -112,6 +112,26 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         asset.refresh_from_db()
         self.assertEqual(asset.status, BookmarkAsset.STATUS_FAILURE)
 
+    def test_create_snapshot_should_not_overwrite_newer_bookmark_metadata(self):
+        bookmark = self.setup_bookmark(
+            url="https://example.com",
+            title="",
+            description="",
+        )
+        asset = assets.create_snapshot_asset(bookmark)
+        asset.save()
+
+        Bookmark.objects.filter(id=bookmark.id).update(
+            title="Updated title",
+            description="Updated description",
+        )
+
+        assets.create_snapshot(asset)
+
+        bookmark.refresh_from_db()
+        self.assertEqual(bookmark.title, "Updated title")
+        self.assertEqual(bookmark.description, "Updated description")
+
     def test_create_snapshot_truncates_asset_file_name(self):
         # Create a bookmark with a very long URL
         long_url = "http://" + "a" * 300 + ".com"
@@ -174,6 +194,24 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
 
         # asset is not saved to the database
         self.assertIsNone(BookmarkAsset.objects.first())
+
+    def test_upload_snapshot_should_not_overwrite_newer_bookmark_metadata(self):
+        bookmark = self.setup_bookmark(
+            url="https://example.com",
+            title="",
+            description="",
+        )
+
+        Bookmark.objects.filter(id=bookmark.id).update(
+            title="Updated title",
+            description="Updated description",
+        )
+
+        assets.upload_snapshot(bookmark, self.html_content.encode())
+
+        bookmark.refresh_from_db()
+        self.assertEqual(bookmark.title, "Updated title")
+        self.assertEqual(bookmark.description, "Updated description")
 
     def test_upload_snapshot_truncates_asset_file_name(self):
         # Create a bookmark with a very long URL
