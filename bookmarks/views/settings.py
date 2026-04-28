@@ -1,19 +1,22 @@
 import logging
 import time
 from functools import lru_cache
+from http import HTTPStatus
+from pathlib import Path
 
 import requests
+from django import forms as django_forms
 from django.conf import settings as django_settings
+from django.conf.locale import LANG_INFO
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import prefetch_related_objects
-from django.http import HttpResponseRedirect, HttpResponse
+from django.http import HttpResponseRedirect, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _, ngettext
-from django.utils.translation import check_for_language
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.urls import translate_url
 from django.views.i18n import LANGUAGE_QUERY_PARAMETER
@@ -21,10 +24,14 @@ from rest_framework.authtoken.models import Token
 
 from bookmarks.models import (
     Bookmark,
-    UserProfileForm,
     FeedToken,
     GlobalSettings,
     GlobalSettingsForm,
+    UserProfile,
+    UserProfileAutoTaggingRulesForm,
+    UserProfileCustomCssForm,
+    UserProfileCustomDomainRootForm,
+    UserProfileQuickSettingsForm,
 )
 from bookmarks.services import exporter, tasks
 from bookmarks.services import importer
@@ -32,6 +39,8 @@ from bookmarks.type_defs import HttpRequest
 from bookmarks.utils import app_version
 
 logger = logging.getLogger(__name__)
+LANGUAGE_OTHER_SENTINEL = "__other__"
+LANGUAGE_NONE_SENTINEL = "__none__"
 
 
 def update_language(request: HttpRequest):
@@ -59,11 +68,9 @@ def update_language(request: HttpRequest):
     if not lang_code:
         return response
 
-    supported_languages = {
-        code.lower(): code for code, _label in django_settings.LANGUAGES
-    }
-    lang_code = supported_languages.get(lang_code.lower())
-    if not lang_code or not check_for_language(lang_code):
+    supported_languages = _get_supported_interface_languages()
+    lang_code = supported_languages.get(_normalize_language_code(lang_code))
+    if not lang_code:
         return response
 
     if request.user.is_authenticated:
@@ -102,7 +109,14 @@ def general(request: HttpRequest, status=200, context_overrides=None):
     )
     version_info = get_version_info(get_ttl_hash())
 
-    profile_form = UserProfileForm(instance=request.user_profile)
+    profile_quick_form = UserProfileQuickSettingsForm(instance=request.user_profile)
+    custom_css_form = UserProfileCustomCssForm(instance=request.user_profile)
+    auto_tagging_rules_form = UserProfileAutoTaggingRulesForm(
+        instance=request.user_profile
+    )
+    custom_domain_root_form = UserProfileCustomDomainRootForm(
+        instance=request.user_profile
+    )
     global_settings_form = None
     if request.user.is_superuser:
         global_settings_form = GlobalSettingsForm(instance=GlobalSettings.get())
@@ -110,12 +124,41 @@ def general(request: HttpRequest, status=200, context_overrides=None):
     if context_overrides is None:
         context_overrides = {}
 
+    primary_language_choices = _get_primary_language_choices()
+    other_language_choices = _get_other_language_choices()
+    current_language = _normalize_language_code(
+        request.user_profile.language or django_settings.LANGUAGE_CODE
+    )
+    primary_language_codes = {
+        _normalize_language_code(code) for code, _label in primary_language_choices
+    }
+    other_language_codes = {
+        _normalize_language_code(code) for code, _label in other_language_choices
+    }
+    language_segment_value = (
+        current_language
+        if current_language in primary_language_codes
+        else LANGUAGE_OTHER_SENTINEL
+    )
+
     return render(
         request,
         "settings/general.html",
         {
-            "form": profile_form,
+            "profile_quick_form": profile_quick_form,
+            "custom_css_form": custom_css_form,
+            "auto_tagging_rules_form": auto_tagging_rules_form,
+            "custom_domain_root_form": custom_domain_root_form,
             "global_settings_form": global_settings_form,
+            "primary_language_choices": primary_language_choices,
+            "other_language_choices": other_language_choices,
+            "language_segment_value": language_segment_value,
+            "language_other_sentinel": LANGUAGE_OTHER_SENTINEL,
+            "language_other_current_code": (
+                current_language if current_language in other_language_codes else ""
+            ),
+            "language_none_sentinel": LANGUAGE_NONE_SENTINEL,
+            "settings_general_url": reverse("linkding:settings.general"),
             "enable_refresh_favicons": enable_refresh_favicons,
             "has_snapshot_support": has_snapshot_support,
             "success_message": success_message,
@@ -130,11 +173,6 @@ def general(request: HttpRequest, status=200, context_overrides=None):
 @login_required
 def update(request: HttpRequest):
     if request.method == "POST":
-        if "update_profile" in request.POST:
-            return update_profile(request)
-        if "update_global_settings" in request.POST:
-            update_global_settings(request)
-            messages.success(request, _("Global settings updated"), "settings_success_message")
         if "refresh_favicons" in request.POST:
             tasks.schedule_refresh_favicons(request.user)
             messages.success(
@@ -161,41 +199,168 @@ def update(request: HttpRequest):
     return HttpResponseRedirect(reverse("linkding:settings.general"))
 
 
-def update_profile(request: HttpRequest):
-    user = request.user
-    profile = user.profile
-    favicons_were_enabled = profile.enable_favicons
-    previews_were_enabled = profile.enable_preview_images
-    form = UserProfileForm(request.POST, instance=profile)
-    if form.is_valid():
-        form.save()
-        messages.success(request, _("Profile updated"), "settings_success_message")
-        # Load missing favicons if the feature was just enabled
-        if profile.enable_favicons and not favicons_were_enabled:
-            tasks.schedule_bookmarks_without_favicons(request.user)
-        # Load missing preview images if the feature was just enabled
-        if profile.enable_preview_images and not previews_were_enabled:
-            tasks.schedule_bookmarks_without_previews(request.user)
+def _schedule_profile_side_effects(
+    request: HttpRequest,
+    profile_before: dict,
+    profile_after,
+):
+    if profile_after.enable_favicons and not profile_before["enable_favicons"]:
+        tasks.schedule_bookmarks_without_favicons(request.user)
 
-        return HttpResponseRedirect(reverse("linkding:settings.general"))
+    if (
+        profile_after.enable_preview_images
+        and not profile_before["enable_preview_images"]
+    ):
+        tasks.schedule_bookmarks_without_previews(request.user)
 
-    messages.error(
-        request,
-        _("Profile update failed, check the form below for errors"),
-        "settings_error_message",
+
+def _json_form_error_response(form):
+    return JsonResponse(
+        {
+            "status": "error",
+            "errors": form.errors.get_json_data(escape_html=True),
+        },
+        status=HTTPStatus.UNPROCESSABLE_ENTITY,
     )
-    return general(request, 422, {"form": form})
 
 
-def update_global_settings(request):
-    user = request.user
-    if not user.is_superuser:
-        raise PermissionDenied()
+def _prefers_json_response(request: HttpRequest) -> bool:
+    accept_header = request.headers.get("Accept", "")
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest" or (
+        "application/json" in accept_header and "text/html" not in accept_header
+    )
 
-    form = GlobalSettingsForm(request.POST, instance=GlobalSettings.get())
-    if form.is_valid():
-        form.save()
-    return form
+
+def _form_context_key(form_id: str) -> str | None:
+    return {
+        "profile_quick": "profile_quick_form",
+        "profile_custom_css": "custom_css_form",
+        "profile_auto_tagging_rules": "auto_tagging_rules_form",
+        "profile_custom_domain_root": "custom_domain_root_form",
+        "global_quick": "global_settings_form",
+    }.get(form_id)
+
+
+def _build_form_error_response(
+    request: HttpRequest, form_id: str, form
+) -> JsonResponse | HttpResponse:
+    if _prefers_json_response(request):
+        return _json_form_error_response(form)
+
+    context_key = _form_context_key(form_id)
+    context_overrides = {
+        "error_message": _("Settings update failed, check the form below for errors"),
+        "error_details": [
+            message
+            for field_errors in form.errors.values()
+            for message in field_errors
+        ],
+    }
+    if context_key:
+        context_overrides[context_key] = form
+    return general(request, 422, context_overrides)
+
+
+def _build_form_success_response(
+    request: HttpRequest, form_id: str
+) -> JsonResponse | HttpResponseRedirect:
+    if _prefers_json_response(request):
+        return JsonResponse({"status": "ok"})
+
+    success_message = (
+        _("Global settings updated")
+        if form_id == "global_quick"
+        else _("Profile updated")
+    )
+    messages.success(request, success_message, "settings_success_message")
+    return HttpResponseRedirect(reverse("linkding:settings.general"))
+
+
+def _parse_form_fields(raw_value: str | None) -> set[str]:
+    if not raw_value:
+        return set()
+    return {
+        field_name.strip()
+        for field_name in raw_value.split(",")
+        if field_name.strip()
+    }
+
+
+def _build_profile_quick_form_data(profile, request_post) -> dict:
+    form = UserProfileQuickSettingsForm(instance=profile)
+    submitted_fields = _parse_form_fields(request_post.get("form_fields"))
+    if not submitted_fields:
+        return request_post
+
+    form_data = {}
+    for field_name, field in form.fields.items():
+        if field_name in submitted_fields:
+            if isinstance(field, django_forms.BooleanField):
+                if field_name in request_post:
+                    form_data[field_name] = request_post.get(field_name)
+            else:
+                if field_name in request_post:
+                    form_data[field_name] = request_post.get(field_name)
+                else:
+                    value = form[field_name].value()
+                    if value not in (None, ""):
+                        form_data[field_name] = value
+            continue
+
+        value = form[field_name].value()
+        if isinstance(field, django_forms.BooleanField):
+            if value:
+                form_data[field_name] = "on"
+        elif value not in (None, ""):
+            form_data[field_name] = value
+
+    return form_data
+
+
+@login_required
+def save(request: HttpRequest):
+    if request.method != "POST":
+        return JsonResponse(
+            {"status": "error", "message": "Method not allowed"},
+            status=HTTPStatus.METHOD_NOT_ALLOWED,
+        )
+
+    form_id = request.POST.get("form_id")
+    profile = request.user.profile
+    profile_before = {
+        "enable_favicons": profile.enable_favicons,
+        "enable_preview_images": profile.enable_preview_images,
+    }
+
+    if form_id == "profile_quick":
+        form = UserProfileQuickSettingsForm(
+            _build_profile_quick_form_data(profile, request.POST),
+            instance=profile,
+        )
+    elif form_id == "profile_custom_css":
+        form = UserProfileCustomCssForm(request.POST, instance=profile)
+    elif form_id == "profile_auto_tagging_rules":
+        form = UserProfileAutoTaggingRulesForm(request.POST, instance=profile)
+    elif form_id == "profile_custom_domain_root":
+        form = UserProfileCustomDomainRootForm(request.POST, instance=profile)
+    elif form_id == "global_quick":
+        if not request.user.is_superuser:
+            raise PermissionDenied()
+        form = GlobalSettingsForm(request.POST, instance=GlobalSettings.get())
+    else:
+        return JsonResponse(
+            {"status": "error", "message": "Unknown form"},
+            status=HTTPStatus.BAD_REQUEST,
+        )
+
+    if not form.is_valid():
+        return _build_form_error_response(request, form_id, form)
+
+    saved_instance = form.save()
+    if form_id == "profile_quick":
+        _schedule_profile_side_effects(request, profile_before, saved_instance)
+
+    return _build_form_success_response(request, form_id)
 
 
 # Cache API call response, for one hour when using get_ttl_hash with default params
@@ -317,10 +482,9 @@ def bookmark_export(request: HttpRequest):
 
         return response
     except:
-        return render(
+        return general(
             request,
-            "settings/general.html",
-            {"export_error": _("An error occurred during bookmark export.")},
+            context_overrides={"export_error": _("An error occurred during bookmark export.")},
         )
 
 
@@ -328,3 +492,58 @@ def _find_message_with_tag(messages, tag):
     for message in messages:
         if message.extra_tags == tag:
             return message
+    return None
+
+
+def _normalize_language_code(language_code: str) -> str:
+    return language_code.replace("_", "-").lower()
+
+
+def _get_primary_language_choices():
+    return [
+        (UserProfile.LANGUAGE_ZH_HANS, "简体中文"),
+        (UserProfile.LANGUAGE_EN, "English"),
+    ]
+
+
+def _get_other_language_choices():
+    primary_language_codes = {
+        _normalize_language_code(code)
+        for code, _label in _get_primary_language_choices()
+    }
+    discovered_languages = []
+    seen_codes = set()
+
+    for po_file in Path(django_settings.BASE_DIR).glob("locale/*/LC_MESSAGES/django.po"):
+        language_code = _normalize_language_code(po_file.parent.parent.name)
+        if language_code in primary_language_codes or language_code in seen_codes:
+            continue
+
+        seen_codes.add(language_code)
+        discovered_languages.append(
+            (
+                language_code,
+                _get_language_display_name(language_code, po_file.parent.parent.name),
+            )
+        )
+
+    return sorted(discovered_languages, key=lambda item: item[1].casefold())
+
+
+def _get_language_display_name(language_code: str, fallback: str) -> str:
+    language_info = LANG_INFO.get(language_code) or LANG_INFO.get(
+        language_code.split("-")[0]
+    )
+    if not language_info:
+        return fallback
+
+    return language_info.get("name_local") or language_info.get("name") or fallback
+
+
+def _get_supported_interface_languages():
+    return {
+        _normalize_language_code(code): code
+        for code, _label in (
+            _get_primary_language_choices() + _get_other_language_choices()
+        )
+    }

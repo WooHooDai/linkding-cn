@@ -1,4 +1,5 @@
 import hashlib
+import json
 import logging
 import os
 import re
@@ -876,6 +877,145 @@ class UserProfileForm(forms.ModelForm):
             "collapse_side_panel",
             "hide_bundles",
         ]
+
+
+class UserProfileQuickSettingsForm(forms.ModelForm):
+    SHARING_MODE_DISABLED = "disabled"
+    SHARING_MODE_PRIVATE = "private"
+    SHARING_MODE_PUBLIC = "public"
+    SHARING_MODE_CHOICES = [
+        (SHARING_MODE_DISABLED, _("Disabled")),
+        (SHARING_MODE_PRIVATE, _("Private sharing")),
+        (SHARING_MODE_PUBLIC, _("Public sharing")),
+    ]
+
+    show_sidebar = forms.BooleanField(required=False)
+    enable_web_archive = forms.BooleanField(required=False)
+    sharing_mode = forms.ChoiceField(choices=SHARING_MODE_CHOICES)
+    sidebar_modules = forms.CharField()
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            "theme",
+            "bookmark_date_display",
+            "bookmark_description_display",
+            "bookmark_description_max_lines",
+            "bookmark_link_target",
+            "web_archive_integration",
+            "tag_search",
+            "tag_grouping",
+            "display_url",
+            "display_view_bookmark_action",
+            "display_edit_bookmark_action",
+            "display_archive_bookmark_action",
+            "display_remove_bookmark_action",
+            "permanent_notes",
+            "default_mark_unread",
+            "default_mark_shared",
+            "enable_favicons",
+            "enable_preview_images",
+            "enable_automatic_html_snapshots",
+            "items_per_page",
+            "sticky_header_controls",
+            "sticky_pagination",
+            "sticky_side_panel",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields["show_sidebar"].initial = not self.instance.collapse_side_panel
+            self.fields["enable_web_archive"].initial = (
+                self.instance.web_archive_integration
+                == self.instance.WEB_ARCHIVE_INTEGRATION_ENABLED
+            )
+            if self.instance.enable_public_sharing:
+                self.fields["sharing_mode"].initial = self.SHARING_MODE_PUBLIC
+            elif self.instance.enable_sharing:
+                self.fields["sharing_mode"].initial = self.SHARING_MODE_PRIVATE
+            else:
+                self.fields["sharing_mode"].initial = self.SHARING_MODE_DISABLED
+            self.fields["sidebar_modules"].initial = json.dumps(
+                self.instance.get_sidebar_modules()
+            )
+
+    @property
+    def sidebar_module_items(self) -> list[dict]:
+        if self.is_bound:
+            modules = self.data.get("sidebar_modules")
+            try:
+                parsed_modules = json.loads(modules) if modules else []
+            except (TypeError, ValueError):
+                parsed_modules = []
+            normalized = UserProfile.normalize_sidebar_modules(
+                parsed_modules,
+                bundles_enabled=not self.instance.hide_bundles,
+            )
+            return [
+                {
+                    **item,
+                    "label": UserProfile.SIDEBAR_MODULE_LABELS[item["key"]],
+                }
+                for item in normalized
+            ]
+
+        return self.instance.get_sidebar_module_items()
+
+    def clean_sidebar_modules(self):
+        raw_value = self.cleaned_data["sidebar_modules"]
+        try:
+            parsed_value = json.loads(raw_value)
+        except (TypeError, ValueError):
+            raise forms.ValidationError(_("Invalid sidebar configuration."))
+
+        return UserProfile.normalize_sidebar_modules(
+            parsed_value,
+            bundles_enabled=not self.instance.hide_bundles,
+        )
+
+    def save(self, commit=True):
+        profile = super().save(commit=False)
+        profile.collapse_side_panel = not self.cleaned_data["show_sidebar"]
+        if profile.collapse_side_panel:
+            profile.sticky_side_panel = False
+
+        profile.web_archive_integration = (
+            self.instance.WEB_ARCHIVE_INTEGRATION_ENABLED
+            if self.cleaned_data["enable_web_archive"]
+            else self.instance.WEB_ARCHIVE_INTEGRATION_DISABLED
+        )
+
+        sharing_mode = self.cleaned_data["sharing_mode"]
+        profile.enable_sharing = sharing_mode != self.SHARING_MODE_DISABLED
+        profile.enable_public_sharing = sharing_mode == self.SHARING_MODE_PUBLIC
+        if sharing_mode == self.SHARING_MODE_DISABLED:
+            profile.default_mark_shared = False
+
+        profile.sidebar_modules = self.cleaned_data["sidebar_modules"]
+
+        if commit:
+            profile.save()
+
+        return profile
+
+
+class UserProfileCustomCssForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ["custom_css"]
+
+
+class UserProfileAutoTaggingRulesForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ["auto_tagging_rules"]
+
+
+class UserProfileCustomDomainRootForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ["custom_domain_root"]
 
 
 @receiver(post_save, sender=User)
