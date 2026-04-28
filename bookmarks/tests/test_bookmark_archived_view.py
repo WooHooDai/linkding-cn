@@ -630,19 +630,22 @@ class BookmarkArchivedViewTestCase(
         feed = soup.select_one('head link[type="application/rss+xml"]')
         self.assertIsNone(feed)
 
-    def test_hide_bundles_when_enabled_in_profile(self):
-        # visible by default
-        response = self.client.get(reverse("linkding:bookmarks.archived"))
-        html = response.content.decode()
-
-        self.assertInHTML('<h2 id="bundles-heading">Bundles</h2>', html)
-
-        # hidden when disabled in profile
+    def test_sidebar_modules_hide_disabled_bundle_module(self):
         user_profile = self.get_or_create_test_user().profile
-        user_profile.hide_bundles = True
-        user_profile.save()
+        user_profile.sidebar_modules = [
+            {"key": "summary", "enabled": True},
+            {"key": "bundles", "enabled": False},
+            {"key": "domains", "enabled": True},
+            {"key": "tags", "enabled": True},
+        ]
+        user_profile.save(update_fields=["sidebar_modules"])
 
         response = self.client.get(reverse("linkding:bookmarks.archived"))
-        html = response.content.decode()
+        soup = self.make_soup(response.content.decode())
 
-        self.assertInHTML('<h2 id="bundles-heading">Bundles</h2>', html, count=0)
+        module_keys = [
+            element["data-sidebar-module"]
+            for element in soup.select(".side-panel [data-sidebar-module]")
+        ]
+        self.assertEqual(module_keys, ["domains", "tags"])
+        self.assertIsNone(soup.select_one(".side-panel [data-sidebar-module='bundles']"))

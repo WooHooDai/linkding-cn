@@ -671,22 +671,43 @@ class BookmarkIndexViewTestCase(
 
         self.assertVisibleBundles(soup, user_bundles)
 
-    def test_hide_bundles_when_enabled_in_profile(self):
-        # visible by default
+    def test_sidebar_modules_respect_profile_order_and_enabled_state(self):
+        self.setup_bundle(name="Bundle 1")
+        self.setup_bookmark(url="https://example.com/a")
+        self.setup_bookmark(url="https://another.example.com/b")
+        tag = self.setup_tag(name="Tag 1")
+        bookmark = self.setup_bookmark(url="https://tagged.example.com/c")
+        bookmark.tags.add(tag)
+
+        user_profile = self.get_or_create_test_user().profile
+        user_profile.sidebar_modules = [
+            {"key": "tags", "enabled": True},
+            {"key": "summary", "enabled": True},
+            {"key": "bundles", "enabled": False},
+            {"key": "domains", "enabled": True},
+        ]
+        user_profile.save(update_fields=["sidebar_modules"])
+
         response = self.client.get(reverse("linkding:bookmarks.index"))
-        html = response.content.decode()
+        soup = self.make_soup(response.content.decode())
 
-        self.assertInHTML('<h2 id="bundles-heading">Bundles</h2>', html)
+        module_keys = [
+            element["data-sidebar-module"]
+            for element in soup.select(".side-panel [data-sidebar-module]")
+        ]
+        self.assertEqual(module_keys, ["tags", "summary", "domains"])
+        self.assertIsNone(soup.select_one(".side-panel [data-sidebar-module='bundles']"))
 
-        # hidden when disabled in profile
+    def test_legacy_hide_bundles_still_applies_without_sidebar_configuration(self):
         user_profile = self.get_or_create_test_user().profile
         user_profile.hide_bundles = True
-        user_profile.save()
+        user_profile.sidebar_modules = []
+        user_profile.save(update_fields=["hide_bundles", "sidebar_modules"])
 
         response = self.client.get(reverse("linkding:bookmarks.index"))
-        html = response.content.decode()
+        soup = self.make_soup(response.content.decode())
 
-        self.assertInHTML('<h2 id="bundles-heading">Bundles</h2>', html, count=0)
+        self.assertIsNone(soup.select_one(".side-panel [data-sidebar-module='bundles']"))
 
     def test_list_domains_without_normalization_rules(self):
         self.setup_bookmark(

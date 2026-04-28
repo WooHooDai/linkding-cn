@@ -1,0 +1,5 @@
+{% for module in sidebar_modules %}
+  <div{% if module.wrapper_id %} id="{{ module.wrapper_id }}"{% endif %} data-sidebar-module="{{ module.key }}">
+    {% include module.template_name %}
+  </div>
+{% endfor %}

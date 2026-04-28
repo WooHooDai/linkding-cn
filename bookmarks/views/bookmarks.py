@@ -20,6 +20,7 @@ from bookmarks.forms import BookmarkForm
 from bookmarks.models import (
     Bookmark,
     BookmarkSearch,
+    UserProfile,
 )
 from bookmarks.services import assets as asset_actions, tasks, website_loader, preview_image_loader, favicon_loader
 from bookmarks.services.bookmarks import (
@@ -45,6 +46,41 @@ from bookmarks.services.bookmarks import (
 from bookmarks.type_defs import HttpRequest
 from bookmarks.utils import get_safe_return_url
 from bookmarks.views import access, contexts, partials, turbo
+
+
+SIDEBAR_MODULE_TEMPLATES = {
+    UserProfile.SIDEBAR_MODULE_SUMMARY: "bookmarks/sidebar_user_summary.html",
+    UserProfile.SIDEBAR_MODULE_BUNDLES: "bookmarks/bundle_section.html",
+    UserProfile.SIDEBAR_MODULE_DOMAINS: "bookmarks/domain_section.html",
+    UserProfile.SIDEBAR_MODULE_TAGS: "bookmarks/tag_section.html",
+}
+
+
+def _build_sidebar_modules(request: HttpRequest, context: dict) -> list[dict]:
+    available_modules = {
+        UserProfile.SIDEBAR_MODULE_SUMMARY: bool(context.get("sidebar_summary")),
+        UserProfile.SIDEBAR_MODULE_BUNDLES: context.get("bundles") is not None,
+        UserProfile.SIDEBAR_MODULE_DOMAINS: context.get("domains") is not None,
+        UserProfile.SIDEBAR_MODULE_TAGS: context.get("tag_cloud") is not None,
+    }
+    wrapper_ids = {
+        UserProfile.SIDEBAR_MODULE_SUMMARY: "sidebar-user-summary-container",
+    }
+
+    modules = []
+    for item in request.user_profile.get_sidebar_modules():
+        key = item["key"]
+        if not item["enabled"] or not available_modules.get(key):
+            continue
+        modules.append(
+            {
+                "key": key,
+                "template_name": SIDEBAR_MODULE_TEMPLATES[key],
+                "wrapper_id": wrapper_ids.get(key),
+            }
+        )
+
+    return modules
 
 
 @login_required
@@ -184,6 +220,8 @@ def trashed(request: HttpRequest):
 
 
 def render_bookmarks_view(request: HttpRequest, template_name, context):
+    context["sidebar_modules"] = _build_sidebar_modules(request, context)
+
     if context["details"]:
         context["page_title"] = _("Bookmark details - Linkding")
 

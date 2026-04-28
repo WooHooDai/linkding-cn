@@ -241,6 +241,38 @@ class BookmarkSharedViewTestCase(
         self.assertVisibleTags(response, visible_tags)
         self.assertInvisibleTags(response, invisible_tags)
 
+    def test_sidebar_modules_respect_profile_order_and_enabled_state(self):
+        self.authenticate()
+        owner = self.setup_user(enable_sharing=True)
+        tag = self.setup_tag(user=owner, name="Shared tag")
+        bookmark = self.setup_bookmark(
+            shared=True,
+            user=owner,
+            url="https://shared.example.com/article",
+        )
+        bookmark.tags.add(tag)
+
+        viewer_profile = self.get_or_create_test_user().profile
+        viewer_profile.sidebar_modules = [
+            {"key": "tags", "enabled": True},
+            {"key": "summary", "enabled": True},
+            {"key": "domains", "enabled": True},
+            {"key": "bundles", "enabled": False},
+        ]
+        viewer_profile.save(update_fields=["sidebar_modules"])
+
+        response = self.client.get(reverse("linkding:bookmarks.shared"))
+        soup = self.make_soup(response.content.decode())
+
+        module_keys = [
+            element["data-sidebar-module"]
+            for element in soup.select(".side-panel [data-sidebar-module]")
+        ]
+        self.assertEqual(module_keys, ["tags", "domains"])
+        self.assertIsNotNone(soup.select_one("#user-heading"))
+        self.assertIsNone(soup.select_one(".side-panel [data-sidebar-module='summary']"))
+        self.assertIsNone(soup.select_one(".side-panel [data-sidebar-module='bundles']"))
+
     def test_should_list_tags_for_bookmarks_matching_query(self):
         self.authenticate()
         user1 = self.setup_user(enable_sharing=True)

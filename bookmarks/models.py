@@ -687,6 +687,16 @@ class UserProfile(models.Model):
         (TAG_GROUPING_ALPHABETICAL, _("Alphabetical")),
         (TAG_GROUPING_DISABLED, _("Disabled")),
     ]
+    SIDEBAR_MODULE_SUMMARY = "summary"
+    SIDEBAR_MODULE_BUNDLES = "bundles"
+    SIDEBAR_MODULE_DOMAINS = "domains"
+    SIDEBAR_MODULE_TAGS = "tags"
+    SIDEBAR_MODULE_LABELS = {
+        SIDEBAR_MODULE_SUMMARY: _("User summary"),
+        SIDEBAR_MODULE_BUNDLES: _("Filters"),
+        SIDEBAR_MODULE_DOMAINS: _("Domains"),
+        SIDEBAR_MODULE_TAGS: _("Tags"),
+    }
     user = models.OneToOneField(User, related_name="profile", on_delete=models.CASCADE)
     language = models.CharField(
         max_length=20, choices=LANGUAGE_CHOICES, blank=False, default=LANGUAGE_EN
@@ -750,6 +760,7 @@ class UserProfile(models.Model):
     auto_tagging_rules = models.TextField(blank=True, null=False)
     search_preferences = models.JSONField(default=dict, null=False)
     trash_search_preferences = models.JSONField(default=dict, null=False)
+    sidebar_modules = models.JSONField(default=list, blank=True, null=False)
     enable_automatic_html_snapshots = models.BooleanField(default=True, null=False)
     default_mark_unread = models.BooleanField(default=False, null=False)
     default_mark_shared = models.BooleanField(default=False, null=False)
@@ -770,6 +781,64 @@ class UserProfile(models.Model):
         else:
             self.custom_css_hash = ""
         super().save(*args, **kwargs)
+
+    @classmethod
+    def default_sidebar_modules(cls, bundles_enabled: bool = True) -> list[dict]:
+        return [
+            {"key": cls.SIDEBAR_MODULE_SUMMARY, "enabled": True},
+            {"key": cls.SIDEBAR_MODULE_BUNDLES, "enabled": bundles_enabled},
+            {"key": cls.SIDEBAR_MODULE_DOMAINS, "enabled": True},
+            {"key": cls.SIDEBAR_MODULE_TAGS, "enabled": True},
+        ]
+
+    @classmethod
+    def normalize_sidebar_modules(
+        cls, sidebar_modules: list | None, bundles_enabled: bool = True
+    ) -> list[dict]:
+        if not isinstance(sidebar_modules, list) or len(sidebar_modules) == 0:
+            return cls.default_sidebar_modules(bundles_enabled)
+
+        normalized = []
+        seen = set()
+        defaults = {
+            item["key"]: item["enabled"]
+            for item in cls.default_sidebar_modules(bundles_enabled)
+        }
+
+        for item in sidebar_modules:
+            if not isinstance(item, dict):
+                continue
+            key = item.get("key")
+            if key not in defaults or key in seen:
+                continue
+            normalized.append(
+                {
+                    "key": key,
+                    "enabled": bool(item.get("enabled", defaults[key])),
+                }
+            )
+            seen.add(key)
+
+        for key, enabled in defaults.items():
+            if key not in seen:
+                normalized.append({"key": key, "enabled": enabled})
+
+        return normalized
+
+    def get_sidebar_modules(self) -> list[dict]:
+        return self.normalize_sidebar_modules(
+            self.sidebar_modules,
+            bundles_enabled=not self.hide_bundles,
+        )
+
+    def get_sidebar_module_items(self) -> list[dict]:
+        return [
+            {
+                **item,
+                "label": self.SIDEBAR_MODULE_LABELS[item["key"]],
+            }
+            for item in self.get_sidebar_modules()
+        ]
 
 
 class UserProfileForm(forms.ModelForm):
