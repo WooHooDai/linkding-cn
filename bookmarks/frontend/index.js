@@ -13,6 +13,7 @@ import "./behaviors/search-autocomplete";
 import "./behaviors/sidebar-user-summary";
 import "./behaviors/tag-autocomplete";
 import "./behaviors/date-filter-fields";
+import "./behaviors/settings-page";
 
 export { api } from "./api";
 export { cache } from "./cache";

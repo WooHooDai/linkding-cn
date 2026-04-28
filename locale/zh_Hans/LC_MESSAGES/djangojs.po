@@ -46,3 +46,27 @@ msgstr "关闭对话框"
 #: bookmarks/frontend/behaviors/form.js:167
 msgid "Name cannot be empty."
 msgstr "名称不能为空。"
+
+#: bookmarks/frontend/behaviors/settings-page.js
+msgid "Collapse"
+msgstr "折叠"
+
+#: bookmarks/frontend/behaviors/settings-page.js
+msgid "Couldn't save settings. Please try again."
+msgstr "无法保存设置，请重试。"
+
+#: bookmarks/frontend/behaviors/settings-page.js
+msgid "Expand"
+msgstr "展开"
+
+#: bookmarks/frontend/behaviors/settings-page.js
+msgid "More info"
+msgstr "更多信息"
+
+#: bookmarks/frontend/behaviors/settings-page.js
+msgid "Please review the highlighted fields."
+msgstr "请检查高亮字段。"
+
+#: bookmarks/frontend/behaviors/settings-page.js
+msgid "Saved"
+msgstr "已保存"

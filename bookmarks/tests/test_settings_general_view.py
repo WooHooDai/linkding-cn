@@ -1,6 +1,6 @@
-import hashlib
+import json
 import random
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 import requests
 from bs4 import BeautifulSoup
@@ -8,121 +8,278 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from requests import RequestException
 
-from bookmarks.models import UserProfile, GlobalSettings
+from bookmarks.models import GlobalSettings, UserProfile
 from bookmarks.services import tasks
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 from bookmarks.views.settings import app_version, get_version_info
 
 
 class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
+    quick_boolean_fields = (
+        "display_url",
+        "permanent_notes",
+        "display_view_bookmark_action",
+        "display_edit_bookmark_action",
+        "display_archive_bookmark_action",
+        "display_remove_bookmark_action",
+        "default_mark_unread",
+        "default_mark_shared",
+        "enable_favicons",
+        "enable_preview_images",
+        "enable_automatic_html_snapshots",
+        "enable_web_archive",
+        "sticky_header_controls",
+        "sticky_pagination",
+        "show_sidebar",
+        "sticky_side_panel",
+    )
 
     def setUp(self) -> None:
-        user = self.get_or_create_test_user()
-        self.client.force_login(user)
+        self.user = self.get_or_create_test_user()
+        self.client.force_login(self.user)
 
-    def create_profile_form_data(self, overrides=None):
-        if not overrides:
-            overrides = {}
-        form_data = {
-            "update_profile": "",
-            "language": "en",
+    def make_soup(self, html):
+        return BeautifulSoup(html, "html.parser")
+
+    def create_sidebar_modules(self, modules=None):
+        if modules is None:
+            modules = [
+                {"key": "summary", "enabled": True},
+                {"key": "bundles", "enabled": True},
+                {"key": "domains", "enabled": True},
+                {"key": "tags", "enabled": True},
+            ]
+        return json.dumps(modules)
+
+    def create_quick_profile_form_data(self, overrides=None):
+        overrides = overrides or {}
+        values = {
+            "form_id": "profile_quick",
             "theme": UserProfile.THEME_AUTO,
             "bookmark_date_display": UserProfile.BOOKMARK_DATE_DISPLAY_RELATIVE,
             "bookmark_description_display": UserProfile.BOOKMARK_DESCRIPTION_DISPLAY_INLINE,
-            "bookmark_description_max_lines": 1,
+            "bookmark_description_max_lines": "1",
             "bookmark_link_target": UserProfile.BOOKMARK_LINK_TARGET_BLANK,
-            "web_archive_integration": UserProfile.WEB_ARCHIVE_INTEGRATION_DISABLED,
-            "enable_sharing": False,
-            "enable_public_sharing": False,
-            "enable_favicons": False,
-            "enable_preview_images": False,
-            "enable_automatic_html_snapshots": True,
+            "enable_web_archive": False,
             "tag_search": UserProfile.TAG_SEARCH_STRICT,
             "tag_grouping": UserProfile.TAG_GROUPING_ALPHABETICAL,
+            "items_per_page": "30",
+            "sharing_mode": "disabled",
+            "sidebar_modules": self.create_sidebar_modules(),
             "display_url": False,
+            "permanent_notes": False,
             "display_view_bookmark_action": True,
             "display_edit_bookmark_action": True,
             "display_archive_bookmark_action": True,
             "display_remove_bookmark_action": True,
-            "permanent_notes": False,
-            "custom_css": "",
-            "auto_tagging_rules": "",
-            "items_per_page": "30",
+            "default_mark_unread": False,
+            "default_mark_shared": False,
+            "enable_favicons": False,
+            "enable_preview_images": False,
+            "enable_automatic_html_snapshots": True,
+            "sticky_header_controls": False,
             "sticky_pagination": False,
-            "collapse_side_panel": False,
-            "hide_bundles": False,
+            "show_sidebar": True,
+            "sticky_side_panel": False,
         }
+        values.update(overrides)
+        post_data = {
+            k: v
+            for k, v in values.items()
+            if k not in self.quick_boolean_fields and k != "form_fields"
+        }
+        post_data["form_fields"] = ",".join(
+            key for key in values.keys() if key not in {"form_id", "form_fields"}
+        )
+        for field in self.quick_boolean_fields:
+            if values.get(field):
+                post_data[field] = "on"
+        return post_data
 
-        return {**form_data, **overrides}
+    def create_global_quick_form_data(self, overrides=None):
+        overrides = overrides or {}
+        values = {
+            "form_id": "global_quick",
+            "landing_page": GlobalSettings.LANDING_PAGE_LOGIN,
+            "guest_profile_user": "",
+            "enable_link_prefetch": False,
+        }
+        values.update(overrides)
+        post_data = {
+            "form_id": values["form_id"],
+            "landing_page": values["landing_page"],
+            "guest_profile_user": values["guest_profile_user"],
+        }
+        if values["enable_link_prefetch"]:
+            post_data["enable_link_prefetch"] = "on"
+        return post_data
 
-    def create_language_form_data(self, language="zh-hans", next_url=None):
+    def create_long_text_form_data(self, form_id, field_name, value):
         return {
-            "language": language,
-            "next": next_url or reverse("linkding:settings.general"),
+            "form_id": form_id,
+            field_name: value,
         }
 
     def assertSuccessMessage(self, html, message: str, count=1):
         self.assertInHTML(
-            f"""
-            <div class="toast toast-success mb-4">{ message }</div>
-        """,
+            f'<div class="toast toast-success mb-4">{message}</div>',
             html,
             count=count,
         )
 
-    def assertErrorMessage(self, html, message: str, count=1):
-        self.assertInHTML(
-            f"""
-            <div class="toast toast-error mb-4">{ message }</div>
-        """,
-            html,
-            count=count,
-        )
-
-    def test_should_render_successfully(self):
+    def test_should_render_grouped_sections_and_toc(self):
+        superuser = self.setup_superuser()
+        self.client.force_login(superuser)
         response = self.client.get(reverse("linkding:settings.general"))
-
         self.assertEqual(response.status_code, 200)
 
-    def test_should_render_language_field(self):
-        response = self.client.get(reverse("linkding:settings.general"))
-        html = response.content.decode()
-        soup = BeautifulSoup(html, "html.parser")
-        profile_form = soup.find(
-            "form", attrs={"action": reverse("linkding:settings.update")}
-        )
-        language_form = soup.find(
-            "form", attrs={"action": reverse("language-update")}
-        )
+        soup = self.make_soup(response.content.decode())
+        section_ids = [
+            "settings-user",
+            "settings-interface",
+            "settings-sidebar",
+            "settings-bookmark-list",
+            "settings-bookmarks",
+            "settings-tags",
+            "settings-domains",
+            "settings-sharing",
+            "settings-access-visitors",
+            "settings-import-export",
+            "settings-about",
+        ]
+        for section_id in section_ids:
+            self.assertIsNotNone(soup.select_one(f"section#{section_id}"))
 
-        self.assertContains(response, 'name="language"')
-        self.assertIsNotNone(profile_form)
-        self.assertIsNotNone(language_form)
-        self.assertIsNone(profile_form.find(attrs={"name": "language"}))
-        self.assertIsNotNone(language_form.find(attrs={"name": "language"}))
-        self.assertIsNotNone(
-            language_form.find("select", attrs={"id": "settings-language-switcher"})
-        )
-        self.assertIsNone(language_form.find(class_="dropdown-toggle"))
-
-    def test_language_options_keep_native_names(self):
-        self.user.profile.language = "zh-hans"
-        self.user.profile.save()
-
-        response = self.client.get(reverse("linkding:settings.general"))
-        soup = BeautifulSoup(response.content.decode(), "html.parser")
-        options = soup.select("#settings-language-switcher option")
-
+        nav_targets = [
+            link.get("data-settings-section-target")
+            for link in soup.select(".settings-directory [data-settings-section-target]")
+        ]
         self.assertEqual(
-            [option.get_text(strip=True) for option in options],
-            ["English", "简体中文"],
+            nav_targets,
+            [
+                "settings-user",
+                "settings-interface",
+                "settings-sidebar",
+                "settings-bookmark-list",
+                "settings-bookmarks",
+                "settings-tags",
+                "settings-domains",
+                "settings-sharing",
+                "settings-access-visitors",
+                "settings-import-export",
+                "settings-about",
+            ],
         )
+
+        username_value = soup.select_one("[data-setting-username]")
+        self.assertIsNotNone(username_value)
+        self.assertEqual(username_value.get_text(strip=True), superuser.username)
+        self.assertIsNotNone(soup.find("a", href=reverse("change_password")))
+
+    def test_should_render_requested_segment_option_order_and_labels(self):
+        superuser = self.setup_superuser()
+        self.client.force_login(superuser)
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = self.make_soup(response.content.decode())
+
+        language_labels = [
+            option.get_text(strip=True)
+            for option in soup.select(
+                '[aria-labelledby="settings-language-label"] .settings-segmented-option span'
+            )
+        ]
+        self.assertEqual(language_labels, ["简体中文", "English", "..."])
+
+        other_language_select = soup.select_one(
+            "[data-settings-language-other] [data-settings-language-select]"
+        )
+        self.assertIsNotNone(other_language_select)
+        other_language_options = [
+            option.get_text(strip=True)
+            for option in other_language_select.select("option")
+        ]
+        self.assertEqual(other_language_options, ["No other languages"])
+        self.assertTrue(other_language_select.has_attr("disabled"))
+
+        date_format_labels = [
+            option.get_text(strip=True)
+            for option in soup.select(
+                '[aria-labelledby="settings-bookmark-date-label"] .settings-segmented-option span'
+            )
+        ]
+        self.assertEqual(date_format_labels, ["Hidden", "Relative", "Absolute"])
+
+        landing_page_labels = [
+            option.get_text(strip=True)
+            for option in soup.select(
+                '[aria-labelledby="settings-landing-page-label"] .settings-segmented-option span'
+            )
+        ]
+        self.assertEqual(landing_page_labels, ["Login page", "Shared page"])
+
+    @patch(
+        "bookmarks.views.settings._get_other_language_choices",
+        return_value=[("fr", "francais")],
+    )
+    def test_update_language_persists_other_language_preference(
+        self, _mock_other_languages
+    ):
+        response = self.client.post(
+            reverse("language-update"),
+            {"language": "fr", "next": reverse("linkding:settings.general")},
+            follow=True,
+        )
+
+        self.user.profile.refresh_from_db()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.user.profile.language, "fr")
+        self.user.profile.clean_fields(
+            exclude=["search_preferences", "trash_search_preferences"]
+        )
+
+    def test_should_hide_default_sharing_when_sharing_is_disabled(self):
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = self.make_soup(response.content.decode())
+
+        default_sharing_row = soup.select_one(
+            "[data-setting-row='default_mark_shared']"
+        )
+        self.assertIsNotNone(default_sharing_row)
+        self.assertIn("is-hidden", default_sharing_row.get("class", []))
+
+    def test_should_show_default_sharing_when_sharing_is_enabled(self):
+        profile = self.user.profile
+        profile.enable_sharing = True
+        profile.default_mark_shared = True
+        profile.save()
+
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = self.make_soup(response.content.decode())
+
+        default_sharing_row = soup.select_one("[data-setting-row='default_mark_shared']")
+        self.assertIsNotNone(default_sharing_row)
+        self.assertIn("Default sharing", default_sharing_row.get_text())
+
+    def test_global_settings_only_visible_for_superuser(self):
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = self.make_soup(response.content.decode())
+        self.assertIsNone(soup.select_one("section#settings-access-visitors"))
+
+        superuser = self.setup_superuser()
+        self.client.force_login(superuser)
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = self.make_soup(response.content.decode())
+
+        section = soup.select_one("section#settings-access-visitors")
+        self.assertIsNotNone(section)
+        self.assertIn("Access & Visitors", section.get_text())
 
     def test_update_language_persists_language_preference(self):
-        form_data = self.create_language_form_data()
-
         response = self.client.post(
-            reverse("language-update"), form_data, follow=True
+            reverse("language-update"),
+            {"language": "zh-hans", "next": reverse("linkding:settings.general")},
+            follow=True,
         )
 
         self.user.profile.refresh_from_db()
@@ -130,373 +287,402 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.user.profile.language, "zh-hans")
 
-    def test_update_language_ignores_unsupported_language(self):
+    def test_async_profile_quick_save_updates_profile_fields(self):
         response = self.client.post(
-            reverse("language-update"),
-            self.create_language_form_data(language="fr"),
+            reverse("linkding:settings.save"),
+            self.create_quick_profile_form_data(
+                {
+                    "theme": UserProfile.THEME_DARK,
+                    "bookmark_date_display": UserProfile.BOOKMARK_DATE_DISPLAY_HIDDEN,
+                    "bookmark_description_display": UserProfile.BOOKMARK_DESCRIPTION_DISPLAY_SEPARATE,
+                    "bookmark_description_max_lines": "3",
+                    "bookmark_link_target": UserProfile.BOOKMARK_LINK_TARGET_SELF,
+                    "enable_web_archive": True,
+                    "tag_search": UserProfile.TAG_SEARCH_LAX,
+                    "tag_grouping": UserProfile.TAG_GROUPING_DISABLED,
+                    "items_per_page": "40",
+                    "display_url": True,
+                    "permanent_notes": True,
+                    "display_view_bookmark_action": False,
+                    "display_edit_bookmark_action": True,
+                    "display_archive_bookmark_action": False,
+                    "display_remove_bookmark_action": True,
+                    "default_mark_unread": True,
+                    "enable_favicons": True,
+                    "enable_preview_images": True,
+                    "enable_automatic_html_snapshots": False,
+                    "sticky_header_controls": True,
+                    "sticky_pagination": True,
+                    "show_sidebar": False,
+                    "sticky_side_panel": False,
+                    "sharing_mode": "public",
+                    "default_mark_shared": True,
+                    "sidebar_modules": self.create_sidebar_modules(
+                        [
+                            {"key": "domains", "enabled": True},
+                            {"key": "summary", "enabled": True},
+                            {"key": "bundles", "enabled": False},
+                            {"key": "tags", "enabled": True},
+                        ]
+                    ),
+                }
+            ),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
         )
-
-        self.user.profile.refresh_from_db()
-
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(self.user.profile.language, "en")
-        self.assertNotIn("django_language", response.cookies)
-
-
-    def test_should_check_authentication(self):
-        self.client.logout()
-        response = self.client.get(reverse("linkding:settings.general"), follow=True)
-
-        self.assertRedirects(
-            response,
-            reverse("login") + "?next=" + reverse("linkding:settings.general"),
-        )
-
-        response = self.client.get(reverse("linkding:settings.update"), follow=True)
-
-        self.assertRedirects(
-            response,
-            reverse("login") + "?next=" + reverse("linkding:settings.update"),
-        )
-
-    def test_update_profile(self):
-        form_data = {
-            "update_profile": "",
-            "language": "zh-hans",
-            "theme": UserProfile.THEME_DARK,
-            "bookmark_date_display": UserProfile.BOOKMARK_DATE_DISPLAY_HIDDEN,
-            "bookmark_description_display": UserProfile.BOOKMARK_DESCRIPTION_DISPLAY_SEPARATE,
-            "bookmark_description_max_lines": 3,
-            "bookmark_link_target": UserProfile.BOOKMARK_LINK_TARGET_SELF,
-            "web_archive_integration": UserProfile.WEB_ARCHIVE_INTEGRATION_ENABLED,
-            "enable_sharing": True,
-            "enable_public_sharing": True,
-            "enable_favicons": True,
-            "enable_preview_images": True,
-            "enable_automatic_html_snapshots": False,
-            "tag_search": UserProfile.TAG_SEARCH_LAX,
-            "tag_grouping": UserProfile.TAG_GROUPING_DISABLED,
-            "display_url": True,
-            "display_view_bookmark_action": False,
-            "display_edit_bookmark_action": False,
-            "display_archive_bookmark_action": False,
-            "display_remove_bookmark_action": False,
-            "permanent_notes": True,
-            "default_mark_unread": True,
-            "default_mark_shared": True,
-            "custom_css": "body { background-color: #000; }",
-            "auto_tagging_rules": "example.com tag",
-            "items_per_page": "10",
-            "sticky_pagination": True,
-            "collapse_side_panel": True,
-            "hide_bundles": True,
-        }
-        response = self.client.post(
-            reverse("linkding:settings.update"), form_data, follow=True
-        )
-        html = response.content.decode()
-
-        self.user.profile.refresh_from_db()
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.user.profile.theme, form_data["theme"])
+        self.assertEqual(response.json()["status"], "ok")
+
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.profile.theme, UserProfile.THEME_DARK)
         self.assertEqual(
-            self.user.profile.bookmark_date_display, form_data["bookmark_date_display"]
+            self.user.profile.bookmark_date_display,
+            UserProfile.BOOKMARK_DATE_DISPLAY_HIDDEN,
         )
         self.assertEqual(
             self.user.profile.bookmark_description_display,
-            form_data["bookmark_description_display"],
+            UserProfile.BOOKMARK_DESCRIPTION_DISPLAY_SEPARATE,
         )
+        self.assertEqual(self.user.profile.bookmark_description_max_lines, 3)
         self.assertEqual(
-            self.user.profile.bookmark_description_max_lines,
-            form_data["bookmark_description_max_lines"],
-        )
-        self.assertEqual(
-            self.user.profile.bookmark_link_target, form_data["bookmark_link_target"]
+            self.user.profile.bookmark_link_target,
+            UserProfile.BOOKMARK_LINK_TARGET_SELF,
         )
         self.assertEqual(
             self.user.profile.web_archive_integration,
-            form_data["web_archive_integration"],
+            UserProfile.WEB_ARCHIVE_INTEGRATION_ENABLED,
         )
-        self.assertEqual(self.user.profile.enable_sharing, form_data["enable_sharing"])
+        self.assertEqual(self.user.profile.tag_search, UserProfile.TAG_SEARCH_LAX)
         self.assertEqual(
-            self.user.profile.enable_public_sharing, form_data["enable_public_sharing"]
+            self.user.profile.tag_grouping, UserProfile.TAG_GROUPING_DISABLED
         )
+        self.assertEqual(self.user.profile.items_per_page, 40)
+        self.assertTrue(self.user.profile.display_url)
+        self.assertTrue(self.user.profile.permanent_notes)
+        self.assertFalse(self.user.profile.display_view_bookmark_action)
+        self.assertFalse(self.user.profile.display_archive_bookmark_action)
+        self.assertTrue(self.user.profile.default_mark_unread)
+        self.assertTrue(self.user.profile.enable_favicons)
+        self.assertTrue(self.user.profile.enable_preview_images)
+        self.assertFalse(self.user.profile.enable_automatic_html_snapshots)
+        self.assertTrue(self.user.profile.sticky_header_controls)
+        self.assertTrue(self.user.profile.sticky_pagination)
+        self.assertTrue(self.user.profile.collapse_side_panel)
+        self.assertTrue(self.user.profile.enable_sharing)
+        self.assertTrue(self.user.profile.enable_public_sharing)
+        self.assertTrue(self.user.profile.default_mark_shared)
         self.assertEqual(
-            self.user.profile.enable_favicons, form_data["enable_favicons"]
+            self.user.profile.sidebar_modules,
+            [
+                {"key": "domains", "enabled": True},
+                {"key": "summary", "enabled": True},
+                {"key": "bundles", "enabled": False},
+                {"key": "tags", "enabled": True},
+            ],
         )
-        self.assertEqual(
-            self.user.profile.enable_preview_images, form_data["enable_preview_images"]
-        )
-        self.assertEqual(
-            self.user.profile.enable_automatic_html_snapshots,
-            form_data["enable_automatic_html_snapshots"],
-        )
-        self.assertEqual(self.user.profile.tag_search, form_data["tag_search"])
-        self.assertEqual(self.user.profile.tag_grouping, form_data["tag_grouping"])
-        self.assertEqual(self.user.profile.display_url, form_data["display_url"])
-        self.assertEqual(
-            self.user.profile.display_view_bookmark_action,
-            form_data["display_view_bookmark_action"],
-        )
-        self.assertEqual(
-            self.user.profile.display_edit_bookmark_action,
-            form_data["display_edit_bookmark_action"],
-        )
-        self.assertEqual(
-            self.user.profile.display_archive_bookmark_action,
-            form_data["display_archive_bookmark_action"],
-        )
-        self.assertEqual(
-            self.user.profile.display_remove_bookmark_action,
-            form_data["display_remove_bookmark_action"],
-        )
-        self.assertEqual(
-            self.user.profile.permanent_notes, form_data["permanent_notes"]
-        )
-        self.assertEqual(
-            self.user.profile.default_mark_unread, form_data["default_mark_unread"]
-        )
-        self.assertEqual(
-            self.user.profile.default_mark_shared, form_data["default_mark_shared"]
-        )
-        self.assertEqual(self.user.profile.custom_css, form_data["custom_css"])
-        self.assertEqual(
-            self.user.profile.auto_tagging_rules, form_data["auto_tagging_rules"]
-        )
-        self.assertEqual(
-            self.user.profile.items_per_page, int(form_data["items_per_page"])
-        )
-        self.assertEqual(
-            self.user.profile.sticky_pagination, form_data["sticky_pagination"]
-        )
-        self.assertEqual(
-            self.user.profile.collapse_side_panel, form_data["collapse_side_panel"]
-        )
-        self.assertEqual(self.user.profile.hide_bundles, form_data["hide_bundles"])
 
-        self.assertSuccessMessage(html, "Profile updated")
-
-    def test_update_profile_with_invalid_form_returns_422(self):
-        form_data = self.create_profile_form_data({"items_per_page": "-1"})
-        response = self.client.post(reverse("linkding:settings.update"), form_data)
-
-        self.assertEqual(response.status_code, 422)
-
-    def test_update_profile_should_not_be_called_without_respective_form_action(self):
-        form_data = {
-            "language": "zh-hans",
-            "theme": UserProfile.THEME_DARK,
-        }
+    def test_html_profile_quick_save_redirects_on_success(self):
         response = self.client.post(
-            reverse("linkding:settings.update"), form_data, follow=True
+            reverse("linkding:settings.save"),
+            self.create_quick_profile_form_data({"theme": UserProfile.THEME_DARK}),
+            follow=True,
         )
-        html = response.content.decode()
-
-        self.user.profile.refresh_from_db()
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(self.user.profile.theme, UserProfile.THEME_AUTO)
-        self.assertSuccessMessage(html, "Profile updated", count=0)
+        self.assertEqual(response.request["PATH_INFO"], reverse("linkding:settings.general"))
 
-    def test_update_profile_updates_custom_css_hash(self):
-        form_data = self.create_profile_form_data(
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.profile.theme, UserProfile.THEME_DARK)
+        self.assertSuccessMessage(response.content.decode(), "Profile updated")
+
+    def test_async_profile_quick_save_rejects_invalid_items_per_page(self):
+        response = self.client.post(
+            reverse("linkding:settings.save"),
+            self.create_quick_profile_form_data({"items_per_page": "-1"}),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("items_per_page", response.json()["errors"])
+
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.profile.items_per_page, 30)
+
+    def test_html_profile_quick_save_renders_form_errors(self):
+        response = self.client.post(
+            reverse("linkding:settings.save"),
+            self.create_quick_profile_form_data({"items_per_page": "-1"}),
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response["Content-Type"], "text/html; charset=utf-8")
+        self.assertIn("items_per_page", response.context["profile_quick_form"].errors)
+        self.assertContains(
+            response,
+            "Ensure this value is greater than or equal to 10.",
+            status_code=422,
+        )
+
+    def test_html_custom_css_save_redirects_on_success(self):
+        response = self.client.post(
+            reverse("linkding:settings.save"),
+            self.create_long_text_form_data(
+                "profile_custom_css", "custom_css", "body { color: green; }"
+            ),
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.request["PATH_INFO"], reverse("linkding:settings.general"))
+
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.profile.custom_css, "body { color: green; }")
+        self.assertSuccessMessage(response.content.decode(), "Profile updated")
+
+    def test_html_global_quick_save_redirects_on_success(self):
+        superuser = self.setup_superuser()
+        self.client.force_login(superuser)
+
+        response = self.client.post(
+            reverse("linkding:settings.save"),
+            self.create_global_quick_form_data(
+                {"landing_page": GlobalSettings.LANDING_PAGE_SHARED_BOOKMARKS}
+            ),
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.request["PATH_INFO"], reverse("linkding:settings.general"))
+        self.assertSuccessMessage(response.content.decode(), "Global settings updated")
+        self.assertEqual(
+            GlobalSettings.get().landing_page,
+            GlobalSettings.LANDING_PAGE_SHARED_BOOKMARKS,
+        )
+
+    def test_html_global_quick_save_renders_form_errors(self):
+        superuser = self.setup_superuser()
+        self.client.force_login(superuser)
+
+        response = self.client.post(
+            reverse("linkding:settings.save"),
+            self.create_global_quick_form_data({"landing_page": "invalid"}),
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response["Content-Type"], "text/html; charset=utf-8")
+        self.assertIn("landing_page", response.context["global_settings_form"].errors)
+        self.assertContains(response, "Select a valid choice.", status_code=422)
+
+    def test_async_profile_quick_save_only_updates_submitted_section_fields(self):
+        profile = self.user.profile
+        profile.theme = UserProfile.THEME_DARK
+        profile.items_per_page = 30
+        profile.sticky_header_controls = True
+        profile.sticky_pagination = True
+        profile.save()
+
+        response = self.client.post(
+            reverse("linkding:settings.save"),
             {
-                "custom_css": "body { background-color: #000; }",
-            }
+                "form_id": "profile_quick",
+                "form_fields": "items_per_page,sticky_header_controls,sticky_pagination",
+                "items_per_page": "55",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
         )
-        self.client.post(reverse("linkding:settings.update"), form_data, follow=True)
-        self.user.profile.refresh_from_db()
 
-        expected_hash = hashlib.md5(form_data["custom_css"].encode("utf-8")).hexdigest()
-        self.assertEqual(expected_hash, self.user.profile.custom_css_hash)
+        self.assertEqual(response.status_code, 200)
 
-        form_data["custom_css"] = "body { background-color: #fff; }"
-        self.client.post(reverse("linkding:settings.update"), form_data, follow=True)
-        self.user.profile.refresh_from_db()
+        profile.refresh_from_db()
+        self.assertEqual(profile.theme, UserProfile.THEME_DARK)
+        self.assertEqual(profile.items_per_page, 55)
+        self.assertFalse(profile.sticky_header_controls)
+        self.assertFalse(profile.sticky_pagination)
 
-        expected_hash = hashlib.md5(form_data["custom_css"].encode("utf-8")).hexdigest()
-        self.assertEqual(expected_hash, self.user.profile.custom_css_hash)
-
-        form_data["custom_css"] = ""
-        self.client.post(reverse("linkding:settings.update"), form_data, follow=True)
-        self.user.profile.refresh_from_db()
-
-        self.assertEqual("", self.user.profile.custom_css_hash)
-
-    def test_enable_favicons_should_schedule_icon_update(self):
-        with patch.object(
-            tasks, "schedule_bookmarks_without_favicons"
-        ) as mock_schedule_bookmarks_without_favicons:
-            # Enabling favicons schedules update
-            form_data = self.create_profile_form_data(
+    def test_private_sharing_mode_enables_private_sharing_without_public_access(self):
+        response = self.client.post(
+            reverse("linkding:settings.save"),
+            self.create_quick_profile_form_data(
                 {
-                    "enable_favicons": True,
+                    "sharing_mode": "private",
+                    "default_mark_shared": True,
                 }
-            )
-            self.client.post(reverse("linkding:settings.update"), form_data)
+            ),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
 
-            mock_schedule_bookmarks_without_favicons.assert_called_once_with(self.user)
+        self.assertEqual(response.status_code, 200)
 
-            # No update scheduled if favicons are already enabled
-            mock_schedule_bookmarks_without_favicons.reset_mock()
+        self.user.profile.refresh_from_db()
+        self.assertTrue(self.user.profile.enable_sharing)
+        self.assertFalse(self.user.profile.enable_public_sharing)
+        self.assertTrue(self.user.profile.default_mark_shared)
 
-            self.client.post(reverse("linkding:settings.update"), form_data)
+    def test_disabling_sharing_resets_public_and_default_sharing(self):
+        profile = self.user.profile
+        profile.enable_sharing = True
+        profile.enable_public_sharing = True
+        profile.default_mark_shared = True
+        profile.save()
 
-            mock_schedule_bookmarks_without_favicons.assert_not_called()
-
-            # No update scheduled when disabling favicons
-            form_data = self.create_profile_form_data(
+        response = self.client.post(
+            reverse("linkding:settings.save"),
+            self.create_quick_profile_form_data(
                 {
-                    "enable_favicons": False,
+                    "sharing_mode": "disabled",
+                    "default_mark_shared": True,
                 }
+            ),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        profile.refresh_from_db()
+        self.assertFalse(profile.enable_sharing)
+        self.assertFalse(profile.enable_public_sharing)
+        self.assertFalse(profile.default_mark_shared)
+
+    def test_long_text_save_updates_only_the_target_field(self):
+        profile = self.user.profile
+        profile.custom_css = "body { color: red; }"
+        profile.auto_tagging_rules = "example.com news"
+        profile.custom_domain_root = "example.com"
+        profile.save()
+
+        response = self.client.post(
+            reverse("linkding:settings.save"),
+            self.create_long_text_form_data(
+                "profile_custom_css", "custom_css", "body { color: blue; }"
+            ),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        profile.refresh_from_db()
+        self.assertEqual(profile.custom_css, "body { color: blue; }")
+        self.assertEqual(profile.auto_tagging_rules, "example.com news")
+        self.assertEqual(profile.custom_domain_root, "example.com")
+
+    def test_long_text_panels_should_render_collapsed_by_default(self):
+        profile = self.user.profile
+        profile.custom_css = "body { color: red; }"
+        profile.auto_tagging_rules = "example.com news"
+        profile.custom_domain_root = "example.com"
+        profile.save()
+
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = self.make_soup(response.content.decode())
+
+        for panel_id in (
+            "settings-custom-css-panel",
+            "settings-sidebar-modules-panel",
+            "settings-auto-tagging-panel",
+            "settings-custom-domain-panel",
+        ):
+            panel = soup.select_one(f"#{panel_id}")
+            self.assertIsNotNone(panel)
+            self.assertTrue(panel.has_attr("hidden"))
+
+        for control_id in (
+            "settings-custom-css-panel",
+            "settings-sidebar-modules-panel",
+            "settings-auto-tagging-panel",
+            "settings-custom-domain-panel",
+        ):
+            toggle = soup.select_one(
+                f"[data-settings-panel-toggle][aria-controls='{control_id}']"
             )
+            self.assertIsNotNone(toggle)
+            self.assertEqual(toggle.get("aria-expanded"), "false")
 
-            self.client.post(reverse("linkding:settings.update"), form_data)
+    def test_import_file_controls_should_use_input_group_markup(self):
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = self.make_soup(response.content.decode())
 
-            mock_schedule_bookmarks_without_favicons.assert_not_called()
+        input_group = soup.select_one(
+            ".settings-file-controls .input-group.settings-file-input-group"
+        )
+        self.assertIsNotNone(input_group)
 
-    def test_refresh_favicons(self):
-        with patch.object(
-            tasks, "schedule_refresh_favicons"
-        ) as mock_schedule_refresh_favicons:
-            form_data = {
-                "refresh_favicons": "",
-            }
+        file_shell = input_group.select_one("[data-settings-file-shell]")
+        self.assertIsNotNone(file_shell)
+        self.assertIn("form-input", file_shell.get("class", []))
+        self.assertIn("settings-file-input-shell", file_shell.get("class", []))
+
+        file_input = input_group.select_one("input[type='file'][name='import_file']")
+        self.assertIsNotNone(file_input)
+        self.assertIn("settings-native-file-input", file_input.get("class", []))
+
+        upload_button = input_group.select_one("input[type='submit']")
+        self.assertIsNotNone(upload_button)
+        self.assertIn("input-group-btn", upload_button.get("class", []))
+
+    def test_async_global_save_updates_global_settings(self):
+        superuser = self.setup_superuser()
+        selectable_user = self.setup_user()
+        self.client.force_login(superuser)
+
+        response = self.client.post(
+            reverse("linkding:settings.save"),
+            self.create_global_quick_form_data(
+                {
+                    "landing_page": GlobalSettings.LANDING_PAGE_SHARED_BOOKMARKS,
+                    "guest_profile_user": selectable_user.id,
+                    "enable_link_prefetch": True,
+                }
+            ),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        global_settings = GlobalSettings.get()
+        self.assertEqual(
+            global_settings.landing_page, GlobalSettings.LANDING_PAGE_SHARED_BOOKMARKS
+        )
+        self.assertEqual(global_settings.guest_profile_user, selectable_user)
+        self.assertTrue(global_settings.enable_link_prefetch)
+
+    def test_async_global_save_checks_for_superuser(self):
+        response = self.client.post(
+            reverse("linkding:settings.save"),
+            self.create_global_quick_form_data(),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_refresh_favicons_action(self):
+        with patch.object(tasks, "schedule_refresh_favicons") as mock_schedule:
             response = self.client.post(
-                reverse("linkding:settings.update"), form_data, follow=True
-            )
-            html = response.content.decode()
-
-            mock_schedule_refresh_favicons.assert_called_once()
-            self.assertSuccessMessage(
-                html, "Scheduled favicon update. This may take a while..."
+                reverse("linkding:settings.update"),
+                {"refresh_favicons": ""},
+                follow=True,
             )
 
-    def test_refresh_favicons_should_not_be_called_without_respective_form_action(self):
-        with patch.object(
-            tasks, "schedule_refresh_favicons"
-        ) as mock_schedule_refresh_favicons:
-            form_data = {}
-            response = self.client.post(reverse("linkding:settings.update"), form_data)
-            html = response.content.decode()
-
-            mock_schedule_refresh_favicons.assert_not_called()
-            self.assertSuccessMessage(
-                html, "Scheduled favicon update. This may take a while...", count=0
-            )
-
-    def test_refresh_favicons_should_be_visible_when_favicons_enabled_in_profile(self):
-        profile = self.get_or_create_test_user().profile
-        profile.enable_favicons = True
-        profile.save()
-
-        response = self.client.get(reverse("linkding:settings.general"))
-        html = response.content.decode()
-
-        self.assertInHTML(
-            """
-            <button class="btn mt-2" name="refresh_favicons">Refresh Favicons</button>
-        """,
-            html,
-            count=1,
-        )
-
-    def test_refresh_favicons_should_not_be_visible_when_favicons_disabled_in_profile(
-        self,
-    ):
-        profile = self.get_or_create_test_user().profile
-        profile.enable_favicons = False
-        profile.save()
-
-        response = self.client.get(reverse("linkding:settings.general"))
-        html = response.content.decode()
-
-        self.assertInHTML(
-            """
-            <button class="btn mt-2" name="refresh_favicons">Refresh Favicons</button>
-        """,
-            html,
-            count=0,
-        )
-
-    @override_settings(LD_ENABLE_REFRESH_FAVICONS=False)
-    def test_refresh_favicons_should_not_be_visible_when_disabled(self):
-        profile = self.get_or_create_test_user().profile
-        profile.enable_favicons = True
-        profile.save()
-
-        response = self.client.get(reverse("linkding:settings.general"))
-        html = response.content.decode()
-
-        self.assertInHTML(
-            """
-            <button class="btn mt-2" name="refresh_favicons">Refresh Favicons</button>
-        """,
-            html,
-            count=0,
-        )
-
-    def test_enable_preview_image_should_schedule_preview_update(self):
-        with patch.object(
-            tasks, "schedule_bookmarks_without_previews"
-        ) as mock_schedule_bookmarks_without_previews:
-            # Enabling favicons schedules update
-            form_data = self.create_profile_form_data(
-                {
-                    "enable_preview_images": True,
-                }
-            )
-            self.client.post(reverse("linkding:settings.update"), form_data)
-
-            mock_schedule_bookmarks_without_previews.assert_called_once_with(self.user)
-
-            # No update scheduled if favicons are already enabled
-            mock_schedule_bookmarks_without_previews.reset_mock()
-
-            self.client.post(reverse("linkding:settings.update"), form_data)
-
-            mock_schedule_bookmarks_without_previews.assert_not_called()
-
-            # No update scheduled when disabling favicons
-            form_data = self.create_profile_form_data(
-                {
-                    "enable_preview_images": False,
-                }
-            )
-
-            self.client.post(reverse("linkding:settings.update"), form_data)
-
-            mock_schedule_bookmarks_without_previews.assert_not_called()
-
-    @override_settings(LD_ENABLE_SNAPSHOTS=False)
-    def test_automatic_html_snapshots_should_be_hidden_when_snapshots_not_supported(
-        self,
-    ):
-        response = self.client.get(reverse("linkding:settings.general"))
-        html = response.content.decode()
-
-        self.assertInHTML(
-            """
-            <input type="checkbox" name="enable_automatic_html_snapshots" id="id_enable_automatic_html_snapshots" checked="">
-            """,
-            html,
-            count=0,
+        self.assertEqual(response.status_code, 200)
+        mock_schedule.assert_called_once_with(self.user)
+        self.assertSuccessMessage(
+            response.content.decode(),
+            "Scheduled favicon update. This may take a while...",
         )
 
     @override_settings(LD_ENABLE_SNAPSHOTS=True)
-    def test_automatic_html_snapshots_should_be_visible_when_snapshots_supported(
-        self,
-    ):
-        response = self.client.get(reverse("linkding:settings.general"))
-        html = response.content.decode()
+    def test_create_missing_html_snapshots_action(self):
+        with patch.object(
+            tasks, "create_missing_html_snapshots", return_value=5
+        ) as mock_create:
+            response = self.client.post(
+                reverse("linkding:settings.update"),
+                {"create_missing_html_snapshots": ""},
+                follow=True,
+            )
 
-        self.assertInHTML(
-            """
-            <input type="checkbox" name="enable_automatic_html_snapshots" id="id_enable_automatic_html_snapshots" checked="">
-            """,
-            html,
-            count=1,
+        self.assertEqual(response.status_code, 200)
+        mock_create.assert_called_once_with(self.user)
+        self.assertSuccessMessage(
+            response.content.decode(),
+            "Queued 5 missing snapshots. This may take a while...",
         )
 
     def test_about_shows_version_info(self):
@@ -504,7 +690,6 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
             "bookmarks.views.settings.get_version_info", return_value=app_version
         ):
             response = self.client.get(reverse("linkding:settings.general"))
-        html = response.content.decode()
 
         self.assertInHTML(
             f"""
@@ -512,9 +697,25 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
                 <td>Version</td>
                 <td>{app_version}</td>
             </tr>
-        """,
-            html,
+            """,
+            response.content.decode(),
         )
+
+    def test_about_shows_based_on_linkding_reference(self):
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = self.make_soup(response.content.decode())
+
+        rows = soup.select("section#settings-about .settings-about-table tr")
+        based_on_row = rows[-1]
+        cells = based_on_row.select("td")
+
+        self.assertEqual(cells[0].get_text(strip=True), "Based on")
+        self.assertEqual(cells[1].get_text(" ", strip=True), "sissbruecker's linkding")
+
+        link = cells[1].select_one("a")
+        self.assertIsNotNone(link)
+        self.assertEqual(link.get("href"), "https://github.com/sissbruecker/linkding")
+        self.assertEqual(link.get_text(strip=True), "linkding")
 
     def test_get_version_info_just_displays_latest_when_versions_are_equal(self):
         latest_version_response_mock = Mock(
@@ -526,7 +727,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
 
     def test_get_version_info_shows_latest_version_when_versions_are_not_equal(self):
         latest_version_response_mock = Mock(
-            status_code=200, json=lambda: {"name": f"v123.0.1"}
+            status_code=200, json=lambda: {"name": "v123.0.1"}
         )
         with patch.object(requests, "get", return_value=latest_version_response_mock):
             version_info = get_version_info(random.random())
@@ -535,7 +736,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
     def test_get_version_info_silently_ignores_request_errors(self):
         with patch.object(requests, "get", side_effect=RequestException()):
             version_info = get_version_info(random.random())
-            self.assertEqual(version_info, f"{app_version}")
+            self.assertEqual(version_info, app_version)
 
     def test_get_version_info_handles_invalid_response(self):
         latest_version_response_mock = Mock(status_code=403, json=lambda: {})
@@ -547,145 +748,3 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         with patch.object(requests, "get", return_value=latest_version_response_mock):
             version_info = get_version_info(random.random())
             self.assertEqual(version_info, app_version)
-
-    @override_settings(LD_ENABLE_SNAPSHOTS=True)
-    def test_create_missing_html_snapshots(self):
-        with patch.object(
-            tasks, "create_missing_html_snapshots"
-        ) as mock_create_missing_html_snapshots:
-            mock_create_missing_html_snapshots.return_value = 5
-            form_data = {
-                "create_missing_html_snapshots": "",
-            }
-            response = self.client.post(
-                reverse("linkding:settings.update"), form_data, follow=True
-            )
-            html = response.content.decode()
-
-            self.assertEqual(response.status_code, 200)
-            mock_create_missing_html_snapshots.assert_called_once()
-            self.assertSuccessMessage(
-                html, "Queued 5 missing snapshots. This may take a while..."
-            )
-
-    @override_settings(LD_ENABLE_SNAPSHOTS=True)
-    def test_create_missing_html_snapshots_no_missing_snapshots(self):
-        with patch.object(
-            tasks, "create_missing_html_snapshots"
-        ) as mock_create_missing_html_snapshots:
-            mock_create_missing_html_snapshots.return_value = 0
-            form_data = {
-                "create_missing_html_snapshots": "",
-            }
-            response = self.client.post(
-                reverse("linkding:settings.update"), form_data, follow=True
-            )
-            html = response.content.decode()
-
-            self.assertEqual(response.status_code, 200)
-            mock_create_missing_html_snapshots.assert_called_once()
-            self.assertSuccessMessage(html, "No missing snapshots found.")
-
-    def test_create_missing_html_snapshots_should_not_be_called_without_respective_form_action(
-        self,
-    ):
-        with patch.object(
-            tasks, "create_missing_html_snapshots"
-        ) as mock_create_missing_html_snapshots:
-            mock_create_missing_html_snapshots.return_value = 5
-            form_data = {}
-            response = self.client.post(
-                reverse("linkding:settings.update"), form_data, follow=True
-            )
-            html = response.content.decode()
-
-            self.assertEqual(response.status_code, 200)
-            mock_create_missing_html_snapshots.assert_not_called()
-            self.assertSuccessMessage(
-                html, "Queued 5 missing snapshots. This may take a while...", count=0
-            )
-
-    def test_update_global_settings(self):
-        superuser = self.setup_superuser()
-        self.client.force_login(superuser)
-        selectable_user = self.setup_user()
-
-        # Update global settings
-        form_data = {
-            "update_global_settings": "",
-            "landing_page": GlobalSettings.LANDING_PAGE_SHARED_BOOKMARKS,
-            "guest_profile_user": selectable_user.id,
-        }
-        response = self.client.post(
-            reverse("linkding:settings.update"), form_data, follow=True
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertSuccessMessage(response.content.decode(), "Global settings updated")
-
-        global_settings = GlobalSettings.get()
-        self.assertEqual(global_settings.landing_page, form_data["landing_page"])
-        self.assertEqual(global_settings.guest_profile_user, selectable_user)
-
-        # Revert settings
-        form_data = {
-            "update_global_settings": "",
-            "landing_page": GlobalSettings.LANDING_PAGE_LOGIN,
-            "guest_profile_user": "",
-        }
-        response = self.client.post(
-            reverse("linkding:settings.update"), form_data, follow=True
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertSuccessMessage(response.content.decode(), "Global settings updated")
-
-        global_settings = GlobalSettings.get()
-        global_settings.refresh_from_db()
-        self.assertEqual(global_settings.landing_page, form_data["landing_page"])
-        self.assertIsNone(global_settings.guest_profile_user)
-
-    def test_update_global_settings_should_not_be_called_without_respective_form_action(
-        self,
-    ):
-        superuser = self.setup_superuser()
-        self.client.force_login(superuser)
-
-        form_data = {
-            "landing_page": GlobalSettings.LANDING_PAGE_SHARED_BOOKMARKS,
-        }
-        response = self.client.post(
-            reverse("linkding:settings.update"), form_data, follow=True
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertSuccessMessage(
-            response.content.decode(), "Global settings updated", count=0
-        )
-
-    def test_update_global_settings_checks_for_superuser(self):
-        form_data = {
-            "update_global_settings": "",
-            "landing_page": GlobalSettings.LANDING_PAGE_SHARED_BOOKMARKS,
-        }
-        response = self.client.post(reverse("linkding:settings.update"), form_data)
-        self.assertEqual(response.status_code, 403)
-
-    def test_global_settings_only_visible_for_superuser(self):
-        response = self.client.get(reverse("linkding:settings.general"))
-        html = response.content.decode()
-
-        self.assertInHTML(
-            '<h2 id="global-settings-heading">Global settings</h2>',
-            html,
-            count=0,
-        )
-
-        superuser = self.setup_superuser()
-        self.client.force_login(superuser)
-
-        response = self.client.get(reverse("linkding:settings.general"))
-        html = response.content.decode()
-
-        self.assertInHTML(
-            '<h2 id="global-settings-heading">Global settings</h2>',
-            html,
-            count=1,
-        )

@@ -1,5 +1,6 @@
 const behaviorRegistry = {};
 const debug = false;
+let observerStarted = false;
 
 const mutationObserver = new MutationObserver((mutations) => {
   mutations.forEach((mutation) => {
@@ -16,35 +17,50 @@ const mutationObserver = new MutationObserver((mutations) => {
   });
 });
 
-// Update behaviors on Turbo events
-// - turbo:load: initial page load, only listen once, afterward can rely on turbo:render
-// - turbo:render: after page navigation, including back/forward, and failed form submissions
-// - turbo:before-cache: before page navigation, reset DOM before caching
-document.addEventListener(
-  "turbo:load",
-  () => {
+function startBehaviorObserver() {
+  if (!document.body) {
+    return;
+  }
+
+  if (!observerStarted) {
     mutationObserver.observe(document.body, {
       childList: true,
       subtree: true,
     });
-
-    applyBehaviors(document.body);
-  },
-  { once: true },
-);
-
-document.addEventListener("turbo:render", () => {
-  mutationObserver.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
+    observerStarted = true;
+  }
 
   applyBehaviors(document.body);
-});
+}
 
-document.addEventListener("turbo:before-cache", () => {
-  destroyBehaviors(document.body);
-});
+function stopBehaviorObserver() {
+  mutationObserver.disconnect();
+  observerStarted = false;
+
+  if (document.body) {
+    destroyBehaviors(document.body);
+  }
+}
+
+// Update behaviors on Turbo events
+// - turbo:load: initial page load
+// - turbo:render: after page navigation, including back/forward, and failed form submissions
+// - turbo:before-cache: before page navigation, reset DOM before caching
+document.addEventListener("turbo:load", startBehaviorObserver, { once: true });
+document.addEventListener("turbo:render", startBehaviorObserver);
+document.addEventListener("turbo:before-cache", stopBehaviorObserver);
+
+if (document.readyState === "loading") {
+  document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+      queueMicrotask(startBehaviorObserver);
+    },
+    { once: true },
+  );
+} else {
+  queueMicrotask(startBehaviorObserver);
+}
 
 export class Behavior {
   constructor(element) {

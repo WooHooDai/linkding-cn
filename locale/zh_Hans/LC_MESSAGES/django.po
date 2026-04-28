@@ -310,7 +310,7 @@ msgstr "宽松"
 
 #: bookmarks/models.py:687
 msgid "Alphabetical"
-msgstr "按字母"
+msgstr "首字母"
 
 #: bookmarks/models.py:860 bookmarks/templates/bookmarks/layout.html:96
 #: bookmarks/templates/registration/login.html:19
@@ -1070,14 +1070,18 @@ msgid "Confirm new password"
 msgstr "确认新密码"
 
 #: bookmarks/templates/settings/general.html:5
-msgid "Settings - Linkding"
-msgstr "设置 - Linkding"
+msgid "General - Linkding"
+msgstr "通用 - Linkding"
 
 #: bookmarks/templates/settings/general.html:23
 #: bookmarks/templates/shared/language_switcher.html:8
 #: bookmarks/templates/shared/language_switcher.html:46
 msgid "Language"
 msgstr "语言"
+
+#: bookmarks/templates/settings/general.html:900
+msgid "General sections"
+msgstr "通用分组"
 
 #: bookmarks/templates/settings/general.html:26
 msgid ""
@@ -1219,11 +1223,11 @@ msgstr "标签搜索"
 
 #: bookmarks/templates/settings/general.html:175
 msgid "In strict mode, tags must be prefixed with a hash character (#)."
-msgstr "在 Strict 模式下，标签必须带有井号前缀（#）。"
+msgstr "在严格模式下，标签必须带有井号前缀（#）。"
 
 #: bookmarks/templates/settings/general.html:176
 msgid "In lax mode, tags can also be found without the hash character."
-msgstr "在 Lax 模式下，没有井号前缀的标签也能被搜索到。"
+msgstr "在宽松模式下，没有“#”前缀的标签也能被搜索到。"
 
 #: bookmarks/templates/settings/general.html:177
 msgid ""
@@ -1237,7 +1241,7 @@ msgstr "标签聚合"
 
 #: bookmarks/templates/settings/general.html:184
 msgid "In alphabetical mode, tags are grouped by the first letter."
-msgstr "在 Alphabetical 模式下，标签会按首字母分组。"
+msgstr "在 首字母 模式下，标签会按首字母分组。"
 
 #: bookmarks/templates/settings/general.html:185
 msgid "If disabled, tags are shown without grouping."
@@ -1495,8 +1499,8 @@ msgid "Export all bookmarks as a Netscape HTML file."
 msgstr "将全部书签导出为 Netscape HTML 文件。"
 
 #: bookmarks/templates/settings/general.html:388
-msgid "Download (.html)"
-msgstr "下载（.html）"
+msgid "Download"
+msgstr "下载"
 
 #: bookmarks/templates/settings/general.html:399
 msgid "About"
@@ -1515,16 +1519,13 @@ msgid "Changelog"
 msgstr "更新日志"
 
 #: bookmarks/templates/settings/general.html:417
-msgid "Credits"
-msgstr "致谢"
-
-#: bookmarks/templates/settings/general.html:418
-msgid "Built on top of"
+msgid "Based on"
 msgstr "基于"
 
-#: bookmarks/templates/settings/general.html:418
-msgid "with additional customizations."
-msgstr "构建，并加入了额外自定义功能。"
+#: bookmarks/templates/settings/general.html:420
+#, python-format
+msgid "sissbruecker's <a href=\"%(project_url)s\" target=\"_blank\" rel=\"noopener\">linkding</a>"
+msgstr "sissbruecker 的 <a href=\"%(project_url)s\" target=\"_blank\" rel=\"noopener\">linkding</a>"
 
 #: bookmarks/templates/settings/integrations.html:5
 msgid "Integrations - Linkding"
@@ -2071,6 +2072,22 @@ msgstr "个人资料已更新"
 msgid "Profile update failed, check the form below for errors"
 msgstr "个人资料更新失败，请检查下方表单中的错误"
 
+#: bookmarks/views/settings.py:252
+msgid "Settings update failed, check the form below for errors"
+msgstr "设置更新失败，请检查下方表单中的错误"
+
+#: bookmarks/templates/settings/general.html:176
+#: bookmarks/templates/settings/general.html:733
+#: bookmarks/templates/settings/general.html:780
+msgid "Restore draft"
+msgstr "恢复草稿"
+
+#: bookmarks/templates/settings/general.html:180
+#: bookmarks/templates/settings/general.html:750
+#: bookmarks/templates/settings/general.html:816
+msgid "Discard draft"
+msgstr "放弃草稿"
+
 #: bookmarks/views/settings.py:270
 msgid "Please select a file to import."
 msgstr "请选择要导入的文件。"
@@ -2126,6 +2143,186 @@ msgstr[0] ""
 "已成功将 %(count)s 个标签（%(tag_names)s）合并到“%(target_tag)s”中。"
 msgstr[1] ""
 "已成功将 %(count)s 个标签（%(tag_names)s）合并到“%(target_tag)s”中。"
+
+msgid "Access & Visitors"
+msgstr "访问 & 访客"
+
+msgid "Adjust your personal preferences, sharing behavior, and bookmark list experience."
+msgstr "调整你的个人偏好、分享行为和书签列表体验。"
+
+msgid "Admin only"
+msgstr "仅管理员"
+
+msgid "Aggregation mode"
+msgstr "聚合模式"
+
+msgid "Anonymous visitor profile"
+msgstr "匿名访客配置"
+
+msgid "Auto tagging"
+msgstr "自动标签"
+
+msgid "Bookmark sharing"
+msgstr "书签分享"
+
+msgid "Bookmarks per page"
+msgstr "每页书签数量"
+
+msgid "Collapse"
+msgstr "折叠"
+
+msgid "Create"
+msgstr "创建"
+
+msgid "Current username"
+msgstr "当前用户名"
+
+msgid "Date format"
+msgstr "日期格式"
+
+msgid "Default page for visitors"
+msgstr "访客默认落地页"
+
+msgid "Default sharing"
+msgstr "默认分享"
+
+msgid "Default unread"
+msgstr "默认未读"
+
+msgid "Display actions"
+msgstr "显示动作"
+
+msgid "Display Favicons"
+msgstr "显示 Favicons"
+
+msgid "Display preview images"
+msgstr "显示预览图"
+
+msgid "Description max lines"
+msgstr "描述最大行数"
+
+msgid "Description style"
+msgstr "描述样式"
+
+msgid "Drag to reorder modules and toggle whether they are shown in the sidebar."
+msgstr "拖拽排序模块，并切换其是否在侧边栏显示。"
+
+msgid "Enable HTML snapshots"
+msgstr "启用 HTML 快照"
+
+msgid "Enable preview images"
+msgstr "启用预览图"
+
+msgid "Enabled actions"
+msgstr "启用动作"
+
+msgid "Expand"
+msgstr "展开"
+
+msgid "Expand notes"
+msgstr "默认展开笔记"
+
+msgid "Export bookmarks"
+msgstr "导出书签"
+
+msgid "Import & Export"
+msgstr "导入 & 导出"
+
+msgid "Import bookmarks"
+msgstr "导入书签"
+
+msgid "Interface"
+msgstr "界面"
+
+msgid "Keep pagination controls pinned to the bottom while you scroll."
+msgstr "滚动时将分页控件固定在底部。"
+
+msgid "Keep the sidebar visible while scrolling on wider screens."
+msgstr "在较宽屏幕上滚动时保持侧边栏可见。"
+
+msgid "Module configuration"
+msgstr "模块配置"
+
+msgid "Open mode"
+msgstr "打开方式"
+
+msgid "Paginator follows"
+msgstr "分页器跟随"
+
+msgid "Prefetch internal links"
+msgstr "预读取内部链接"
+
+msgid "Prefetch internal links on hover"
+msgstr "鼠标悬浮预读取链接"
+
+msgid "Refresh"
+msgstr "刷新"
+
+msgid "Search bar follows"
+msgstr "搜索栏跟随"
+
+msgid "Search mode"
+msgstr "搜索模式"
+
+msgid "Sharing"
+msgstr "分享"
+
+msgid "Show URL"
+msgstr "显示 URL"
+
+msgid "Show sidebar by default (desktop)"
+msgstr "默认显示侧边栏（桌面）"
+
+msgid "Show sidebar"
+msgstr "显示侧边栏"
+
+msgid "Sidebar"
+msgstr "侧边栏"
+
+msgid "Sidebar follows"
+msgstr "侧边栏跟随"
+
+msgid "Sidebar modules"
+msgstr "侧边栏模块"
+
+msgid "HTML snapshots"
+msgstr "HTML 快照"
+
+msgid "This instance does not currently support HTML snapshots."
+msgstr "当前实例暂不支持 HTML 快照。"
+
+msgid "Turn this off to collapse the side panel by default and give the bookmark list more room."
+msgstr "关闭后将默认折叠侧边栏，为书签列表腾出更多空间。"
+
+msgid "Use a separate flow to change your account password."
+msgstr "通过单独的流程修改你的账户密码。"
+
+msgid "Your current account name for login and ownership display."
+msgstr "你当前用于登录和显示归属的账户名称。"
+
+msgid "Invalid sidebar configuration."
+msgstr "无效的侧边栏配置。"
+
+msgid "Login page"
+msgstr "登录页"
+
+msgid "Private sharing"
+msgstr "私密分享"
+
+msgid "Public sharing"
+msgstr "公开分享"
+
+msgid "Shared page"
+msgstr "分享页"
+
+msgid "User summary"
+msgstr "用户数据"
+
+msgid "Choose file"
+msgstr "选择文件"
+
+msgid "No file chosen"
+msgstr "未选择文件"
 
 #~ msgid "Shared by"
 #~ msgstr "分享者"

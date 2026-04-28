@@ -654,9 +654,9 @@ class UserProfile(models.Model):
     BOOKMARK_DATE_DISPLAY_ABSOLUTE = "absolute"
     BOOKMARK_DATE_DISPLAY_HIDDEN = "hidden"
     BOOKMARK_DATE_DISPLAY_CHOICES = [
+        (BOOKMARK_DATE_DISPLAY_HIDDEN, _("Hidden")),
         (BOOKMARK_DATE_DISPLAY_RELATIVE, _("Relative")),
         (BOOKMARK_DATE_DISPLAY_ABSOLUTE, _("Absolute")),
-        (BOOKMARK_DATE_DISPLAY_HIDDEN, _("Hidden")),
     ]
     BOOKMARK_DESCRIPTION_DISPLAY_INLINE = "inline"
     BOOKMARK_DESCRIPTION_DISPLAY_SEPARATE = "separate"
@@ -699,9 +699,7 @@ class UserProfile(models.Model):
         SIDEBAR_MODULE_TAGS: _("Tags"),
     }
     user = models.OneToOneField(User, related_name="profile", on_delete=models.CASCADE)
-    language = models.CharField(
-        max_length=20, choices=LANGUAGE_CHOICES, blank=False, default=LANGUAGE_EN
-    )
+    language = models.CharField(max_length=20, blank=False, default=LANGUAGE_EN)
     theme = models.CharField(
         max_length=10, choices=THEME_CHOICES, blank=False, default=THEME_AUTO
     )
@@ -1066,8 +1064,8 @@ class GlobalSettings(models.Model):
     LANDING_PAGE_LOGIN = "login"
     LANDING_PAGE_SHARED_BOOKMARKS = "shared_bookmarks"
     LANDING_PAGE_CHOICES = [
-        (LANDING_PAGE_LOGIN, _("Login")),
-        (LANDING_PAGE_SHARED_BOOKMARKS, _("Shared bookmarks")),
+        (LANDING_PAGE_LOGIN, _("Login page")),
+        (LANDING_PAGE_SHARED_BOOKMARKS, _("Shared page")),
     ]
 
     landing_page = models.CharField(
