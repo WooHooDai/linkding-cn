@@ -87,48 +87,36 @@
     gap: var(--unit-8);
   }
 
-  .settings-content > #settings-user {
+  .settings-content > #settings-interface {
     order: 10;
   }
 
-  .settings-content > #settings-interface {
+  .settings-content > #settings-sidebar {
     order: 20;
   }
 
-  .settings-content > #settings-sidebar {
+  .settings-content > #settings-search {
     order: 30;
   }
 
-  .settings-content > #settings-bookmark-list {
+  .settings-content > #settings-bookmarks {
     order: 40;
   }
 
-  .settings-content > #settings-bookmarks {
+  .settings-content > #settings-sharing {
     order: 50;
   }
 
-  .settings-content > #settings-tags {
+  .settings-content > #settings-user {
     order: 60;
   }
 
-  .settings-content > #settings-domains {
-    order: 65;
-  }
-
-  .settings-content > #settings-sharing {
+  .settings-content > #settings-import-export {
     order: 70;
   }
 
-  .settings-content > #settings-access-visitors {
-    order: 80;
-  }
-
-  .settings-content > #settings-import-export {
-    order: 90;
-  }
-
   .settings-content > #settings-about {
-    order: 100;
+    order: 80;
   }
 
   .settings-directory {

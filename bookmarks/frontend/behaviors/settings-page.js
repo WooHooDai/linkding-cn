@@ -830,25 +830,54 @@ class SettingsPageBehavior extends Behavior {
   }
 
   updateSidebarState(form = null) {
-    if (!(form instanceof HTMLFormElement)) {
-      form = this.element.querySelector("[data-sidebar-modules-form]");
-    }
-    if (!form) {
+    const sidebarForm = this.element.querySelector("[data-sidebar-modules-form]");
+    if (!(sidebarForm instanceof HTMLFormElement)) {
       return;
     }
 
-    const row = form.querySelector('[data-setting-row="sticky_side_panel"]');
+    const row = sidebarForm.querySelector('[data-setting-row="sticky_side_panel"]');
+    const modulesRow = sidebarForm.querySelector('[data-setting-row="sidebar_modules"]');
     const input = row?.querySelector('[name="sticky_side_panel"]');
-    const showSidebar = Boolean(form.querySelector('[name="show_sidebar"]')?.checked);
+    const showSidebarInput = sidebarForm.querySelector('[name="show_sidebar"]');
+    const showSidebar =
+      showSidebarInput instanceof HTMLInputElement
+        ? showSidebarInput.checked
+        : true;
     const visible = showSidebar;
+    const tagsModuleToggle = sidebarForm.querySelector(
+      '[data-module-key="tags"] [data-module-enabled]',
+    );
+    const tagsModuleEnabled =
+      tagsModuleToggle instanceof HTMLInputElement
+        ? tagsModuleToggle.checked
+        : true;
+    const tagGroupingRow = sidebarForm.querySelector(
+      '[data-setting-row="tag_grouping"]',
+    );
 
     this.setRowVisibility(row, visible);
+    this.setRowVisibility(modulesRow, visible);
+    // Keep the stored "Sidebar follows" value unchanged when the sidebar is hidden.
     if (input) {
-      input.disabled = !visible;
-      if (!visible) {
-        input.checked = false;
+      input.disabled = false;
+    }
+
+    if (modulesRow instanceof HTMLElement) {
+      modulesRow
+        .querySelectorAll('[data-module-enabled], .settings-module-handle')
+        .forEach((control) => {
+          if (control instanceof HTMLInputElement || control instanceof HTMLButtonElement) {
+            control.disabled = !visible;
+          }
+        });
+
+      const panelToggle = modulesRow.querySelector("[data-settings-panel-toggle]");
+      if (panelToggle instanceof HTMLButtonElement) {
+        panelToggle.disabled = !visible;
       }
     }
+
+    this.setRowVisibility(tagGroupingRow, visible && tagsModuleEnabled);
   }
 
   // 语言设置：主选项与“其他语言”下拉的联动提交。

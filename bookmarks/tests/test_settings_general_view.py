@@ -32,6 +32,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         "sticky_pagination",
         "show_sidebar",
         "sticky_side_panel",
+        "legacy_search",
     )
 
     def setUp(self) -> None:
@@ -63,6 +64,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
             "enable_web_archive": False,
             "tag_search": UserProfile.TAG_SEARCH_STRICT,
             "tag_grouping": UserProfile.TAG_GROUPING_ALPHABETICAL,
+            "legacy_search": False,
             "items_per_page": "30",
             "sharing_mode": "disabled",
             "sidebar_modules": self.create_sidebar_modules(),
@@ -135,15 +137,12 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
 
         soup = self.make_soup(response.content.decode())
         section_ids = [
-            "settings-user",
             "settings-interface",
             "settings-sidebar",
-            "settings-bookmark-list",
+            "settings-search",
             "settings-bookmarks",
-            "settings-tags",
-            "settings-domains",
             "settings-sharing",
-            "settings-access-visitors",
+            "settings-user",
             "settings-import-export",
             "settings-about",
         ]
@@ -157,19 +156,17 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(
             nav_targets,
             [
-                "settings-user",
                 "settings-interface",
                 "settings-sidebar",
-                "settings-bookmark-list",
+                "settings-search",
                 "settings-bookmarks",
-                "settings-tags",
-                "settings-domains",
                 "settings-sharing",
-                "settings-access-visitors",
+                "settings-user",
                 "settings-import-export",
                 "settings-about",
             ],
         )
+        self.assertIsNone(soup.select_one("section#settings-bookmark-list"))
 
         username_value = soup.select_one("[data-setting-username]")
         self.assertIsNotNone(username_value)
@@ -216,6 +213,84 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
             )
         ]
         self.assertEqual(landing_page_labels, ["Login page", "Shared page"])
+
+    def test_search_and_tag_cards_should_render_in_expected_sections(self):
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = self.make_soup(response.content.decode())
+
+        search_form_fields = [
+            hidden_field.get("value")
+            for hidden_field in soup.select(
+                "section#settings-search input[name='form_fields']"
+            )
+        ]
+        self.assertEqual(search_form_fields, ["legacy_search,tag_search"])
+
+        search_section = soup.select_one("section#settings-search")
+        self.assertIsNotNone(search_section)
+        self.assertIn("Compatibility mode", search_section.get_text())
+        self.assertIn("Tag search mode", search_section.get_text())
+
+        sidebar_section = soup.select_one("section#settings-sidebar")
+        self.assertIsNotNone(sidebar_section)
+        self.assertIsNotNone(
+            sidebar_section.select_one(
+                "input[name='form_fields'][value='show_sidebar,sticky_side_panel,sidebar_modules,tag_grouping']"
+            )
+        )
+        self.assertIn("Tag aggregation mode", sidebar_section.get_text())
+
+        bookmarks_section = soup.select_one("section#settings-bookmarks")
+        self.assertIsNotNone(bookmarks_section)
+        self.assertIsNotNone(
+            bookmarks_section.select_one(
+                "input[name='form_id'][value='profile_auto_tagging_rules']"
+            )
+        )
+        self.assertIsNotNone(
+            bookmarks_section.select_one(
+                "input[name='form_id'][value='profile_custom_domain_root']"
+            )
+        )
+
+    def test_prefetch_internal_links_should_render_in_interface_section(self):
+        superuser = self.setup_superuser()
+        self.client.force_login(superuser)
+
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = self.make_soup(response.content.decode())
+
+        interface_section = soup.select_one("section#settings-interface")
+        self.assertIsNotNone(interface_section)
+        self.assertIsNotNone(
+            interface_section.select_one(
+                "input[type='checkbox'][name='enable_link_prefetch']"
+            )
+        )
+
+        user_section = soup.select_one("section#settings-user")
+        self.assertIsNotNone(user_section)
+        self.assertIsNone(
+            user_section.select_one(
+                "input[type='checkbox'][name='enable_link_prefetch']"
+            )
+        )
+
+    def test_show_sidebar_should_render_in_sidebar_section(self):
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = self.make_soup(response.content.decode())
+
+        interface_section = soup.select_one("section#settings-interface")
+        self.assertIsNotNone(interface_section)
+        self.assertIsNone(
+            interface_section.select_one("input[name='show_sidebar']")
+        )
+
+        sidebar_section = soup.select_one("section#settings-sidebar")
+        self.assertIsNotNone(sidebar_section)
+        self.assertIsNotNone(
+            sidebar_section.select_one("input[name='show_sidebar']")
+        )
 
     @patch(
         "bookmarks.views.settings._get_other_language_choices",
@@ -264,16 +339,21 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
     def test_global_settings_only_visible_for_superuser(self):
         response = self.client.get(reverse("linkding:settings.general"))
         soup = self.make_soup(response.content.decode())
-        self.assertIsNone(soup.select_one("section#settings-access-visitors"))
+        user_section = soup.select_one("section#settings-user")
+        self.assertIsNotNone(user_section)
+        self.assertNotIn("Default page for visitors", user_section.get_text())
+        self.assertNotIn("Anonymous visitor profile", user_section.get_text())
 
         superuser = self.setup_superuser()
         self.client.force_login(superuser)
         response = self.client.get(reverse("linkding:settings.general"))
         soup = self.make_soup(response.content.decode())
 
-        section = soup.select_one("section#settings-access-visitors")
+        section = soup.select_one("section#settings-user")
         self.assertIsNotNone(section)
-        self.assertIn("Access & Visitors", section.get_text())
+        self.assertIn("User & Visitors", section.get_text())
+        self.assertIn("Default page for visitors", section.get_text())
+        self.assertIn("Anonymous visitor profile", section.get_text())
 
     def test_update_language_persists_language_preference(self):
         response = self.client.post(
@@ -300,6 +380,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
                     "enable_web_archive": True,
                     "tag_search": UserProfile.TAG_SEARCH_LAX,
                     "tag_grouping": UserProfile.TAG_GROUPING_DISABLED,
+                    "legacy_search": True,
                     "items_per_page": "40",
                     "display_url": True,
                     "permanent_notes": True,
@@ -356,6 +437,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(
             self.user.profile.tag_grouping, UserProfile.TAG_GROUPING_DISABLED
         )
+        self.assertTrue(self.user.profile.legacy_search)
         self.assertEqual(self.user.profile.items_per_page, 40)
         self.assertTrue(self.user.profile.display_url)
         self.assertTrue(self.user.profile.permanent_notes)
@@ -380,6 +462,28 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
                 {"key": "tags", "enabled": True},
             ],
         )
+
+    def test_disabling_sidebar_should_preserve_sticky_sidebar_preference(self):
+        profile = self.user.profile
+        profile.sticky_side_panel = True
+        profile.save(update_fields=["sticky_side_panel"])
+
+        response = self.client.post(
+            reverse("linkding:settings.save"),
+            self.create_quick_profile_form_data(
+                {
+                    "show_sidebar": False,
+                    "sticky_side_panel": True,
+                }
+            ),
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        profile.refresh_from_db()
+        self.assertTrue(profile.collapse_side_panel)
+        self.assertTrue(profile.sticky_side_panel)
 
     def test_html_profile_quick_save_redirects_on_success(self):
         response = self.client.post(

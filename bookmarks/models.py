@@ -978,8 +978,6 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
     def save(self, commit=True):
         profile = super().save(commit=False)
         profile.collapse_side_panel = not self.cleaned_data["show_sidebar"]
-        if profile.collapse_side_panel:
-            profile.sticky_side_panel = False
 
         profile.web_archive_integration = (
             self.instance.WEB_ARCHIVE_INTEGRATION_ENABLED
