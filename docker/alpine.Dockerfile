@@ -13,7 +13,7 @@ ENV NODE_ENV=production
 RUN npm run build
 
 
-FROM python:3.12.9-alpine3.21 AS build-deps
+FROM python:3.13.7-alpine3.21 AS build-deps
 # Add required packages
 # alpine-sdk linux-headers pkgconfig: build Python packages from source
 # libpq-dev: build Postgres client from source
@@ -21,14 +21,12 @@ FROM python:3.12.9-alpine3.21 AS build-deps
 # libffi-dev openssl-dev rust cargo: build Python cryptography from source
 RUN apk update && apk add alpine-sdk linux-headers libpq-dev pkgconfig icu-dev sqlite-dev libffi-dev openssl-dev rust cargo
 WORKDIR /etc/linkding
+# install uv, use installer script for now as distroless images are not availabe for armv7
+ADD https://astral.sh/uv/0.8.13/install.sh /uv-installer.sh
+RUN chmod +x /uv-installer.sh && /uv-installer.sh
 # install python dependencies
-COPY requirements.txt requirements.txt
-# Need to build psycopg2 from source for ARM platforms
-RUN sed -i 's/psycopg2-binary/psycopg2/g' requirements.txt
-RUN mkdir /opt/venv && \
-    python -m venv --upgrade-deps --copies /opt/venv && \
-    /opt/venv/bin/pip install --upgrade pip wheel && \
-    /opt/venv/bin/pip install -r requirements.txt
+COPY pyproject.toml uv.lock ./
+RUN /root/.local/bin/uv sync --no-dev
 
 
 FROM build-deps AS compile-icu
@@ -52,7 +50,7 @@ RUN wget https://www.sqlite.org/${SQLITE_RELEASE_YEAR}/sqlite-amalgamation-${SQL
     gcc -fPIC -shared icu.c `pkg-config --libs --cflags icu-uc icu-io` -o libicu.so
 
 
-FROM python:3.12.9-alpine3.21 AS linkding
+FROM python:3.13.7-alpine3.21 AS linkding
 LABEL org.opencontainers.image.source="https://github.com/sissbruecker/linkding"
 # install runtime dependencies
 RUN apk update && apk add bash curl icu libpq mailcap libssl3
@@ -62,7 +60,7 @@ RUN set -x ; \
   adduser -u 82 -D -S -G www-data www-data && exit 0 ; exit 1
 WORKDIR /etc/linkding
 # copy python dependencies
-COPY --from=build-deps /opt/venv /opt/venv
+COPY --from=build-deps /etc/linkding/.venv /etc/linkding/.venv
 # copy compiled icu extension
 COPY --from=compile-icu /etc/linkding/libicu.so libicu.so
 # copy application code first
@@ -70,8 +68,8 @@ COPY . .
 # then overwrite static assets with fresh build output
 COPY --from=node-build /etc/linkding/bookmarks/static bookmarks/static/
 # Activate virtual env
-ENV VIRTUAL_ENV=/opt/venv
-ENV PATH=/opt/venv/bin:$PATH
+ENV VIRTUAL_ENV=/etc/linkding/.venv
+ENV PATH="/etc/linkding/.venv/bin:$PATH"
 # Generate static files, remove source styles that are not needed
 RUN mkdir data && \
     python manage.py collectstatic

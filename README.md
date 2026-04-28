@@ -108,43 +108,29 @@ linkding 是一个可自部署的书签管理器。
 应用使用 Django 框架构建。你可以从优秀的 [Django 文档](https://docs.djangoproject.com/en/4.1/)开始。`bookmarks`文件夹包含了实际的书签应用。其他部分的代码应该可以自解释，或者它们与 Django 相关。
 
 ### 前置条件
-- Python 3.12
+- Python 3.13
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - Node.js
 
 ### 启动
 
-为应用创建一个虚拟环境 (https://docs.python.org/3/tutorial/venv.html):
+初始化开发环境:
 ```
-python3 -m venv ~/environments/linkding
+make init
 ```
-在 shell 中激活环境:
-```
-source ~/environments/linkding/bin/activate[.csh|.fish]
-```
-在环境中安装应用所需依赖:
-```
-pip3 install -r requirements.txt -r requirements.dev.txt
-```
-安装前端依赖:
-```
-npm install
-```
-初始化数据库:
-```
-mkdir -p data
-python3 manage.py migrate
-```
+该命令会用 uv 初始化虚拟环境、安装 NPM 依赖并执行数据库迁移。
+
 为前端创建一个用户:
 ```
-python3 manage.py createsuperuser --username=joe --email=joe@example.com
+uv run manage.py createsuperuser --username=joe --email=joe@example.com
 ```
-启动 Node.js 开发服务器 (用于运行编译了的 Javascript 组件，例如标签自动补全):
+启动 Node.js 开发服务器 (用于编译前端资源，例如标签自动补全):
 ```
-npm run dev
+make frontend
 ```
 启动 Django 开发服务器:
 ```
-python3 manage.py runserver
+make serve
 ```
 现在可以通过 http://localhost:8000 打开前端
 
@@ -170,14 +156,14 @@ make format
 
 为前端创建一个用户:
 ```
-python3 manage.py createsuperuser --username=joe --email=joe@example.com
+uv run manage.py createsuperuser --username=joe --email=joe@example.com
 ```
-启动 Node.js 开发服务器 (用于运行编译了的 Javascript 组件，例如标签自动补全):
+启动 Node.js 开发服务器 (用于编译前端资源，例如标签自动补全):
 ```
-npm run dev
+make frontend
 ```
 启动 Django 开发服务器:
 ```
-python3 manage.py runserver
+make serve
 ```
 现在可以通过 http://localhost:8000 打开前端
