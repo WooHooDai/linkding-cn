@@ -74,7 +74,7 @@
           {% csrf_token %}
           {% for toast in toast_messages %}
             <div class="toast d-flex">
-              {{ toast.message }}
+              {{ toast.display_message }}
               <button type="submit" name="toast" value="{{ toast.id }}" class="btn btn-clear"></button>
             </div>
           {% endfor %}

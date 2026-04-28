@@ -849,6 +849,9 @@ msgstr "保存为默认"
 msgid "User"
 msgstr "用户"
 
+msgid "User & Visitors"
+msgstr "用户 & 访客"
+
 #: bookmarks/templates/bookmarks/sidebar_user_summary.html:20
 msgid "User summary menu"
 msgstr "用户信息菜单"
@@ -1246,6 +1249,12 @@ msgstr "在 首字母 模式下，标签会按首字母分组。"
 #: bookmarks/templates/settings/general.html:185
 msgid "If disabled, tags are shown without grouping."
 msgstr "关闭后，标签将不进行分组显示。"
+
+msgid "This setting applies to the Tags module in the sidebar."
+msgstr "此设置仅作用于侧边栏中的标签模块。"
+
+msgid "Enable the Tags module in Sidebar modules to configure this setting."
+msgstr "请先在“侧边栏模块”中启用“标签”模块，再配置此设置。"
 
 #: bookmarks/templates/settings/general.html:191
 #: bookmarks/templates/settings/general.html:193
@@ -2264,6 +2273,18 @@ msgstr "搜索栏跟随"
 msgid "Search mode"
 msgstr "搜索模式"
 
+msgid "Compatibility search mode"
+msgstr "兼容搜索模式"
+
+msgid "Compatibility mode"
+msgstr "兼容模式"
+
+msgid "Tag search mode"
+msgstr "标签搜索模式"
+
+msgid "Tag aggregation mode"
+msgstr "标签聚合模式"
+
 msgid "Sharing"
 msgstr "分享"
 
@@ -2291,8 +2312,14 @@ msgstr "HTML 快照"
 msgid "This instance does not currently support HTML snapshots."
 msgstr "当前实例暂不支持 HTML 快照。"
 
+msgid "This version replaces the search engine with a new implementation that supports logical operators (and, or, not). If you run into any issues with the new search, you can switch back to the old one by enabling legacy search in the settings."
+msgstr "此版本将搜索引擎替换为支持逻辑运算符（and、or、not）的新实现。如果你在新搜索中遇到问题，可在设置中启用搜索的 兼容模式 切回旧版。"
+
 msgid "Turn this off to collapse the side panel by default and give the bookmark list more room."
 msgstr "关闭后将默认折叠侧边栏，为书签列表腾出更多空间。"
+
+msgid "Enable the old search behavior if the new logical search syntax causes unexpected results."
+msgstr "如果新的逻辑搜索语法出现不符合预期的结果，可启用旧版搜索行为。"
 
 msgid "Use a separate flow to change your account password."
 msgstr "通过单独的流程修改你的账户密码。"

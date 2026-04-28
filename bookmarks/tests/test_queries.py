@@ -2024,6 +2024,37 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         query2 = queries.query_bookmarks(self.user, self.profile, BookmarkSearch(q="notes:(baz qux)"))
         self.assertCountEqual(list(query2), [bm_notes])
 
+    def test_field_search_desc_combined_with_tag_and_operator(self):
+        """desc:(...) and #tag 在新搜索模式下应返回交集结果"""
+        target_tag = self.setup_tag(name="高人")
+
+        matching = self.setup_bookmark(description="观星入门", tags=[target_tag])
+        self.setup_bookmark(description="观星入门")
+        self.setup_bookmark(tags=[target_tag])
+
+        query = queries.query_bookmarks(
+            self.user,
+            self.profile,
+            BookmarkSearch(q="desc:(星) and #高人"),
+        )
+        self.assertCountEqual(list(query), [matching])
+
+    def test_field_search_desc_combined_with_tag_or_operator(self):
+        """desc:(...) or #tag 在新搜索模式下应返回并集结果"""
+        target_tag = self.setup_tag(name="高人")
+
+        both = self.setup_bookmark(description="观星入门", tags=[target_tag])
+        only_desc = self.setup_bookmark(description="观星进阶")
+        only_tag = self.setup_bookmark(tags=[target_tag])
+        self.setup_bookmark(description="航海")
+
+        query = queries.query_bookmarks(
+            self.user,
+            self.profile,
+            BookmarkSearch(q="desc:(星) or #高人"),
+        )
+        self.assertCountEqual(list(query), [both, only_desc, only_tag])
+
     def test_field_search_url_with_parentheses(self):
         """url:(...) 使用 url__icontains"""
         bm = self.setup_bookmark(url="https://example.com/path/to/hello")

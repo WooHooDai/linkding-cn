@@ -743,6 +743,7 @@ class UserProfile(models.Model):
         blank=False,
         default=TAG_GROUPING_ALPHABETICAL,
     )
+    legacy_search = models.BooleanField(default=False, null=False)
     enable_sharing = models.BooleanField(default=False, null=False)
     enable_public_sharing = models.BooleanField(default=False, null=False)
     enable_favicons = models.BooleanField(default=False, null=False)
@@ -852,6 +853,7 @@ class UserProfileForm(forms.ModelForm):
             "web_archive_integration",
             "tag_search",
             "tag_grouping",
+            "legacy_search",
             "enable_sharing",
             "enable_public_sharing",
             "enable_favicons",
@@ -903,6 +905,7 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
             "web_archive_integration",
             "tag_search",
             "tag_grouping",
+            "legacy_search",
             "display_url",
             "display_view_bookmark_action",
             "display_edit_bookmark_action",
@@ -1032,6 +1035,16 @@ class Toast(models.Model):
     message = models.TextField()
     acknowledged = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    I18N_MESSAGES = {
+        "new_search_toast": _(
+            "This version replaces the search engine with a new implementation that supports logical operators (and, or, not). If you run into any issues with the new search, you can switch back to the old one by enabling legacy search in the settings."
+        ),
+    }
+
+    @property
+    def display_message(self):
+        return self.I18N_MESSAGES.get(self.key, self.message)
 
 
 class FeedToken(models.Model):

@@ -92,6 +92,20 @@ class ToastsViewTestCase(TestCase, BookmarkFactoryMixin):
 
         self.assertInHTML(expected_toast, html)
 
+    def test_known_toast_key_uses_localized_message(self):
+        toast = Toast(
+            owner=self.user,
+            key="new_search_toast",
+            message="legacy message fallback",
+            acknowledged=False,
+        )
+        toast.save()
+
+        response = self.client.get(reverse("linkding:bookmarks.index"))
+
+        self.assertContains(response, toast.display_message)
+        self.assertNotContains(response, "legacy message fallback")
+
     def test_acknowledge_toast(self):
         toast = self.create_toast()
 

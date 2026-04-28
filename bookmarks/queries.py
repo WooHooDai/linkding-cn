@@ -18,6 +18,19 @@ from bookmarks.models import (
     UserProfile,
     parse_tag_string,
 )
+from bookmarks.services.search_query_parser import (
+    parse_search_query,
+    SearchExpression,
+    TermExpression,
+    FieldTermExpression,
+    TagExpression,
+    SpecialKeywordExpression,
+    AndExpression,
+    OrExpression,
+    NotExpression,
+    SearchQueryParseError,
+    extract_tag_names_from_query,
+)
 from bookmarks.utils import unique
 
 
@@ -54,6 +67,212 @@ def query_trashed_bookmarks(
     search: BookmarkSearch,
 ) -> QuerySet:
     return _base_bookmarks_query(user, profile, search).filter(is_deleted=True)
+
+
+def _build_term_search_condition(term: str, profile: UserProfile) -> Q:
+    conditions = (
+        Q(title__icontains=term)
+        | Q(description__icontains=term)
+        | Q(notes__icontains=term)
+        | Q(url__icontains=term)
+    )
+
+    if profile.tag_search == UserProfile.TAG_SEARCH_LAX:
+        conditions = conditions | Exists(
+            Bookmark.objects.filter(
+                id=OuterRef("id"), tags__name__iexact=term
+            )
+        )
+
+    return conditions
+
+
+def _build_domain_group_condition(raw_group: str) -> Q:
+    parts = [p.strip().lower() for p in raw_group.split("|")]
+    parts = [p for p in parts if p]
+    if not parts:
+        return Q()
+
+    group_condition = Q()
+    for part in parts:
+        if part.startswith("."):
+            # Subdomain match: domain:(.a.com) matches *.a.com, but excludes a.com itself.
+            base = part[1:]
+            if not base:
+                continue
+            http_sub = (
+                Q(url__istartswith="http://")
+                & (
+                    Q(url__icontains=f".{base}/")
+                    | Q(url__icontains=f".{base}:")
+                    | Q(url__icontains=f".{base}?")
+                    | Q(url__icontains=f".{base}#")
+                    | Q(url__iendswith=f".{base}")
+                )
+                & ~(
+                    Q(url__iexact=f"http://{base}")
+                    | Q(url__istartswith=f"http://{base}/")
+                    | Q(url__istartswith=f"http://{base}:")
+                    | Q(url__istartswith=f"http://{base}?")
+                    | Q(url__istartswith=f"http://{base}#")
+                )
+            )
+            https_sub = (
+                Q(url__istartswith="https://")
+                & (
+                    Q(url__icontains=f".{base}/")
+                    | Q(url__icontains=f".{base}:")
+                    | Q(url__icontains=f".{base}?")
+                    | Q(url__icontains=f".{base}#")
+                    | Q(url__iendswith=f".{base}")
+                )
+                & ~(
+                    Q(url__iexact=f"https://{base}")
+                    | Q(url__istartswith=f"https://{base}/")
+                    | Q(url__istartswith=f"https://{base}:")
+                    | Q(url__istartswith=f"https://{base}?")
+                    | Q(url__istartswith=f"https://{base}#")
+                )
+            )
+            group_condition |= (http_sub | https_sub)
+        else:
+            # Exact host match.
+            http_prefix = f"http://{part}"
+            https_prefix = f"https://{part}"
+            http_exact = (
+                Q(url__iexact=http_prefix)
+                | Q(url__istartswith=http_prefix + "/")
+                | Q(url__istartswith=http_prefix + ":")
+                | Q(url__istartswith=http_prefix + "?")
+                | Q(url__istartswith=http_prefix + "#")
+            )
+            https_exact = (
+                Q(url__iexact=https_prefix)
+                | Q(url__istartswith=https_prefix + "/")
+                | Q(url__istartswith=https_prefix + ":")
+                | Q(url__istartswith=https_prefix + "?")
+                | Q(url__istartswith=https_prefix + "#")
+            )
+            group_condition |= (http_exact | https_exact)
+
+    return group_condition
+
+
+def _field_term_expression_to_q(field_name: str, term: str) -> Q:
+    if field_name == "title":
+        return Q(title__icontains=term)
+    if field_name == "desc":
+        return Q(description__icontains=term)
+    if field_name == "notes":
+        return Q(notes__icontains=term)
+    if field_name == "url":
+        return Q(url__icontains=term)
+    if field_name == "domain":
+        return _build_domain_group_condition(term)
+    return Q()
+
+
+def _convert_ast_to_q_object(ast_node: SearchExpression, profile: UserProfile) -> Q:
+    if isinstance(ast_node, TermExpression):
+        return _build_term_search_condition(ast_node.term, profile)
+
+    elif isinstance(ast_node, FieldTermExpression):
+        return _field_term_expression_to_q(ast_node.field, ast_node.term)
+
+    elif isinstance(ast_node, TagExpression):
+        # Use Exists() to avoid reusing the same join when combining multiple tag expressions with and
+        return Q(
+            Exists(
+                Bookmark.objects.filter(
+                    id=OuterRef("id"), tags__name__iexact=ast_node.tag
+                )
+            )
+        )
+
+    elif isinstance(ast_node, SpecialKeywordExpression):
+        # Handle special keywords
+        if ast_node.keyword.lower() == "unread":
+            return Q(unread=True)
+        elif ast_node.keyword.lower() == "untagged":
+            return Q(tags=None)
+        else:
+            # Unknown keyword, return empty Q object (matches all)
+            return Q()
+
+    elif isinstance(ast_node, AndExpression):
+        # Combine left and right with AND
+        left_q = _convert_ast_to_q_object(ast_node.left, profile)
+        right_q = _convert_ast_to_q_object(ast_node.right, profile)
+        return left_q & right_q
+
+    elif isinstance(ast_node, OrExpression):
+        # Combine left and right with OR
+        left_q = _convert_ast_to_q_object(ast_node.left, profile)
+        right_q = _convert_ast_to_q_object(ast_node.right, profile)
+        return left_q | right_q
+
+    elif isinstance(ast_node, NotExpression):
+        # Negate the operand
+        operand_q = _convert_ast_to_q_object(ast_node.operand, profile)
+        return ~operand_q
+
+    else:
+        # Fallback for unknown node types
+        return Q()
+
+
+def _filter_search_query(
+    query_set: QuerySet, query_string: str, profile: UserProfile
+) -> QuerySet:
+    """New search filtering logic using logical expressions."""
+
+    try:
+        ast = parse_search_query(query_string)
+        if ast:
+            search_query = _convert_ast_to_q_object(ast, profile)
+            query_set = query_set.filter(search_query)
+    except SearchQueryParseError:
+        # If the query cannot be parsed, return zero results
+        return query_set.none()
+
+    return query_set
+
+
+def _filter_search_query_legacy(
+    query_set: QuerySet, query_string: str, profile: UserProfile
+) -> QuerySet:
+    """Legacy search filtering logic where everything is just combined with AND."""
+
+    # Split query into search terms and tags
+    query = parse_query_string(query_string)
+
+    # Filter for search terms and tags
+    for term in query["search_terms"]:
+        conditions = (
+            Q(title__icontains=term)
+            | Q(description__icontains=term)
+            | Q(notes__icontains=term)
+            | Q(url__icontains=term)
+        )
+
+        if profile.tag_search == UserProfile.TAG_SEARCH_LAX:
+            conditions = conditions | Exists(
+                Bookmark.objects.filter(id=OuterRef("id"), tags__name__iexact=term)
+            )
+
+        query_set = query_set.filter(conditions)
+
+    for tag_name in query["tag_names"]:
+        query_set = query_set.filter(tags__name__iexact=tag_name)
+
+    # Untagged bookmarks
+    if query["untagged"]:
+        query_set = query_set.filter(tags=None)
+    # Legacy unread bookmarks filter from query
+    if query["unread"]:
+        query_set = query_set.filter(unread=True)
+
+    return query_set
 
 
 def _filter_bundle(query_set: QuerySet, bundle: BookmarkBundle) -> QuerySet:
@@ -128,37 +347,16 @@ def _apply_filters(query_set: QuerySet, user: Optional[User], profile: UserProfi
             # If the date format is invalid, ignore the filter
             pass
 
-    # Split query into search terms, tags and field-terms
-    query = parse_query_string(search.q)
-
-    # Filter for search terms and tags
-    for term in query["search_terms"]:
-        conditions = (
-            Q(title__icontains=term)
-            | Q(description__icontains=term)
-            | Q(notes__icontains=term)
-            | Q(url__icontains=term)
+    # Filter by search query
+    if profile.legacy_search:
+        parsed_query = parse_query_string(search.q)
+        query_set = _filter_search_query_legacy(query_set, search.q, profile)
+        # 在 legacy 模式下保留 field-term 查询能力
+        query_set = _apply_field_terms_filters(
+            query_set, parsed_query.get("field_terms", {})
         )
-
-        if profile.tag_search == UserProfile.TAG_SEARCH_LAX:
-            conditions = conditions | Exists(
-                Bookmark.objects.filter(id=OuterRef("id"), tags__name__iexact=term)
-            )
-
-        query_set = query_set.filter(conditions)
-
-    # 筛选field_term
-    query_set = _apply_field_terms_filters(query_set, query.get("field_terms", {}))
-
-    for tag_name in query["tag_names"]:
-        query_set = query_set.filter(tags__name__iexact=tag_name)
-
-    # Untagged bookmarks
-    if query["untagged"]:
-        query_set = query_set.filter(tags=None)
-    # Legacy unread bookmarks filter from query
-    if query["unread"]:
-        query_set = query_set.filter(unread=True)
+    else:
+        query_set = _filter_search_query(query_set, search.q, profile)
 
     # Unread filter from bookmark search
     if search.unread == BookmarkSearch.FILTER_UNREAD_YES:
@@ -261,73 +459,7 @@ def _apply_field_terms_filters(query_set: QuerySet, field_terms: dict) -> QueryS
         combined_domains_condition = Q()
 
         for raw_group in domain_terms:
-            # 或语法：使用`|`连接多个域名，如 domain:(v2ex.com | x.com)
-            parts = [p.strip().lower() for p in raw_group.split('|')]
-            parts = [p for p in parts if p]
-            if not parts:
-                continue
-
-            group_condition = Q()
-            for part in parts:
-                if part.startswith('.'):
-                    # 子域名匹配：domain:(.a.com) 匹配 *.a.com，不包含 a.com 本身
-                    base = part[1:]
-                    if not base:
-                        continue
-                    http_sub = (
-                        Q(url__istartswith="http://")
-                        & (
-                            Q(url__icontains=f".{base}/")
-                            | Q(url__icontains=f".{base}:")
-                            | Q(url__icontains=f".{base}?")
-                            | Q(url__icontains=f".{base}#")
-                            | Q(url__iendswith=f".{base}")
-                        )
-                        & ~(
-                            Q(url__iexact=f"http://{base}")
-                            | Q(url__istartswith=f"http://{base}/")
-                            | Q(url__istartswith=f"http://{base}:")
-                            | Q(url__istartswith=f"http://{base}?")
-                            | Q(url__istartswith=f"http://{base}#")
-                        )
-                    )
-                    https_sub = (
-                        Q(url__istartswith="https://")
-                        & (
-                            Q(url__icontains=f".{base}/")
-                            | Q(url__icontains=f".{base}:")
-                            | Q(url__icontains=f".{base}?")
-                            | Q(url__icontains=f".{base}#")
-                            | Q(url__iendswith=f".{base}")
-                        )
-                        & ~(
-                            Q(url__iexact=f"https://{base}")
-                            | Q(url__istartswith=f"https://{base}/")
-                            | Q(url__istartswith=f"https://{base}:")
-                            | Q(url__istartswith=f"https://{base}?")
-                            | Q(url__istartswith=f"https://{base}#")
-                        )
-                    )
-                    group_condition |= (http_sub | https_sub)
-                else:
-                    # 精确域名匹配
-                    http_prefix = f"http://{part}"
-                    https_prefix = f"https://{part}"
-                    http_exact = (
-                        Q(url__iexact=http_prefix)
-                        | Q(url__istartswith=http_prefix + "/")
-                        | Q(url__istartswith=http_prefix + ":")
-                        | Q(url__istartswith=http_prefix + "?")
-                        | Q(url__istartswith=http_prefix + "#")
-                    )
-                    https_exact = (
-                        Q(url__iexact=https_prefix)
-                        | Q(url__istartswith=https_prefix + "/")
-                        | Q(url__istartswith=https_prefix + ":")
-                        | Q(url__istartswith=https_prefix + "?")
-                        | Q(url__istartswith=https_prefix + "#")
-                    )
-                    group_condition |= (http_exact | https_exact)
+            group_condition = _build_domain_group_condition(raw_group)
 
             # AND 逻辑连接多个 domain:(...) 分组
             combined_domains_condition &= group_condition if combined_domains_condition else group_condition
@@ -467,6 +599,45 @@ def query_shared_bookmark_users(
 
 def get_user_tags(user: User):
     return Tag.objects.filter(owner=user).all()
+
+
+def get_tags_for_query(user: User, profile: UserProfile, query: str) -> QuerySet:
+    tag_names = extract_tag_names_from_query(query, profile)
+
+    if not tag_names:
+        return Tag.objects.none()
+
+    tag_conditions = Q()
+    for tag_name in tag_names:
+        tag_conditions |= Q(name__iexact=tag_name)
+
+    return Tag.objects.filter(owner=user).filter(tag_conditions).distinct()
+
+
+def get_shared_tags_for_query(
+    user: Optional[User], profile: UserProfile, query: str, public_only: bool
+) -> QuerySet:
+    tag_names = extract_tag_names_from_query(query, profile)
+
+    if not tag_names:
+        return Tag.objects.none()
+
+    # Build conditions similar to query_shared_bookmarks
+    conditions = Q(bookmark__shared=True) & Q(
+        bookmark__owner__profile__enable_sharing=True
+    )
+    if public_only:
+        conditions = conditions & Q(
+            bookmark__owner__profile__enable_public_sharing=True
+        )
+    if user is not None:
+        conditions = conditions & Q(bookmark__owner=user)
+
+    tag_conditions = Q()
+    for tag_name in tag_names:
+        tag_conditions |= Q(name__iexact=tag_name)
+
+    return Tag.objects.filter(conditions).filter(tag_conditions).distinct()
 
 
 def parse_query_string(query_string):
