@@ -145,29 +145,23 @@ class BookmarkAssetViewTestCase(TestCase, BookmarkFactoryMixin):
         bookmark = self.setup_bookmark()
         asset = self.setup_asset_with_file(bookmark)
         url = reverse("linkding:bookmarks.index.action")
-        old_name = asset.display_name
         # 正常重命名
-        response = self.client.post(url, {
-            "rename_asset": asset.id,
-            "new_display_name": "新名字.txt"
-        })
+        self.client.post(
+            url, {"rename_asset": asset.id, "new_display_name": "新名字.txt"}
+        )
         asset.refresh_from_db()
         self.assertEqual(asset.display_name, "新名字.txt")
         # 空字符串不应修改
-        response = self.client.post(url, {
-            "rename_asset": asset.id,
-            "new_display_name": "   "
-        })
+        self.client.post(url, {"rename_asset": asset.id, "new_display_name": "   "})
         asset.refresh_from_db()
         self.assertEqual(asset.display_name, "新名字.txt")
         # 非本人无权限
         other_user = self.setup_user()
         other_bookmark = self.setup_bookmark(user=other_user)
         other_asset = self.setup_asset_with_file(other_bookmark)
-        response = self.client.post(url, {
-            "rename_asset": other_asset.id,
-            "new_display_name": "非法.txt"
-        })
+        self.client.post(
+            url, {"rename_asset": other_asset.id, "new_display_name": "非法.txt"}
+        )
         other_asset.refresh_from_db()
         self.assertNotEqual(other_asset.display_name, "非法.txt")
 

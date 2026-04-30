@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("bookmarks", "0053_userprofile_sticky_header_controls"),
     ]

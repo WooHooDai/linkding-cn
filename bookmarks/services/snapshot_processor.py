@@ -1,16 +1,10 @@
-import importlib
-import json
 import logging
 import os
-import shlex
-import signal
-import subprocess
-from urllib.parse import urlparse
 
 from django.conf import settings
-from bookmarks.utils import get_domain, search_config_for_domain, load_settings, load_module
-from bookmarks.services import singlefile
 
+from bookmarks.services import singlefile
+from bookmarks.utils import load_module, search_config_for_domain
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +12,7 @@ logger = logging.getLogger(__name__)
 # 缓存规则设置与解析规则（function）
 _settings_cache = None
 _processors_module_cache = {}  # {loader_path: (module, mtime)}
+
 
 # 创建快照： 快照总调度
 def create_snapshot(url: str, filepath: str):
@@ -27,10 +22,14 @@ def create_snapshot(url: str, filepath: str):
     if config:
         processor_file = config.get("processor")
         if processor_file:
-            processor_path = os.path.join(os.path.dirname(settings_path), processor_file) if processor_file else None
+            processor_path = (
+                os.path.join(os.path.dirname(settings_path), processor_file)
+                if processor_file
+                else None
+            )
             if processor_path and os.path.exists(processor_path):
                 module = load_module(processor_path, _processors_module_cache)
-                func = getattr(module, "_create_snapshot")
+                func = module._create_snapshot
                 return func(url, filepath, config)
         else:
             return _create_snapshot(url, filepath, config)

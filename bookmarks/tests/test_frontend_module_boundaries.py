@@ -2,7 +2,6 @@ from pathlib import Path
 
 from django.test import SimpleTestCase
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -32,17 +31,25 @@ class FrontendModuleBoundaryTestCase(SimpleTestCase):
         self.assertIn('import "./state/registry";', content)
 
     def test_preference_modules_do_not_self_register_document_listeners(self):
-        summary_content = self.read_source("bookmarks/frontend/state/summary-preferences.js")
-        domain_content = self.read_source("bookmarks/frontend/state/domain-preferences.js")
+        summary_content = self.read_source(
+            "bookmarks/frontend/state/summary-preferences.js"
+        )
+        domain_content = self.read_source(
+            "bookmarks/frontend/state/domain-preferences.js"
+        )
 
-        self.assertIn("export function registerSummaryDisplayPreferences()", summary_content)
-        self.assertIn("export function registerDomainDisplayPreferences()", domain_content)
+        self.assertIn(
+            "export function registerSummaryDisplayPreferences()", summary_content
+        )
+        self.assertIn(
+            "export function registerDomainDisplayPreferences()", domain_content
+        )
         self.assertNotIn(
-            'registerSummaryDisplayPreferences();',
+            "registerSummaryDisplayPreferences();",
             summary_content,
         )
         self.assertNotIn(
-            'registerDomainDisplayPreferences();',
+            "registerDomainDisplayPreferences();",
             domain_content,
         )
 

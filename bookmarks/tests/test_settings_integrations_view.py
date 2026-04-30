@@ -2,12 +2,11 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
 
-from bookmarks.tests.helpers import BookmarkFactoryMixin
 from bookmarks.models import FeedToken
+from bookmarks.tests.helpers import BookmarkFactoryMixin
 
 
 class SettingsIntegrationsViewTestCase(TestCase, BookmarkFactoryMixin):
-
     def setUp(self) -> None:
         user = self.get_or_create_test_user()
         self.client.force_login(user)

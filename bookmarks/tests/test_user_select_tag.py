@@ -1,13 +1,15 @@
 from django.db.models import QuerySet
-from django.template import Template, RequestContext
-from django.test import TestCase, RequestFactory
+from django.template import RequestContext, Template
+from django.test import RequestFactory, TestCase
 
 from bookmarks.models import BookmarkSearch, User
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 
 
 class UserSelectTagTest(TestCase, BookmarkFactoryMixin):
-    def render_template(self, url: str, users: QuerySet[User] = User.objects.all()):
+    def render_template(self, url: str, users: QuerySet[User] | None = None):
+        if users is None:
+            users = User.objects.all()
         rf = RequestFactory()
         request = rf.get(url)
         request.user = self.get_or_create_test_user()
@@ -22,14 +24,14 @@ class UserSelectTagTest(TestCase, BookmarkFactoryMixin):
             },
         )
         template_to_render = Template(
-            "{% load bookmarks %}" "{% user_select search users %}"
+            "{% load bookmarks %}{% user_select search users %}"
         )
         return template_to_render.render(context)
 
     def assertUserOption(self, html: str, user: User, selected: bool = False):
         self.assertInHTML(
             f"""
-          <option value="{user.username}" {'selected' if selected else ''}>
+          <option value="{user.username}" {"selected" if selected else ""}>
             {user.username}
           </option>        
         """,
@@ -52,7 +54,7 @@ class UserSelectTagTest(TestCase, BookmarkFactoryMixin):
         rendered_template = self.render_template("/test")
 
         self.assertInHTML(
-            f"""
+            """
           <option value="" selected="">Everyone</option>        
         """,
             rendered_template,

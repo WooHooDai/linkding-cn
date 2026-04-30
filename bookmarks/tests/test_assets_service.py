@@ -14,7 +14,6 @@ from bookmarks.tests.helpers import BookmarkFactoryMixin, disable_logging
 
 
 class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
-
     def setUp(self) -> None:
         self.setup_temp_assets_dir()
         self.get_or_create_test_user()
@@ -27,14 +26,16 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         self.mock_singlefile_create_snapshot = (
             self.mock_singlefile_create_snapshot_patcher.start()
         )
-        self.mock_singlefile_create_snapshot.side_effect = lambda url, filepath: (
-            open(filepath, "w").write(self.html_content)
-        )
+        self.mock_singlefile_create_snapshot.side_effect = self._write_html_snapshot
         self.mock_detect_content_type_patcher = mock.patch(
             "bookmarks.services.assets.detect_content_type",
             return_value="text/html",
         )
         self.mock_detect_content_type = self.mock_detect_content_type_patcher.start()
+
+    def _write_html_snapshot(self, _url, filepath):
+        with open(filepath, "w") as snapshot_file:
+            snapshot_file.write(self.html_content)
 
     def tearDown(self) -> None:
         self.mock_singlefile_create_snapshot_patcher.stop()
@@ -62,16 +63,14 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         self.assertIsNone(asset.id)
 
     def test_create_snapshot(self):
-        initial_modified = timezone.datetime(
-            2025, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc
-        )
+        initial_modified = timezone.datetime(2025, 1, 1, 0, 0, 0, tzinfo=datetime.UTC)
         bookmark = self.setup_bookmark(
             url="https://example.com", modified=initial_modified
         )
         asset = assets.create_snapshot_asset(bookmark)
         asset.save()
         asset.date_created = timezone.datetime(
-            2023, 8, 11, 21, 45, 11, tzinfo=datetime.timezone.utc
+            2023, 8, 11, 21, 45, 11, tzinfo=datetime.UTC
         )
 
         assets.create_snapshot(asset)
@@ -115,7 +114,7 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
 
         self.mock_singlefile_create_snapshot.side_effect = Exception
 
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             assets.create_snapshot(asset)
 
         asset.refresh_from_db()
@@ -175,7 +174,7 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         asset = assets.create_snapshot_asset(bookmark)
         asset.save()
         asset.date_created = timezone.datetime(
-            2023, 8, 11, 21, 45, 11, tzinfo=datetime.timezone.utc
+            2023, 8, 11, 21, 45, 11, tzinfo=datetime.UTC
         )
 
         self.mock_detect_content_type.return_value = "application/pdf"
@@ -263,16 +262,14 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         with mock.patch("bookmarks.services.assets.requests.get") as mock_get:
             mock_get.side_effect = Exception("Download failed")
 
-            with self.assertRaises(Exception):
+            with self.assertRaises(Exception):  # noqa: B017
                 assets.create_snapshot(asset)
 
         asset.refresh_from_db()
         self.assertEqual(asset.status, BookmarkAsset.STATUS_FAILURE)
 
     def test_upload_snapshot(self):
-        initial_modified = timezone.datetime(
-            2025, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc
-        )
+        initial_modified = timezone.datetime(2025, 1, 1, 0, 0, 0, tzinfo=datetime.UTC)
         bookmark = self.setup_bookmark(
             url="https://example.com", modified=initial_modified
         )
@@ -311,7 +308,7 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         with mock.patch("gzip.open") as mock_gzip_open:
             mock_gzip_open.side_effect = Exception
 
-            with self.assertRaises(Exception):
+            with self.assertRaises(Exception):  # noqa: B017
                 assets.upload_snapshot(bookmark, b"invalid content")
 
         # asset is not saved to the database
@@ -350,9 +347,7 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
 
     @disable_logging
     def test_upload_asset(self):
-        initial_modified = timezone.datetime(
-            2025, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc
-        )
+        initial_modified = timezone.datetime(2025, 1, 1, 0, 0, 0, tzinfo=datetime.UTC)
         bookmark = self.setup_bookmark(modified=initial_modified)
         file_content = b"test content"
         upload_file = SimpleUploadedFile(
@@ -389,9 +384,7 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
 
     @disable_logging
     def test_upload_gzip_asset(self):
-        initial_modified = timezone.datetime(
-            2025, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc
-        )
+        initial_modified = timezone.datetime(2025, 1, 1, 0, 0, 0, tzinfo=datetime.UTC)
         bookmark = self.setup_bookmark(modified=initial_modified)
         file_content = gzip.compress(b"<html>test content</html>")
         upload_file = SimpleUploadedFile(
@@ -454,7 +447,7 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         with mock.patch("builtins.open") as mock_open:
             mock_open.side_effect = Exception
 
-            with self.assertRaises(Exception):
+            with self.assertRaises(Exception):  # noqa: B017
                 assets.upload_asset(bookmark, upload_file)
 
         # asset is not saved to the database
@@ -509,7 +502,7 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         )
 
         # Attempt to create a snapshot (which will fail)
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             assets.create_snapshot(failing_asset)
 
         # Verify that the bookmark's latest_snapshot is still the initial snapshot
@@ -528,7 +521,7 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
             mock_gzip_open.side_effect = Exception("Upload failed")
 
             # Attempt to upload a snapshot (which will fail)
-            with self.assertRaises(Exception):
+            with self.assertRaises(Exception):  # noqa: B017
                 assets.upload_snapshot(bookmark, b"New content")
 
         # Verify that the bookmark's latest_snapshot is still the initial snapshot
@@ -634,9 +627,7 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
 
     @disable_logging
     def test_remove_asset(self):
-        initial_modified = timezone.datetime(
-            2025, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc
-        )
+        initial_modified = timezone.datetime(2025, 1, 1, 0, 0, 0, tzinfo=datetime.UTC)
         bookmark = self.setup_bookmark(modified=initial_modified)
         file_content = b"test content for removal"
         upload_file = SimpleUploadedFile(

@@ -2,7 +2,7 @@ from unittest.mock import patch
 from urllib.parse import quote
 
 from django.urls import reverse
-from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api import expect, sync_playwright
 
 from bookmarks.models import Bookmark
 from bookmarks.services import website_loader
@@ -17,7 +17,6 @@ mock_website_metadata = website_loader.WebsiteMetadata(
 
 
 class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
-
     def setUp(self) -> None:
         super().setUp()
         self.website_loader_patch = patch.object(

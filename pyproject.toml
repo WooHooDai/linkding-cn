@@ -26,15 +26,33 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "black>=25.1.0",
     "coverage>=7.10.4",
     "django-debug-toolbar>=6.0.0",
     "playwright>=1.54.0",
     "pytest>=8.4.1",
     "pytest-django>=4.11.1",
     "pytest-xdist>=3.8.0",
+    "ruff>=0.14.10",
 ]
 
 [tool.uv]
 # Prefer system Python for now, less complications when copying the venv in the Docker build
 python-preference = "system"
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
+# ignore line length violations
+ignore = ["E501"]

@@ -1,23 +1,23 @@
 from django.test import TestCase
 
-from bookmarks.services.search_query_parser import (
-    SearchQueryTokenizer,
-    TokenType,
-    SearchExpression,
-    TermExpression,
-    TagExpression,
-    SpecialKeywordExpression,
-    FieldTermExpression,
-    AndExpression,
-    OrExpression,
-    NotExpression,
-    SearchQueryParseError,
-    parse_search_query,
-    expression_to_string,
-    strip_tag_from_query,
-    extract_tag_names_from_query,
-)
 from bookmarks.models import UserProfile
+from bookmarks.services.search_query_parser import (
+    AndExpression,
+    FieldTermExpression,
+    NotExpression,
+    OrExpression,
+    SearchExpression,
+    SearchQueryParseError,
+    SearchQueryTokenizer,
+    SpecialKeywordExpression,
+    TagExpression,
+    TermExpression,
+    TokenType,
+    expression_to_string,
+    extract_tag_names_from_query,
+    parse_search_query,
+    strip_tag_from_query,
+)
 
 
 def _term(term: str) -> TermExpression:
@@ -1300,9 +1300,7 @@ class ExtractTagNamesFromQueryLaxSearchTest(TestCase):
         self.assertEqual(result, ["django", "python"])
 
     def test_lax_search_does_not_extract_field_term_as_tag(self):
-        result = extract_tag_names_from_query(
-            "desc:(星) and #高人", self.lax_profile
-        )
+        result = extract_tag_names_from_query("desc:(星) and #高人", self.lax_profile)
         self.assertEqual(result, ["高人"])
 
     def test_strict_search_ignores_terms(self):

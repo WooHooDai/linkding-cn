@@ -84,7 +84,7 @@ class TagsNewViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         )
 
         soup = self.make_soup(response.content.decode())
-        self.assertIsNotNone(soup.select_one('turbo-frame#tag-modal'))
+        self.assertIsNotNone(soup.select_one("turbo-frame#tag-modal"))
         self.assertIsNotNone(soup.select_one("ld-modal"))
 
     def test_invalid_turbo_post_replaces_modal(self):

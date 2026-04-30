@@ -1,3 +1,4 @@
+import datetime
 import importlib
 import json
 import logging
@@ -5,19 +6,18 @@ import os
 import re
 import unicodedata
 import urllib.parse
-import datetime
-from typing import Optional
 from pathlib import Path
 
-from dateutil.relativedelta import relativedelta
-from django.http import HttpResponseRedirect
-from django.utils import timezone, formats
-from django.conf import settings
-from django.utils.translation import gettext as _, ngettext
 import tldextract
+from dateutil.relativedelta import relativedelta
+from django.conf import settings
+from django.http import HttpResponseRedirect
+from django.utils import formats, timezone
+from django.utils.translation import gettext as _
+from django.utils.translation import ngettext
 
 try:
-    with open("version.txt", "r") as f:
+    with open("version.txt") as f:
         app_version = f.read().strip("\n")
 except Exception as exc:
     logging.exception(exc)
@@ -47,7 +47,7 @@ def _localize_datetime(value: datetime.datetime) -> datetime.datetime:
 
 
 def humanize_absolute_date(
-    value: datetime.datetime, now: Optional[datetime.datetime] = None
+    value: datetime.datetime, now: datetime.datetime | None = None
 ):
     if not now:
         now = timezone.now()
@@ -69,7 +69,7 @@ def humanize_absolute_date(
 
 
 def humanize_relative_date(
-    value: datetime.datetime, now: Optional[datetime.datetime] = None
+    value: datetime.datetime, now: datetime.datetime | None = None
 ):
     if not now:
         now = timezone.now()
@@ -98,8 +98,9 @@ def humanize_relative_date(
         else:
             return weekday_names[value_local.isoweekday()]
 
+
 def humanize_absolute_date_short(
-    value: datetime.datetime, now: Optional[datetime.datetime] = None
+    value: datetime.datetime, now: datetime.datetime | None = None
 ):
     if not now:
         now = timezone.now()
@@ -108,7 +109,9 @@ def humanize_absolute_date_short(
     delta = relativedelta(now_local, value_local)
     yesterday = now_local - relativedelta(days=1)
 
-    is_older_than_yesterday = delta.years > 0 or delta.months > 0 or delta.weeks > 0 or delta.days > 0
+    is_older_than_yesterday = (
+        delta.years > 0 or delta.months > 0 or delta.weeks > 0 or delta.days > 0
+    )
 
     if is_older_than_yesterday:
         return formats.date_format(value_local, "SHORT_DATE_FORMAT")
@@ -117,6 +120,7 @@ def humanize_absolute_date_short(
     elif value_local.date() == yesterday.date():
         return _("Yesterday")
     return formats.date_format(value_local, "SHORT_DATE_FORMAT")
+
 
 def parse_timestamp(value: str):
     """
@@ -130,7 +134,7 @@ def parse_timestamp(value: str):
     try:
         timestamp = int(value)
     except ValueError:
-        raise ValueError(f"{value} is not a valid timestamp")
+        raise ValueError(f"{value} is not a valid timestamp") from None
 
     try:
         return datetime.datetime.fromtimestamp(timestamp, datetime.UTC)
@@ -154,18 +158,22 @@ def parse_timestamp(value: str):
     # Timestamp is out of range
     raise ValueError(f"{value} exceeds maximum value for a timestamp")
 
+
 def get_clean_url(url: str) -> str:
     # 清除 url 中所有参数
     parsed_url = urllib.parse.urlparse(url)
-    clean_url = urllib.parse.urlunparse((
-        parsed_url.scheme, 
-        parsed_url.netloc, 
-        parsed_url.path, 
-        '',  # 清空 params
-        '',  # 清空 query (? 后的部分)
-        ''   # 清空 fragment (# 后的部分)
-    ))
+    clean_url = urllib.parse.urlunparse(
+        (
+            parsed_url.scheme,
+            parsed_url.netloc,
+            parsed_url.path,
+            "",  # 清空 params
+            "",  # 清空 query (? 后的部分)
+            "",  # 清空 fragment (# 后的部分)
+        )
+    )
     return clean_url
+
 
 def get_safe_return_url(return_url: str, fallback_url: str):
     # Use fallback if URL is none or URL is not on same domain
@@ -215,12 +223,13 @@ def get_registrable_domain(url: str) -> str:
 
     return hostname.lower()
 
+
 def search_config_for_domain(url, settings_path, settings_cache=None):
     config = None
 
     if os.path.exists(settings_path):
-        domain_map = load_settings(settings_path,settings_cache)
-        if domain_map == '__JSON_ERROR__':
+        domain_map = load_settings(settings_path, settings_cache)
+        if domain_map == "__JSON_ERROR__":
             logging.error(f"【错误】配置文件解析失败：{settings_path}")
             return config
     else:
@@ -228,12 +237,12 @@ def search_config_for_domain(url, settings_path, settings_cache=None):
         return config
 
     domain = get_domain(url)
-    if domain in domain_map: # 直接命中
+    if domain in domain_map:  # 直接命中
         config = domain_map[domain]
     if not config:
-        for key in domain_map: # 解析命中（通用匹配符*）
+        for key in domain_map:  # 解析命中（通用匹配符*）
             if key.startswith("*.") and domain.endswith(key[1:]):
-                config =  domain_map[key]
+                config = domain_map[key]
 
     # 域名别名（配置复用）：将另一个域名的配置作为当前域名的配置
     visited = {domain}
@@ -245,6 +254,7 @@ def search_config_for_domain(url, settings_path, settings_cache=None):
         config = domain_map.get(alias)
 
     return config
+
 
 def load_settings(path, cache):
     base_dir = Path(path).resolve().parent
@@ -259,7 +269,7 @@ def load_settings(path, cache):
     cache_mtime = cache.get("mtime")
     if cache_settings is None or cache_mtime != mtime:
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 config_data = json.load(f)
                 cache["cache"] = _process_path(config_data, base_dir)
             cache["mtime"] = mtime
@@ -271,21 +281,23 @@ def load_settings(path, cache):
             cache["mtime"] = None
     return cache.get("cache")
 
+
 def _process_path(node, base_dir):
-    '''解析相对路径'''
+    """解析相对路径"""
     if isinstance(node, dict):
         for key, value in node.items():
             node[key] = _process_path(value, base_dir)
     elif isinstance(node, list):
         for i, item in enumerate(node):
             node[i] = _process_path(item, base_dir)
-    elif isinstance(node, str) and (node.startswith('./') or node.startswith('../')):
+    elif isinstance(node, str) and (node.startswith("./") or node.startswith("../")):
         # 如果是字符串且以 ./ 或 ../ 开头，就解析它
         # (base_dir / node) 将路径拼接起来
         # .resolve() 将其转换为绝对路径，并处理 ".." 等情况
         return str((base_dir / node).resolve())
-    
+
     return node
+
 
 def load_module(path, cache):
     cache = {} if cache is None else cache
@@ -301,17 +313,21 @@ def load_module(path, cache):
         cache[path] = (module, mtime)
     return cache[path][0]
 
+
 def parse_relative_date_string(date_filter_relative_string):
-    '''解析相对日期字符串，获取数值、单位，用于前端搜索筛选项显示'''
+    """解析相对日期字符串，获取数值、单位，用于前端搜索筛选项显示"""
     if not date_filter_relative_string:
         return None, None
-    match = re.match(r'^last_(\d+)_(day|week|month|year)s?$', date_filter_relative_string)
+    match = re.match(
+        r"^last_(\d+)_(day|week|month|year)s?$", date_filter_relative_string
+    )
     if match:
         value = match.group(1)
-        unit = match.group(2) + 's'
+        unit = match.group(2) + "s"
         return value, unit
     return None, None
-    
+
+
 def normalize_url(url: str) -> str:
     if not url or not isinstance(url, str):
         return ""

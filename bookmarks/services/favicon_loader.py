@@ -48,7 +48,9 @@ def _get_favicon_path(favicon_file: str) -> Path:
     return Path(os.path.join(settings.LD_FAVICON_FOLDER, favicon_file))
 
 
-def _find_cached_favicon(favicon_name: str, include_stale: bool) -> CachedFavicon | None:
+def _find_cached_favicon(
+    favicon_name: str, include_stale: bool
+) -> CachedFavicon | None:
     favicon_folder = Path(settings.LD_FAVICON_FOLDER)
     if not favicon_folder.exists():
         return None
@@ -150,7 +152,9 @@ def refresh_favicon(url: str, timeout: int = 10) -> str:
         logger.error(f"Failed to refresh favicon for {url}: {e}")
         raise
     except Exception as e:
-        logger.error(f"An unexpected error occurred during favicon refresh for {url}: {e}")
+        logger.error(
+            f"An unexpected error occurred during favicon refresh for {url}: {e}"
+        )
         raise
 
 

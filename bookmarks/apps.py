@@ -6,4 +6,4 @@ class BookmarksConfig(AppConfig):
 
     def ready(self):
         # Register signal handlers
-        import bookmarks.signals
+        pass

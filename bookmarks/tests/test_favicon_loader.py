@@ -1,13 +1,13 @@
 import io
 import os.path
-import time
 import tempfile
+import time
 from pathlib import Path
 from unittest import mock
 
+import requests
 from django.conf import settings
 from django.test import TestCase, override_settings
-import requests
 
 from bookmarks.services import favicon_loader
 
@@ -213,11 +213,13 @@ class FaviconLoaderTestCase(TestCase):
         self.assertEqual(self.get_icon_data("https_example_com.png"), b"updated_icon")
 
     def test_refresh_favicon_raises_on_request_error(self):
-        with mock.patch(
-            "requests.get", side_effect=requests.exceptions.RequestException("boom")
+        with (
+            mock.patch(
+                "requests.get", side_effect=requests.exceptions.RequestException("boom")
+            ),
+            self.assertRaises(requests.exceptions.RequestException),
         ):
-            with self.assertRaises(requests.exceptions.RequestException):
-                favicon_loader.refresh_favicon("https://example.com")
+            favicon_loader.refresh_favicon("https://example.com")
 
     @override_settings(LD_FAVICON_PROVIDER="https://custom.icons.com/?url={url}")
     def test_custom_provider_with_url_param(self):

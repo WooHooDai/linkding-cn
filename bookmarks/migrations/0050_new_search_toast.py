@@ -24,7 +24,6 @@ def reverse(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("bookmarks", "0049_userprofile_legacy_search"),
     ]

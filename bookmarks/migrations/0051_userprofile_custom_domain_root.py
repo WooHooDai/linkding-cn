@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("bookmarks", "0050_add_trash_search_preferences_field"),
     ]

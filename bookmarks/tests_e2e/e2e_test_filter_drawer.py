@@ -1,5 +1,5 @@
 from django.urls import reverse
-from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api import expect, sync_playwright
 
 from bookmarks.tests_e2e.helpers import LinkdingE2ETestCase
 
@@ -87,7 +87,9 @@ class FilterDrawerE2ETestCase(LinkdingE2ETestCase):
                 "data-domain-compact-mode", "true"
             )
 
-            domain_section = drawer.locator("section[aria-labelledby='domains-heading']")
+            domain_section = drawer.locator(
+                "section[aria-labelledby='domains-heading']"
+            )
             domain_section.locator("button.dropdown-toggle").click()
             expect(domain_section.locator(".menu-link").nth(1)).to_be_visible()
             compact_mode_debug = page.evaluate(
@@ -137,7 +139,9 @@ class FilterDrawerE2ETestCase(LinkdingE2ETestCase):
             drawer = page.locator(".modal.drawer.filter-drawer")
             expect(drawer).to_be_visible()
 
-            domain_section = drawer.locator("section[aria-labelledby='domains-heading']")
+            domain_section = drawer.locator(
+                "section[aria-labelledby='domains-heading']"
+            )
             domain_section.locator("button.dropdown-toggle").click()
             menu_links = domain_section.locator(".menu-link")
             expect(menu_links.nth(0)).to_have_text("Icon mode")

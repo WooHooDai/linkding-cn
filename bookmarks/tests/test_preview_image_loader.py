@@ -63,9 +63,11 @@ class PreviewImageLoaderTestCase(TestCase):
         url="https://example.com/image.png",
         icon_data=mock_image_data,
         content_type="image/png",
-        content_length=len(mock_image_data),
+        content_length=None,
         status_code=200,
     ):
+        if content_length is None:
+            content_length = len(icon_data)
         mock_response = mock.Mock()
         mock_response.raw = io.BytesIO(icon_data)
         return MockStreamingResponse(

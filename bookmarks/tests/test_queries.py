@@ -977,10 +977,10 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         ]
 
         # Unshared bookmarks
-        self.setup_bookmark(user=user1, shared=False, title="test title"),
-        self.setup_bookmark(user=user2, shared=False),
-        self.setup_bookmark(user=user3, shared=False, tags=[tag]),
-        self.setup_bookmark(user=user4, shared=True, tags=[tag]),
+        (self.setup_bookmark(user=user1, shared=False, title="test title"),)
+        (self.setup_bookmark(user=user2, shared=False),)
+        (self.setup_bookmark(user=user3, shared=False, tags=[tag]),)
+        (self.setup_bookmark(user=user4, shared=True, tags=[tag]),)
 
         # Should return shared bookmarks from all users
         query_set = queries.query_shared_bookmarks(
@@ -1023,20 +1023,30 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
             self.setup_tag(user=user3),
         ]
 
-        self.setup_bookmark(user=user1, shared=True, tags=[shared_tags[0]]),
-        self.setup_bookmark(user=user2, shared=True, tags=[shared_tags[1]]),
-        self.setup_bookmark(user=user3, shared=True, tags=[shared_tags[2]]),
+        (self.setup_bookmark(user=user1, shared=True, tags=[shared_tags[0]]),)
+        (self.setup_bookmark(user=user2, shared=True, tags=[shared_tags[1]]),)
+        (self.setup_bookmark(user=user3, shared=True, tags=[shared_tags[2]]),)
 
-        self.setup_bookmark(
-            user=user1, shared=False, tags=[self.setup_tag(user=user1)]
-        ),
-        self.setup_bookmark(
-            user=user2, shared=False, tags=[self.setup_tag(user=user2)]
-        ),
-        self.setup_bookmark(
-            user=user3, shared=False, tags=[self.setup_tag(user=user3)]
-        ),
-        self.setup_bookmark(user=user4, shared=True, tags=[self.setup_tag(user=user4)]),
+        (
+            self.setup_bookmark(
+                user=user1, shared=False, tags=[self.setup_tag(user=user1)]
+            ),
+        )
+        (
+            self.setup_bookmark(
+                user=user2, shared=False, tags=[self.setup_tag(user=user2)]
+            ),
+        )
+        (
+            self.setup_bookmark(
+                user=user3, shared=False, tags=[self.setup_tag(user=user3)]
+            ),
+        )
+        (
+            self.setup_bookmark(
+                user=user4, shared=True, tags=[self.setup_tag(user=user4)]
+            ),
+        )
 
         query_set = queries.query_shared_bookmark_tags(
             None, self.profile, BookmarkSearch(q=""), False
@@ -1051,8 +1061,8 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         tag1 = self.setup_tag(user=user1)
         tag2 = self.setup_tag(user=user2)
 
-        self.setup_bookmark(user=user1, shared=True, tags=[tag1]),
-        self.setup_bookmark(user=user2, shared=True, tags=[tag2]),
+        (self.setup_bookmark(user=user1, shared=True, tags=[tag1]),)
+        (self.setup_bookmark(user=user2, shared=True, tags=[tag2]),)
 
         query_set = queries.query_shared_bookmark_tags(
             None, self.profile, BookmarkSearch(q=""), True
@@ -1072,17 +1082,21 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         ]
 
         # Shared bookmarks
-        self.setup_bookmark(
-            user=users_with_shared_bookmarks[0], shared=True, title="test title"
-        ),
-        self.setup_bookmark(user=users_with_shared_bookmarks[1], shared=True),
+        (
+            self.setup_bookmark(
+                user=users_with_shared_bookmarks[0], shared=True, title="test title"
+            ),
+        )
+        (self.setup_bookmark(user=users_with_shared_bookmarks[1], shared=True),)
 
         # Unshared bookmarks
-        self.setup_bookmark(
-            user=users_without_shared_bookmarks[0], shared=False, title="test title"
-        ),
-        self.setup_bookmark(user=users_without_shared_bookmarks[1], shared=False),
-        self.setup_bookmark(user=users_without_shared_bookmarks[2], shared=True),
+        (
+            self.setup_bookmark(
+                user=users_without_shared_bookmarks[0], shared=False, title="test title"
+            ),
+        )
+        (self.setup_bookmark(user=users_without_shared_bookmarks[1], shared=False),)
+        (self.setup_bookmark(user=users_without_shared_bookmarks[2], shared=True),)
 
         # Should return users with shared bookmarks
         query_set = queries.query_shared_bookmark_users(
@@ -1113,25 +1127,25 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
 
         bookmarks = [
             self.setup_bookmark(
-                added=timezone.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+                added=timezone.datetime(2020, 1, 1, tzinfo=datetime.UTC)
             ),
             self.setup_bookmark(
-                added=timezone.datetime(2021, 2, 1, tzinfo=datetime.timezone.utc)
+                added=timezone.datetime(2021, 2, 1, tzinfo=datetime.UTC)
             ),
             self.setup_bookmark(
-                added=timezone.datetime(2022, 3, 1, tzinfo=datetime.timezone.utc)
+                added=timezone.datetime(2022, 3, 1, tzinfo=datetime.UTC)
             ),
             self.setup_bookmark(
-                added=timezone.datetime(2023, 4, 1, tzinfo=datetime.timezone.utc)
+                added=timezone.datetime(2023, 4, 1, tzinfo=datetime.UTC)
             ),
             self.setup_bookmark(
-                added=timezone.datetime(2022, 5, 1, tzinfo=datetime.timezone.utc)
+                added=timezone.datetime(2022, 5, 1, tzinfo=datetime.UTC)
             ),
             self.setup_bookmark(
-                added=timezone.datetime(2021, 6, 1, tzinfo=datetime.timezone.utc)
+                added=timezone.datetime(2021, 6, 1, tzinfo=datetime.UTC)
             ),
             self.setup_bookmark(
-                added=timezone.datetime(2020, 7, 1, tzinfo=datetime.timezone.utc)
+                added=timezone.datetime(2020, 7, 1, tzinfo=datetime.UTC)
             ),
         ]
         sorted_bookmarks = sorted(bookmarks, key=lambda b: b.date_added)
@@ -1144,25 +1158,25 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
 
         bookmarks = [
             self.setup_bookmark(
-                added=timezone.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+                added=timezone.datetime(2020, 1, 1, tzinfo=datetime.UTC)
             ),
             self.setup_bookmark(
-                added=timezone.datetime(2021, 2, 1, tzinfo=datetime.timezone.utc)
+                added=timezone.datetime(2021, 2, 1, tzinfo=datetime.UTC)
             ),
             self.setup_bookmark(
-                added=timezone.datetime(2022, 3, 1, tzinfo=datetime.timezone.utc)
+                added=timezone.datetime(2022, 3, 1, tzinfo=datetime.UTC)
             ),
             self.setup_bookmark(
-                added=timezone.datetime(2023, 4, 1, tzinfo=datetime.timezone.utc)
+                added=timezone.datetime(2023, 4, 1, tzinfo=datetime.UTC)
             ),
             self.setup_bookmark(
-                added=timezone.datetime(2022, 5, 1, tzinfo=datetime.timezone.utc)
+                added=timezone.datetime(2022, 5, 1, tzinfo=datetime.UTC)
             ),
             self.setup_bookmark(
-                added=timezone.datetime(2021, 6, 1, tzinfo=datetime.timezone.utc)
+                added=timezone.datetime(2021, 6, 1, tzinfo=datetime.UTC)
             ),
             self.setup_bookmark(
-                added=timezone.datetime(2020, 7, 1, tzinfo=datetime.timezone.utc)
+                added=timezone.datetime(2020, 7, 1, tzinfo=datetime.UTC)
             ),
         ]
         sorted_bookmarks = sorted(bookmarks, key=lambda b: b.date_added, reverse=True)
@@ -1183,10 +1197,10 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
 
         query = queries.query_bookmarks(self.user, self.profile, search)
         result_bookmarks = list(query)
-        
+
         # 验证返回的书签数量正确
         self.assertEqual(len(result_bookmarks), len(bookmarks))
-        
+
         # 验证所有书签都被返回（内容相同，顺序可能不同）
         self.assertCountEqual(result_bookmarks, bookmarks)
 
@@ -1247,11 +1261,11 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
 
         # Modify date field on bookmark directly to test modified_since
         older_bookmark.date_modified = timezone.datetime(
-            2025, 1, 1, tzinfo=datetime.timezone.utc
+            2025, 1, 1, tzinfo=datetime.UTC
         )
         older_bookmark.save()
         recent_bookmark.date_modified = timezone.datetime(
-            2025, 5, 15, tzinfo=datetime.timezone.utc
+            2025, 5, 15, tzinfo=datetime.UTC
         )
         recent_bookmark.save()
 
@@ -1284,11 +1298,11 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         # Create bookmarks with different dates
         older_bookmark = self.setup_bookmark(
             title="old bookmark",
-            added=timezone.datetime(2025, 1, 1, tzinfo=datetime.timezone.utc),
+            added=timezone.datetime(2025, 1, 1, tzinfo=datetime.UTC),
         )
         recent_bookmark = self.setup_bookmark(
             title="recent bookmark",
-            added=timezone.datetime(2025, 5, 15, tzinfo=datetime.timezone.utc),
+            added=timezone.datetime(2025, 5, 15, tzinfo=datetime.UTC),
         )
 
         # Test with date between the two bookmarks
@@ -1543,9 +1557,9 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         # Bookmarks that should not match
         self.setup_bookmark(is_archived=True, tags=[other_tag])
         self.setup_bookmark(is_archived=True)
-        self.setup_bookmark(tags=[tag1]),
-        self.setup_bookmark(tags=[tag2]),
-        self.setup_bookmark(tags=[tag1, tag2]),
+        (self.setup_bookmark(tags=[tag1]),)
+        (self.setup_bookmark(tags=[tag2]),)
+        (self.setup_bookmark(tags=[tag1, tag2]),)
 
         query = queries.query_archived_bookmarks(
             self.user, self.profile, BookmarkSearch(q="", bundle=bundle)
@@ -1571,9 +1585,9 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         # Bookmarks that should not match
         self.setup_bookmark(user=user1, shared=True, tags=[other_tag])
         self.setup_bookmark(user=user2, shared=True)
-        self.setup_bookmark(user=user1, shared=False, tags=[tag1]),
-        self.setup_bookmark(user=user2, shared=False, tags=[tag2]),
-        self.setup_bookmark(user=user1, shared=False, tags=[tag1, tag2]),
+        (self.setup_bookmark(user=user1, shared=False, tags=[tag1]),)
+        (self.setup_bookmark(user=user2, shared=False, tags=[tag2]),)
+        (self.setup_bookmark(user=user1, shared=False, tags=[tag1, tag2]),)
 
         query = queries.query_shared_bookmarks(
             None, self.profile, BookmarkSearch(q="", bundle=bundle), False
@@ -1584,13 +1598,13 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         # 创建有标签和无标签的书签
         tag1 = self.setup_tag(name="tag1")
         tag2 = self.setup_tag(name="tag2")
-        
+
         tagged_bookmarks = [
             self.setup_bookmark(tags=[tag1]),
             self.setup_bookmark(tags=[tag2]),
             self.setup_bookmark(tags=[tag1, tag2]),
         ]
-        
+
         untagged_bookmarks = [
             self.setup_bookmark(),
             self.setup_bookmark(),
@@ -1600,7 +1614,7 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         bundle = self.setup_bundle()
         bundle.search_params = {"tagged": BookmarkSearch.FILTER_TAGGED_TAGGED}
         bundle.save()
-        
+
         search = BookmarkSearch(q="", bundle=bundle)
         query = queries.query_bookmarks(self.user, self.profile, search)
         self.assertQueryResult(query, [tagged_bookmarks])
@@ -1608,7 +1622,7 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         # 测试 bundle 的 tagged 筛选 - 无标签
         bundle.search_params = {"tagged": BookmarkSearch.FILTER_TAGGED_UNTAGGED}
         bundle.save()
-        
+
         search = BookmarkSearch(q="", bundle=bundle)
         query = queries.query_bookmarks(self.user, self.profile, search)
         self.assertQueryResult(query, [untagged_bookmarks])
@@ -1616,7 +1630,7 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         # 测试 bundle 的 tagged 筛选 - 关闭（默认）
         bundle.search_params = {"tagged": BookmarkSearch.FILTER_TAGGED_OFF}
         bundle.save()
-        
+
         search = BookmarkSearch(q="", bundle=bundle)
         query = queries.query_bookmarks(self.user, self.profile, search)
         self.assertQueryResult(query, [tagged_bookmarks + untagged_bookmarks])
@@ -1624,20 +1638,20 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
     def test_query_bookmarks_with_bundle_tagged_filter_and_other_filters(self):
         # 创建有标签和无标签的书签，部分设为未读
         tag1 = self.setup_tag(name="tag1")
-        
+
         tagged_unread_bookmarks = [
             self.setup_bookmark(tags=[tag1], unread=True),
             self.setup_bookmark(tags=[tag1], unread=True),
         ]
-        
-        tagged_read_bookmarks = [
+
+        [
             self.setup_bookmark(tags=[tag1], unread=False),
         ]
-        
-        untagged_unread_bookmarks = [
+
+        [
             self.setup_bookmark(unread=True),
         ]
-        
+
         untagged_read_bookmarks = [
             self.setup_bookmark(unread=False),
         ]
@@ -1646,10 +1660,10 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         bundle = self.setup_bundle()
         bundle.search_params = {
             "tagged": BookmarkSearch.FILTER_TAGGED_TAGGED,
-            "unread": BookmarkSearch.FILTER_UNREAD_YES
+            "unread": BookmarkSearch.FILTER_UNREAD_YES,
         }
         bundle.save()
-        
+
         search = BookmarkSearch(q="", bundle=bundle)
         query = queries.query_bookmarks(self.user, self.profile, search)
         self.assertQueryResult(query, [tagged_unread_bookmarks])
@@ -1657,10 +1671,10 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         # 测试 bundle 的 tagged 筛选与未读筛选组合 - 无标签且已读
         bundle.search_params = {
             "tagged": BookmarkSearch.FILTER_TAGGED_UNTAGGED,
-            "unread": BookmarkSearch.FILTER_UNREAD_NO
+            "unread": BookmarkSearch.FILTER_UNREAD_NO,
         }
         bundle.save()
-        
+
         search = BookmarkSearch(q="", bundle=bundle)
         query = queries.query_bookmarks(self.user, self.profile, search)
         self.assertQueryResult(query, [untagged_read_bookmarks])
@@ -1694,7 +1708,9 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
             preview_image_file="preview-local.png",
         )
         remote_preview = self.setup_bookmark(title="Remote preview")
-        remote_preview.preview_image_remote_url = "https://example.com/preview-remote.png"
+        remote_preview.preview_image_remote_url = (
+            "https://example.com/preview-remote.png"
+        )
         remote_preview.save(update_fields=["preview_image_remote_url"])
         no_preview = self.setup_bookmark(title="No preview")
 
@@ -1756,7 +1772,7 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         wrong_unread.latest_snapshot = snapshot
         wrong_unread.save(update_fields=["latest_snapshot"])
 
-        missing_snapshot = self.setup_bookmark(
+        self.setup_bookmark(
             title="Missing snapshot",
             unread=True,
             favicon_file="favicon.png",
@@ -1782,20 +1798,22 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         # 创建已删除的书签
         bookmark1 = self.setup_bookmark()
         bookmark1.is_deleted = True
-        bookmark1.date_deleted = timezone.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+        bookmark1.date_deleted = timezone.datetime(2020, 1, 1, tzinfo=datetime.UTC)
         bookmark1.save()
 
         bookmark2 = self.setup_bookmark()
         bookmark2.is_deleted = True
-        bookmark2.date_deleted = timezone.datetime(2021, 2, 1, tzinfo=datetime.timezone.utc)
+        bookmark2.date_deleted = timezone.datetime(2021, 2, 1, tzinfo=datetime.UTC)
         bookmark2.save()
 
         bookmark3 = self.setup_bookmark()
         bookmark3.is_deleted = True
-        bookmark3.date_deleted = timezone.datetime(2022, 3, 1, tzinfo=datetime.timezone.utc)
+        bookmark3.date_deleted = timezone.datetime(2022, 3, 1, tzinfo=datetime.UTC)
         bookmark3.save()
 
-        sorted_bookmarks = sorted([bookmark1, bookmark2, bookmark3], key=lambda b: b.date_deleted)
+        sorted_bookmarks = sorted(
+            [bookmark1, bookmark2, bookmark3], key=lambda b: b.date_deleted
+        )
 
         query = queries.query_trashed_bookmarks(self.user, self.profile, search)
         self.assertEqual(list(query), sorted_bookmarks)
@@ -1806,20 +1824,24 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         # 创建已删除的书签
         bookmark1 = self.setup_bookmark()
         bookmark1.is_deleted = True
-        bookmark1.date_deleted = timezone.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+        bookmark1.date_deleted = timezone.datetime(2020, 1, 1, tzinfo=datetime.UTC)
         bookmark1.save()
 
         bookmark2 = self.setup_bookmark()
         bookmark2.is_deleted = True
-        bookmark2.date_deleted = timezone.datetime(2021, 2, 1, tzinfo=datetime.timezone.utc)
+        bookmark2.date_deleted = timezone.datetime(2021, 2, 1, tzinfo=datetime.UTC)
         bookmark2.save()
 
         bookmark3 = self.setup_bookmark()
         bookmark3.is_deleted = True
-        bookmark3.date_deleted = timezone.datetime(2022, 3, 1, tzinfo=datetime.timezone.utc)
+        bookmark3.date_deleted = timezone.datetime(2022, 3, 1, tzinfo=datetime.UTC)
         bookmark3.save()
 
-        sorted_bookmarks = sorted([bookmark1, bookmark2, bookmark3], key=lambda b: b.date_deleted, reverse=True)
+        sorted_bookmarks = sorted(
+            [bookmark1, bookmark2, bookmark3],
+            key=lambda b: b.date_deleted,
+            reverse=True,
+        )
 
         query = queries.query_trashed_bookmarks(self.user, self.profile, search)
         self.assertEqual(list(query), sorted_bookmarks)
@@ -1828,12 +1850,14 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         # 创建已删除的书签
         older_bookmark = self.setup_bookmark()
         older_bookmark.is_deleted = True
-        older_bookmark.date_deleted = timezone.datetime(2025, 1, 1, tzinfo=datetime.timezone.utc)
+        older_bookmark.date_deleted = timezone.datetime(2025, 1, 1, tzinfo=datetime.UTC)
         older_bookmark.save()
 
         recent_bookmark = self.setup_bookmark()
         recent_bookmark.is_deleted = True
-        recent_bookmark.date_deleted = timezone.datetime(2025, 5, 15, tzinfo=datetime.timezone.utc)
+        recent_bookmark.date_deleted = timezone.datetime(
+            2025, 5, 15, tzinfo=datetime.UTC
+        )
         recent_bookmark.save()
 
         # 测试日期在两个书签之间
@@ -1865,24 +1889,24 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         # 创建已删除的书签
         bookmark1 = self.setup_bookmark()
         bookmark1.is_deleted = True
-        bookmark1.date_deleted = timezone.datetime(2025, 1, 15, tzinfo=datetime.timezone.utc)
+        bookmark1.date_deleted = timezone.datetime(2025, 1, 15, tzinfo=datetime.UTC)
         bookmark1.save()
 
         bookmark2 = self.setup_bookmark()
         bookmark2.is_deleted = True
-        bookmark2.date_deleted = timezone.datetime(2025, 2, 15, tzinfo=datetime.timezone.utc)
+        bookmark2.date_deleted = timezone.datetime(2025, 2, 15, tzinfo=datetime.UTC)
         bookmark2.save()
 
         bookmark3 = self.setup_bookmark()
         bookmark3.is_deleted = True
-        bookmark3.date_deleted = timezone.datetime(2025, 3, 15, tzinfo=datetime.timezone.utc)
+        bookmark3.date_deleted = timezone.datetime(2025, 3, 15, tzinfo=datetime.UTC)
         bookmark3.save()
 
         # 测试删除日期范围筛选
         search = BookmarkSearch(
             date_filter_by=BookmarkSearch.FILTER_DATE_BY_DELETED,
             date_filter_start="2025-02-01",
-            date_filter_end="2025-03-01"
+            date_filter_end="2025-03-01",
         )
         query = queries.query_trashed_bookmarks(self.user, self.profile, search)
         self.assertCountEqual(list(query), [bookmark2])
@@ -1892,17 +1916,17 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         # 创建已删除的书签
         bookmark1 = self.setup_bookmark()
         bookmark1.is_deleted = True
-        bookmark1.date_deleted = timezone.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+        bookmark1.date_deleted = timezone.datetime(2020, 1, 1, tzinfo=datetime.UTC)
         bookmark1.save()
 
         bookmark2 = self.setup_bookmark()
         bookmark2.is_deleted = True
-        bookmark2.date_deleted = timezone.datetime(2021, 2, 1, tzinfo=datetime.timezone.utc)
+        bookmark2.date_deleted = timezone.datetime(2021, 2, 1, tzinfo=datetime.UTC)
         bookmark2.save()
 
         bookmark3 = self.setup_bookmark()
         bookmark3.is_deleted = True
-        bookmark3.date_deleted = timezone.datetime(2022, 3, 1, tzinfo=datetime.timezone.utc)
+        bookmark3.date_deleted = timezone.datetime(2022, 3, 1, tzinfo=datetime.UTC)
         bookmark3.save()
 
         # 设置用户的回收站搜索偏好为空，模拟首次访问
@@ -1910,11 +1934,13 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         self.profile.save()
 
         # 使用标准的from_request方式，不指定排序
-        search = BookmarkSearch.from_request(None, {}, self.profile.trash_search_preferences)
-        
+        search = BookmarkSearch.from_request(
+            None, {}, self.profile.trash_search_preferences
+        )
+
         # 验证默认排序是添加时间降序（BookmarkSearch的默认值）
         self.assertEqual(search.sort, BookmarkSearch.SORT_ADDED_DESC)
-        
+
         # 验证查询结果按添加时间降序排列
         query = queries.query_trashed_bookmarks(self.user, self.profile, search)
         expected_order = [bookmark3, bookmark2, bookmark1]  # 最新的添加时间在前
@@ -1926,40 +1952,42 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         self.profile.trash_search_preferences = {
             "sort": BookmarkSearch.SORT_DELETED_ASC,
             "shared": BookmarkSearch.FILTER_SHARED_SHARED,
-            "unread": BookmarkSearch.FILTER_UNREAD_YES
+            "unread": BookmarkSearch.FILTER_UNREAD_YES,
         }
         self.profile.save()
 
         # 创建已删除的书签
         bookmark1 = self.setup_bookmark()
         bookmark1.is_deleted = True
-        bookmark1.date_deleted = timezone.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc)
+        bookmark1.date_deleted = timezone.datetime(2020, 1, 1, tzinfo=datetime.UTC)
         bookmark1.shared = True
         bookmark1.unread = True
         bookmark1.save()
 
         bookmark2 = self.setup_bookmark()
         bookmark2.is_deleted = True
-        bookmark2.date_deleted = timezone.datetime(2021, 2, 1, tzinfo=datetime.timezone.utc)
+        bookmark2.date_deleted = timezone.datetime(2021, 2, 1, tzinfo=datetime.UTC)
         bookmark2.shared = True
         bookmark2.unread = True
         bookmark2.save()
 
         bookmark3 = self.setup_bookmark()
         bookmark3.is_deleted = True
-        bookmark3.date_deleted = timezone.datetime(2022, 3, 1, tzinfo=datetime.timezone.utc)
+        bookmark3.date_deleted = timezone.datetime(2022, 3, 1, tzinfo=datetime.UTC)
         bookmark3.shared = True
         bookmark3.unread = True
         bookmark3.save()
 
         # 使用标准的from_request方式
-        search = BookmarkSearch.from_request(None, {}, self.profile.trash_search_preferences)
-        
+        search = BookmarkSearch.from_request(
+            None, {}, self.profile.trash_search_preferences
+        )
+
         # 验证使用了用户的偏好设置
         self.assertEqual(search.sort, BookmarkSearch.SORT_DELETED_ASC)
         self.assertEqual(search.shared, BookmarkSearch.FILTER_SHARED_SHARED)
         self.assertEqual(search.unread, BookmarkSearch.FILTER_UNREAD_YES)
-        
+
         # 验证查询结果按删除时间升序排列
         query = queries.query_trashed_bookmarks(self.user, self.profile, search)
         expected_order = [bookmark1, bookmark2, bookmark3]  # 最早的删除时间在前
@@ -1967,39 +1995,44 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
 
     def test_bookmark_search_form_choices_for_different_modes(self):
         """测试不同模式下搜索表单的选项"""
-        from bookmarks.templatetags.bookmarks import bookmark_search
         from django.test import RequestFactory
-        
+
+        from bookmarks.templatetags.bookmarks import bookmark_search
+
         # 创建测试请求
         factory = RequestFactory()
-        request = factory.get('/')
+        request = factory.get("/")
         request.user = self.user
-        
+
         # 创建搜索对象
         search = BookmarkSearch()
-        
+
         # 测试trash模式 - 应该包含删除相关选项
-        context = {'request': request}
-        result = bookmark_search(context, search, mode='trash')
-        preferences_form = result['preferences_form']
-        
-        sort_choices = [choice[0] for choice in preferences_form.fields['sort'].choices]
-        date_filter_choices = [choice[0] for choice in preferences_form.fields['date_filter_by'].choices]
-        
-        self.assertIn('deleted_asc', sort_choices)
-        self.assertIn('deleted_desc', sort_choices)
-        self.assertIn('deleted', date_filter_choices)
-        
+        context = {"request": request}
+        result = bookmark_search(context, search, mode="trash")
+        preferences_form = result["preferences_form"]
+
+        sort_choices = [choice[0] for choice in preferences_form.fields["sort"].choices]
+        date_filter_choices = [
+            choice[0] for choice in preferences_form.fields["date_filter_by"].choices
+        ]
+
+        self.assertIn("deleted_asc", sort_choices)
+        self.assertIn("deleted_desc", sort_choices)
+        self.assertIn("deleted", date_filter_choices)
+
         # 测试非trash模式 - 应该不包含删除相关选项
-        result = bookmark_search(context, search, mode='')
-        preferences_form = result['preferences_form']
-        
-        sort_choices = [choice[0] for choice in preferences_form.fields['sort'].choices]
-        date_filter_choices = [choice[0] for choice in preferences_form.fields['date_filter_by'].choices]
-        
-        self.assertNotIn('deleted_asc', sort_choices)
-        self.assertNotIn('deleted_desc', sort_choices)
-        self.assertNotIn('deleted', date_filter_choices)
+        result = bookmark_search(context, search, mode="")
+        preferences_form = result["preferences_form"]
+
+        sort_choices = [choice[0] for choice in preferences_form.fields["sort"].choices]
+        date_filter_choices = [
+            choice[0] for choice in preferences_form.fields["date_filter_by"].choices
+        ]
+
+        self.assertNotIn("deleted_asc", sort_choices)
+        self.assertNotIn("deleted_desc", sort_choices)
+        self.assertNotIn("deleted", date_filter_choices)
 
     def test_field_search_title_with_parentheses(self):
         """title:(...) 仅匹配标题，不匹配描述/笔记/URL"""
@@ -2008,7 +2041,9 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         self.setup_bookmark(notes="你好世界")
         self.setup_bookmark(url="https://example.com/你好世界")
 
-        query = queries.query_bookmarks(self.user, self.profile, BookmarkSearch(q="title:(你好世界)"))
+        query = queries.query_bookmarks(
+            self.user, self.profile, BookmarkSearch(q="title:(你好世界)")
+        )
         self.assertCountEqual(list(query), [bm_title])
 
     def test_field_search_desc_and_notes_with_parentheses(self):
@@ -2018,10 +2053,14 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         self.setup_bookmark(title="foo bar")
         self.setup_bookmark(url="https://example.com/baz qux")
 
-        query1 = queries.query_bookmarks(self.user, self.profile, BookmarkSearch(q="desc:(foo bar)"))
+        query1 = queries.query_bookmarks(
+            self.user, self.profile, BookmarkSearch(q="desc:(foo bar)")
+        )
         self.assertCountEqual(list(query1), [bm_desc])
 
-        query2 = queries.query_bookmarks(self.user, self.profile, BookmarkSearch(q="notes:(baz qux)"))
+        query2 = queries.query_bookmarks(
+            self.user, self.profile, BookmarkSearch(q="notes:(baz qux)")
+        )
         self.assertCountEqual(list(query2), [bm_notes])
 
     def test_field_search_desc_combined_with_tag_and_operator(self):
@@ -2059,14 +2098,18 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         """url:(...) 使用 url__icontains"""
         bm = self.setup_bookmark(url="https://example.com/path/to/hello")
         self.setup_bookmark(url="https://example.com/other")
-        query = queries.query_bookmarks(self.user, self.profile, BookmarkSearch(q="url:(/path/to)"))
+        query = queries.query_bookmarks(
+            self.user, self.profile, BookmarkSearch(q="url:(/path/to)")
+        )
         self.assertCountEqual(list(query), [bm])
 
     def test_field_search_escaped_parentheses_treated_as_literal(self):
         """title:\(你好世界\) 不触发字段语法，按普通词搜索"""
         bm = self.setup_bookmark(description="title:(你好世界)")
         # 使用原样字面搜索
-        query = queries.query_bookmarks(self.user, self.profile, BookmarkSearch(q=r"title:\(你好世界\)"))
+        query = queries.query_bookmarks(
+            self.user, self.profile, BookmarkSearch(q=r"title:\(你好世界\)")
+        )
         self.assertCountEqual(list(query), [bm])
 
     def test_field_search_domain_strict_match(self):
@@ -2078,5 +2121,7 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         self.setup_bookmark(url="http://x.com.evil.com/")
         self.setup_bookmark(url="https://x.come/")
 
-        query = queries.query_bookmarks(self.user, self.profile, BookmarkSearch(q="domain:(x.com)"))
+        query = queries.query_bookmarks(
+            self.user, self.profile, BookmarkSearch(q="domain:(x.com)")
+        )
         self.assertCountEqual(list(query), [bm1, bm2])

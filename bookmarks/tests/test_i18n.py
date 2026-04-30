@@ -1,9 +1,9 @@
 import calendar
 
+from bs4 import BeautifulSoup
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from bs4 import BeautifulSoup
 
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 
@@ -24,8 +24,8 @@ class I18nTestCase(TestCase, BookmarkFactoryMixin):
         response = self.client.get(reverse("login"))
         html = response.content.decode()
 
-        self.assertContains(response, "lang=\"en\"")
-        self.assertIn("<h1 id=\"main-heading\">Login</h1>", html)
+        self.assertContains(response, 'lang="en"')
+        self.assertIn('<h1 id="main-heading">Login</h1>', html)
 
     def test_login_page_renders_language_switcher(self):
         response = self.client.get(reverse("login"))
@@ -55,7 +55,7 @@ class I18nTestCase(TestCase, BookmarkFactoryMixin):
 
         self.assertEqual(response.wsgi_request.LANGUAGE_CODE, "zh-hans")
         self.assertContains(response, 'lang="zh-hans"')
-        self.assertContains(response, "<h1 id=\"main-heading\">登录</h1>", html=True)
+        self.assertContains(response, '<h1 id="main-heading">登录</h1>', html=True)
 
     def test_login_page_language_options_keep_native_names(self):
         self.client.cookies["django_language"] = "zh-hans"
@@ -90,9 +90,7 @@ class I18nTestCase(TestCase, BookmarkFactoryMixin):
         user.profile.refresh_from_db()
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(
-            response["Location"], reverse("linkding:settings.general")
-        )
+        self.assertEqual(response["Location"], reverse("linkding:settings.general"))
         self.assertEqual(response.cookies["django_language"].value, "zh-hans")
         self.assertEqual(user.profile.language, "zh-hans")
 
@@ -110,7 +108,6 @@ class I18nTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(user.profile.language, "en")
         self.assertNotIn("django_language", response.cookies)
-
 
     def test_authenticated_user_profile_language_overrides_cookie(self):
         user = self.get_or_create_test_user()
@@ -212,8 +209,9 @@ class I18nTestCase(TestCase, BookmarkFactoryMixin):
         summary = soup.select_one("section[ld-sidebar-user-summary]")
         self.assertIsNotNone(summary)
         self.assertEqual(
-            summary.select_one("[data-summary-stat='collection-days'] .summary-metric-label")
-            .get_text(strip=True),
+            summary.select_one(
+                "[data-summary-stat='collection-days'] .summary-metric-label"
+            ).get_text(strip=True),
             "Days",
         )
         self.assertEqual(
@@ -290,8 +288,12 @@ class I18nTestCase(TestCase, BookmarkFactoryMixin):
 
         new_response = self.client.get(reverse("linkding:bundles.new"))
         new_html = new_response.content.decode()
-        self.assertContains(new_response, '<h1 id="main-heading">Add filter</h1>', html=True)
-        self.assertContains(new_response, '<h2 id="preview-heading">Preview</h2>', html=True)
+        self.assertContains(
+            new_response, '<h1 id="main-heading">Add filter</h1>', html=True
+        )
+        self.assertContains(
+            new_response, '<h2 id="preview-heading">Preview</h2>', html=True
+        )
         self.assertContains(new_response, "Filter name")
         self.assertContains(new_response, "Search terms")
         self.assertContains(new_response, "Required tags")
@@ -303,9 +305,13 @@ class I18nTestCase(TestCase, BookmarkFactoryMixin):
         self.assertNotIn("保存", new_html)
         self.assertNotIn("取消", new_html)
 
-        edit_response = self.client.get(reverse("linkding:bundles.edit", args=[bundle.id]))
+        edit_response = self.client.get(
+            reverse("linkding:bundles.edit", args=[bundle.id])
+        )
         edit_html = edit_response.content.decode()
-        self.assertContains(edit_response, '<h1 id="main-heading">Edit filter</h1>', html=True)
+        self.assertContains(
+            edit_response, '<h1 id="main-heading">Edit filter</h1>', html=True
+        )
         self.assertNotIn("编辑过滤器", edit_html)
 
     def test_tag_pages_use_english_labels_when_profile_language_is_en(self):
@@ -314,7 +320,9 @@ class I18nTestCase(TestCase, BookmarkFactoryMixin):
 
         new_response = self.client.get(reverse("linkding:tags.new"))
         new_html = new_response.content.decode()
-        self.assertContains(new_response, '<h1 id="main-heading">Add tag</h1>', html=True)
+        self.assertContains(
+            new_response, '<h1 id="main-heading">Add tag</h1>', html=True
+        )
         self.assertContains(new_response, "Name")
         self.assertContains(new_response, ">Save<", html=False)
         self.assertContains(new_response, ">Cancel<", html=False)
@@ -324,5 +332,7 @@ class I18nTestCase(TestCase, BookmarkFactoryMixin):
 
         edit_response = self.client.get(reverse("linkding:tags.edit", args=[tag.id]))
         edit_html = edit_response.content.decode()
-        self.assertContains(edit_response, '<h1 id="main-heading">Edit tag</h1>', html=True)
+        self.assertContains(
+            edit_response, '<h1 id="main-heading">Edit tag</h1>', html=True
+        )
         self.assertNotIn("编辑标签", edit_html)

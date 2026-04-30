@@ -6,7 +6,6 @@ from bookmarks.tests.helpers import BookmarkFactoryMixin
 
 
 class BundleIndexViewTestCase(TestCase, BookmarkFactoryMixin):
-
     def setUp(self) -> None:
         user = self.get_or_create_test_user()
         self.client.force_login(user)
@@ -39,7 +38,7 @@ class BundleIndexViewTestCase(TestCase, BookmarkFactoryMixin):
                     <path d="M15 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/>
                   </svg>
                   <div class="list-item-text">
-                    <span>{ bundle.name }</span>
+                    <span>{bundle.name}</span>
                   </div>
                 </div>
               </td>
@@ -74,7 +73,9 @@ class BundleIndexViewTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(response.status_code, 200)
         html = response.content.decode()
 
-        self.assertInHTML('<p class="empty-title h5">You do not have any filters yet</p>', html)
+        self.assertInHTML(
+            '<p class="empty-title h5">You do not have any filters yet</p>', html
+        )
         self.assertInHTML(
             '<p class="empty-subtitle">Try creating a filter</p>',
             html,

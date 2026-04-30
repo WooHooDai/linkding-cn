@@ -11,9 +11,9 @@ from bookmarks.utils import (
     get_sidebar_domain_filter_value,
     humanize_absolute_date,
     humanize_relative_date,
-    parse_timestamp,
-    parse_domain_roots,
     normalize_url,
+    parse_domain_roots,
+    parse_timestamp,
 )
 
 

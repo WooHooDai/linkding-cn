@@ -5,13 +5,12 @@ from django.urls import reverse
 from bookmarks.models import Toast
 from bookmarks.tests.helpers import (
     BookmarkFactoryMixin,
-    random_sentence,
     disable_logging,
+    random_sentence,
 )
 
 
 class ToastsViewTestCase(TestCase, BookmarkFactoryMixin):
-
     def setUp(self) -> None:
         user = self.get_or_create_test_user()
         self.client.force_login(user)

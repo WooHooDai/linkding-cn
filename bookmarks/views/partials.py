@@ -2,7 +2,9 @@ from bookmarks.models import BookmarkSearch
 from bookmarks.views import contexts, turbo
 
 
-def render_bookmark_update(request, bookmark_list, tag_cloud, details, bundles, domains, sidebar_summary=None):
+def render_bookmark_update(
+    request, bookmark_list, tag_cloud, details, bundles, domains, sidebar_summary=None
+):
     return turbo.stream(
         request,
         "bookmarks/updates/bookmark_view_stream.html",

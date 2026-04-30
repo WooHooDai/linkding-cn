@@ -120,6 +120,7 @@ def humanize_relative_date(value):
         return ""
     return utils.humanize_relative_date(value)
 
+
 @register.filter(name="humanize_absolute_date_short")
 def humanize_absolute_date_short(value):
     if value in (None, ""):
@@ -165,7 +166,7 @@ linker = Linker(callbacks=[*DEFAULT_CALLBACKS, schemeless_urls_to_https])
 def render_markdown(context, markdown_text):
     # naive approach to reusing the renderer for a single request
     # works for bookmark list for now
-    if not ("markdown_renderer" in context):
+    if "markdown_renderer" not in context:
         renderer = markdown.Markdown(extensions=["fenced_code", "nl2br"])
         context["markdown_renderer"] = renderer
     else:

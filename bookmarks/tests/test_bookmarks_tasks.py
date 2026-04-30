@@ -1,8 +1,8 @@
 from datetime import timedelta
 from unittest import mock
 
-import waybackpy
 import requests
+import waybackpy
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -10,7 +10,7 @@ from huey.contrib.djhuey import HUEY as huey
 from waybackpy.exceptions import WaybackError
 
 from bookmarks.models import BookmarkAsset, UserProfile
-from bookmarks.services import tasks, favicon_loader, website_loader
+from bookmarks.services import favicon_loader, tasks, website_loader
 from bookmarks.services.website_loader import WebsiteMetadata
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 
@@ -28,7 +28,6 @@ def create_wayback_machine_save_api_mock(
 
 
 class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
-
     def setUp(self):
         huey.immediate = True
         huey.results = True
@@ -66,8 +65,8 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
         self.mock_assets_create_snapshot = (
             self.mock_assets_create_snapshot_patcher.start()
         )
-        self.mock_assets_create_snapshot.side_effect = (
-            lambda asset: BookmarkAsset.objects.filter(id=asset.id).update(
+        self.mock_assets_create_snapshot.side_effect = lambda asset: (
+            BookmarkAsset.objects.filter(id=asset.id).update(
                 status=BookmarkAsset.STATUS_COMPLETE
             )
         )
@@ -463,8 +462,8 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
 
     def test_load_preview_image_task_propagates_retryable_loader_errors(self):
         bookmark = self.setup_bookmark()
-        self.mock_load_preview_image.side_effect = website_loader.RetryableMetadataError(
-            "boom"
+        self.mock_load_preview_image.side_effect = (
+            website_loader.RetryableMetadataError("boom")
         )
 
         with self.assertRaises(website_loader.RetryableMetadataError):

@@ -141,9 +141,16 @@ make serve
 make test
 ```
 
+### 代码检查
+
+使用 ruff 运行 Python 代码检查:
+```
+make lint
+```
+
 ### 格式化
 
-使用 black 格式化 Python，使用 prettier 格式化 Javascrip:
+使用 ruff 格式化 Python，使用 prettier 格式化 Javascrip:
 ```
 make format
 ```

@@ -189,63 +189,100 @@ class BookmarkBundleForm(forms.ModelForm):
         label=_("Favicon"),
         required=False,
     )
-    
+
     class Meta:
         model = BookmarkBundle
         fields = [
-            "name", "search", "any_tags", "all_tags", "excluded_tags", 
-            "show_count", "is_folder", "sort", "shared", "unread", "tagged",
-            "date_filter_by", "date_filter_type", "date_filter_start", 
-            "date_filter_end", "date_filter_relative_string", "html_snapshot",
-            "preview_image", "favicon"
+            "name",
+            "search",
+            "any_tags",
+            "all_tags",
+            "excluded_tags",
+            "show_count",
+            "is_folder",
+            "sort",
+            "shared",
+            "unread",
+            "tagged",
+            "date_filter_by",
+            "date_filter_type",
+            "date_filter_start",
+            "date_filter_end",
+            "date_filter_relative_string",
+            "html_snapshot",
+            "preview_image",
+            "favicon",
         ]
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         # 优先使用非空search_params
-        params = getattr(self.instance, 'search_params', None)
+        params = getattr(self.instance, "search_params", None)
         if params:
             for field_name, value in params.items():
                 if field_name in self.fields:
                     self.fields[field_name].initial = value
             return
-        
+
         # 否则，使用默认值
         defaults = BookmarkSearch.defaults
         for field_name in [
-            'sort', 'shared', 'unread', 'tagged', 'date_filter_by',
-            'date_filter_type', 'html_snapshot', 'preview_image', 'favicon'
+            "sort",
+            "shared",
+            "unread",
+            "tagged",
+            "date_filter_by",
+            "date_filter_type",
+            "html_snapshot",
+            "preview_image",
+            "favicon",
         ]:
             if field_name in self.fields:
                 self.fields[field_name].initial = defaults.get(field_name)
-    
+
     def save(self, commit=True):
         instance = super().save(commit=False)
 
         search_params = {}
         search_field_names = [
-            'sort', 'shared', 'unread', 'tagged', 'date_filter_by', 'date_filter_type',
-            'date_filter_start', 'date_filter_end', 'date_filter_relative_string',
-            'html_snapshot', 'preview_image', 'favicon'
+            "sort",
+            "shared",
+            "unread",
+            "tagged",
+            "date_filter_by",
+            "date_filter_type",
+            "date_filter_start",
+            "date_filter_end",
+            "date_filter_relative_string",
+            "html_snapshot",
+            "preview_image",
+            "favicon",
         ]
-        
+
         for field_name in search_field_names:
             if field_name in self.cleaned_data:
                 value = self.cleaned_data[field_name]
-                if value is not None and value != '':
-                    if field_name in ['date_filter_start', 'date_filter_end'] and value:
+                if value is not None and value != "":
+                    if field_name in ["date_filter_start", "date_filter_end"] and value:
                         search_params[field_name] = value.isoformat()
                     else:
                         search_params[field_name] = value
-                elif field_name in ['date_filter_by', 'date_filter_type']: # 日期筛选项若为空，使用默认值
-                    search_params[field_name] = value or BookmarkSearch.defaults.get(field_name)
-        
+                elif field_name in [
+                    "date_filter_by",
+                    "date_filter_type",
+                ]:  # 日期筛选项若为空，使用默认值
+                    search_params[field_name] = value or BookmarkSearch.defaults.get(
+                        field_name
+                    )
+
         instance.search_params = search_params
-        
+
         if commit:
             instance.save()
         return instance
+
+
 class TagForm(forms.ModelForm):
     class Meta:
         model = Tag
@@ -306,9 +343,8 @@ class TagMergeForm(forms.Form):
             target_tag = Tag.objects.get(name__iexact=target_tag_name, owner=self.user)
         except Tag.DoesNotExist:
             raise forms.ValidationError(
-                _('Tag "%(tag_name)s" does not exist.')
-                % {"tag_name": target_tag_name}
-            )
+                _('Tag "%(tag_name)s" does not exist.') % {"tag_name": target_tag_name}
+            ) from None
 
         return target_tag
 
@@ -326,9 +362,8 @@ class TagMergeForm(forms.Form):
                 merge_tags.append(tag)
             except Tag.DoesNotExist:
                 raise forms.ValidationError(
-                    _('Tag "%(tag_name)s" does not exist.')
-                    % {"tag_name": tag_name}
-                )
+                    _('Tag "%(tag_name)s" does not exist.') % {"tag_name": tag_name}
+                ) from None
 
         target_tag = self.cleaned_data.get("target_tag")
         if target_tag and target_tag in merge_tags:

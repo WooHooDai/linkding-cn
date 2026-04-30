@@ -5,34 +5,32 @@ from django.test import TestCase
 from django.utils import timezone
 
 from bookmarks.models import Bookmark, Tag
-from bookmarks.services import tasks
-from bookmarks.services import website_loader
+from bookmarks.services import tasks, website_loader
 from bookmarks.services.bookmarks import (
-    create_bookmark,
-    update_bookmark,
     archive_bookmark,
     archive_bookmarks,
-    unarchive_bookmark,
-    unarchive_bookmarks,
+    create_bookmark,
+    create_html_snapshots,
     delete_bookmarks,
-    tag_bookmarks,
-    untag_bookmarks,
+    enhance_with_website_metadata,
     mark_bookmarks_as_read,
     mark_bookmarks_as_unread,
-    share_bookmarks,
-    unshare_bookmarks,
-    enhance_with_website_metadata,
     refresh_bookmarks_metadata,
+    restore_bookmarks,
+    share_bookmarks,
+    tag_bookmarks,
     trash_bookmark,
     trash_bookmarks,
-    restore_bookmarks,
-    create_html_snapshots,
+    unarchive_bookmark,
+    unarchive_bookmarks,
+    unshare_bookmarks,
+    untag_bookmarks,
+    update_bookmark,
 )
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 
 
 class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
-
     def setUp(self) -> None:
         self.get_or_create_test_user()
 
@@ -1165,7 +1163,9 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
         bookmark1 = self.setup_bookmark()
         bookmark2 = self.setup_bookmark()
         bookmark3 = self.setup_bookmark()
-        trash_bookmarks([bookmark1.id, bookmark2.id, bookmark3.id], self.get_or_create_test_user())
+        trash_bookmarks(
+            [bookmark1.id, bookmark2.id, bookmark3.id], self.get_or_create_test_user()
+        )
         self.assertTrue(Bookmark.objects.get(id=bookmark1.id).is_deleted)
         self.assertTrue(Bookmark.objects.get(id=bookmark2.id).is_deleted)
         self.assertTrue(Bookmark.objects.get(id=bookmark3.id).is_deleted)
@@ -1173,18 +1173,18 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
     def test_trash_bookmarks_sets_date_deleted(self):
         bookmark1 = self.setup_bookmark()
         bookmark2 = self.setup_bookmark()
-        
+
         # 记录删除前的时间
         before_trash = timezone.now()
-        
+
         trash_bookmarks([bookmark1.id, bookmark2.id], self.get_or_create_test_user())
-        
+
         # 记录删除后的时间
         after_trash = timezone.now()
-        
+
         bookmark1.refresh_from_db()
         bookmark2.refresh_from_db()
-        
+
         # 验证date_deleted字段被正确设置
         self.assertIsNotNone(bookmark1.date_deleted)
         self.assertIsNotNone(bookmark2.date_deleted)
@@ -1196,19 +1196,19 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
     def test_restore_bookmarks_clears_date_deleted(self):
         bookmark1 = self.setup_bookmark()
         bookmark2 = self.setup_bookmark()
-        
+
         # 先删除书签
         trash_bookmarks([bookmark1.id, bookmark2.id], self.get_or_create_test_user())
-        
+
         # 验证date_deleted被设置
         bookmark1.refresh_from_db()
         bookmark2.refresh_from_db()
         self.assertIsNotNone(bookmark1.date_deleted)
         self.assertIsNotNone(bookmark2.date_deleted)
-        
+
         # 还原书签
         restore_bookmarks([bookmark1.id, bookmark2.id], self.get_or_create_test_user())
-        
+
         # 验证date_deleted被清除
         bookmark1.refresh_from_db()
         bookmark2.refresh_from_db()

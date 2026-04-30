@@ -3,14 +3,13 @@ from unittest import mock
 from django.test import TestCase
 from django.urls import reverse
 
-from bookmarks.models import Bookmark
 import bookmarks.forms
+from bookmarks.models import Bookmark
 from bookmarks.services import favicon_loader
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 
 
 class BookmarkNewViewTestCase(TestCase, BookmarkFactoryMixin):
-
     def setUp(self) -> None:
         user = self.get_or_create_test_user()
         self.client.force_login(user)
@@ -249,11 +248,12 @@ class BookmarkNewViewTestCase(TestCase, BookmarkFactoryMixin):
     def test_prefetch_favicon_should_return_cached_stale_file_without_downloading(self):
         self.user.profile.enable_favicons = True
         self.user.profile.save()
-        with mock.patch.object(
-            favicon_loader, "get_cached_favicon"
-        ) as mock_get_cached_favicon, mock.patch.object(
-            favicon_loader, "load_favicon"
-        ) as mock_load_favicon:
+        with (
+            mock.patch.object(
+                favicon_loader, "get_cached_favicon"
+            ) as mock_get_cached_favicon,
+            mock.patch.object(favicon_loader, "load_favicon") as mock_load_favicon,
+        ):
             mock_get_cached_favicon.return_value = favicon_loader.CachedFavicon(
                 filename="https_example_com.png",
                 is_stale=True,
@@ -273,11 +273,14 @@ class BookmarkNewViewTestCase(TestCase, BookmarkFactoryMixin):
     def test_prefetch_favicon_should_download_when_cache_is_missing(self):
         self.user.profile.enable_favicons = True
         self.user.profile.save()
-        with mock.patch.object(
-            favicon_loader, "get_cached_favicon", return_value=None
-        ) as mock_get_cached_favicon, mock.patch.object(
-            favicon_loader, "load_favicon", return_value="https_example_com.png"
-        ) as mock_load_favicon:
+        with (
+            mock.patch.object(
+                favicon_loader, "get_cached_favicon", return_value=None
+            ) as mock_get_cached_favicon,
+            mock.patch.object(
+                favicon_loader, "load_favicon", return_value="https_example_com.png"
+            ) as mock_load_favicon,
+        ):
             response = self.client.get(
                 reverse("linkding:bookmarks.prefetch_favicon")
                 + "?url=https://example.com"

@@ -304,19 +304,19 @@ LD_ENABLE_REFRESH_FAVICONS = os.getenv("LD_ENABLE_REFRESH_FAVICONS", True) in (
 # Previews settings
 LD_PREVIEW_FOLDER = os.path.join(BASE_DIR, "data", "previews")
 LD_PREVIEW_MAX_SIZE = int(os.getenv("LD_PREVIEW_MAX_SIZE", 5242880))
-LD_PREVIEW_ALLOWED_EXTENSIONS = [
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".gif",
-    ".svg",
-    ".webp"
-]
+LD_PREVIEW_ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".svg", ".webp"]
 
 # Website loader / snapshot settings
-LD_DEFAULT_USER_AGENT = os.getenv("LD_DEFAULT_USER_AGENT", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0")
-LD_CUSTOM_WEBSITE_LOADER_SETTINGS = os.getenv("LD_CUSTOM_WEBSITE_LOADER_SETTINGS","data/website_loader/settings.json")
-LD_CUSTOM_SNAPSHOT_PROCESSOR_SETTINGS = os.getenv("LD_CUSTOM_SNAPSHOT_PROCESSOR_SETTINGS", "data/snapshot_processor/settings.json")
+LD_DEFAULT_USER_AGENT = os.getenv(
+    "LD_DEFAULT_USER_AGENT",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0",
+)
+LD_CUSTOM_WEBSITE_LOADER_SETTINGS = os.getenv(
+    "LD_CUSTOM_WEBSITE_LOADER_SETTINGS", "data/website_loader/settings.json"
+)
+LD_CUSTOM_SNAPSHOT_PROCESSOR_SETTINGS = os.getenv(
+    "LD_CUSTOM_SNAPSHOT_PROCESSOR_SETTINGS", "data/snapshot_processor/settings.json"
+)
 
 # Asset / snapshot settings
 LD_ASSET_FOLDER = os.path.join(BASE_DIR, "data", "assets")
@@ -337,10 +337,10 @@ LD_SINGLEFILE_UBLOCK_OPTIONS = os.getenv(
     "LD_SINGLEFILE_UBLOCK_OPTIONS",
     shlex.join(
         [
-            '--browser-arg=--headless=new',
-            '--browser-arg=--user-data-dir=chromium-profile',
-            '--browser-arg=--no-sandbox',
-            '--browser-arg=--load-extension=uBOLite.chromium.mv3'
+            "--browser-arg=--headless=new",
+            "--browser-arg=--user-data-dir=chromium-profile",
+            "--browser-arg=--no-sandbox",
+            "--browser-arg=--load-extension=uBOLite.chromium.mv3",
         ]
     ),
 )
@@ -353,9 +353,7 @@ LD_SNAPSHOT_DOMAIN_COOLDOWN_MIN_SEC = int(
 LD_SNAPSHOT_DOMAIN_COOLDOWN_MAX_SEC = int(
     os.getenv("LD_SNAPSHOT_DOMAIN_COOLDOWN_MAX_SEC", 10)
 )
-LD_SNAPSHOT_DISPATCHER_TICK_SEC = int(
-    os.getenv("LD_SNAPSHOT_DISPATCHER_TICK_SEC", 1)
-)
+LD_SNAPSHOT_DISPATCHER_TICK_SEC = int(os.getenv("LD_SNAPSHOT_DISPATCHER_TICK_SEC", 1))
 
 # Monolith isn't used at the moment, as the local snapshot implementation
 # switched to single-file after the prototype. Keeping this around in case

@@ -12,13 +12,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import prefetch_related_objects
-from django.http import HttpResponseRedirect, HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
-from django.urls import reverse
+from django.urls import reverse, translate_url
 from django.utils import timezone
-from django.utils.translation import gettext as _, ngettext
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.urls import translate_url
+from django.utils.translation import gettext as _
+from django.utils.translation import ngettext
 from django.views.i18n import LANGUAGE_QUERY_PARAMETER
 from rest_framework.authtoken.models import Token
 
@@ -33,8 +33,7 @@ from bookmarks.models import (
     UserProfileCustomDomainRootForm,
     UserProfileQuickSettingsForm,
 )
-from bookmarks.services import exporter, tasks
-from bookmarks.services import importer
+from bookmarks.services import exporter, importer, tasks
 from bookmarks.type_defs import HttpRequest
 from bookmarks.utils import app_version
 
@@ -194,7 +193,11 @@ def update(request: HttpRequest):
                     "settings_success_message",
                 )
             else:
-                messages.success(request, _("No missing snapshots found."), "settings_success_message")
+                messages.success(
+                    request,
+                    _("No missing snapshots found."),
+                    "settings_success_message",
+                )
 
     return HttpResponseRedirect(reverse("linkding:settings.general"))
 
@@ -251,9 +254,7 @@ def _build_form_error_response(
     context_overrides = {
         "error_message": _("Settings update failed, check the form below for errors"),
         "error_details": [
-            message
-            for field_errors in form.errors.values()
-            for message in field_errors
+            message for field_errors in form.errors.values() for message in field_errors
         ],
     }
     if context_key:
@@ -280,9 +281,7 @@ def _parse_form_fields(raw_value: str | None) -> set[str]:
     if not raw_value:
         return set()
     return {
-        field_name.strip()
-        for field_name in raw_value.split(",")
-        if field_name.strip()
+        field_name.strip() for field_name in raw_value.split(",") if field_name.strip()
     }
 
 
@@ -444,7 +443,7 @@ def bookmark_import(request: HttpRequest):
                 result.failed,
             ) % {"count": result.failed}
             messages.error(request, err_msg, "settings_error_message")
-    except:
+    except Exception:
         logging.exception("Unexpected error during bookmark import")
         messages.error(
             request,
@@ -473,10 +472,12 @@ def bookmark_export(request: HttpRequest):
         response.write(file_content)
 
         return response
-    except:
+    except Exception:
         return general(
             request,
-            context_overrides={"export_error": _("An error occurred during bookmark export.")},
+            context_overrides={
+                "export_error": _("An error occurred during bookmark export.")
+            },
         )
 
 
@@ -506,7 +507,9 @@ def _get_other_language_choices():
     discovered_languages = []
     seen_codes = set()
 
-    for po_file in Path(django_settings.BASE_DIR).glob("locale/*/LC_MESSAGES/django.po"):
+    for po_file in Path(django_settings.BASE_DIR).glob(
+        "locale/*/LC_MESSAGES/django.po"
+    ):
         language_code = _normalize_language_code(po_file.parent.parent.name)
         if language_code in primary_language_codes or language_code in seen_codes:
             continue

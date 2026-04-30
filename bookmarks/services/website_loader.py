@@ -1,19 +1,17 @@
-import json
 import logging
 import os
 from dataclasses import dataclass
 from functools import lru_cache
+from http.cookies import SimpleCookie
 from urllib.parse import urljoin
 
-import importlib.util
 import requests
-from http.cookies import SimpleCookie
 from bs4 import BeautifulSoup
-from bookmarks.utils import get_domain, load_module, search_config_for_domain, load_settings
 from charset_normalizer import from_bytes
 from django.conf import settings
 from django.utils import timezone
-from json.decoder import JSONDecodeError
+
+from bookmarks.utils import load_module, search_config_for_domain
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +40,6 @@ class WebsiteMetadata:
         }
 
 
-
-
 # 缓存规则设置与解析规则（function）
 _settings_cache = None
 _loaders_module_cache = {}  # {loader_path: (module, mtime)}
@@ -58,9 +54,7 @@ def _normalize_metadata_result(url: str, metadata, source: str):
         return metadata
 
     if metadata is None:
-        logger.warning(
-            f"Metadata loader returned no result. url={url} source={source}"
-        )
+        logger.warning(f"Metadata loader returned no result. url={url} source={source}")
     else:
         logger.warning(
             f"Metadata loader returned invalid result. url={url} source={source} type={type(metadata).__name__}"
@@ -69,7 +63,9 @@ def _normalize_metadata_result(url: str, metadata, source: str):
     return _empty_metadata(url)
 
 
-def _call_metadata_loader(loader, url: str, config: dict = None, source: str = "default"):
+def _call_metadata_loader(
+    loader, url: str, config: dict = None, source: str = "default"
+):
     try:
         metadata = loader(url, config)
     except RetryableMetadataError:
@@ -89,19 +85,24 @@ def _call_metadata_loader(loader, url: str, config: dict = None, source: str = "
 
     return _normalize_metadata_result(url, metadata, source)
 
+
 # 获取网站标题、描述、首图
 # TODO: 目前一旦用户有自定义字段，就会失去缓存，暂时没考虑好传递config dict时的缓存方案
 def load_website_metadata(url: str, ignore_cache: bool = False):
     settings_path = settings.LD_CUSTOM_WEBSITE_LOADER_SETTINGS
     config = search_config_for_domain(url, settings_path, _settings_cache)
-        
+
     if config:
         loader_file = config.get("loader")
         if loader_file:
-            loader_path = os.path.join(os.path.dirname(settings_path), loader_file) if loader_file else None
+            loader_path = (
+                os.path.join(os.path.dirname(settings_path), loader_file)
+                if loader_file
+                else None
+            )
             if loader_path and os.path.exists(loader_path):
                 module = load_module(loader_path, _loaders_module_cache)
-                func = getattr(module, "_load_website_metadata")
+                func = module._load_website_metadata
                 return _call_metadata_loader(func, url, config, source=loader_path)
         else:
             return _load_website_metadata(url, config)
@@ -109,7 +110,6 @@ def load_website_metadata(url: str, ignore_cache: bool = False):
     if ignore_cache:
         return _load_website_metadata(url)
     return _load_website_metadata_cached(url)
-
 
 
 # Caching metadata avoids scraping again when saving bookmarks, in case the
@@ -163,9 +163,8 @@ def _load_website_metadata(url: str, config: dict = None):
             )
 
         # 获取预览图，依次查找如下标签：meta；link
-        image_tag_meta = (
-            soup.find("meta", attrs={"property": "og:image"}) 
-            or soup.find("meta", attrs={"name": "og:image"})
+        image_tag_meta = soup.find("meta", attrs={"property": "og:image"}) or soup.find(
+            "meta", attrs={"name": "og:image"}
         )
         image_tag_link = soup.find("link", attrs={"rel": "preload", "as": "image"})
 
@@ -199,34 +198,45 @@ def load_page(url: str, config: dict = None):
     timeout = config.get("timeout", 10) if config else 10
     proxies = config.get("proxy") if config else None
 
-
-    CHUNK_SIZE = config.get("chunk_size", 50*1024) if config else 50*1024
-    MAX_CONTENT_LIMIT = config.get("max_content_limit", 5000*1024) if config else 5000*1024
+    CHUNK_SIZE = config.get("chunk_size", 50 * 1024) if config else 50 * 1024
+    MAX_CONTENT_LIMIT = (
+        config.get("max_content_limit", 5000 * 1024) if config else 5000 * 1024
+    )
 
     size = 0
     content = None
     iteration = 0
     try:
         # Use with to ensure request gets closed even if it's only read partially
-        with requests.get(url, timeout=timeout, headers=headers, cookies=cookies, proxies=proxies, stream=True) as r:
+        with requests.get(
+            url,
+            timeout=timeout,
+            headers=headers,
+            cookies=cookies,
+            proxies=proxies,
+            stream=True,
+        ) as r:
             status_code = getattr(r, "status_code", 200)
             if status_code == 429 or status_code >= 500:
-                raise RetryableMetadataError(f"Retryable metadata response: {status_code}")
+                raise RetryableMetadataError(
+                    f"Retryable metadata response: {status_code}"
+                )
             if status_code >= 400:
-                raise NonRetryableMetadataError(f"Non-retryable metadata response: {status_code}")
+                raise NonRetryableMetadataError(
+                    f"Non-retryable metadata response: {status_code}"
+                )
 
             for chunk in r.iter_content(chunk_size=CHUNK_SIZE):
                 size += len(chunk)
                 iteration = iteration + 1
-                if content is None:
-                    content = chunk
-                else:
-                    content = content + chunk
+                content = chunk if content is None else content + chunk
 
-                logger.debug(f"Loaded chunk (iteration={iteration}, total={size / 1024})")
+                logger.debug(
+                    f"Loaded chunk (iteration={iteration}, total={size / 1024})"
+                )
 
                 # Stop reading if we have parsed end of head tag
-                end_of_head = "</head>".encode("utf-8")
+                end_of_head = b"</head>"
                 if end_of_head in content:
                     logger.debug(f"Found closing head tag after {size} bytes")
                     content = content.split(end_of_head)[0] + end_of_head
@@ -240,7 +250,9 @@ def load_page(url: str, config: dict = None):
     except (RetryableMetadataError, NonRetryableMetadataError):
         raise
     except requests.exceptions.RequestException as exc:
-        raise RetryableMetadataError(f"Retryable metadata request failure for {url}") from exc
+        raise RetryableMetadataError(
+            f"Retryable metadata request failure for {url}"
+        ) from exc
 
     # Use charset_normalizer to determine encoding that best matches the response content
     # Several sites seem to specify the response encoding incorrectly, so we ignore it and use custom logic instead
@@ -258,9 +270,11 @@ def load_full_page(url: str, config: dict = None):
     cookies = build_request_cookies(config)
     timeout = config.get("timeout", 30) if config else 30
     proxies = config.get("proxy") if config else None
-    
+
     try:
-        response = requests.get(url, timeout=timeout, headers=headers, cookies=cookies, proxies=proxies)
+        response = requests.get(
+            url, timeout=timeout, headers=headers, cookies=cookies, proxies=proxies
+        )
         response.raise_for_status()
         return response.text
     except requests.exceptions.RequestException as e:
@@ -279,7 +293,9 @@ def detect_content_type(
     url: str, config: dict | None = None, timeout: int = 10
 ) -> str | None:
     request_config = config if config is not None else get_request_config(url)
-    request_timeout = request_config.get("timeout", timeout) if request_config else timeout
+    request_timeout = (
+        request_config.get("timeout", timeout) if request_config else timeout
+    )
     request_kwargs = {
         "allow_redirects": True,
         "cookies": build_request_cookies(request_config),
@@ -330,13 +346,14 @@ def build_request_headers(config: dict = None):
     }
     if config and config.get("headers"):
         headers.update(config["headers"])
-        if config.get("headers",{}).get("Cookie"): # 剔除Cookie
+        if config.get("headers", {}).get("Cookie"):  # 剔除Cookie
             headers.pop("Cookie", None)
     return headers
 
+
 def build_request_cookies(config: dict = None) -> dict:
     cookies = {}
-    cookies_str = config.get("headers",{}).get("Cookie") if config else None
+    cookies_str = config.get("headers", {}).get("Cookie") if config else None
     if cookies_str:
         try:
             simple_cookie = SimpleCookie()

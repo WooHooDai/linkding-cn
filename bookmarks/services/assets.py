@@ -134,7 +134,10 @@ def _create_pdf_snapshot(asset: BookmarkAsset, request_config: dict | None = Non
 
         filename = _generate_asset_filename(asset, url, "pdf.gz")
         filepath = os.path.join(settings.LD_ASSET_FOLDER, filename)
-        with open(temp_filepath, "rb") as temp_file, gzip.open(filepath, "wb") as gz_file:
+        with (
+            open(temp_filepath, "rb") as temp_file,
+            gzip.open(filepath, "wb") as gz_file,
+        ):
             shutil.copyfileobj(temp_file, gz_file)
 
         timestamp = formats.date_format(asset.date_created, "SHORT_DATE_FORMAT")
@@ -266,7 +269,7 @@ def rename_asset(asset: BookmarkAsset, new_display_name: str):
 
     asset.bookmark.date_modified = timezone.now()
     _save_bookmark_updates(asset.bookmark, ["date_modified"])
-    
+
     logger.info(
         f"Successfully renamed asset. asset_id={asset.id} new_name={new_display_name}"
     )

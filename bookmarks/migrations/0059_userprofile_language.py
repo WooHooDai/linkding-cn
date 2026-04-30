@@ -4,15 +4,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('bookmarks', '0058_userprofile_default_mark_shared'),
+        ("bookmarks", "0058_userprofile_default_mark_shared"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='userprofile',
-            name='language',
-            field=models.CharField(choices=[('en', 'English'), ('zh-hans', 'Simplified Chinese')], default='en', max_length=20),
+            model_name="userprofile",
+            name="language",
+            field=models.CharField(
+                choices=[("en", "English"), ("zh-hans", "Simplified Chinese")],
+                default="en",
+                max_length=20,
+            ),
         ),
     ]

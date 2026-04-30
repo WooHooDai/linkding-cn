@@ -4,7 +4,6 @@ from bookmarks.models import parse_tag_string
 
 
 class TagTestCase(TestCase):
-
     def test_parse_tag_string_returns_list_of_tag_names(self):
         self.assertCountEqual(
             parse_tag_string("book, movie, album"), ["book", "movie", "album"]
@@ -40,7 +39,7 @@ class TagTestCase(TestCase):
         self.assertCountEqual(
             parse_tag_string("book,,movie,,,album"), ["album", "book", "movie"]
         )
-    
+
     def test_parse_tag_string_handles_duplicate_separators_with_spaces(self):
         self.assertCountEqual(
             parse_tag_string("book, ,movie, , ,album"), ["album", "book", "movie"]

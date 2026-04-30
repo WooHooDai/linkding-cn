@@ -5,13 +5,13 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.utils.translation import gettext as _
 
-from bookmarks.models import BookmarkBundle, BookmarkSearch
 from bookmarks.forms import BookmarkBundleForm
+from bookmarks.models import BookmarkBundle, BookmarkSearch
 from bookmarks.queries import parse_query_string
 from bookmarks.services import bundles
+from bookmarks.utils import parse_relative_date_string
 from bookmarks.views import access
 from bookmarks.views.contexts import ActiveBookmarkListContext
-from bookmarks.utils import parse_relative_date_string
 
 
 @login_required
@@ -67,7 +67,7 @@ def _handle_edit(request: HttpRequest, template: str, bundle: BookmarkBundle = N
         shared_param = request.GET.get("shared")
         if shared_param:
             initial_data["shared"] = shared_param
-            
+
         # Prefill unread, potentially overriding !unread from query
         unread_param = request.GET.get("unread")
         if unread_param:
@@ -75,44 +75,54 @@ def _handle_edit(request: HttpRequest, template: str, bundle: BookmarkBundle = N
 
         # Prefill date filters
         date_filter_fields = [
-            'date_filter_by', 'date_filter_type',
-            'date_filter_start', 'date_filter_end',
-            'date_filter_relative_preset', 'date_filter_relative_value',
-            'date_filter_relative_unit', 'relative_filter_mode'
+            "date_filter_by",
+            "date_filter_type",
+            "date_filter_start",
+            "date_filter_end",
+            "date_filter_relative_preset",
+            "date_filter_relative_value",
+            "date_filter_relative_unit",
+            "relative_filter_mode",
         ]
         for field in date_filter_fields:
             param_value = request.GET.get(field)
             if param_value:
                 initial_data[field] = param_value
-            
 
     form = BookmarkBundleForm(form_data, instance=bundle, initial=initial_data)
 
-    if request.method == "POST":
-        if form.is_valid():
-            instance = form.save(commit=False)
+    if request.method == "POST" and form.is_valid():
+        instance = form.save(commit=False)
 
-            if bundle is None:
-                instance.order = None
-                bundles.create_bundle(instance, request.user)
-            else:
-                instance.save()
+        if bundle is None:
+            instance.order = None
+            bundles.create_bundle(instance, request.user)
+        else:
+            instance.save()
 
-            messages.success(request, _("Bundle saved successfully."))
-            return HttpResponseRedirect(reverse("linkding:bundles.index"))
+        messages.success(request, _("Bundle saved successfully."))
+        return HttpResponseRedirect(reverse("linkding:bundles.index"))
 
     status = 422 if request.method == "POST" and not form.is_valid() else 200
     bookmark_list = _get_bookmark_list_preview(request, bundle, initial_data)
-    
+
     # 解析相对日期字符串，用于前端显示
     bundle_date_filter_relative_value = None
     bundle_date_filter_relative_unit = None
-    if bundle and bundle.search_params and 'date_filter_relative_string' in bundle.search_params:
-        bundle_date_filter_relative_value, bundle_date_filter_relative_unit =   parse_relative_date_string(bundle.search_params['date_filter_relative_string'])
-    
+    if (
+        bundle
+        and bundle.search_params
+        and "date_filter_relative_string" in bundle.search_params
+    ):
+        bundle_date_filter_relative_value, bundle_date_filter_relative_unit = (
+            parse_relative_date_string(
+                bundle.search_params["date_filter_relative_string"]
+            )
+        )
+
     context = {
-        "form": form, 
-        "bundle": bundle, 
+        "form": form,
+        "bundle": bundle,
         "bookmark_list": bookmark_list,
         "bundle_date_filter_relative_value": bundle_date_filter_relative_value,
         "bundle_date_filter_relative_unit": bundle_date_filter_relative_unit,
@@ -157,8 +167,8 @@ def _get_bookmark_list_preview(
                 form_data[key] = value
 
         form_data["name"] = "Preview Bundle"  # Set dummy name for form validation
-        _process_date_filter_fields(form_data) # 处理日期筛选字段
-        
+        _process_date_filter_fields(form_data)  # 处理日期筛选字段
+
         form = BookmarkBundleForm(form_data)
         preview_bundle = form.save(commit=False)
         search = preview_bundle.search_object
@@ -167,21 +177,24 @@ def _get_bookmark_list_preview(
     bookmark_list.is_preview = True
     return bookmark_list
 
+
 def _process_date_filter_fields(form_data):
     """处理日期筛选字段，生成相对日期字符串"""
-    form_data['date_filter_relative_string'] = ''
+    form_data["date_filter_relative_string"] = ""
 
-    date_filter_by = form_data.get('date_filter_by')
-    date_filter_type = form_data.get('date_filter_type')
-    if date_filter_by == 'off' or date_filter_type != 'relative':
+    date_filter_by = form_data.get("date_filter_by")
+    date_filter_type = form_data.get("date_filter_type")
+    if date_filter_by == "off" or date_filter_type != "relative":
         return
 
-    relative_filter_mode = form_data.get('relative_filter_mode')
-    if relative_filter_mode == 'preset':
-        preset_value = form_data.get('date_filter_relative_preset')
-        form_data['date_filter_relative_string'] = preset_value if preset_value else ''
-    if relative_filter_mode == 'custom':
-        value = form_data.get('date_filter_relative_value')
-        unit = form_data.get('date_filter_relative_unit')
-        unit = unit[:-1] if unit.endswith('s') else unit
-        form_data['date_filter_relative_string'] = f'last_{value}_{unit}' if value and unit else ''
+    relative_filter_mode = form_data.get("relative_filter_mode")
+    if relative_filter_mode == "preset":
+        preset_value = form_data.get("date_filter_relative_preset")
+        form_data["date_filter_relative_string"] = preset_value if preset_value else ""
+    if relative_filter_mode == "custom":
+        value = form_data.get("date_filter_relative_value")
+        unit = form_data.get("date_filter_relative_unit")
+        unit = unit[:-1] if unit.endswith("s") else unit
+        form_data["date_filter_relative_string"] = (
+            f"last_{value}_{unit}" if value and unit else ""
+        )

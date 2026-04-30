@@ -1,8 +1,9 @@
 from unittest import mock
-import requests
-from bookmarks.services import website_loader
 
+import requests
 from django.test import TestCase
+
+from bookmarks.services import website_loader
 
 
 class MockStreamingResponse:
@@ -20,7 +21,7 @@ class MockStreamingResponse:
             self.chunks.append(chunk.encode("utf-8"))
 
             if index == insert_head_after_chunk:
-                self.chunks.append("</head>".encode("utf-8"))
+                self.chunks.append(b"</head>")
 
     def iter_content(self, **kwargs):
         return self.chunks
@@ -100,7 +101,7 @@ class WebsiteLoaderTestCase(TestCase):
     def test_load_page_removes_bytes_after_end_of_head(self):
         with mock.patch("requests.get") as mock_get:
             mock_response = MockStreamingResponse(num_chunks=1, chunk_size=0)
-            mock_response.chunks[0] = "<head>人</head>".encode("utf-8")
+            mock_response.chunks[0] = "<head>人</head>".encode()
             # add a single byte that can't be decoded to utf-8
             mock_response.chunks[0] += 0xFF.to_bytes(1, "big")
             mock_get.return_value = mock_response
@@ -110,11 +111,11 @@ class WebsiteLoaderTestCase(TestCase):
             self.assertEqual(content, "<head>人</head>")
 
     def test_load_page_raises_retryable_error_on_timeout(self):
-        with mock.patch(
-            "requests.get", side_effect=requests.exceptions.Timeout("boom")
+        with (
+            mock.patch("requests.get", side_effect=requests.exceptions.Timeout("boom")),
+            self.assertRaises(website_loader.RetryableMetadataError),
         ):
-            with self.assertRaises(website_loader.RetryableMetadataError):
-                website_loader.load_page("https://example.com")
+            website_loader.load_page("https://example.com")
 
     def test_load_page_raises_retryable_error_on_rate_limit(self):
         with mock.patch("requests.get") as mock_get:
@@ -223,12 +224,16 @@ class WebsiteLoaderTestCase(TestCase):
         custom_loader_module = mock.Mock()
         custom_loader_module._load_website_metadata.return_value = None
 
-        with mock.patch(
-            "bookmarks.services.website_loader.search_config_for_domain",
-            return_value={"loader": "custom.py"},
-        ), mock.patch("os.path.exists", return_value=True), mock.patch(
-            "bookmarks.services.website_loader.load_module",
-            return_value=custom_loader_module,
+        with (
+            mock.patch(
+                "bookmarks.services.website_loader.search_config_for_domain",
+                return_value={"loader": "custom.py"},
+            ),
+            mock.patch("os.path.exists", return_value=True),
+            mock.patch(
+                "bookmarks.services.website_loader.load_module",
+                return_value=custom_loader_module,
+            ),
         ):
             metadata = website_loader.load_website_metadata("https://x.com/example")
 

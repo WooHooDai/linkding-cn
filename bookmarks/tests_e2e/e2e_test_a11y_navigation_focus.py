@@ -1,5 +1,5 @@
 from django.urls import reverse
-from playwright.sync_api import sync_playwright, expect
+from playwright.sync_api import expect, sync_playwright
 
 from bookmarks.tests_e2e.helpers import LinkdingE2ETestCase
 

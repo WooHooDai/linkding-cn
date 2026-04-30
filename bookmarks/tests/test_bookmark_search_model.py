@@ -107,7 +107,11 @@ class BookmarkSearchModelTest(TestCase, BookmarkFactoryMixin):
 
         # params are default values
         search = BookmarkSearch(
-            q="", sort=BookmarkSearch.SORT_ADDED_DESC, user="", bundle=None, shared=BookmarkSearch.FILTER_SHARED_OFF
+            q="",
+            sort=BookmarkSearch.SORT_ADDED_DESC,
+            user="",
+            bundle=None,
+            shared=BookmarkSearch.FILTER_SHARED_OFF,
         )
         self.assertEqual(search.query_params, {})
 
@@ -189,7 +193,10 @@ class BookmarkSearchModelTest(TestCase, BookmarkFactoryMixin):
 
         # params are default values
         bookmark_search = BookmarkSearch(
-            q="", sort=BookmarkSearch.SORT_ADDED_DESC, user="", shared=BookmarkSearch.FILTER_SHARED_OFF
+            q="",
+            sort=BookmarkSearch.SORT_ADDED_DESC,
+            user="",
+            shared=BookmarkSearch.FILTER_SHARED_OFF,
         )
         modified_params = bookmark_search.modified_params
         self.assertEqual(len(modified_params), 0)
@@ -260,7 +267,10 @@ class BookmarkSearchModelTest(TestCase, BookmarkFactoryMixin):
 
         # params are default values
         bookmark_search = BookmarkSearch(
-            q="", sort=BookmarkSearch.SORT_ADDED_DESC, user="", shared=BookmarkSearch.FILTER_SHARED_OFF
+            q="",
+            sort=BookmarkSearch.SORT_ADDED_DESC,
+            user="",
+            shared=BookmarkSearch.FILTER_SHARED_OFF,
         )
         self.assertFalse(bookmark_search.has_modifications)
 

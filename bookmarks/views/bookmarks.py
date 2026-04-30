@@ -1,15 +1,14 @@
-import urllib.parse
 import time
-import os
+import urllib.parse
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db.models import QuerySet
 from django.http import (
-    JsonResponse,
-    HttpResponseRedirect,
     HttpResponseBadRequest,
     HttpResponseForbidden,
+    HttpResponseRedirect,
+    JsonResponse,
 )
 from django.shortcuts import render
 from django.urls import reverse
@@ -22,31 +21,36 @@ from bookmarks.models import (
     BookmarkSearch,
     UserProfile,
 )
-from bookmarks.services import assets as asset_actions, tasks, website_loader, preview_image_loader, favicon_loader
+from bookmarks.services import assets as asset_actions
+from bookmarks.services import (
+    favicon_loader,
+    preview_image_loader,
+    tasks,
+    website_loader,
+)
 from bookmarks.services.bookmarks import (
     archive_bookmark,
     archive_bookmarks,
-    unarchive_bookmark,
-    unarchive_bookmarks,
+    create_html_snapshots,
     delete_bookmarks,
-    tag_bookmarks,
-    untag_bookmarks,
     mark_bookmarks_as_read,
     mark_bookmarks_as_unread,
-    share_bookmarks,
-    unshare_bookmarks,
     refresh_bookmarks_metadata,
-    trash_bookmark,
-    trash_bookmarks,
+    remove_all_html_snapshots,
     restore_bookmark,
     restore_bookmarks,
-    create_html_snapshots,
-    remove_all_html_snapshots,
+    share_bookmarks,
+    tag_bookmarks,
+    trash_bookmark,
+    trash_bookmarks,
+    unarchive_bookmark,
+    unarchive_bookmarks,
+    unshare_bookmarks,
+    untag_bookmarks,
 )
 from bookmarks.type_defs import HttpRequest
 from bookmarks.utils import get_safe_return_url
 from bookmarks.views import access, contexts, partials, turbo
-
 
 SIDEBAR_MODULE_TEMPLATES = {
     UserProfile.SIDEBAR_MODULE_SUMMARY: "bookmarks/sidebar_user_summary.html",
@@ -182,6 +186,7 @@ def shared(request: HttpRequest):
         },
     )
 
+
 @login_required
 def trashed(request: HttpRequest):
     if request.method == "POST":
@@ -189,7 +194,9 @@ def trashed(request: HttpRequest):
 
     # 如果用户的回收站搜索偏好为空，设置默认的删除时间降序
     if not request.user_profile.trash_search_preferences:
-        request.user_profile.trash_search_preferences = {"sort": BookmarkSearch.SORT_DELETED_DESC}
+        request.user_profile.trash_search_preferences = {
+            "sort": BookmarkSearch.SORT_DELETED_DESC
+        }
         request.user_profile.save()
 
     search = BookmarkSearch.from_request(
@@ -285,20 +292,27 @@ def _get_create_bundle_query_string(search: BookmarkSearch) -> str:
     This includes both explicit query parameters and default preferences.
     """
     params = search.query_params.copy()
-    ensure_params = ['sort', 'shared', 'unread', 'date_filter_by', 'date_filter_type', 'date_filter_relative_string']
-    
+    ensure_params = [
+        "sort",
+        "shared",
+        "unread",
+        "date_filter_by",
+        "date_filter_type",
+        "date_filter_relative_string",
+    ]
+
     for param in ensure_params:
         if param not in params:
             value = getattr(search, param)
-            if value is not None and value != '':
+            if value is not None and value != "":
                 params[param] = value
-                
-    if search.date_filter_type == 'absolute':
-        if 'date_filter_start' not in params and search.date_filter_start:
-            params['date_filter_start'] = search.date_filter_start.isoformat()
-        if 'date_filter_end' not in params and search.date_filter_end:
-            params['date_filter_end'] = search.date_filter_end.isoformat()
-            
+
+    if search.date_filter_type == "absolute":
+        if "date_filter_start" not in params and search.date_filter_start:
+            params["date_filter_start"] = search.date_filter_start.isoformat()
+        if "date_filter_end" not in params and search.date_filter_end:
+            params["date_filter_end"] = search.date_filter_end.isoformat()
+
     return urllib.parse.urlencode(params)
 
 
@@ -307,21 +321,21 @@ def search_action(request: HttpRequest):
         if not request.user.is_authenticated:
             return HttpResponseForbidden()
         search = BookmarkSearch.from_request(request, request.POST)
-        
+
         # 根据当前页面路径决定保存到哪个偏好设置字段
-        if request.path.endswith('/trash') or request.path.endswith('/trash/'):
+        if request.path.endswith("/trash") or request.path.endswith("/trash/"):
             # 回收站页面，保存到trash_search_preferences
             request.user_profile.trash_search_preferences = search.preferences_dict
         else:
             # 其他页面，保存到search_preferences
             request.user_profile.search_preferences = search.preferences_dict
-        
+
         request.user_profile.save()
 
     # Handle random sort request
     if "sort" in request.POST and request.POST["sort"] == "random":
         new_seed = int(time.time())
-        request.session['random_sort_seed'] = new_seed
+        request.session["random_sort_seed"] = new_seed
 
     # redirect to base url including new query params
     search = BookmarkSearch.from_request(
@@ -343,13 +357,12 @@ def convert_tag_string(tag_string: str):
 @login_required
 def new(request: HttpRequest):
     form = BookmarkForm(request)
-    if request.method == "POST":
-        if form.is_valid():
-            form.save()
-            if form.is_auto_close:
-                return HttpResponseRedirect(reverse("linkding:bookmarks.close"))
-            else:
-                return HttpResponseRedirect(reverse("linkding:bookmarks.index"))
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        if form.is_auto_close:
+            return HttpResponseRedirect(reverse("linkding:bookmarks.close"))
+        else:
+            return HttpResponseRedirect(reverse("linkding:bookmarks.index"))
 
     status = 422 if request.method == "POST" and not form.is_valid() else 200
     context = {"form": form, "return_url": reverse("linkding:bookmarks.index")}
@@ -365,13 +378,17 @@ def edit(request: HttpRequest, bookmark_id: int):
         request.GET.get("return_url"), reverse("linkding:bookmarks.index")
     )
 
-    if request.method == "POST":
-        if form.is_valid():
-            form.save()
-            return HttpResponseRedirect(return_url)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        return HttpResponseRedirect(return_url)
 
     status = 422 if request.method == "POST" and not form.is_valid() else 200
-    context = {"form": form, "bookmark_id": bookmark_id, "return_url": return_url, "preview_image_file": bookmark.preview_image_file}
+    context = {
+        "form": form,
+        "bookmark_id": bookmark_id,
+        "return_url": return_url,
+        "preview_image_file": bookmark.preview_image_file,
+    }
 
     return render(request, "bookmarks/edit.html", context, status=status)
 
@@ -380,13 +397,16 @@ def remove(request: HttpRequest, bookmark_id: int | str):
     bookmark = access.bookmark_write(request, bookmark_id)
     bookmark.delete()
 
+
 def trash(request: HttpRequest, bookmark_id: int | str):
     bookmark = access.bookmark_write(request, bookmark_id)
     trash_bookmark(bookmark)
 
+
 def restore(request: HttpRequest, bookmark_id: int | str):
     bookmark = access.bookmark_write(request, bookmark_id)
     restore_bookmark(bookmark)
+
 
 def archive(request: HttpRequest, bookmark_id: int | str):
     bookmark = access.bookmark_write(request, bookmark_id)
@@ -435,7 +455,7 @@ def prefetch_favicon(request: HttpRequest):
 
 
 def load_temporary_preview_image(request: HttpRequest):
-    image_url = request.GET.get('url')
+    image_url = request.GET.get("url")
     if not image_url:
         return HttpResponseBadRequest(_("URL parameter is missing"))
     try:
@@ -444,9 +464,7 @@ def load_temporary_preview_image(request: HttpRequest):
         tasks.delete_preview_image_temp_file.schedule(args=(image_path,), delay=600)
 
         temp_path = settings.STATIC_URL + "tmp" + "/" + image_name
-        result = {
-            "temp_path": temp_path
-        }
+        result = {"temp_path": temp_path}
         print(result)
         print(JsonResponse(result))
         return JsonResponse(result)
@@ -454,6 +472,7 @@ def load_temporary_preview_image(request: HttpRequest):
         return HttpResponseBadRequest(
             _("Failed to download image: %(error)s") % {"error": e}
         )
+
 
 def create_html_snapshot(request: HttpRequest, bookmark_id: int | str):
     bookmark = access.bookmark_write(request, bookmark_id)
@@ -544,7 +563,9 @@ def shared_action(request: HttpRequest):
 def trashed_action(request: HttpRequest):
     # 如果用户的回收站搜索偏好为空，设置默认的删除时间降序
     if not request.user_profile.trash_search_preferences:
-        request.user_profile.trash_search_preferences = {"sort": BookmarkSearch.SORT_DELETED_DESC}
+        request.user_profile.trash_search_preferences = {
+            "sort": BookmarkSearch.SORT_DELETED_DESC
+        }
         request.user_profile.save()
 
     search = BookmarkSearch.from_request(
@@ -606,35 +627,35 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
             # Use only selected bookmarks
             bookmark_ids = request.POST.getlist("bookmark_id")
 
-        if "bulk_archive" == bulk_action:
+        if bulk_action == "bulk_archive":
             return archive_bookmarks(bookmark_ids, request.user)
-        if "bulk_unarchive" == bulk_action:
+        if bulk_action == "bulk_unarchive":
             return unarchive_bookmarks(bookmark_ids, request.user)
-        if "bulk_delete" == bulk_action:
+        if bulk_action == "bulk_delete":
             return delete_bookmarks(bookmark_ids, request.user)
-        if "bulk_tag" == bulk_action:
+        if bulk_action == "bulk_tag":
             tag_string = convert_tag_string(request.POST["bulk_tag_string"])
             return tag_bookmarks(bookmark_ids, tag_string, request.user)
-        if "bulk_untag" == bulk_action:
+        if bulk_action == "bulk_untag":
             tag_string = convert_tag_string(request.POST["bulk_tag_string"])
             return untag_bookmarks(bookmark_ids, tag_string, request.user)
-        if "bulk_read" == bulk_action:
+        if bulk_action == "bulk_read":
             return mark_bookmarks_as_read(bookmark_ids, request.user)
-        if "bulk_unread" == bulk_action:
+        if bulk_action == "bulk_unread":
             return mark_bookmarks_as_unread(bookmark_ids, request.user)
-        if "bulk_share" == bulk_action:
+        if bulk_action == "bulk_share":
             return share_bookmarks(bookmark_ids, request.user)
-        if "bulk_unshare" == bulk_action:
+        if bulk_action == "bulk_unshare":
             return unshare_bookmarks(bookmark_ids, request.user)
-        if "bulk_refresh" == bulk_action:
+        if bulk_action == "bulk_refresh":
             return refresh_bookmarks_metadata(bookmark_ids, request.user)
-        if "bulk_trash" == bulk_action:
+        if bulk_action == "bulk_trash":
             return trash_bookmarks(bookmark_ids, request.user)
-        if "bulk_restore" == bulk_action:
+        if bulk_action == "bulk_restore":
             return restore_bookmarks(bookmark_ids, request.user)
-        if "bulk_snapshot" == bulk_action:
+        if bulk_action == "bulk_snapshot":
             return create_html_snapshots(bookmark_ids, request.user)
-        if "bulk_remove_snapshot" == bulk_action:
+        if bulk_action == "bulk_remove_snapshot":
             return remove_all_html_snapshots(bookmark_ids, request.user)
 
 
@@ -650,7 +671,7 @@ def read(request: HttpRequest, bookmark_id: int):
         content = website_loader.load_full_page(bookmark.url)
     except Exception as e:
         content = f"<html><body><p>{_('Unable to load page content: %(error)s') % {'error': str(e)}}</p></body></html>"
-    
+
     return render(
         request,
         "bookmarks/read.html",

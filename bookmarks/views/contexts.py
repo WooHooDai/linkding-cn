@@ -2,7 +2,6 @@ import calendar
 import re
 import urllib.parse
 from datetime import date, datetime, timedelta
-from typing import Set, List
 
 from django.conf import settings
 from django.core.paginator import Paginator
@@ -10,33 +9,32 @@ from django.db import models
 from django.db.models.functions import TruncDate
 from django.http import Http404, QueryDict
 from django.urls import reverse
-from django.utils.html import format_html
 from django.utils import timezone
-from django.utils.translation import gettext as _, ngettext
+from django.utils.html import format_html
+from django.utils.translation import gettext as _
+from django.utils.translation import ngettext
+from pypinyin import Style, pinyin
 
-from bookmarks import queries
-from bookmarks import utils
+from bookmarks import queries, utils
 from bookmarks.models import (
     Bookmark,
     BookmarkAsset,
     BookmarkBundle,
     BookmarkSearch,
+    Tag,
     User,
     UserProfile,
-    Tag,
 )
 from bookmarks.services.search_query_parser import (
-    parse_search_query,
-    strip_tag_from_query,
-    extract_tag_names_from_query,
     OrExpression,
     SearchQueryParseError,
+    extract_tag_names_from_query,
+    parse_search_query,
+    strip_tag_from_query,
 )
 from bookmarks.services.wayback import generate_fallback_webarchive_url
 from bookmarks.type_defs import HttpRequest
 from bookmarks.views import access
-
-from pypinyin import pinyin, Style
 
 CJK_RE = re.compile(r"[\u4e00-\u9fff]+")
 
@@ -192,20 +190,32 @@ class BookmarkItem:
         self.css_classes = " ".join(css_classes)
 
         if not bookmark.is_deleted:
-            if profile.bookmark_date_display == UserProfile.BOOKMARK_DATE_DISPLAY_RELATIVE:
+            if (
+                profile.bookmark_date_display
+                == UserProfile.BOOKMARK_DATE_DISPLAY_RELATIVE
+            ):
                 self.display_date = utils.humanize_relative_date(bookmark.date_added)
             elif (
-                profile.bookmark_date_display == UserProfile.BOOKMARK_DATE_DISPLAY_ABSOLUTE
+                profile.bookmark_date_display
+                == UserProfile.BOOKMARK_DATE_DISPLAY_ABSOLUTE
             ):
-                self.display_date = utils.humanize_absolute_date_short(bookmark.date_added)
+                self.display_date = utils.humanize_absolute_date_short(
+                    bookmark.date_added
+                )
         else:
             # 若书签已被删除，则显示删除日期
-            if profile.bookmark_date_display == UserProfile.BOOKMARK_DATE_DISPLAY_RELATIVE:
+            if (
+                profile.bookmark_date_display
+                == UserProfile.BOOKMARK_DATE_DISPLAY_RELATIVE
+            ):
                 self.display_date = utils.humanize_relative_date(bookmark.date_deleted)
             elif (
-                profile.bookmark_date_display == UserProfile.BOOKMARK_DATE_DISPLAY_ABSOLUTE
+                profile.bookmark_date_display
+                == UserProfile.BOOKMARK_DATE_DISPLAY_ABSOLUTE
             ):
-                self.display_date = utils.humanize_absolute_date_short(bookmark.date_deleted)
+                self.display_date = utils.humanize_absolute_date_short(
+                    bookmark.date_deleted
+                )
 
         self.show_notes_button = bookmark.notes and not profile.permanent_notes
         self.show_mark_as_read = is_editable and bookmark.unread
@@ -299,6 +309,7 @@ class SidebarUserSummaryContext:
         "date_filter_start",
         "date_filter_end",
     )
+
     def __init__(self, request: HttpRequest, search: BookmarkSearch) -> None:
         self.request = request
         self.search = search
@@ -335,7 +346,9 @@ class SidebarUserSummaryContext:
         self.selected_start_iso = (
             self.selected_start.isoformat() if self.selected_start else ""
         )
-        self.selected_end_iso = self.selected_end.isoformat() if self.selected_end else ""
+        self.selected_end_iso = (
+            self.selected_end.isoformat() if self.selected_end else ""
+        )
 
         current_month_start = today.replace(day=1)
         earliest_month_start = self.selectable_start_day.replace(day=1)
@@ -405,7 +418,9 @@ class SidebarUserSummaryContext:
                 "target_week": target_week,
             }
         else:
-            target_month = self._get_visible_heatmap_month_start(today).strftime("%Y-%m")
+            target_month = self._get_visible_heatmap_month_start(today).strftime(
+                "%Y-%m"
+            )
             self.mode_switch = {
                 "key": self.MODE_CALENDAR,
                 "url": self._build_url(),
@@ -417,9 +432,7 @@ class SidebarUserSummaryContext:
         previous_month = self._shift_month(self.visible_month_start, -1)
         next_month = self._shift_month(self.visible_month_start, 1)
         self.previous_month_url = (
-            self._build_url()
-            if previous_month >= earliest_month_start
-            else None
+            self._build_url() if previous_month >= earliest_month_start else None
         )
         self.previous_month_key = (
             previous_month.strftime("%Y-%m")
@@ -427,9 +440,7 @@ class SidebarUserSummaryContext:
             else None
         )
         self.next_month_url = (
-            self._build_url()
-            if next_month <= current_month_start
-            else None
+            self._build_url() if next_month <= current_month_start else None
         )
         self.next_month_key = (
             next_month.strftime("%Y-%m") if next_month <= current_month_start else None
@@ -437,9 +448,7 @@ class SidebarUserSummaryContext:
         previous_week = self.visible_week_start - timedelta(days=7)
         next_week = self.visible_week_start + timedelta(days=7)
         self.previous_week_url = (
-            self._build_url()
-            if previous_week >= self.earliest_week_start
-            else None
+            self._build_url() if previous_week >= self.earliest_week_start else None
         )
         self.previous_week_key = (
             self._format_week_key(previous_week)
@@ -447,12 +456,12 @@ class SidebarUserSummaryContext:
             else None
         )
         self.next_week_url = (
-            self._build_url()
-            if next_week <= self.current_week_start
-            else None
+            self._build_url() if next_week <= self.current_week_start else None
         )
         self.next_week_key = (
-            self._format_week_key(next_week) if next_week <= self.current_week_start else None
+            self._format_week_key(next_week)
+            if next_week <= self.current_week_start
+            else None
         )
 
         self.absolute_range_url = self._build_absolute_range_url()
@@ -500,7 +509,9 @@ class SidebarUserSummaryContext:
                         value=value,
                         day_number=value.day,
                         count=count,
-                        url=self._build_absolute_day_url(value) if is_available else None,
+                        url=self._build_absolute_day_url(value)
+                        if is_available
+                        else None,
                         level=self._heatmap_level(count) if is_current_month else 0,
                         title=self._build_day_title(value, count),
                         is_available=is_available,
@@ -523,14 +534,17 @@ class SidebarUserSummaryContext:
 
         heatmap_end = self.visible_week_start + timedelta(days=6)
         heatmap_start = self.visible_week_start - timedelta(days=(7 * 14))
-        daily_counts = self._load_daily_counts(active_bookmarks, heatmap_start, heatmap_end)
+        daily_counts = self._load_daily_counts(
+            active_bookmarks, heatmap_start, heatmap_end
+        )
 
         weeks = []
         week_start = heatmap_start
         while week_start <= heatmap_end:
             week_url = (
                 self._build_absolute_week_url(week_start, today)
-                if self.selectable_start_day <= min(today, week_start + timedelta(days=6))
+                if self.selectable_start_day
+                <= min(today, week_start + timedelta(days=6))
                 else None
             )
             week = []
@@ -563,7 +577,9 @@ class SidebarUserSummaryContext:
         return weeks
 
     @staticmethod
-    def _load_daily_counts(active_bookmarks, start_day: date, end_day: date) -> dict[date, int]:
+    def _load_daily_counts(
+        active_bookmarks, start_day: date, end_day: date
+    ) -> dict[date, int]:
         return {
             row["day"]: row["total"]
             for row in (
@@ -571,7 +587,9 @@ class SidebarUserSummaryContext:
                     date_added__date__gte=start_day,
                     date_added__date__lte=end_day,
                 )
-                .annotate(day=TruncDate("date_added", tzinfo=timezone.get_current_timezone()))
+                .annotate(
+                    day=TruncDate("date_added", tzinfo=timezone.get_current_timezone())
+                )
                 .values("day")
                 .annotate(total=models.Count("id"))
                 .order_by("day")
@@ -826,8 +844,10 @@ class SidebarUserSummaryContext:
     def _build_heatmap_week_headers(self):
         headers = []
         week_start = self.visible_week_start - timedelta(days=(7 * 14))
-        for _ in range(15):
-            iso_year, iso_week, _ = (week_start + timedelta(days=1)).isocalendar()
+        for _week_index in range(15):
+            iso_year, iso_week, _iso_weekday = (
+                week_start + timedelta(days=1)
+            ).isocalendar()
             headers.append(
                 {
                     "label": f"{iso_week:02d}",
@@ -894,7 +914,9 @@ class SidebarUserSummaryContext:
                 return week["start"]
 
         earlier_weeks = [
-            week for week in year_weeks if week["week_number"] < self.visible_week_number
+            week
+            for week in year_weeks
+            if week["week_number"] < self.visible_week_number
         ]
         if earlier_weeks:
             return earlier_weeks[-1]["start"]
@@ -947,7 +969,9 @@ class SidebarUserSummaryContext:
         return [
             {
                 "key": "weekdays",
-                "label": _("Hide weekdays") if self.show_weekdays else _("Show weekdays"),
+                "label": _("Hide weekdays")
+                if self.show_weekdays
+                else _("Show weekdays"),
                 "url": self._build_url(),
                 "target_show_weekdays": "0" if self.show_weekdays else "1",
             },
@@ -1067,7 +1091,9 @@ class SidebarUserSummaryContext:
 
     def _build_activity_summary(self, active_bookmarks, today: date):
         period_start, period_end, lead = self._resolve_activity_summary_period(today)
-        daily_counts = self._load_daily_counts(active_bookmarks, period_start, period_end)
+        daily_counts = self._load_daily_counts(
+            active_bookmarks, period_start, period_end
+        )
         bookmark_total = sum(daily_counts.values())
         active_days = sum(1 for count in daily_counts.values() if count > 0)
         longest_streak = self._calculate_longest_streak(
@@ -1348,7 +1374,7 @@ class TagGroup:
         self.tags.append(AddTagItem(self.context, tag))
 
     @staticmethod
-    def create_tag_groups(context: RequestContext, mode: str, tags: Set[Tag]):
+    def create_tag_groups(context: RequestContext, mode: str, tags: set[Tag]):
         if mode == UserProfile.TAG_GROUPING_ALPHABETICAL:
             return TagGroup._create_tag_groups_alphabetical(context, tags)
         elif mode == UserProfile.TAG_GROUPING_DISABLED:
@@ -1357,7 +1383,7 @@ class TagGroup:
             raise ValueError(f"{mode} is not a valid tag grouping mode")
 
     @staticmethod
-    def _create_tag_groups_alphabetical(context: RequestContext, tags: Set[Tag]):
+    def _create_tag_groups_alphabetical(context: RequestContext, tags: set[Tag]):
         def is_cjk(tag_name):
             return CJK_RE.match(tag_name[0]) is not None
 
@@ -1366,7 +1392,7 @@ class TagGroup:
             return "".join(
                 [
                     item[0].lower() if item and item[0] else char
-                    for item, char in zip(py, tag_name)
+                    for item, char in zip(py, tag_name, strict=False)
                 ]
             )
 
@@ -1420,7 +1446,7 @@ class TagGroup:
         return eng_groups + cjk_groups
 
     @staticmethod
-    def _create_tag_groups_disabled(context: RequestContext, tags: Set[Tag]):
+    def _create_tag_groups_disabled(context: RequestContext, tags: set[Tag]):
         if len(tags) == 0:
             return []
 
@@ -1468,7 +1494,7 @@ class TagCloudContext:
     def get_selected_tags(self):
         raise NotImplementedError("Must be implemented by subclass")
 
-    def get_selected_tags_legacy(self, tags: List[Tag]):
+    def get_selected_tags_legacy(self, tags: list[Tag]):
         parsed_query = queries.parse_query_string(self.search.q)
         tag_names = parsed_query["tag_names"]
         if self.request.user_profile.tag_search == UserProfile.TAG_SEARCH_LAX:
@@ -1532,7 +1558,7 @@ class DomainTreeNode:
         self.node_id = node_id or hostname
         self.is_under_group_node = is_under_group_node
         self.total = 0
-        self.children: dict[str, "DomainTreeNode"] = {}
+        self.children: dict[str, DomainTreeNode] = {}
         self._exact_favicon_file = ""
         self._fallback_favicon_file = ""
 
@@ -1554,7 +1580,11 @@ class DomainTreeNode:
         self.total += 1
         if favicon_file and not self._fallback_favicon_file:
             self._fallback_favicon_file = favicon_file
-        if favicon_file and bookmark_host == self.hostname and not self._exact_favicon_file:
+        if (
+            favicon_file
+            and bookmark_host == self.hostname
+            and not self._exact_favicon_file
+        ):
             self._exact_favicon_file = favicon_file
 
 
@@ -1592,20 +1622,20 @@ class DomainItem:
 
         if self.filter_value:
             next_domain_terms = (
-                [
-                    value
-                    for value in selected_domain_terms
-                    if value != self.filter_value
-                ]
+                [value for value in selected_domain_terms if value != self.filter_value]
                 if self.filter_value in selected_domain_filters
                 else [self.filter_value]
             )
-            query_string = queries.replace_field_terms(search_query, "domain", next_domain_terms)
+            query_string = queries.replace_field_terms(
+                search_query, "domain", next_domain_terms
+            )
             query_params = request_context.query_params.copy()
             query_params.setlist("q", [query_string])
             query_params.pop("page", None)
             encoded_query = query_params.urlencode()
-            self.url = "?" + encoded_query if encoded_query else request_context.index_url
+            self.url = (
+                "?" + encoded_query if encoded_query else request_context.index_url
+            )
 
 
 class DomainsContext:
@@ -1626,9 +1656,7 @@ class DomainsContext:
         )
         self.toggle_view_mode_target = "full" if self.is_icon_mode else "icon"
         self.toggle_compact_mode_label = (
-            _("All domains")
-            if self.is_compact_mode
-            else _("Only important domains")
+            _("All domains") if self.is_compact_mode else _("Only important domains")
         )
         self.toggle_compact_mode_target = "0" if self.is_compact_mode else "1"
 
@@ -1717,7 +1745,9 @@ class DomainsContext:
         return request.path + ("?" + encoded_query if encoded_query else "")
 
     @classmethod
-    def _compact_root_nodes(cls, root_nodes: list[DomainTreeNode]) -> list[DomainTreeNode]:
+    def _compact_root_nodes(
+        cls, root_nodes: list[DomainTreeNode]
+    ) -> list[DomainTreeNode]:
         if len(root_nodes) <= cls.TOP_ROOT_LIMIT:
             return root_nodes
 
@@ -1908,6 +1938,7 @@ class TrashedBookmarksContext(RequestContext):
             self.request.user, self.request.user_profile, search
         )
 
+
 class TrashedBookmarkListContext(BookmarkListContext):
     request_context = TrashedBookmarksContext
 
@@ -1915,11 +1946,14 @@ class TrashedBookmarkListContext(BookmarkListContext):
         super().__init__(request, search)
         self.is_trash_page = True
 
+
 class TrashedTagCloudContext(TagCloudContext):
     request_context = TrashedBookmarksContext
 
+
 class TrashedDomainsContext(DomainsContext):
     request_context = TrashedBookmarksContext
+
 
 class TrashedBookmarkDetailsContext(BookmarkDetailsContext):
     request_context = TrashedBookmarksContext
@@ -1951,21 +1985,21 @@ class BundlesContext:
         self.bundles = (
             BookmarkBundle.objects.filter(owner=self.user).order_by("order").all()
         )
-        
+
         # 根据当前页面类型选择合适的上下文类
         current_path = request.path
-        if current_path.endswith('/trash') or current_path.endswith('/trashed'):
-            context_class = TrashedBookmarksContext # 回收站
-        elif current_path.endswith('/archived'):
-            context_class = ArchivedBookmarksContext # 归档
-        elif current_path.endswith('/shared'):
-            context_class = SharedBookmarksContext # 分享
+        if current_path.endswith("/trash") or current_path.endswith("/trashed"):
+            context_class = TrashedBookmarksContext  # 回收站
+        elif current_path.endswith("/archived"):
+            context_class = ArchivedBookmarksContext  # 归档
+        elif current_path.endswith("/shared"):
+            context_class = SharedBookmarksContext  # 分享
         else:
-            context_class = ActiveBookmarksContext # 正常
-        
+            context_class = ActiveBookmarksContext  # 正常
+
         # 为每个 bundle 统计书签数量
         for bundle in self.bundles:
-            if getattr(bundle, 'show_count', True):
+            if getattr(bundle, "show_count", True):
                 search = bundle.search_object
                 context = context_class(request)
                 queryset = context.get_bookmark_query_set(search)
@@ -1977,10 +2011,10 @@ class BundlesContext:
         # 新增：为每个 folder bundle 增加 has_child 属性
         bundles_list = list(self.bundles)
         for i, bundle in enumerate(bundles_list):
-            if getattr(bundle, 'is_folder', False):
+            if getattr(bundle, "is_folder", False):
                 has_child = False
-                for next_bundle in bundles_list[i+1:]:
-                    if getattr(next_bundle, 'is_folder', False):
+                for next_bundle in bundles_list[i + 1 :]:
+                    if getattr(next_bundle, "is_folder", False):
                         break
                     else:
                         has_child = True

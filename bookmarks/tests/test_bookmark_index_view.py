@@ -354,7 +354,7 @@ class BookmarkIndexViewTestCase(
         html = response.content.decode()
 
         self.assertInHTML(
-            f"""
+            """
           <select name="bulk_action" class="form-select select-sm">
             <option value="bulk_archive">Archive</option>
             <option value="bulk_delete">Delete</option>
@@ -375,7 +375,7 @@ class BookmarkIndexViewTestCase(
         html = response.content.decode()
 
         self.assertInHTML(
-            f"""
+            """
           <select name="bulk_action" class="form-select select-sm">
             <option value="bulk_archive">Archive</option>
             <option value="bulk_delete">Delete</option>
@@ -400,7 +400,7 @@ class BookmarkIndexViewTestCase(
         html = response.content.decode()
 
         self.assertInHTML(
-            f"""
+            """
           <select name="bulk_action" class="form-select select-sm">
             <option value="bulk_archive">Archive</option>
             <option value="bulk_delete">Delete</option>
@@ -427,7 +427,7 @@ class BookmarkIndexViewTestCase(
         html = response.content.decode()
 
         self.assertInHTML(
-            f"""
+            """
           <select name="bulk_action" class="form-select select-sm">
             <option value="bulk_archive">Archive</option>
             <option value="bulk_delete">Delete</option>
@@ -696,7 +696,9 @@ class BookmarkIndexViewTestCase(
             for element in soup.select(".side-panel [data-sidebar-module]")
         ]
         self.assertEqual(module_keys, ["tags", "summary", "domains"])
-        self.assertIsNone(soup.select_one(".side-panel [data-sidebar-module='bundles']"))
+        self.assertIsNone(
+            soup.select_one(".side-panel [data-sidebar-module='bundles']")
+        )
 
     def test_legacy_hide_bundles_still_applies_without_sidebar_configuration(self):
         user_profile = self.get_or_create_test_user().profile
@@ -707,7 +709,9 @@ class BookmarkIndexViewTestCase(
         response = self.client.get(reverse("linkding:bookmarks.index"))
         soup = self.make_soup(response.content.decode())
 
-        self.assertIsNone(soup.select_one(".side-panel [data-sidebar-module='bundles']"))
+        self.assertIsNone(
+            soup.select_one(".side-panel [data-sidebar-module='bundles']")
+        )
 
     def test_list_domains_without_normalization_rules(self):
         self.setup_bookmark(
@@ -834,8 +838,7 @@ class BookmarkIndexViewTestCase(
         self.setup_bookmark(url="https://feishu.cn/blog", title="hello root")
 
         response = self.client.get(
-            reverse("linkding:bookmarks.index")
-            + "?q=domain:(feishu.cn+|+.feishu.cn)"
+            reverse("linkding:bookmarks.index") + "?q=domain:(feishu.cn+|+.feishu.cn)"
         )
 
         soup = self.make_soup(response.content.decode())
@@ -1001,8 +1004,12 @@ class BookmarkIndexViewTestCase(
         menu_texts = [link.text.strip() for link in menu_links]
 
         self.assertEqual(menu_texts, ["Icon mode", "All domains"])
-        self.assertEqual(menu_links[0].attrs["href"], reverse("linkding:bookmarks.index"))
-        self.assertEqual(menu_links[1].attrs["href"], reverse("linkding:bookmarks.index"))
+        self.assertEqual(
+            menu_links[0].attrs["href"], reverse("linkding:bookmarks.index")
+        )
+        self.assertEqual(
+            menu_links[1].attrs["href"], reverse("linkding:bookmarks.index")
+        )
 
     def test_domain_search_forms_do_not_render_domain_state_inputs(self):
         response = self.client.get(
@@ -1040,8 +1047,12 @@ class BookmarkIndexViewTestCase(
         menu_texts = [link.text.strip() for link in menu_links]
 
         self.assertEqual(menu_texts, ["Full mode", "All domains"])
-        self.assertEqual(menu_links[0].attrs["href"], reverse("linkding:bookmarks.index"))
-        self.assertEqual(menu_links[1].attrs["href"], reverse("linkding:bookmarks.index"))
+        self.assertEqual(
+            menu_links[0].attrs["href"], reverse("linkding:bookmarks.index")
+        )
+        self.assertEqual(
+            menu_links[1].attrs["href"], reverse("linkding:bookmarks.index")
+        )
 
         domain_list = soup.select_one("ul.domain-menu")
         self.assertIsNotNone(domain_list)
@@ -1195,7 +1206,9 @@ class BookmarkIndexViewTestCase(
             self.set_profile_language("zh-hans")
             today = timezone.localdate()
             joined_at = timezone.make_aware(
-                timezone.datetime(today.year, today.month, max(today.day - 20, 1), 12, 0)
+                timezone.datetime(
+                    today.year, today.month, max(today.day - 20, 1), 12, 0
+                )
             ) - timezone.timedelta(days=70)
             self.user.date_joined = joined_at
             self.user.save(update_fields=["date_joined"])
@@ -1203,10 +1216,14 @@ class BookmarkIndexViewTestCase(
             oldest_day = today - timezone.timedelta(days=30)
             recent_day = today.replace(day=max(today.day - 4, 1))
             oldest_added = timezone.make_aware(
-                timezone.datetime(oldest_day.year, oldest_day.month, oldest_day.day, 12, 0)
+                timezone.datetime(
+                    oldest_day.year, oldest_day.month, oldest_day.day, 12, 0
+                )
             )
             recent_added = timezone.make_aware(
-                timezone.datetime(recent_day.year, recent_day.month, recent_day.day, 12, 0)
+                timezone.datetime(
+                    recent_day.year, recent_day.month, recent_day.day, 12, 0
+                )
             )
 
             alpha = self.setup_tag(name="alpha")
@@ -1230,9 +1247,13 @@ class BookmarkIndexViewTestCase(
             summary = soup.select_one("section[ld-sidebar-user-summary]")
             self.assertIsNotNone(summary)
             self.assertTrue(summary.has_attr("ld-collapse-button"))
-            self.assertEqual(summary.attrs["data-toggle-storage-key"], "userSummarySectionState")
+            self.assertEqual(
+                summary.attrs["data-toggle-storage-key"], "userSummarySectionState"
+            )
             self.assertEqual(summary.attrs["data-summary-mode"], "calendar")
-            self.assertEqual(summary.attrs["data-summary-month"], today.strftime("%Y-%m"))
+            self.assertEqual(
+                summary.attrs["data-summary-month"], today.strftime("%Y-%m")
+            )
 
             heading = summary.select_one("#sidebar-user-summary-heading")
             self.assertIsNotNone(heading)
@@ -1282,7 +1303,9 @@ class BookmarkIndexViewTestCase(
                 .text.strip(),
                 "天",
             )
-            collection_days_toggle = summary.select_one("[data-summary-collection-toggle]")
+            collection_days_toggle = summary.select_one(
+                "[data-summary-collection-toggle]"
+            )
             self.assertIsNotNone(collection_days_toggle)
             self.assertEqual(
                 collection_days_toggle.attrs["data-summary-collection-start"],
@@ -1303,12 +1326,18 @@ class BookmarkIndexViewTestCase(
             self.assertIsNone(
                 collection_days_toggle.select_one(".summary-metric-face-alternate")
             )
-            self.assertIsNone(collection_days_toggle.select_one(".summary-info-popover"))
+            self.assertIsNone(
+                collection_days_toggle.select_one(".summary-info-popover")
+            )
             self.assertIsNone(summary.select_one("[data-summary-stat='unread']"))
             self.assertIsNone(summary.select_one("[data-summary-stat='untagged']"))
 
-            self.assertIsNone(summary.select_one("[data-summary-mode-toggle='calendar']"))
-            self.assertIsNotNone(summary.select_one("[data-summary-mode-toggle='heatmap']"))
+            self.assertIsNone(
+                summary.select_one("[data-summary-mode-toggle='calendar']")
+            )
+            self.assertIsNotNone(
+                summary.select_one("[data-summary-mode-toggle='heatmap']")
+            )
             self.assertIsNone(summary.select_one("[data-summary-month-picker-trigger]"))
             year_picker_trigger = summary.select_one(
                 "[data-summary-month-year-picker-trigger]"
@@ -1321,20 +1350,30 @@ class BookmarkIndexViewTestCase(
             self.assertEqual(year_picker_trigger.text.strip(), str(today.year))
             self.assertEqual(month_picker_trigger.text.strip(), f"{today.month:02d}")
             self.assertIsNone(
-                summary.select_one("form[data-summary-month-picker] select[name='summary_month']")
+                summary.select_one(
+                    "form[data-summary-month-picker] select[name='summary_month']"
+                )
             )
             self.assertIsNone(summary.select_one("form[data-summary-month-picker]"))
             year_picker_options = summary.select("[data-summary-month-year-option]")
             month_picker_options = summary.select("[data-summary-month-option]")
             self.assertTrue(
-                any(option.text.strip() == str(today.year) for option in year_picker_options)
+                any(
+                    option.text.strip() == str(today.year)
+                    for option in year_picker_options
+                )
             )
             self.assertTrue(
-                any(option.text.strip() == f"{today.month:02d}" for option in month_picker_options)
+                any(
+                    option.text.strip() == f"{today.month:02d}"
+                    for option in month_picker_options
+                )
             )
             self.assertIsNotNone(summary.select_one("[data-summary-range-url]"))
             self.assertIsNone(summary.select_one("[data-summary-range-hint]"))
-            activity_disclosure = summary.select_one("[data-summary-activity-disclosure]")
+            activity_disclosure = summary.select_one(
+                "[data-summary-activity-disclosure]"
+            )
             self.assertIsNotNone(activity_disclosure)
             self.assertTrue(activity_disclosure.has_attr("ld-collapse-button"))
             self.assertEqual(
@@ -1441,7 +1480,9 @@ class BookmarkIndexViewTestCase(
             day_link["data-summary-target-month"], current_day.strftime("%Y-%m")
         )
 
-        range_url = summary.select_one("[data-summary-range-url]")["data-summary-range-url"]
+        range_url = summary.select_one("[data-summary-range-url]")[
+            "data-summary-range-url"
+        ]
         range_query = urllib.parse.parse_qs(urllib.parse.urlsplit(range_url).query)
         self.assertEqual(
             range_query["date_filter_by"], [BookmarkSearch.FILTER_DATE_BY_ADDED]
@@ -1518,8 +1559,12 @@ class BookmarkIndexViewTestCase(
             self.assertIsNotNone(summary)
             self.assertEqual(summary.attrs["data-summary-mode"], "heatmap")
 
-            self.assertIsNone(summary.select_one("[data-summary-mode-toggle='heatmap']"))
-            self.assertIsNotNone(summary.select_one("[data-summary-mode-toggle='calendar']"))
+            self.assertIsNone(
+                summary.select_one("[data-summary-mode-toggle='heatmap']")
+            )
+            self.assertIsNotNone(
+                summary.select_one("[data-summary-mode-toggle='calendar']")
+            )
             self.assertIsNone(summary.select_one("[data-summary-month-picker-trigger]"))
             self.assertIsNone(summary.select_one(".summary-week-label"))
             current_week_start = today - timezone.timedelta(
@@ -1529,11 +1574,15 @@ class BookmarkIndexViewTestCase(
             expected_year = str(current_week_key_date.isocalendar().year)
             expected_week = f"W{current_week_key_date.isocalendar().week:02d}"
             self.assertEqual(
-                summary.select_one("[data-summary-week-year-picker-trigger]").text.strip(),
+                summary.select_one(
+                    "[data-summary-week-year-picker-trigger]"
+                ).text.strip(),
                 expected_year,
             )
             self.assertEqual(
-                summary.select_one("[data-summary-week-number-picker-trigger]").text.strip(),
+                summary.select_one(
+                    "[data-summary-week-number-picker-trigger]"
+                ).text.strip(),
                 expected_week,
             )
 
@@ -1577,7 +1626,9 @@ class BookmarkIndexViewTestCase(
             )
 
             week_options = summary.select("[data-summary-week-option]")
-            self.assertTrue(any(item.text.strip() == expected_week for item in week_options))
+            self.assertTrue(
+                any(item.text.strip() == expected_week for item in week_options)
+            )
 
             oldest_visible_heatmap_day = summary.select_one(
                 f"[data-summary-heatmap-day='{oldest_visible_day.isoformat()}']"
@@ -1665,9 +1716,9 @@ class BookmarkIndexViewTestCase(
             reverse("linkding:bookmarks.index"),
             **self.get_summary_headers(month=previous_month_day.strftime("%Y-%m")),
         )
-        calendar_summary = self.make_soup(calendar_response.content.decode()).select_one(
-            "section[ld-sidebar-user-summary]"
-        )
+        calendar_summary = self.make_soup(
+            calendar_response.content.decode()
+        ).select_one("section[ld-sidebar-user-summary]")
         self.assertIsNotNone(calendar_summary)
         current_month_action = calendar_summary.select_one(
             "[data-summary-toolbar-action='current-month']"
@@ -1883,7 +1934,12 @@ class BookmarkIndexViewTestCase(
                 "收藏书签3个，共活跃3天，最高连续活跃2天。",
             )
             self.assertEqual(
-                [item.text.strip() for item in activity_summary.select(".summary-activity-summary-value")],
+                [
+                    item.text.strip()
+                    for item in activity_summary.select(
+                        ".summary-activity-summary-value"
+                    )
+                ],
                 ["3", "3", "2"],
             )
 
@@ -1909,12 +1965,15 @@ class BookmarkIndexViewTestCase(
                     show_details=True,
                 ),
             )
-            heatmap_summary = self.make_soup(heatmap_response.content.decode()).select_one(
-                "section[ld-sidebar-user-summary]"
-            )
+            heatmap_summary = self.make_soup(
+                heatmap_response.content.decode()
+            ).select_one("section[ld-sidebar-user-summary]")
             self.assertIsNotNone(heatmap_summary)
             self.assertEqual(
-                [item.text.strip() for item in heatmap_summary.select(".summary-heatmap-weekday")],
+                [
+                    item.text.strip()
+                    for item in heatmap_summary.select(".summary-heatmap-weekday")
+                ],
                 ["日", "一", "二", "三", "四", "五", "六"],
             )
             week_end = week_start + timezone.timedelta(days=6)
@@ -1992,9 +2051,9 @@ class BookmarkIndexViewTestCase(
             reverse("linkding:bookmarks.index") + "?" + query_string,
             **self.get_summary_headers(show_details=True),
         )
-        calendar_summary = self.make_soup(calendar_response.content.decode()).select_one(
-            "section[ld-sidebar-user-summary]"
-        )
+        calendar_summary = self.make_soup(
+            calendar_response.content.decode()
+        ).select_one("section[ld-sidebar-user-summary]")
         self.assertIsNotNone(calendar_summary)
         self.assertEqual(
             calendar_summary.attrs["data-summary-month"],
@@ -2046,11 +2105,15 @@ class BookmarkIndexViewTestCase(
             expected_week_start + timezone.timedelta(days=1)
         ).isocalendar()
         self.assertEqual(
-            heatmap_summary.select_one("[data-summary-week-year-picker-trigger]").text.strip(),
+            heatmap_summary.select_one(
+                "[data-summary-week-year-picker-trigger]"
+            ).text.strip(),
             str(expected_week_year),
         )
         self.assertEqual(
-            heatmap_summary.select_one("[data-summary-week-number-picker-trigger]").text.strip(),
+            heatmap_summary.select_one(
+                "[data-summary-week-number-picker-trigger]"
+            ).text.strip(),
             f"W{expected_week_number:02d}",
         )
         heatmap_activity_summary = heatmap_summary.select_one(
@@ -2167,11 +2230,15 @@ class BookmarkIndexViewTestCase(
         self.assertTrue(selected_type.has_attr("checked"))
 
         self.assertEqual(
-            search_preferences.select_one("input[name='date_filter_start']").attrs["value"],
+            search_preferences.select_one("input[name='date_filter_start']").attrs[
+                "value"
+            ],
             day_query["date_filter_start"][0],
         )
         self.assertEqual(
-            search_preferences.select_one("input[name='date_filter_end']").attrs["value"],
+            search_preferences.select_one("input[name='date_filter_end']").attrs[
+                "value"
+            ],
             day_query["date_filter_end"][0],
         )
 

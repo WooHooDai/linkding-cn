@@ -135,9 +135,7 @@ class SettingsGeneralE2ETestCase(LinkdingE2ETestCase):
             ).first
             custom_css = custom_css_form.locator("textarea[name='custom_css']")
             expect(custom_css).to_have_value("")
-            restore_button = custom_css_form.get_by_role(
-                "button", name="Restore draft"
-            )
+            restore_button = custom_css_form.get_by_role("button", name="Restore draft")
             expect(restore_button).to_be_visible()
 
             restore_button.click()

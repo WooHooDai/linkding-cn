@@ -1,23 +1,21 @@
 import datetime
-from typing import Type
 
 from dateutil.relativedelta import relativedelta
 from django.contrib.auth.models import AnonymousUser
 from django.http import HttpResponse
-from django.template import Template, RequestContext
-from django.test import TestCase, RequestFactory
+from django.template import RequestContext, Template
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from bookmarks.middlewares import LinkdingMiddleware
-from bookmarks.models import Bookmark, BookmarkSearch, UserProfile, User
+from bookmarks.models import Bookmark, BookmarkSearch, User, UserProfile
 from bookmarks.tests.helpers import BookmarkFactoryMixin, HtmlTestMixin
 from bookmarks.utils import humanize_absolute_date_short
 from bookmarks.views import contexts
 
 
 class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
-
     def assertBookmarksLink(
         self, html: str, bookmark: Bookmark, link_target: str = "_blank"
     ):
@@ -257,7 +255,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
     def render_template(
         self,
         url="/bookmarks",
-        context_type: Type[
+        context_type: type[
             contexts.BookmarkListContext
         ] = contexts.ActiveBookmarkListContext,
         user: User | AnonymousUser = None,
@@ -298,7 +296,9 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         has_tags = len(bookmark.tags.all()) > 0
 
         # inline description block exists
-        description = soup.select_one(".description.inline .description-container.truncate")
+        description = soup.select_one(
+            ".description.inline .description-container.truncate"
+        )
         self.assertIsNotNone(description)
 
         # separate description block does not exist
@@ -546,9 +546,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         user.profile.bookmark_date_display = UserProfile.BOOKMARK_DATE_DISPLAY_ABSOLUTE
         user.profile.save()
 
-        date_added = timezone.datetime(
-            2023, 8, 11, 21, 45, 11, tzinfo=datetime.timezone.utc
-        )
+        date_added = timezone.datetime(2023, 8, 11, 21, 45, 11, tzinfo=datetime.UTC)
         bookmark = self.setup_bookmark(
             url="https://example.com/article", added=date_added
         )

@@ -20,7 +20,6 @@ class BookmarkArchivedViewTestCase(
     DomainSidebarTestMixin,
     TagCloudTestMixin,
 ):
-
     def setUp(self) -> None:
         user = self.get_or_create_test_user()
         self.client.force_login(user)
@@ -334,7 +333,7 @@ class BookmarkArchivedViewTestCase(
         html = response.content.decode()
 
         self.assertInHTML(
-            f"""
+            """
           <select name="bulk_action" class="form-select select-sm">
             <option value="bulk_unarchive">Unarchive</option>
             <option value="bulk_delete">Delete</option>
@@ -355,7 +354,7 @@ class BookmarkArchivedViewTestCase(
         html = response.content.decode()
 
         self.assertInHTML(
-            f"""
+            """
           <select name="bulk_action" class="form-select select-sm">
             <option value="bulk_unarchive">Unarchive</option>
             <option value="bulk_delete">Delete</option>
@@ -380,7 +379,7 @@ class BookmarkArchivedViewTestCase(
         html = response.content.decode()
 
         self.assertInHTML(
-            f"""
+            """
           <select name="bulk_action" class="form-select select-sm">
             <option value="bulk_unarchive">Unarchive</option>
             <option value="bulk_delete">Delete</option>
@@ -407,7 +406,7 @@ class BookmarkArchivedViewTestCase(
         html = response.content.decode()
 
         self.assertInHTML(
-            f"""
+            """
           <select name="bulk_action" class="form-select select-sm">
             <option value="bulk_unarchive">Unarchive</option>
             <option value="bulk_delete">Delete</option>
@@ -648,4 +647,6 @@ class BookmarkArchivedViewTestCase(
             for element in soup.select(".side-panel [data-sidebar-module]")
         ]
         self.assertEqual(module_keys, ["domains", "tags"])
-        self.assertIsNone(soup.select_one(".side-panel [data-sidebar-module='bundles']"))
+        self.assertIsNone(
+            soup.select_one(".side-panel [data-sidebar-module='bundles']")
+        )

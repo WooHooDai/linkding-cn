@@ -6,7 +6,6 @@ from bookmarks.tests.helpers import BookmarkFactoryMixin
 
 
 class BundleEditViewTestCase(TestCase, BookmarkFactoryMixin):
-
     def setUp(self) -> None:
         user = self.get_or_create_test_user()
         self.client.force_login(user)
@@ -156,9 +155,7 @@ class BundleEditViewTestCase(TestCase, BookmarkFactoryMixin):
         response = self.client.post(
             reverse("linkding:bundles.edit", args=[bundle.id]), form_data
         )
-        self.assertIn(
-            "Found 1 matching bookmark.", response.content.decode()
-        )
+        self.assertIn("Found 1 matching bookmark.", response.content.decode())
         self.assertNotIn(bookmark1.title, response.content.decode())
         self.assertIn(bookmark2.title, response.content.decode())
         self.assertNotIn(bookmark3.title, response.content.decode())

@@ -3,8 +3,8 @@ import logging
 import os
 import random
 import time
+from collections.abc import Callable
 from datetime import timedelta
-from typing import Callable, List
 
 import waybackpy
 from django.conf import settings
@@ -14,12 +14,12 @@ from django.utils import timezone
 from huey import crontab
 from huey.contrib.djhuey import HUEY as huey
 from huey.exceptions import TaskLockedException
-from waybackpy.exceptions import WaybackError, TooManyRequestsError
+from waybackpy.exceptions import TooManyRequestsError, WaybackError
 
 from bookmarks.models import Bookmark, BookmarkAsset, UserProfile
 from bookmarks.services import assets, favicon_loader, preview_image_loader
-from bookmarks.utils import get_registrable_domain
 from bookmarks.services.website_loader import load_website_metadata
+from bookmarks.utils import get_registrable_domain
 
 logger = logging.getLogger(__name__)
 HTML_SNAPSHOT_DISPATCHER_LOCK = huey.lock_task("html-snapshot-dispatcher-lock")
@@ -208,10 +208,13 @@ def load_preview_image(user: User, bookmark: Bookmark):
 
 @task()
 def delete_preview_image_temp_file(filepath: str):
-    logger.debug(f"Followed temporary preview image file will be deleted after a while: {filepath}")
+    logger.debug(
+        f"Followed temporary preview image file will be deleted after a while: {filepath}"
+    )
     if os.path.exists(filepath):
         os.remove(filepath)
         logger.info(f"Deleted temporary preview image file: {filepath}")
+
 
 @task()
 def _load_preview_image_task(bookmark_id: int):
@@ -222,7 +225,9 @@ def _load_preview_image_task(bookmark_id: int):
 
     logger.info(f"Load preview image for bookmark. url={bookmark.url}")
 
-    new_preview_image_file = preview_image_loader.load_preview_image(bookmark.url, bookmark)
+    new_preview_image_file = preview_image_loader.load_preview_image(
+        bookmark.url, bookmark
+    )
 
     if new_preview_image_file != bookmark.preview_image_file:
         bookmark.preview_image_file = new_preview_image_file or ""
@@ -287,20 +292,29 @@ def _enrich_metadata_task(
     metadata = load_website_metadata(bookmark.url, ignore_cache=ignore_cache)
     update_fields = []
 
-    if overwrite or not bookmark.title:
-        if metadata.title is not None and metadata.title != bookmark.title:
-            bookmark.title = metadata.title
-            update_fields.append("title")
+    if (
+        (overwrite or not bookmark.title)
+        and metadata.title is not None
+        and metadata.title != bookmark.title
+    ):
+        bookmark.title = metadata.title
+        update_fields.append("title")
 
-    if overwrite or not bookmark.description:
-        if metadata.description is not None and metadata.description != bookmark.description:
-            bookmark.description = metadata.description
-            update_fields.append("description")
+    if (
+        (overwrite or not bookmark.description)
+        and metadata.description is not None
+        and metadata.description != bookmark.description
+    ):
+        bookmark.description = metadata.description
+        update_fields.append("description")
 
-    if overwrite or not bookmark.preview_image_remote_url:
-        if metadata.preview_image and metadata.preview_image != bookmark.preview_image_remote_url:
-            bookmark.preview_image_remote_url = metadata.preview_image
-            update_fields.append("preview_image_remote_url")
+    if (
+        (overwrite or not bookmark.preview_image_remote_url)
+        and metadata.preview_image
+        and metadata.preview_image != bookmark.preview_image_remote_url
+    ):
+        bookmark.preview_image_remote_url = metadata.preview_image
+        update_fields.append("preview_image_remote_url")
 
     if update_fields:
         bookmark.date_modified = timezone.now()
@@ -321,10 +335,10 @@ def _refresh_metadata_task(bookmark_id: int):
     metadata = load_website_metadata(bookmark.url, ignore_cache=True)
     update_fields = []
 
-    if metadata.title or metadata.title=='':
+    if metadata.title or metadata.title == "":
         bookmark.title = metadata.title
         update_fields.append("title")
-    if metadata.description or metadata.description=='':
+    if metadata.description or metadata.description == "":
         bookmark.description = metadata.description
         update_fields.append("description")
     if metadata.preview_image:
@@ -340,11 +354,14 @@ def _refresh_metadata_task(bookmark_id: int):
 
     # 若url变动，则按需更新html快照
     if bookmark.owner.profile.enable_automatic_html_snapshots:
-        pending_assets = BookmarkAsset.objects.filter(bookmark=bookmark, status=BookmarkAsset.STATUS_PENDING)
-        if pending_assets.exists(): # 若有下载中的快照，则移除
+        pending_assets = BookmarkAsset.objects.filter(
+            bookmark=bookmark, status=BookmarkAsset.STATUS_PENDING
+        )
+        if pending_assets.exists():  # 若有下载中的快照，则移除
             pending_assets.delete()
-        
+
         create_html_snapshot(bookmark)
+
 
 def is_html_snapshot_feature_active() -> bool:
     return settings.LD_ENABLE_SNAPSHOTS and not settings.LD_DISABLE_BACKGROUND_TASKS
@@ -445,7 +462,7 @@ def create_html_snapshot(bookmark: Bookmark):
     _kick_html_snapshot_dispatcher()
 
 
-def create_html_snapshots(bookmark_list: List[Bookmark]):
+def create_html_snapshots(bookmark_list: list[Bookmark]):
     if not is_html_snapshot_feature_active():
         return
 

@@ -4,9 +4,10 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
-from django.utils.translation import gettext as _, ngettext
+from django.utils.translation import gettext as _
+from django.utils.translation import ngettext
 
 from bookmarks.forms import TagForm, TagMergeForm
 from bookmarks.models import Bookmark, Tag
@@ -25,8 +26,7 @@ def tags_index(request: HttpRequest):
         if not turbo.is_frame(request, "tag-main"):
             messages.success(
                 request,
-                _('Tag "%(tag_name)s" deleted successfully.')
-                % {"tag_name": tag_name},
+                _('Tag "%(tag_name)s" deleted successfully.') % {"tag_name": tag_name},
             )
 
         return redirect_with_query(request, reverse("linkding:tags.index"))
@@ -80,8 +80,7 @@ def tag_new(request: HttpRequest):
             tag = form.save()
             messages.success(
                 request,
-                _('Tag "%(tag_name)s" created successfully.')
-                % {"tag_name": tag.name},
+                _('Tag "%(tag_name)s" created successfully.') % {"tag_name": tag.name},
             )
             return HttpResponseRedirect(reverse("linkding:tags.index"))
         if turbo.accept(request):

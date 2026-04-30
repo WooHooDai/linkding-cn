@@ -135,7 +135,7 @@ class TagsEditViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         )
 
         soup = self.make_soup(response.content.decode())
-        self.assertIsNotNone(soup.select_one('turbo-frame#tag-modal'))
+        self.assertIsNotNone(soup.select_one("turbo-frame#tag-modal"))
         self.assertIsNotNone(soup.select_one("ld-modal"))
         self.assertContains(
             response,

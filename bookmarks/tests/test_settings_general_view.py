@@ -91,7 +91,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
             if k not in self.quick_boolean_fields and k != "form_fields"
         }
         post_data["form_fields"] = ",".join(
-            key for key in values.keys() if key not in {"form_id", "form_fields"}
+            key for key in values if key not in {"form_id", "form_fields"}
         )
         for field in self.quick_boolean_fields:
             if values.get(field):
@@ -151,7 +151,9 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
 
         nav_targets = [
             link.get("data-settings-section-target")
-            for link in soup.select(".settings-directory [data-settings-section-target]")
+            for link in soup.select(
+                ".settings-directory [data-settings-section-target]"
+            )
         ]
         self.assertEqual(
             nav_targets,
@@ -282,15 +284,11 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
 
         interface_section = soup.select_one("section#settings-interface")
         self.assertIsNotNone(interface_section)
-        self.assertIsNone(
-            interface_section.select_one("input[name='show_sidebar']")
-        )
+        self.assertIsNone(interface_section.select_one("input[name='show_sidebar']"))
 
         sidebar_section = soup.select_one("section#settings-sidebar")
         self.assertIsNotNone(sidebar_section)
-        self.assertIsNotNone(
-            sidebar_section.select_one("input[name='show_sidebar']")
-        )
+        self.assertIsNotNone(sidebar_section.select_one("input[name='show_sidebar']"))
 
     @patch(
         "bookmarks.views.settings._get_other_language_choices",
@@ -332,7 +330,9 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         response = self.client.get(reverse("linkding:settings.general"))
         soup = self.make_soup(response.content.decode())
 
-        default_sharing_row = soup.select_one("[data-setting-row='default_mark_shared']")
+        default_sharing_row = soup.select_one(
+            "[data-setting-row='default_mark_shared']"
+        )
         self.assertIsNotNone(default_sharing_row)
         self.assertIn("Default sharing", default_sharing_row.get_text())
 
@@ -493,7 +493,9 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.request["PATH_INFO"], reverse("linkding:settings.general"))
+        self.assertEqual(
+            response.request["PATH_INFO"], reverse("linkding:settings.general")
+        )
 
         self.user.profile.refresh_from_db()
         self.assertEqual(self.user.profile.theme, UserProfile.THEME_DARK)
@@ -537,7 +539,9 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.request["PATH_INFO"], reverse("linkding:settings.general"))
+        self.assertEqual(
+            response.request["PATH_INFO"], reverse("linkding:settings.general")
+        )
 
         self.user.profile.refresh_from_db()
         self.assertEqual(self.user.profile.custom_css, "body { color: green; }")
@@ -556,7 +560,9 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.request["PATH_INFO"], reverse("linkding:settings.general"))
+        self.assertEqual(
+            response.request["PATH_INFO"], reverse("linkding:settings.general")
+        )
         self.assertSuccessMessage(response.content.decode(), "Global settings updated")
         self.assertEqual(
             GlobalSettings.get().landing_page,

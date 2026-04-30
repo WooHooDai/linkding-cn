@@ -1,7 +1,6 @@
-from django.contrib.auth import views as auth_views
-from django.urls import path, include
-from django.urls import re_path
 from django.conf import settings
+from django.contrib.auth import views as auth_views
+from django.urls import include, path, re_path
 from django.views.i18n import JavaScriptCatalog, set_language
 
 from bookmarks import feeds, views
@@ -33,12 +32,30 @@ urlpatterns = [
     path(
         "bookmarks/<int:bookmark_id>/edit", views.bookmarks.edit, name="bookmarks.edit"
     ),
-    path("bookmarks/<int:bookmark_id>/read", views.bookmarks.read, name="bookmarks.read"),
-    path("bookmarks/<int:bookmark_id>/trash", views.bookmarks.trashed, name="bookmarks.trash"),
+    path(
+        "bookmarks/<int:bookmark_id>/read", views.bookmarks.read, name="bookmarks.read"
+    ),
+    path(
+        "bookmarks/<int:bookmark_id>/trash",
+        views.bookmarks.trashed,
+        name="bookmarks.trash",
+    ),
     path("bookmarks/trash", views.bookmarks.trashed, name="bookmarks.trashed"),
-    path("bookmarks/trash/action", views.bookmarks.trashed_action, name="bookmarks.trashed.action"),
-    path("bookmarks/prefetch-favicon", views.bookmarks.prefetch_favicon, name="bookmarks.prefetch_favicon"),
-    path("bookmarks/load_temporary_preview_image", views.bookmarks.load_temporary_preview_image, name="bookmarks.load_temporary_preview_image"),
+    path(
+        "bookmarks/trash/action",
+        views.bookmarks.trashed_action,
+        name="bookmarks.trashed.action",
+    ),
+    path(
+        "bookmarks/prefetch-favicon",
+        views.bookmarks.prefetch_favicon,
+        name="bookmarks.prefetch_favicon",
+    ),
+    path(
+        "bookmarks/load_temporary_preview_image",
+        views.bookmarks.load_temporary_preview_image,
+        name="bookmarks.load_temporary_preview_image",
+    ),
     # Assets
     path(
         "assets/<int:asset_id>",

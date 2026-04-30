@@ -1,11 +1,10 @@
 import urllib.parse
-from typing import List
 
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
-from bookmarks.models import Bookmark, BookmarkSearch, Tag, UserProfile
+from bookmarks.models import Bookmark, BookmarkSearch, UserProfile
 from bookmarks.tests.helpers import (
     BookmarkFactoryMixin,
     BookmarkListTestMixin,
@@ -34,7 +33,7 @@ class BookmarkSharedViewTestCase(
             count=count,
         )
 
-    def assertVisibleUserOptions(self, response, users: List[User]):
+    def assertVisibleUserOptions(self, response, users: list[User]):
         html = response.content.decode()
 
         user_options = ['<option value="" selected="">Everyone</option>']
@@ -44,7 +43,7 @@ class BookmarkSharedViewTestCase(
             )
         user_select_html = f"""
         <select name="user" class="form-select" id="id_user" ld-auto-submit>
-            {''.join(user_options)}
+            {"".join(user_options)}
         </select>
         """
 
@@ -65,9 +64,7 @@ class BookmarkSharedViewTestCase(
         owner.profile.enable_sharing = True
         owner.profile.save()
 
-        self.setup_bookmark(
-            shared=True, user=owner, url="https://shared.example.com/a"
-        )
+        self.setup_bookmark(shared=True, user=owner, url="https://shared.example.com/a")
         self.setup_bookmark(shared=True, user=owner, url="https://example.com/b")
 
         response = self.client.get(reverse("linkding:bookmarks.shared"))
@@ -270,8 +267,12 @@ class BookmarkSharedViewTestCase(
         ]
         self.assertEqual(module_keys, ["tags", "domains"])
         self.assertIsNotNone(soup.select_one("#user-heading"))
-        self.assertIsNone(soup.select_one(".side-panel [data-sidebar-module='summary']"))
-        self.assertIsNone(soup.select_one(".side-panel [data-sidebar-module='bundles']"))
+        self.assertIsNone(
+            soup.select_one(".side-panel [data-sidebar-module='summary']")
+        )
+        self.assertIsNone(
+            soup.select_one(".side-panel [data-sidebar-module='bundles']")
+        )
 
     def test_should_list_tags_for_bookmarks_matching_query(self):
         self.authenticate()

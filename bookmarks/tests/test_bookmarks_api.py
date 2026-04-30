@@ -1,8 +1,7 @@
 import datetime
 import io
 import urllib.parse
-from collections import OrderedDict
-from unittest.mock import patch, ANY
+from unittest.mock import ANY, patch
 
 from django.contrib.auth.models import User
 from django.test import override_settings
@@ -17,14 +16,12 @@ import bookmarks.services.bookmarks
 from bookmarks.api.serializers import BookmarkSerializer
 from bookmarks.models import Bookmark, BookmarkSearch, UserProfile
 from bookmarks.services import website_loader
-from bookmarks.services.wayback import generate_fallback_webarchive_url
 from bookmarks.services.website_loader import WebsiteMetadata
-from bookmarks.tests.helpers import LinkdingApiTestCase, BookmarkFactoryMixin
+from bookmarks.tests.helpers import BookmarkFactoryMixin, LinkdingApiTestCase
 from bookmarks.utils import app_version
 
 
 class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
-
     def setUp(self):
         self.mock_assets_upload_snapshot_patcher = patch(
             "bookmarks.services.assets.upload_snapshot",
@@ -354,9 +351,9 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
             self.setup_bookmark(title="searchvalue", shared=True, user=user2),
             self.setup_bookmark(title="searchvalue", shared=True, user=user3),
         ]
-        self.setup_bookmark(shared=True, user=user1),
-        self.setup_bookmark(shared=True, user=user2),
-        self.setup_bookmark(shared=True, user=user3),
+        (self.setup_bookmark(shared=True, user=user1),)
+        (self.setup_bookmark(shared=True, user=user2),)
+        (self.setup_bookmark(shared=True, user=user3),)
 
         response = self.get(
             reverse("linkding:bookmark-shared") + "?q=searchvalue",
@@ -478,11 +475,14 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
         self.authenticate()
 
         data = {"url": "https://example.com/"}
-        with patch.object(
-            website_loader, "load_website_metadata"
-        ) as mock_load_website_metadata, patch(
-            "bookmarks.services.bookmarks.tasks.schedule_metadata_enrichment"
-        ) as mock_schedule_metadata_enrichment:
+        with (
+            patch.object(
+                website_loader, "load_website_metadata"
+            ) as mock_load_website_metadata,
+            patch(
+                "bookmarks.services.bookmarks.tasks.schedule_metadata_enrichment"
+            ) as mock_schedule_metadata_enrichment,
+        ):
             self.post(
                 reverse("linkding:bookmark-list") + "?prefer_async_metadata=true",
                 data,
@@ -499,13 +499,16 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
         self.authenticate()
 
         data = {"url": "https://example.com/"}
-        with patch.object(
-            website_loader,
-            "load_website_metadata",
-            side_effect=website_loader.RetryableMetadataError("boom"),
-        ) as mock_load_website_metadata, patch(
-            "bookmarks.api.serializers.tasks.schedule_metadata_enrichment"
-        ) as mock_schedule_metadata_enrichment:
+        with (
+            patch.object(
+                website_loader,
+                "load_website_metadata",
+                side_effect=website_loader.RetryableMetadataError("boom"),
+            ) as mock_load_website_metadata,
+            patch(
+                "bookmarks.api.serializers.tasks.schedule_metadata_enrichment"
+            ) as mock_schedule_metadata_enrichment,
+        ):
             self.post(reverse("linkding:bookmark-list"), data, status.HTTP_201_CREATED)
 
         bookmark = Bookmark.objects.get(url=data["url"])
@@ -761,9 +764,7 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
         bookmark = self.setup_bookmark(
             web_archive_snapshot_url="",
             url="https://example.com/",
-            added=timezone.datetime(
-                2023, 8, 11, 21, 45, 11, tzinfo=datetime.timezone.utc
-            ),
+            added=timezone.datetime(2023, 8, 11, 21, 45, 11, tzinfo=datetime.UTC),
         )
 
         url = reverse("linkding:bookmark-detail", args=[bookmark.id])
@@ -1434,10 +1435,11 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
         self.mock_assets_upload_snapshot.assert_called_with(bookmark, b"dummy content")
 
     def test_singlefile_creates_bookmark_without_creating_snapshot(self):
-        with patch(
-            "bookmarks.services.bookmarks.create_bookmark"
-        ) as mock_create_bookmark, patch(
-            "bookmarks.services.bookmarks.enhance_with_website_metadata"
+        with (
+            patch(
+                "bookmarks.services.bookmarks.create_bookmark"
+            ) as mock_create_bookmark,
+            patch("bookmarks.services.bookmarks.enhance_with_website_metadata"),
         ):
             self.authenticate()
             self.client.post(

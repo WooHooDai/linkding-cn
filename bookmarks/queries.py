@@ -1,14 +1,23 @@
-import time
-import random
+import contextlib
 import datetime
-from typing import Optional
+import random
+import time
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.db.models import Q, QuerySet, Exists, OuterRef, Case, When, CharField, F, IntegerField
+from django.db.models import (
+    Case,
+    CharField,
+    Exists,
+    IntegerField,
+    OuterRef,
+    Q,
+    QuerySet,
+    When,
+)
 from django.db.models.expressions import RawSQL
-from django.db.models.functions import Lower, Mod
+from django.db.models.functions import Lower
 
 from bookmarks.models import (
     Bookmark,
@@ -19,17 +28,17 @@ from bookmarks.models import (
     parse_tag_string,
 )
 from bookmarks.services.search_query_parser import (
-    parse_search_query,
-    SearchExpression,
-    TermExpression,
-    FieldTermExpression,
-    TagExpression,
-    SpecialKeywordExpression,
     AndExpression,
-    OrExpression,
+    FieldTermExpression,
     NotExpression,
+    OrExpression,
+    SearchExpression,
     SearchQueryParseError,
+    SpecialKeywordExpression,
+    TagExpression,
+    TermExpression,
     extract_tag_names_from_query,
+    parse_search_query,
 )
 from bookmarks.utils import unique
 
@@ -39,22 +48,28 @@ def query_bookmarks(
     profile: UserProfile,
     search: BookmarkSearch,
 ) -> QuerySet:
-    return _base_bookmarks_query(user, profile, search).filter(is_archived=False, is_deleted=False)
+    return _base_bookmarks_query(user, profile, search).filter(
+        is_archived=False, is_deleted=False
+    )
 
 
 def query_archived_bookmarks(
     user: User, profile: UserProfile, search: BookmarkSearch
 ) -> QuerySet:
-    return _base_bookmarks_query(user, profile, search).filter(is_archived=True, is_deleted=False)
+    return _base_bookmarks_query(user, profile, search).filter(
+        is_archived=True, is_deleted=False
+    )
 
 
 def query_shared_bookmarks(
-    user: Optional[User],
+    user: User | None,
     profile: UserProfile,
     search: BookmarkSearch,
     public_only: bool,
 ) -> QuerySet:
-    conditions = Q(shared=True) & Q(owner__profile__enable_sharing=True) & Q(is_deleted=False)
+    conditions = (
+        Q(shared=True) & Q(owner__profile__enable_sharing=True) & Q(is_deleted=False)
+    )
     if public_only:
         conditions = conditions & Q(owner__profile__enable_public_sharing=True)
 
@@ -79,9 +94,7 @@ def _build_term_search_condition(term: str, profile: UserProfile) -> Q:
 
     if profile.tag_search == UserProfile.TAG_SEARCH_LAX:
         conditions = conditions | Exists(
-            Bookmark.objects.filter(
-                id=OuterRef("id"), tags__name__iexact=term
-            )
+            Bookmark.objects.filter(id=OuterRef("id"), tags__name__iexact=term)
         )
 
     return conditions
@@ -134,7 +147,7 @@ def _build_domain_group_condition(raw_group: str) -> Q:
                     | Q(url__istartswith=f"https://{base}#")
                 )
             )
-            group_condition |= (http_sub | https_sub)
+            group_condition |= http_sub | https_sub
         else:
             # Exact host match.
             http_prefix = f"http://{part}"
@@ -153,7 +166,7 @@ def _build_domain_group_condition(raw_group: str) -> Q:
                 | Q(url__istartswith=https_prefix + "?")
                 | Q(url__istartswith=https_prefix + "#")
             )
-            group_condition |= (http_exact | https_exact)
+            group_condition |= http_exact | https_exact
 
     return group_condition
 
@@ -322,30 +335,23 @@ def _filter_bundle(query_set: QuerySet, bundle: BookmarkBundle) -> QuerySet:
     return query_set
 
 
-def _apply_filters(query_set: QuerySet, user: Optional[User], profile: UserProfile, search: BookmarkSearch) -> QuerySet:
+def _apply_filters(
+    query_set: QuerySet, user: User | None, profile: UserProfile, search: BookmarkSearch
+) -> QuerySet:
     # Filter by modified_since if provided
     if search.modified_since:
-        try:
+        with contextlib.suppress(ValidationError):
             query_set = query_set.filter(date_modified__gt=search.modified_since)
-        except ValidationError:
-            # If the date format is invalid, ignore the filter
-            pass
 
     # Filter by added_since if provided
     if search.added_since:
-        try:
+        with contextlib.suppress(ValidationError):
             query_set = query_set.filter(date_added__gt=search.added_since)
-        except ValidationError:
-            # If the date format is invalid, ignore the filter
-            pass
 
     # Filter by deleted_since if provided
     if search.deleted_since:
-        try:
+        with contextlib.suppress(ValidationError):
             query_set = query_set.filter(date_deleted__gt=search.deleted_since)
-        except ValidationError:
-            # If the date format is invalid, ignore the filter
-            pass
 
     # Filter by search query
     if profile.legacy_search:
@@ -417,7 +423,7 @@ def _apply_filters(query_set: QuerySet, user: Optional[User], profile: UserProfi
         field_map = {
             "added": "date_added",
             "modified": "date_modified",
-            "deleted": "date_deleted"
+            "deleted": "date_deleted",
         }
         field = field_map[search.date_filter_by]
         start = _parse_date(search.date_filter_start)
@@ -425,7 +431,9 @@ def _apply_filters(query_set: QuerySet, user: Optional[User], profile: UserProfi
         if start:
             query_set = query_set.filter(**{f"{field}__gte": start})
         if end:
-            if isinstance(end, datetime.date) and not isinstance(end, datetime.datetime):
+            if isinstance(end, datetime.date) and not isinstance(
+                end, datetime.datetime
+            ):
                 end = end + datetime.timedelta(days=1)
             query_set = query_set.filter(**{f"{field}__lt": end})
 
@@ -462,7 +470,9 @@ def _apply_field_terms_filters(query_set: QuerySet, field_terms: dict) -> QueryS
             group_condition = _build_domain_group_condition(raw_group)
 
             # AND 逻辑连接多个 domain:(...) 分组
-            combined_domains_condition &= group_condition if combined_domains_condition else group_condition
+            combined_domains_condition &= (
+                group_condition if combined_domains_condition else group_condition
+            )
 
         if combined_domains_condition:
             query_set = query_set.filter(combined_domains_condition)
@@ -471,7 +481,7 @@ def _apply_field_terms_filters(query_set: QuerySet, field_terms: dict) -> QueryS
 
 
 def _base_bookmarks_query(
-    user: Optional[User],
+    user: User | None,
     profile: UserProfile,
     search: BookmarkSearch,
 ) -> QuerySet:
@@ -485,20 +495,20 @@ def _base_bookmarks_query(
     if search.sort == BookmarkSearch.SORT_RANDOM:
         base_query = query_set
         # 生成随机排序
-        if search.request and hasattr(search.request, 'session'):
-            seed = search.request.session.get('random_sort_seed', int(time.time()))
+        if search.request and hasattr(search.request, "session"):
+            seed = search.request.session.get("random_sort_seed", int(time.time()))
         else:
             seed = int(time.time())
-        ids = list(base_query.values_list('id', flat=True))
+        ids = list(base_query.values_list("id", flat=True))
         rng = random.Random(seed)
         shuffled = ids[:]
         rng.shuffle(shuffled)
         order = Case(
             *[When(id=pk, then=pos) for pos, pk in enumerate(shuffled)],
-            output_field=IntegerField()
+            output_field=IntegerField(),
         )
-        query_set = query_set.annotate(random_order=order).order_by('random_order')
-        
+        query_set = query_set.annotate(random_order=order).order_by("random_order")
+
         # 然后进行其他过滤
         query_set = _apply_filters(query_set, user, profile, search)
 
@@ -515,7 +525,10 @@ def _base_bookmarks_query(
             # to be replicated as there is no corresponding database field
             query_set = query_set.annotate(
                 effective_title=Case(
-                    When(Q(title__isnull=False) & ~Q(title__exact=""), then=Lower("title")),
+                    When(
+                        Q(title__isnull=False) & ~Q(title__exact=""),
+                        then=Lower("title"),
+                    ),
                     default=Lower("url"),
                     output_field=CharField(),
                 )
@@ -569,7 +582,7 @@ def query_archived_bookmark_tags(
 
 
 def query_shared_bookmark_tags(
-    user: Optional[User],
+    user: User | None,
     profile: UserProfile,
     search: BookmarkSearch,
     public_only: bool,
@@ -580,12 +593,14 @@ def query_shared_bookmark_tags(
 
     return query_set.distinct()
 
+
 def query_trashed_bookmark_tags(
     user: User, profile: UserProfile, search: BookmarkSearch
 ):
     bookmarks_query = query_trashed_bookmarks(user, profile, search)
     query_set = Tag.objects.filter(bookmark__in=bookmarks_query)
     return query_set.distinct()
+
 
 def query_shared_bookmark_users(
     profile: UserProfile, search: BookmarkSearch, public_only: bool
@@ -615,7 +630,7 @@ def get_tags_for_query(user: User, profile: UserProfile, query: str) -> QuerySet
 
 
 def get_shared_tags_for_query(
-    user: Optional[User], profile: UserProfile, query: str, public_only: bool
+    user: User | None, profile: UserProfile, query: str, public_only: bool
 ) -> QuerySet:
     tag_names = extract_tag_names_from_query(query, profile)
 
@@ -644,7 +659,7 @@ def parse_query_string(query_string):
     """解析查询字符串为不同组件.
 
     语法说明:
-    - Field terms: 
+    - Field terms:
         - 以title|desc|notes|url|domain开头，后跟:和非转义的(，然后是内容，直到匹配的)
         - 如果(被转义为\，则token被视为普通搜索项，如title:\(hello\) -> 搜索项'title:(hello)'
         - 在(...)中允许空格。)可以被转义为\\)
@@ -657,7 +672,9 @@ def parse_query_string(query_string):
     return _parse_tokens(tokens)
 
 
-def replace_field_terms(query_string: str, field_name: str, new_terms: list[str]) -> str:
+def replace_field_terms(
+    query_string: str, field_name: str, new_terms: list[str]
+) -> str:
     tokens = _tokenize_query_string((query_string or "").strip())
     filtered_tokens = []
 
@@ -679,42 +696,42 @@ def _tokenize_query_string(query_string):
     """分词：将query_string拆分为tokens, 处理field_term和转义."""
     if not query_string:
         return []
-    
+
     tokens = []
     i = 0
-    
+
     while i < len(query_string):
         # 忽略前置空格
         while i < len(query_string) and query_string[i].isspace():
             i += 1
-        
+
         if i >= len(query_string):
             break
-        
+
         # 检查是否为field_term，若是则进行提取
         field_prefixes = ("title:", "desc:", "notes:", "url:", "domain:")
         is_field_term = False
         field_prefix = None
-        
+
         for prefix in field_prefixes:
             if query_string.startswith(prefix, i):
                 is_field_term = True
                 field_prefix = prefix
                 break
-        
+
         if is_field_term:
             token = _extract_field_token(query_string, i, field_prefix)
             if token:
                 tokens.append(token)
                 i += len(token)
                 continue
-        
+
         # 解析为普通token
         token_start = i
         while i < len(query_string) and not query_string[i].isspace():
             i += 1
         tokens.append(query_string[token_start:i])
-    
+
     return tokens
 
 
@@ -722,45 +739,45 @@ def _extract_field_token(query_string, start_pos, field_prefix):
     """提取field_term."""
     if not query_string.startswith(field_prefix, start_pos):
         return None
-    
+
     prefix_end = start_pos + len(field_prefix)
-    
+
     # 检查是否跟着非转义 '('
-    if prefix_end >= len(query_string) or query_string[prefix_end] != '(':
+    if prefix_end >= len(query_string) or query_string[prefix_end] != "(":
         return None
-    
+
     # 查找闭合的 ')'
     depth = 1
     escaped = False
     i = prefix_end + 1
-    
+
     while i < len(query_string):
         char = query_string[i]
-        
+
         if escaped:
             escaped = False
             i += 1
             continue
-        
-        if char == '\\':
+
+        if char == "\\":
             escaped = True
             i += 1
             continue
-        
-        if char == '(':
+
+        if char == "(":
             depth += 1
             i += 1
             continue
-        
-        if char == ')':
+
+        if char == ")":
             depth -= 1
             i += 1
             if depth == 0:
                 return query_string[start_pos:i]
             continue
-        
+
         i += 1
-    
+
     return None
 
 
@@ -768,12 +785,10 @@ def _parse_tokens(tokens):
     """解析tokens为搜索组件."""
     search_terms = []
     tag_names = []
-    field_terms = {
-        "title": [], "desc": [], "notes": [], "url": [], "domain": []
-    }
+    field_terms = {"title": [], "desc": [], "notes": [], "url": [], "domain": []}
     untagged = False
     unread = False
-    
+
     for token in tokens:
         if token.startswith("#") and len(token) > 1:
             tag_names.append(token[1:])
@@ -794,9 +809,9 @@ def _parse_tokens(tokens):
             # Unescape parentheses for plain terms
             unescaped_token = _unescape_token(token)
             search_terms.append(unescaped_token)
-    
+
     tag_names = unique(tag_names, str.lower)
-    
+
     return {
         "search_terms": search_terms,
         "tag_names": tag_names,
@@ -815,72 +830,70 @@ def _is_field_term(token):
 def _extract_field_content(token):
     """提取字段名称和内容."""
     field_prefixes = ("title:", "desc:", "notes:", "url:", "domain:")
-    
+
     for prefix in field_prefixes:
         if token.startswith(prefix):
             field_name = prefix[:-1]  # Remove trailing ':'
-            content_part = token[len(prefix):]
-            
+            content_part = token[len(prefix) :]
+
             # Check if content starts with unescaped '('
             # If it starts with '\(', it's escaped and should be treated as plain text
-            if content_part.startswith('\\('):
+            if content_part.startswith("\\("):
                 return None, None
-            
-            if not content_part.startswith('('):
+
+            if not content_part.startswith("("):
                 return None, None
-            
+
             # Extract content between parentheses
             content = _extract_parenthesized_content(content_part)
             if content is not None:
                 return field_name, content
-    
+
     return None, None
 
 
 def _extract_parenthesized_content(text):
     """提取括号内的内容."""
-    if not text.startswith('('):
+    if not text.startswith("("):
         return None
-    
+
     content_start = 1
     depth = 1
     escaped = False
     i = 1
-    
+
     while i < len(text):
         char = text[i]
-        
+
         if escaped:
             escaped = False
             i += 1
             continue
-        
-        if char == '\\':
+
+        if char == "\\":
             escaped = True
             i += 1
             continue
-        
-        if char == '(':
+
+        if char == "(":
             # Do not allow nesting: treat as literal
             depth += 1
             i += 1
             continue
-        
-        if char == ')':
+
+        if char == ")":
             depth -= 1
             i += 1
             if depth == 0:
-                content = text[content_start:i-1]
+                content = text[content_start : i - 1]
                 return _unescape_token(content)
             continue
-        
+
         i += 1
-    
+
     return None
 
 
 def _unescape_token(token):
     """处理转义."""
-    return (token.replace("\\(", "(")
-                 .replace("\\)", ")")
-                 .replace("\\\\", "\\"))
+    return token.replace("\\(", "(").replace("\\)", ")").replace("\\\\", "\\")
