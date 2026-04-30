@@ -31,12 +31,9 @@ def view(request, asset_id: int):
     asset = access.asset_read(request, asset_id)
     content = _get_asset_content(asset)
 
-    content_type = asset.content_type
-    if 'charset' not in content_type.lower():
-        content_type = f'{content_type}; charset=utf-8'
-
-    response = HttpResponse(content, content_type=content_type)
+    response = HttpResponse(content, content_type=asset.content_type)
     response["Content-Disposition"] = f'inline; filename="{asset.download_name}"'
+    response["Content-Security-Policy"] = "sandbox allow-scripts"
     return response
 
 

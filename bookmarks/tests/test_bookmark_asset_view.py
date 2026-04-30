@@ -181,6 +181,10 @@ class BookmarkAssetViewTestCase(TestCase, BookmarkFactoryMixin):
             response["Content-Disposition"],
             f'inline; filename="{asset.display_name}.html"',
         )
+        self.assertEqual(
+            response["Content-Security-Policy"],
+            "sandbox allow-scripts",
+        )
 
     def test_uploaded_file_download_name(self):
         bookmark = self.setup_bookmark()
@@ -191,4 +195,8 @@ class BookmarkAssetViewTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(
             response["Content-Disposition"],
             f'inline; filename="{asset.display_name}"',
+        )
+        self.assertEqual(
+            response["Content-Security-Policy"],
+            "sandbox allow-scripts",
         )
