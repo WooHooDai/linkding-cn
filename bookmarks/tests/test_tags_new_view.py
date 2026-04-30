@@ -2,10 +2,10 @@ from django.test import TestCase
 from django.urls import reverse
 
 from bookmarks.models import Tag
-from bookmarks.tests.helpers import BookmarkFactoryMixin
+from bookmarks.tests.helpers import BookmarkFactoryMixin, HtmlTestMixin
 
 
-class TagsNewViewTestCase(TestCase, BookmarkFactoryMixin):
+class TagsNewViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
     def setUp(self) -> None:
         self.user = self.get_or_create_test_user()
         self.client.force_login(self.user)
@@ -77,3 +77,23 @@ class TagsNewViewTestCase(TestCase, BookmarkFactoryMixin):
         """,
             response.content.decode(),
         )
+
+    def test_frame_get_renders_modal(self):
+        response = self.client.get(
+            reverse("linkding:tags.new"), HTTP_TURBO_FRAME="tag-modal"
+        )
+
+        soup = self.make_soup(response.content.decode())
+        self.assertIsNotNone(soup.select_one('turbo-frame#tag-modal'))
+        self.assertIsNotNone(soup.select_one("ld-modal"))
+
+    def test_invalid_turbo_post_replaces_modal(self):
+        response = self.client.post(
+            reverse("linkding:tags.new"),
+            {"name": ""},
+            HTTP_ACCEPT="text/vnd.turbo-stream.html",
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response["Content-Type"], "text/vnd.turbo-stream.html")
+        self.assertIn('target="tag-modal"', response.content.decode())

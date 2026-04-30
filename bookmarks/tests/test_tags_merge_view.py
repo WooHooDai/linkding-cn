@@ -222,3 +222,12 @@ class TagsMergeViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             """,
             response.content.decode(),
         )
+
+    def test_frame_get_renders_modal(self):
+        response = self.client.get(
+            reverse("linkding:tags.merge"), HTTP_TURBO_FRAME="tag-modal"
+        )
+
+        soup = self.make_soup(response.content.decode())
+        self.assertIsNotNone(soup.select_one('turbo-frame#tag-modal'))
+        self.assertIsNotNone(soup.select_one("ld-modal"))

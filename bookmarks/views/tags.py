@@ -11,6 +11,8 @@ from django.utils.translation import gettext as _, ngettext
 from bookmarks.forms import TagForm, TagMergeForm
 from bookmarks.models import Bookmark, Tag
 from bookmarks.type_defs import HttpRequest
+from bookmarks.utils import redirect_with_query
+from bookmarks.views import turbo
 
 
 @login_required
@@ -20,17 +22,14 @@ def tags_index(request: HttpRequest):
         tag = get_object_or_404(Tag, id=tag_id, owner=request.user)
         tag_name = tag.name
         tag.delete()
-        messages.success(
-            request,
-            _('Tag "%(tag_name)s" deleted successfully.')
-            % {"tag_name": tag_name},
-        )
+        if not turbo.is_frame(request, "tag-main"):
+            messages.success(
+                request,
+                _('Tag "%(tag_name)s" deleted successfully.')
+                % {"tag_name": tag_name},
+            )
 
-        redirect_url = reverse("linkding:tags.index")
-        if request.GET:
-            redirect_url += "?" + request.GET.urlencode()
-
-        return HttpResponseRedirect(redirect_url)
+        return redirect_with_query(request, reverse("linkding:tags.index"))
 
     search = request.GET.get("search", "").strip()
     unused_only = request.GET.get("unused", "") == "true"
@@ -85,9 +84,22 @@ def tag_new(request: HttpRequest):
                 % {"tag_name": tag.name},
             )
             return HttpResponseRedirect(reverse("linkding:tags.index"))
+        if turbo.accept(request):
+            return turbo.replace(
+                request,
+                "tag-modal",
+                "tags/new_modal.html",
+                {"form": form},
+                status=422,
+            )
 
     status = 422 if request.method == "POST" and not form.is_valid() else 200
-    return render(request, "tags/new.html", {"form": form}, status=status)
+    template = (
+        "tags/new_modal.html"
+        if turbo.is_frame(request, "tag-modal")
+        else "tags/new.html"
+    )
+    return render(request, template, {"form": form}, status=status)
 
 
 @login_required
@@ -99,19 +111,29 @@ def tag_edit(request: HttpRequest, tag_id: int):
     if request.method == "POST":
         if form.is_valid():
             form.save()
-            messages.success(
+            if not turbo.is_frame(request, "tag-main"):
+                messages.success(
+                    request,
+                    _('Tag "%(tag_name)s" updated successfully.')
+                    % {"tag_name": tag.name},
+                )
+            return redirect_with_query(request, reverse("linkding:tags.index"))
+        if turbo.accept(request):
+            return turbo.replace(
                 request,
-                _('Tag "%(tag_name)s" updated successfully.')
-                % {"tag_name": tag.name},
+                "tag-modal",
+                "tags/edit_modal.html",
+                {"tag": tag, "form": form},
+                status=422,
             )
-            return HttpResponseRedirect(reverse("linkding:tags.index"))
 
     status = 422 if request.method == "POST" and not form.is_valid() else 200
-    context = {
-        "tag": tag,
-        "form": form,
-    }
-    return render(request, "tags/edit.html", context, status=status)
+    template = (
+        "tags/edit_modal.html"
+        if turbo.is_frame(request, "tag-modal")
+        else "tags/edit.html"
+    )
+    return render(request, template, {"tag": tag, "form": form}, status=status)
 
 
 @login_required
@@ -168,6 +190,19 @@ def tag_merge(request: HttpRequest):
                 )
 
             return HttpResponseRedirect(reverse("linkding:tags.index"))
+        if turbo.accept(request):
+            return turbo.replace(
+                request,
+                "tag-modal",
+                "tags/merge_modal.html",
+                {"form": form},
+                status=422,
+            )
 
     status = 422 if request.method == "POST" and not form.is_valid() else 200
-    return render(request, "tags/merge.html", {"form": form}, status=status)
+    template = (
+        "tags/merge_modal.html"
+        if turbo.is_frame(request, "tag-modal")
+        else "tags/merge.html"
+    )
+    return render(request, template, {"form": form}, status=status)

@@ -1,10 +1,10 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from bookmarks.tests.helpers import BookmarkFactoryMixin
+from bookmarks.tests.helpers import BookmarkFactoryMixin, HtmlTestMixin
 
 
-class TagsEditViewTestCase(TestCase, BookmarkFactoryMixin):
+class TagsEditViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
     def setUp(self) -> None:
         self.user = self.get_or_create_test_user()
         self.client.force_login(self.user)
@@ -111,3 +111,47 @@ class TagsEditViewTestCase(TestCase, BookmarkFactoryMixin):
         """,
             response.content.decode(),
         )
+
+    def test_update_tag_preserves_query_parameters(self):
+        tag = self.setup_tag(name="old_name")
+
+        url = (
+            reverse("linkding:tags.edit", args=[tag.id])
+            + "?search=search&unused=true&page=2&sort=name-desc"
+        )
+        response = self.client.post(url, {"name": "new_name"})
+
+        expected_redirect = (
+            reverse("linkding:tags.index")
+            + "?search=search&unused=true&page=2&sort=name-desc"
+        )
+        self.assertRedirects(response, expected_redirect)
+
+    def test_frame_get_renders_modal(self):
+        tag = self.setup_tag(name="tag1")
+
+        response = self.client.get(
+            reverse("linkding:tags.edit", args=[tag.id]), HTTP_TURBO_FRAME="tag-modal"
+        )
+
+        soup = self.make_soup(response.content.decode())
+        self.assertIsNotNone(soup.select_one('turbo-frame#tag-modal'))
+        self.assertIsNotNone(soup.select_one("ld-modal"))
+        self.assertContains(
+            response,
+            f'action="{reverse("linkding:tags.edit", args=[tag.id])}?"',
+            html=False,
+        )
+
+    def test_invalid_turbo_post_replaces_modal(self):
+        tag = self.setup_tag(name="tag1")
+
+        response = self.client.post(
+            reverse("linkding:tags.edit", args=[tag.id]),
+            {"name": ""},
+            HTTP_ACCEPT="text/vnd.turbo-stream.html",
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response["Content-Type"], "text/vnd.turbo-stream.html")
+        self.assertIn('target="tag-modal"', response.content.decode())

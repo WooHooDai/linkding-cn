@@ -12,6 +12,8 @@
         Found {{ count }} matching bookmarks.
       {% endblocktranslate %}
     </div>
-    {% include 'bookmarks/bookmark_list.html' %}
+    {% with pagination_frame="preview" %}
+      {% include 'bookmarks/bookmark_list.html' %}
+    {% endwith %}
   {% endif %}
 </turbo-frame>

@@ -14,6 +14,7 @@ register = template.Library()
 )
 def pagination(context, page: Page):
     request = context["request"]
+    pagination_frame = context.get("pagination_frame", "_top")
     base_url = request.path
 
     # remove page number and details from query parameters
@@ -53,6 +54,7 @@ def pagination(context, page: Page):
         "prev_link": prev_link,
         "next_link": next_link,
         "page_links": page_links,
+        "pagination_frame": pagination_frame,
     }
 
 
