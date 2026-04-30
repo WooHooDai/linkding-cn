@@ -11,14 +11,14 @@
 {% block content %}
   <div class="tags-page crud-page">
     <turbo-frame id="tag-main">
-    <main aria-labelledby="main-heading">
-      <div class="crud-header">
-        <h1 id="main-heading">{% translate "Tags" %}</h1>
-        <div class="d-flex gap-2 ml-auto">
-          <a href="{% url 'linkding:tags.new' %}" data-turbo-frame="tag-modal" class="btn">{% translate "Add tag" %}</a>
-          <a href="{% url 'linkding:tags.merge' %}" data-turbo-frame="tag-modal" class="btn">{% translate "Merge tags" %}</a>
+      <main aria-labelledby="main-heading">
+        <div class="crud-header">
+          <h1 id="main-heading">{% translate "Tags" %}</h1>
+          <div class="d-flex gap-2 ml-auto">
+            <a href="{% url 'linkding:tags.new' %}" data-turbo-frame="tag-modal" class="btn">{% translate "Add tag" %}</a>
+            <a href="{% url 'linkding:tags.merge' %}" data-turbo-frame="tag-modal" class="btn">{% translate "Merge tags" %}</a>
+          </div>
         </div>
-      </div>
 
       {% include 'shared/messages.html' %}
 
@@ -131,8 +131,11 @@
           {% endif %}
         </div>
       {% endif %}
-    </main>
-    <turbo-frame id="tag-modal"></turbo-frame>
+      </main>
     </turbo-frame>
   </div>
+{% endblock %}
+
+{% block overlays %}
+  <turbo-frame id="tag-modal"></turbo-frame>
 {% endblock %}

@@ -231,3 +231,15 @@ class TagsMergeViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         soup = self.make_soup(response.content.decode())
         self.assertIsNotNone(soup.select_one('turbo-frame#tag-modal'))
         self.assertIsNotNone(soup.select_one("ld-modal"))
+
+    def test_merge_page_renders_chinese_translations(self):
+        self.user.profile.language = "zh-hans"
+        self.user.profile.save()
+
+        response = self.client.get(reverse("linkding:tags.merge"))
+
+        self.assertEqual(response.wsgi_request.LANGUAGE_CODE, "zh-hans")
+        self.assertContains(response, "<h1 id=\"main-heading\">合并标签</h1>", html=True)
+        self.assertContains(response, "如何合并标签")
+        self.assertContains(response, "目标标签")
+        self.assertContains(response, "待合并标签")

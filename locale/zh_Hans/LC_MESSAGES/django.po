@@ -1716,6 +1716,52 @@ msgstr "新增标签"
 msgid "Merge tags"
 msgstr "合并标签"
 
+#: bookmarks/templates/tags/merge.html:5
+msgid "Merge tags - Linkding"
+msgstr "合并标签 - Linkding"
+
+#: bookmarks/templates/tags/merge.html:17
+msgid "How to merge tags"
+msgstr "如何合并标签"
+
+#: bookmarks/templates/tags/merge.html:20
+msgid "Enter the name of the tag you want to keep"
+msgstr "输入你要保留的标签名称"
+
+#: bookmarks/templates/tags/merge.html:21
+msgid "Enter the names of tags to merge into the target tag"
+msgstr "输入要合并到目标标签中的标签名称"
+
+#: bookmarks/templates/tags/merge.html:22
+msgid "The target tag is added to all bookmarks that have any of the merge tags"
+msgstr "目标标签会被添加到所有包含任一待合并标签的书签中"
+
+#: bookmarks/templates/tags/merge.html:23
+msgid "The merged tags are deleted"
+msgstr "被合并的标签会被删除"
+
+#: bookmarks/templates/tags/merge.html:31
+msgid "Target tag"
+msgstr "目标标签"
+
+#: bookmarks/templates/tags/merge.html:38
+msgid ""
+"Enter the name of the tag you want to keep. The tags entered below will "
+"be merged into this one."
+msgstr "输入你要保留的标签名称。下方输入的标签都会合并到这个标签中。"
+
+#: bookmarks/templates/tags/merge.html:51
+msgid "Tags to merge"
+msgstr "待合并标签"
+
+#: bookmarks/templates/tags/merge.html:58
+msgid ""
+"Enter the names of tags to merge into the target tag, separated by spaces. "
+"These tags will be deleted after merging."
+msgstr ""
+"输入要合并到目标标签中的标签名称，多个标签请用空格分隔。合并完成后，这些标"
+"签会被删除。"
+
 #: bookmarks/templates/tags/index.html:27
 msgid "Search tags"
 msgstr "搜索标签"
@@ -2383,40 +2429,3 @@ msgstr "未选择文件"
 
 #~ msgid "Change language"
 #~ msgstr "切换语言"
-
-#~ msgid "Merge tags - Linkding"
-#~ msgstr "合并标签 - Linkding"
-
-#~ msgid "How to merge tags"
-#~ msgstr "如何合并标签"
-
-#~ msgid "Enter the name of the tag you want to keep"
-#~ msgstr "输入你要保留的标签名称"
-
-#~ msgid "Enter the names of tags to merge into the target tag"
-#~ msgstr "输入要合并到目标标签中的标签名称"
-
-#~ msgid ""
-#~ "The target tag is added to all bookmarks that have any of the merge tags"
-#~ msgstr "目标标签会被添加到所有包含任一待合并标签的书签中"
-
-#~ msgid "The merged tags are deleted"
-#~ msgstr "被合并的标签会被删除"
-
-#~ msgid "Target tag"
-#~ msgstr "目标标签"
-
-#~ msgid ""
-#~ "Enter the name of the tag you want to keep. The tags entered below will "
-#~ "be merged into this one."
-#~ msgstr "输入你要保留的标签名称。下方输入的标签都会合并到这个标签中。"
-
-#~ msgid "Tags to merge"
-#~ msgstr "待合并标签"
-
-#~ msgid ""
-#~ "Enter the names of tags to merge into the target tag, separated by "
-#~ "spaces. These tags will be deleted after merging."
-#~ msgstr ""
-#~ "输入要合并到目标标签中的标签名称，多个标签请用空格分隔。合并完成后，这些标"
-#~ "签会被删除。"

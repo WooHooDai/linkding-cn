@@ -247,6 +247,15 @@ class TagsIndexViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
 
         self.assertOrderedRows(response, [tag_a, tag_b, tag_c])
 
+    def test_modal_frame_is_rendered_in_overlay_container(self):
+        response = self.client.get(reverse("linkding:tags.index"))
+        soup = self.make_soup(response.content.decode())
+
+        overlays = soup.select_one(".modals")
+        self.assertIsNotNone(overlays)
+        self.assertIsNotNone(overlays.select_one("turbo-frame#tag-modal"))
+        self.assertIsNone(soup.select_one(".tags-page turbo-frame#tag-modal"))
+
     def test_sort_select_has_correct_options_and_selection(self):
         self.setup_tag()
 
