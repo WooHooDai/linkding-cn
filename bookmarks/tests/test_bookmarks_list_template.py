@@ -164,6 +164,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         url = f"/static/{bookmark.preview_image_file}"
         self.assertIsNotNone(preview_image)
         self.assertEqual(preview_image["src"], url)
+        self.assertEqual(preview_image.get("alt"), "")
 
     def assertPreviewImagePlaceholder(self, html: str):
         soup = self.make_soup(html)
@@ -768,6 +769,22 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
 
         self.assertPreviewImageVisible(html, bookmark)
 
+    def test_remote_preview_image_should_use_empty_alt_text(self):
+        profile = self.get_or_create_test_user().profile
+        profile.enable_preview_images = True
+        profile.save()
+
+        bookmark = self.setup_bookmark()
+        bookmark.preview_image_remote_url = "https://example.com/preview.png"
+        bookmark.save(update_fields=["preview_image_remote_url"])
+        html = self.render_template()
+        soup = self.make_soup(html)
+        preview_image = soup.select_one(".preview-image")
+
+        self.assertIsNotNone(preview_image)
+        self.assertEqual(preview_image["src"], "https://example.com/preview.png")
+        self.assertEqual(preview_image.get("alt"), "")
+
     def test_preview_image_should_be_hidden_when_preview_images_disabled(self):
         profile = self.get_or_create_test_user().profile
         profile.enable_preview_images = False
@@ -943,6 +960,37 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         html = self.render_template()
 
         note_html = '<p><a href="https://example.com" rel="nofollow">https://example.com</a></p>'
+        self.assertNotes(html, note_html, 1)
+
+    def test_note_linkify_converts_schemeless_urls_to_https(self):
+        self.setup_bookmark(notes="Example: example.com")
+        html = self.render_template()
+
+        note_html = '<p>Example: <a href="https://example.com" rel="nofollow">example.com</a></p>'
+        self.assertNotes(html, note_html, 1)
+
+        self.setup_bookmark(notes="Example: http://example.com")
+        html = self.render_template()
+
+        note_html = '<p>Example: <a href="http://example.com" rel="nofollow">http://example.com</a></p>'
+        self.assertNotes(html, note_html, 1)
+
+        self.setup_bookmark(notes="Example: https://example.com")
+        html = self.render_template()
+
+        note_html = '<p>Example: <a href="https://example.com" rel="nofollow">https://example.com</a></p>'
+        self.assertNotes(html, note_html, 1)
+
+        self.setup_bookmark(notes="Contact: hello@example.com")
+        html = self.render_template()
+
+        note_html = "<p>Contact: hello@example.com</p>"
+        self.assertNotes(html, note_html, 1)
+
+        self.setup_bookmark(notes="FTP: ftp://ftp.example.com")
+        html = self.render_template()
+
+        note_html = '<p>FTP: <a href="ftp://ftp.example.com" rel="nofollow">ftp://ftp.example.com</a></p>'
         self.assertNotes(html, note_html, 1)
 
     def test_note_cleans_html(self):

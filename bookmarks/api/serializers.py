@@ -92,8 +92,6 @@ class BookmarkSerializer(serializers.ModelSerializer):
             "preview_image_url",
             "is_deleted",
             "tag_names",
-            "date_added",
-            "date_modified",
             "date_deleted",
             "website_title",
             "website_description",
@@ -110,6 +108,8 @@ class BookmarkSerializer(serializers.ModelSerializer):
     # Add dummy website title and description fields for backwards compatibility but keep them empty
     website_title = EmtpyField()
     website_description = EmtpyField()
+    date_added = serializers.DateTimeField(required=False)
+    date_modified = serializers.DateTimeField(required=False)
 
     def get_favicon_url(self, obj: Bookmark):
         if not obj.favicon_file:

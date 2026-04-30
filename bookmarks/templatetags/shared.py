@@ -2,7 +2,8 @@ import re
 
 import bleach
 import markdown
-from bleach_allowlist import markdown_tags, markdown_attrs
+from bleach.linkifier import DEFAULT_CALLBACKS, Linker
+from bleach_allowlist import markdown_attrs, markdown_tags
 from django import template
 from django.utils.safestring import mark_safe
 
@@ -145,6 +146,21 @@ class HtmlMinNode(template.Node):
         return output
 
 
+def schemeless_urls_to_https(attrs, _new):
+    href_key = (None, "href")
+    if href_key not in attrs:
+        return attrs
+
+    if attrs.get("_text", "").startswith("http://"):
+        return attrs
+
+    attrs[href_key] = re.sub(r"^http://", "https://", attrs[href_key])
+    return attrs
+
+
+linker = Linker(callbacks=[*DEFAULT_CALLBACKS, schemeless_urls_to_https])
+
+
 @register.simple_tag(name="markdown", takes_context=True)
 def render_markdown(context, markdown_text):
     # naive approach to reusing the renderer for a single request
@@ -157,7 +173,7 @@ def render_markdown(context, markdown_text):
 
     as_html = renderer.convert(markdown_text)
     sanitized_html = bleach.clean(as_html, markdown_tags, markdown_attrs)
-    linkified_html = bleach.linkify(sanitized_html)
+    linkified_html = linker.linkify(sanitized_html)
 
     return mark_safe(linkified_html)
 
