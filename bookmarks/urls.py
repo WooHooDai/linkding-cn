@@ -147,10 +147,6 @@ if settings.DEBUG and "debug_toolbar" in settings.INSTALLED_APPS:
 
     urlpatterns.append(path("__debug__/", include(debug_toolbar.urls)))
 
-# Registration
-if settings.ALLOW_REGISTRATION:
-    urlpatterns.append(path("", include("django_registration.backends.one_step.urls")))
-
 # Context path
 if settings.LD_CONTEXT_PATH:
     urlpatterns = [path(settings.LD_CONTEXT_PATH, include(urlpatterns))]

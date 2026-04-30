@@ -14,37 +14,33 @@
 {% endblock %}
 
 {% block content %}
-  <main class="mx-auto width-50 width-md-100" aria-labelledby="main-heading">
+  <main class="auth-page" aria-labelledby="main-heading">
     <div class="section-header">
       <h1 id="main-heading">{% translate "Login" %}</h1>
     </div>
-    <form method="post" action="{% url 'login' %}">
-      {% csrf_token %}
-      {% if form.errors %}
-        <div class="form-group has-error">
-          <p class="form-input-hint">{% translate "Your username and password didn't match. Please try again." %}</p>
+    {% if not disable_login %}
+      <form method="post" action="{% url 'login' %}">
+        {% csrf_token %}
+        {% if form.errors %}
+          <div class="form-group has-error">
+            <p class="form-input-hint">{% translate "Your username and password didn't match. Please try again." %}</p>
+          </div>
+        {% endif %}
+        <div class="form-group">
+          <label class="form-label" for="{{ form.username.id_for_label }}">{% translate "Username" %}</label>
+          {{ form.username|add_class:'form-input'|attr:'placeholder: ' }}
         </div>
-      {% endif %}
-      <div class="form-group">
-        <label class="form-label" for="{{ form.username.id_for_label }}">{% translate "Username" %}</label>
-        {{ form.username|add_class:'form-input'|attr:'placeholder: ' }}
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="{{ form.password.id_for_label }}">{% translate "Password" %}</label>
-        {{ form.password|add_class:'form-input'|attr:'placeholder: ' }}
-      </div>
+        <div class="form-group">
+          <label class="form-label" for="{{ form.password.id_for_label }}">{% translate "Password" %}</label>
+          {{ form.password|add_class:'form-input'|attr:'placeholder: ' }}
+        </div>
 
-      <br/>
-      <div class="d-flex justify-between">
-        <input type="submit" value="{% translate "Login" %}" class="btn btn-primary btn-wide"/>
+        <input type="submit" value="{% translate "Login" %}" class="btn btn-primary width-100 mt-4"/>
         <input type="hidden" name="next" value="{{ next }}"/>
-        {% if enable_oidc %}
-          <a class="btn btn-link" href="{% url 'oidc_authentication_init' %}" data-turbo="false">{% translate "Login with OIDC" %}</a>
-        {% endif %}
-        {% if allow_registration %}
-          <a href="{% url 'django_registration_register' %}" class="btn btn-link">{% translate "Register" %}</a>
-        {% endif %}
-      </div>
-    </form>
+      </form>
+    {% endif %}
+    {% if enable_oidc %}
+      <a class="btn width-100 mt-4" href="{% url 'oidc_authentication_init' %}" data-turbo="false">{% translate "Login with OIDC" %}</a>
+    {% endif %}
   </main>
 {% endblock %}

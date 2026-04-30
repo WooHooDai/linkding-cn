@@ -127,15 +127,6 @@ wheels = [
 ]
 
 [[package]]
-name = "confusable-homoglyphs"
-version = "3.3.1"
-source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
-sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/0d/10/1358fca1ee2d97d4f2877df9ffbe6d124da666fef3b2f75e771a4c1afee6/confusable_homoglyphs-3.3.1.tar.gz", hash = "sha256:b995001c9b2e1b4cea0cf5f3840a7c79188a8cbbad053d693572bd8c1c1ec460", size = 325480, upload-time = "2024-01-30T10:10:27.47Z" }
-wheels = [
-    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/c5/6e/c0fcbb7d341a46cf4241a6aa9e6a737734f0657521fc1bcd074953fe4eea/confusable_homoglyphs-3.3.1-py2.py3-none-any.whl", hash = "sha256:84c92cb79dc7f55aa290d0762b2349abd8dee4c16fbe6f99eac978d394e2e6a1", size = 144755, upload-time = "2024-01-30T10:10:24.857Z" },
-]
-
-[[package]]
 name = "coverage"
 version = "7.10.4"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
@@ -263,19 +254,6 @@ dependencies = [
 sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/c5/d5/5fc90234532088aeec5faa48d5b09951cc7eab6626030ed427d3bd8cd9bc/django_debug_toolbar-6.0.0.tar.gz", hash = "sha256:6eb9fa6f4a5884bf04004700ffb5a44043f1fff38784447fc52c1633448c8c14", size = 305331, upload-time = "2025-07-25T13:11:48.68Z" }
 wheels = [
     { url = "https://pypi.tuna.tsinghua.edu.cn/packages/05/b5/4724a8c18fcc5b09dca7b7a0e70c34208317bb110075ad12484d6588ae91/django_debug_toolbar-6.0.0-py3-none-any.whl", hash = "sha256:0cf2cac5c307b77d6e143c914e5c6592df53ffe34642d93929e5ef095ae56841", size = 266967, upload-time = "2025-07-25T13:11:47.265Z" },
-]
-
-[[package]]
-name = "django-registration"
-version = "3.4"
-source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
-dependencies = [
-    { name = "confusable-homoglyphs" },
-    { name = "django" },
-]
-sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/71/00/ee3e5e08cb16475836f9ad117631f598f62a4e32a37c01ab4cb0859454ea/django-registration-3.4.tar.gz", hash = "sha256:1a0ccef7ef71e67a78a551abd8ad378977dc14a036f1fcd8be422a68bd5254a9", size = 89040, upload-time = "2023-07-04T01:25:38.448Z" }
-wheels = [
-    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/06/3a/455455a208cd38c7fececec136e0de4a848004a7dafe4d62e55566dcbbfe/django_registration-3.4-py3-none-any.whl", hash = "sha256:fa76df481189794f47eb73043ee5cc9bfb0963194b901d7bd8cf914beab1ddd0", size = 96588, upload-time = "2023-07-04T01:25:36.714Z" },
 ]
 
 [[package]]
@@ -432,7 +410,6 @@ dependencies = [
     { name = "bleach" },
     { name = "bleach-allowlist" },
     { name = "django" },
-    { name = "django-registration" },
     { name = "django-widget-tweaks" },
     { name = "djangorestframework" },
     { name = "drissionpage" },
@@ -465,7 +442,6 @@ requires-dist = [
     { name = "bleach", specifier = ">=6.1.0" },
     { name = "bleach-allowlist", specifier = ">=1.0.3" },
     { name = "django", specifier = ">=5.2.3" },
-    { name = "django-registration", specifier = ">=3.4" },
     { name = "django-widget-tweaks", specifier = ">=1.5.0" },
     { name = "djangorestframework", specifier = ">=3.15.2" },
     { name = "drissionpage", specifier = ">=4.1.0.18" },

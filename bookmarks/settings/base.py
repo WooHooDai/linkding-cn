@@ -146,9 +146,6 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 100,
 }
 
-# Registration switch
-ALLOW_REGISTRATION = False
-
 # URL validation flag
 LD_DISABLE_URL_VALIDATION = os.getenv("LD_DISABLE_URL_VALIDATION", False) in (
     True,
@@ -185,6 +182,14 @@ HUEY = {
         "health_check_interval": 10,
     },
 }
+
+# Disable login form if configured
+LD_DISABLE_LOGIN_FORM = os.getenv("LD_DISABLE_LOGIN_FORM", False) in (
+    True,
+    "True",
+    "true",
+    "1",
+)
 
 
 # Enable OICD support if configured
