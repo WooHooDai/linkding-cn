@@ -24,17 +24,17 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
         url = reverse("linkding:bookmarks.index") + f"?details={bookmark.id}"
         response = self.client.get(url)
         soup = self.make_soup(response.content.decode())
-        return soup.select_one("div.modal.bookmark-details")
+        return soup.select_one("ld-details-modal")
 
     def get_shared_details_modal(self, bookmark):
         url = reverse("linkding:bookmarks.shared") + f"?details={bookmark.id}"
         response = self.client.get(url)
         soup = self.make_soup(response.content.decode())
-        return soup.select_one("div.modal.bookmark-details")
+        return soup.select_one("ld-details-modal")
 
     def has_details_modal(self, response):
         soup = self.make_soup(response.content.decode())
-        return soup.select_one("div.modal.bookmark-details") is not None
+        return soup.select_one("ld-details-modal") is not None
 
     def find_section_content(self, soup, section_name):
         h3 = soup.find("h3", string=section_name)
@@ -152,27 +152,15 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
         link = self.find_weblink(soup, bookmark.url)
         self.assertIsNotNone(link)
         self.assertEqual(link["href"], bookmark.url)
-        self.assertEqual(link.text.strip(), bookmark.url)
-
-        # favicons disabled
-        bookmark = self.setup_bookmark(favicon_file="example.png")
-        soup = self.get_index_details_modal(bookmark)
-        link = self.find_weblink(soup, bookmark.url)
-        image = link.select_one("img")
-        self.assertIsNone(image)
-
-        # favicons enabled, no favicon
-        profile = self.get_or_create_test_user().profile
-        profile.enable_favicons = True
-        profile.save()
+        self.assertEqual(link.text.strip(), "Original URL")
 
         bookmark = self.setup_bookmark(favicon_file="")
         soup = self.get_index_details_modal(bookmark)
         link = self.find_weblink(soup, bookmark.url)
         image = link.select_one("img")
-        self.assertIsNone(image)
+        self.assertIsNotNone(image)
+        self.assertEqual(image["src"], "/static/favicon.svg")
 
-        # favicons enabled, favicon present
         bookmark = self.setup_bookmark(favicon_file="example.png")
         soup = self.get_index_details_modal(bookmark)
         link = self.find_weblink(soup, bookmark.url)
@@ -184,7 +172,10 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
         # no latest snapshot
         bookmark = self.setup_bookmark()
         soup = self.get_index_details_modal(bookmark)
-        self.assertEqual(self.count_weblinks(soup), 2)
+        self.assertEqual(self.count_weblinks(soup), 3)
+        reader_mode_url = reverse("linkding:bookmarks.read", args=[bookmark.id])
+        link = self.find_weblink(soup, reader_mode_url)
+        self.assertIsNotNone(link)
 
         # snapshot is not complete
         self.setup_asset(
@@ -198,7 +189,7 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
             status=BookmarkAsset.STATUS_FAILURE,
         )
         soup = self.get_index_details_modal(bookmark)
-        self.assertEqual(self.count_weblinks(soup), 2)
+        self.assertEqual(self.count_weblinks(soup), 3)
 
         # not a snapshot
         self.setup_asset(
@@ -207,7 +198,9 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
             status=BookmarkAsset.STATUS_COMPLETE,
         )
         soup = self.get_index_details_modal(bookmark)
-        self.assertEqual(self.count_weblinks(soup), 2)
+        self.assertEqual(self.count_weblinks(soup), 3)
+        link = self.find_weblink(soup, reader_mode_url)
+        self.assertIsNotNone(link)
 
         # snapshot is complete
         asset = self.setup_asset(
@@ -229,35 +222,6 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
         self.assertIsNotNone(link)
         self.assertEqual(link["href"], bookmark.web_archive_snapshot_url)
         self.assertEqual(link.text.strip(), "Internet Archive")
-
-        # favicons disabled
-        bookmark = self.setup_bookmark(
-            web_archive_snapshot_url="https://example.com/", favicon_file="example.png"
-        )
-        soup = self.get_index_details_modal(bookmark)
-        link = self.find_weblink(soup, bookmark.web_archive_snapshot_url)
-        image = link.select_one("svg")
-        self.assertIsNone(image)
-
-        # favicons enabled, no favicon
-        profile = self.get_or_create_test_user().profile
-        profile.enable_favicons = True
-        profile.save()
-
-        bookmark = self.setup_bookmark(
-            web_archive_snapshot_url="https://example.com/", favicon_file=""
-        )
-        soup = self.get_index_details_modal(bookmark)
-        link = self.find_weblink(soup, bookmark.web_archive_snapshot_url)
-        image = link.select_one("svg")
-        self.assertIsNone(image)
-
-        # favicons enabled, favicon present
-        bookmark = self.setup_bookmark(
-            web_archive_snapshot_url="https://example.com/", favicon_file="example.png"
-        )
-        soup = self.get_index_details_modal(bookmark)
-        link = self.find_weblink(soup, bookmark.web_archive_snapshot_url)
         image = link.select_one("svg")
         self.assertIsNotNone(image)
 
@@ -316,13 +280,13 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
         # without image
         bookmark = self.setup_bookmark()
         soup = self.get_index_details_modal(bookmark)
-        image = soup.select_one("div.preview-image img")
+        image = soup.select_one(".preview-image img")
         self.assertIsNone(image)
 
         # with image
         bookmark = self.setup_bookmark(preview_image_file="example.png")
         soup = self.get_index_details_modal(bookmark)
-        image = soup.select_one("div.preview-image img")
+        image = soup.select_one(".preview-image img")
         self.assertIsNone(image)
 
         # preview images enabled, no image
@@ -332,13 +296,13 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
 
         bookmark = self.setup_bookmark()
         soup = self.get_index_details_modal(bookmark)
-        image = soup.select_one("div.preview-image img")
+        image = soup.select_one(".preview-image img")
         self.assertIsNone(image)
 
         # preview images enabled, image present
         bookmark = self.setup_bookmark(preview_image_file="example.png")
         soup = self.get_index_details_modal(bookmark)
-        image = soup.select_one("div.preview-image img")
+        image = soup.select_one(".preview-image img")
         self.assertIsNotNone(image)
         self.assertEqual(image["src"], "/static/example.png")
 
@@ -431,7 +395,9 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
         soup = self.get_index_details_modal(bookmark)
         section = self.get_section_content(soup, "Date added")
 
-        expected_date = formats.date_format(bookmark.date_added, "DATETIME_FORMAT")
+        expected_date = formats.date_format(
+            timezone.localtime(bookmark.date_added), "DATETIME_FORMAT"
+        )
         date = section.find("span", string=expected_date)
         self.assertIsNotNone(date)
 
@@ -499,7 +465,7 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
         bookmark = self.setup_bookmark()
 
         modal = self.get_index_details_modal(bookmark)
-        delete_button = modal.find("button", {"type": "submit", "name": "remove"})
+        delete_button = modal.find("button", {"type": "submit", "name": "trash"})
         self.assertIsNotNone(delete_button)
         self.assertEqual("Delete...", delete_button.text.strip())
         self.assertEqual(str(bookmark.id), delete_button["value"])
@@ -515,7 +481,7 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
 
         soup = self.get_index_details_modal(bookmark)
         edit_link = soup.find("a", string="Edit")
-        delete_button = soup.find("button", {"type": "submit", "name": "remove"})
+        delete_button = soup.find("button", {"type": "submit", "name": "trash"})
         self.assertIsNotNone(edit_link)
         self.assertIsNotNone(delete_button)
 
@@ -525,7 +491,7 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
 
         soup = self.get_shared_details_modal(bookmark)
         edit_link = soup.find("a", string="Edit")
-        delete_button = soup.find("button", {"type": "submit", "name": "remove"})
+        delete_button = soup.find("button", {"type": "submit", "name": "trash"})
         self.assertIsNone(edit_link)
         self.assertIsNone(delete_button)
 
@@ -537,7 +503,7 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
 
         soup = self.get_shared_details_modal(bookmark)
         edit_link = soup.find("a", string="Edit")
-        delete_button = soup.find("button", {"type": "submit", "name": "remove"})
+        delete_button = soup.find("button", {"type": "submit", "name": "trash"})
         self.assertIsNone(edit_link)
         self.assertIsNone(delete_button)
 
@@ -547,7 +513,7 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
 
         soup = self.get_shared_details_modal(bookmark)
         edit_link = soup.find("a", string="Edit")
-        delete_button = soup.find("button", {"type": "submit", "name": "remove"})
+        delete_button = soup.find("button", {"type": "submit", "name": "trash"})
         self.assertIsNone(edit_link)
         self.assertIsNone(delete_button)
 
@@ -640,10 +606,11 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
 
         soup = self.get_shared_details_modal(bookmark)
         edit_link = soup.find("a", string="Edit")
-        delete_button = soup.find("button", {"type": "submit", "name": "remove"})
+        delete_button = soup.find("button", {"type": "submit", "name": "trash"})
         self.assertIsNone(edit_link)
         self.assertIsNone(delete_button)
 
+    @override_settings(LD_ENABLE_SNAPSHOTS=False)
     def test_asset_list_actions_visibility_without_snapshots_enabled(self):
         bookmark = self.setup_bookmark()
 
@@ -655,7 +622,7 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
         self.assertIsNone(create_snapshot)
         self.assertIsNotNone(upload_asset)
 
-    @override_settings(LD_DISABLE_ASSET_UPLOAD=True)
+    @override_settings(LD_DISABLE_ASSET_UPLOAD=True, LD_ENABLE_SNAPSHOTS=True)
     def test_asset_list_actions_visibility_with_uploads_disabled(self):
         bookmark = self.setup_bookmark()
 
@@ -664,7 +631,7 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
             "button", {"type": "submit", "name": "create_html_snapshot"}
         )
         upload_asset = soup.find("button", {"type": "submit", "name": "upload_asset"})
-        self.assertIsNone(create_snapshot)
+        self.assertIsNotNone(create_snapshot)
         self.assertIsNone(upload_asset)
 
     def test_asset_without_file(self):

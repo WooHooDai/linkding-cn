@@ -82,7 +82,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
     def assertArchiveLinkCount(self, html: str, bookmark: Bookmark, count=1):
         self.assertInHTML(
             f"""
-            <button ld-confirm-button type="submit" name="archive" value="{bookmark.id}"
+            <button data-confirm type="submit" name="archive" value="{bookmark.id}"
                class="btn btn-link btn-sm">Archive</button>
         """,
             html,
@@ -92,7 +92,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
     def assertDeleteLinkCount(self, html: str, bookmark: Bookmark, count=1):
         self.assertInHTML(
             f"""
-            <button ld-confirm-button type="submit" name="trash" value="{bookmark.id}"
+            <button data-confirm type="submit" name="trash" value="{bookmark.id}"
                class="btn btn-link btn-sm">Remove</button>
         """,
             html,
@@ -226,7 +226,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             f"""
         <button type="submit" name="unshare" value="{bookmark.id}"
                 class="btn btn-link btn-sm btn-icon"
-                ld-confirm-button ld-confirm-icon="ld-icon-unshare" ld-confirm-question="">
+                data-confirm data-confirm-question="Unshare?">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
             <use xlink:href="#ld-icon-share"></use>
           </svg>
@@ -242,7 +242,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             f"""
         <button type="submit" name="mark_as_read" value="{bookmark.id}"
                 class="btn btn-link btn-sm btn-icon"
-                ld-confirm-button ld-confirm-icon="ld-icon-read" ld-confirm-question="">
+                data-confirm data-confirm-question="Mark as read?">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
             <use xlink:href="#ld-icon-unread"></use>
           </svg>
@@ -635,7 +635,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         html = self.render_template()
         soup = self.make_soup(html)
 
-        list_item = soup.select_one("li[ld-bookmark-item]")
+        list_item = soup.select_one("ul.bookmark-list > li")
         self.assertIsNotNone(list_item)
         self.assertListEqual(["unread"], list_item["class"])
 
@@ -648,7 +648,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         html = self.render_template()
         soup = self.make_soup(html)
 
-        list_item = soup.select_one("li[ld-bookmark-item]")
+        list_item = soup.select_one("ul.bookmark-list > li")
         self.assertIsNotNone(list_item)
         self.assertListEqual(["shared"], list_item["class"])
 
@@ -661,7 +661,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         html = self.render_template()
         soup = self.make_soup(html)
 
-        list_item = soup.select_one("li[ld-bookmark-item]")
+        list_item = soup.select_one("ul.bookmark-list > li")
         self.assertIsNotNone(list_item)
         self.assertListEqual(["unread", "shared"], list_item["class"])
 
@@ -1114,7 +1114,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         html = self.render_template()
 
         soup = self.make_soup(html)
-        bookmarks = soup.select("li[ld-bookmark-item]")
+        bookmarks = soup.select("ul.bookmark-list > li")
         self.assertEqual(30, len(bookmarks))
 
     def test_items_per_page_is_configurable(self):
@@ -1125,7 +1125,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         html = self.render_template()
 
         soup = self.make_soup(html)
-        bookmarks = soup.select("li[ld-bookmark-item]")
+        bookmarks = soup.select("ul.bookmark-list > li")
         self.assertEqual(10, len(bookmarks))
 
     def test_no_actions_rendered_when_is_preview(self):

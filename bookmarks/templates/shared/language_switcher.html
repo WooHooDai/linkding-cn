@@ -1,7 +1,7 @@
 {% load i18n %}
 {% get_current_language as CURRENT_LANGUAGE %}
 {% if language_switcher_compact %}
-  <div ld-dropdown class="dropdown language-switcher language-switcher-dropdown">
+  <ld-dropdown class="dropdown language-switcher language-switcher-dropdown">
     <button
       type="button"
       class="btn btn-link dropdown-toggle language-switcher-trigger"
@@ -33,7 +33,7 @@
         </li>
       {% endfor %}
     </ul>
-  </div>
+  </ld-dropdown>
 {% else %}
   <form
     class="language-switcher"

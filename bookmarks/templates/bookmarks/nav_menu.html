@@ -3,7 +3,7 @@
   {# Basic menu list #}
   <div class="hide-md">
     <a href="{% url 'linkding:bookmarks.new' %}" class="btn btn-primary mr-2">{% translate "Add" %}</a>
-    <div ld-dropdown class="dropdown">
+    <ld-dropdown class="dropdown">
       <button class="btn btn-link dropdown-toggle" tabindex="0">
         {% translate "Categories" %}
       </button>
@@ -23,8 +23,8 @@
           <a href="{% url 'linkding:bookmarks.trashed' %}" class="menu-link">{% translate "Trash" %}</a>
         </li>
       </ul>
-    </div>
-    <div ld-dropdown class="dropdown">
+    </ld-dropdown>
+    <ld-dropdown class="dropdown">
       <button class="btn btn-link dropdown-toggle" tabindex="0">
         {% translate "Settings" %}
       </button>
@@ -47,7 +47,7 @@
           </form>
         </li>
       </ul>
-    </div>
+    </ld-dropdown>
 
   </div>
   {# Menu drop-down for smaller devices #}
@@ -58,7 +58,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
       </svg>
     </a>
-    <div ld-dropdown class="dropdown dropdown-right">
+    <ld-dropdown class="dropdown dropdown-right">
       <button class="btn btn-link dropdown-toggle" aria-label="Navigation menu" tabindex="0">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
              style="width: 24px; height: 24px">
@@ -101,6 +101,6 @@
           </form>
         </li>
       </ul>
-    </div>
+    </ld-dropdown>
   </div>
 {% endhtmlmin %}

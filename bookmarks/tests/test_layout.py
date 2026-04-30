@@ -42,14 +42,14 @@ class LayoutTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             <a href="{reverse('linkding:bookmarks.shared')}" class="menu-link">Shared</a>
         """,
             html,
-            count=1,
+            count=0,
         )
         self.assertInHTML(
             f"""
             <a href="{reverse('linkding:bookmarks.shared')}" class="menu-link">Shared bookmarks</a>
         """,
             html,
-            count=1,
+            count=2,
         )
 
     def test_metadata_should_respect_prefetch_links_setting(self):

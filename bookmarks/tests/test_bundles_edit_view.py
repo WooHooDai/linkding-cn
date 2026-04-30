@@ -70,23 +70,26 @@ class BundleEditViewTestCase(TestCase, BookmarkFactoryMixin):
         )
 
         self.assertInHTML(
-            f'<input type="text" name="any_tags" value="{bundle.any_tags}" '
-            'autocomplete="off" autocapitalize="off" class="form-input" '
-            'maxlength="1024" id="id_any_tags">',
+            f"""
+            <ld-tag-autocomplete input-id="id_any_tags" input-name="any_tags" input-value="{bundle.any_tags}">
+            </ld-tag-autocomplete>
+            """,
             html,
         )
 
         self.assertInHTML(
-            f'<input type="text" name="all_tags" value="{bundle.all_tags}" '
-            'autocomplete="off" autocapitalize="off" class="form-input" '
-            'maxlength="1024" id="id_all_tags">',
+            f"""
+            <ld-tag-autocomplete input-id="id_all_tags" input-name="all_tags" input-value="{bundle.all_tags}">
+            </ld-tag-autocomplete>
+            """,
             html,
         )
 
         self.assertInHTML(
-            f'<input type="text" name="excluded_tags" value="{bundle.excluded_tags}" '
-            'autocomplete="off" autocapitalize="off" class="form-input" '
-            'maxlength="1024" id="id_excluded_tags">',
+            f"""
+            <ld-tag-autocomplete input-id="id_excluded_tags" input-name="excluded_tags" input-value="{bundle.excluded_tags}">
+            </ld-tag-autocomplete>
+            """,
             html,
         )
 

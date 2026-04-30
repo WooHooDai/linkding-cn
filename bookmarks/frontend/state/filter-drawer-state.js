@@ -13,7 +13,9 @@ export function installDrawerReopenHook() {
     }
 
     window.sessionStorage.removeItem(FILTER_DRAWER_REOPEN_KEY);
-    const trigger = document.querySelector("[ld-filter-drawer-trigger]");
+    const trigger =
+      document.querySelector("ld-filter-drawer-trigger") ||
+      document.querySelector("[ld-filter-drawer-trigger]");
     if (trigger && !document.querySelector(".filter-drawer.active")) {
       trigger.click();
     }

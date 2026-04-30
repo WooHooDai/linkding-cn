@@ -23,25 +23,37 @@
   </div>
 </div>
 
-<div class="form-group" ld-tag-autocomplete>
+<div class="form-group">
   <label for="{{ form.any_tags.id_for_label }}" class="form-label">{% translate "Tags" %}</label>
-  {{ form.any_tags|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
+  <ld-tag-autocomplete
+    input-id="{{ form.any_tags.auto_id }}"
+    input-name="{{ form.any_tags.html_name }}"
+    input-value="{{ form.any_tags.value|default_if_none:'' }}"
+  ></ld-tag-autocomplete>
   <div class="form-input-hint">
     {% translate "The bookmark must contain at least one of these tags." %}
   </div>
 </div>
 
-<div class="form-group" ld-tag-autocomplete>
+<div class="form-group">
   <label for="{{ form.all_tags.id_for_label }}" class="form-label">{% translate "Required tags" %}</label>
-  {{ form.all_tags|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
+  <ld-tag-autocomplete
+    input-id="{{ form.all_tags.auto_id }}"
+    input-name="{{ form.all_tags.html_name }}"
+    input-value="{{ form.all_tags.value|default_if_none:'' }}"
+  ></ld-tag-autocomplete>
   <div class="form-input-hint">
     {% translate "The bookmark must contain all of these tags." %}
   </div>
 </div>
 
-<div class="form-group" ld-tag-autocomplete>
+<div class="form-group">
   <label for="{{ form.excluded_tags.id_for_label }}" class="form-label">{% translate "Excluded tags" %}</label>
-  {{ form.excluded_tags|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
+  <ld-tag-autocomplete
+    input-id="{{ form.excluded_tags.auto_id }}"
+    input-name="{{ form.excluded_tags.html_name }}"
+    input-value="{{ form.excluded_tags.value|default_if_none:'' }}"
+  ></ld-tag-autocomplete>
   <div class="form-input-hint">
     {% translate "The bookmark must not contain any of these tags." %}
   </div>

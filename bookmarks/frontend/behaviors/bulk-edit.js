@@ -40,6 +40,7 @@ class BulkEdit extends Behavior {
       "select[name='bulk_action']",
     );
     this.tagAutoComplete = this.element.querySelector(".tag-autocomplete");
+    this.executeButton = this.element.querySelector("button[name='bulk_execute']");
     this.selectAcross = this.element.querySelector("label.select-across");
     this.allCheckbox = this.element.querySelector(
       ".bulk-edit-checkbox.all input",
@@ -110,6 +111,7 @@ class BulkEdit extends Behavior {
     });
     this.allCheckbox.checked = allChecked;
     this.updateSelectAcross(allChecked);
+    this.updateExecuteState();
   }
 
   onToggleAll() {
@@ -118,6 +120,7 @@ class BulkEdit extends Behavior {
       checkbox.checked = allChecked;
     });
     this.updateSelectAcross(allChecked);
+    this.updateExecuteState();
   }
 
   onActionSelected() {
@@ -145,6 +148,17 @@ class BulkEdit extends Behavior {
       checkbox.checked = false;
     });
     this.updateSelectAcross(false);
+    this.updateExecuteState();
+  }
+
+  updateExecuteState() {
+    if (!this.executeButton) {
+      return;
+    }
+    const hasSelection = this.bookmarkCheckboxes.some((checkbox) => {
+      return checkbox.checked;
+    });
+    this.executeButton.disabled = !hasSelection;
   }
 
   onScroll() {

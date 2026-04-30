@@ -91,4 +91,29 @@
     border-bottom: solid 1px var(--secondary-border-color);
     margin: var(--unit-2) 0;
   }
+
+  &.with-arrow {
+    overflow: visible;
+    --arrow-size: 16px;
+
+    .menu-arrow {
+      display: block;
+      position: absolute;
+      top: 0;
+      width: var(--arrow-size);
+      height: var(--arrow-size);
+      translate: 0 -50%;
+      rotate: 45deg;
+      background: inherit;
+      border: inherit;
+      clip-path: polygon(0 0, 0 100%, 100% 0);
+    }
+
+    &.top-aligned .menu-arrow {
+      top: auto;
+      bottom: 0;
+      rotate: 225deg;
+      translate: 0 50%;
+    }
+  }
 }

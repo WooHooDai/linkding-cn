@@ -13,10 +13,9 @@
       <label for="{{ form.title.id_for_label }}" class="form-label">{% translate "Title" %}</label>
       <div class="flex">
         <button id="refresh-button" class="btn btn-link suffix-button" type="button">{% translate "Refresh from website" %}</button>
-        <button ld-clear-button data-for="{{ form.title.id_for_label }}"
-                class="ml-2 btn btn-link suffix-button clear-button"
-                type="button">{% translate "Clear" %}
-        </button>
+        <ld-clear-button data-for="{{ form.title.id_for_label }}">
+          <button class="ml-2 btn btn-link suffix-button" type="button">{% translate "Clear" %}</button>
+        </ld-clear-button>
       </div>
     </div>
     {{ form.title|add_class:"form-input"|attr:"autocomplete:off" }}
@@ -24,9 +23,14 @@
   </div>
 
   <!-- 标签 -->
-  <div class="form-group" ld-tag-autocomplete>
+  <div class="form-group">
     <label for="{{ form.tag_string.id_for_label }}" class="form-label">{% translate "Tags" %}</label>
-    {{ form.tag_string|form_field:"help"|add_class:"form-input"|attr:"autocomplete:off"|attr:"autocapitalize:off" }}
+    <ld-tag-autocomplete
+      input-id="{{ form.tag_string.auto_id }}"
+      input-name="{{ form.tag_string.html_name }}"
+      input-value="{{ form.tag_string.value|default_if_none:'' }}"
+      input-aria-describedby="{{ form.tag_string.auto_id }}_help"
+    ></ld-tag-autocomplete>
     <div id="{{ form.tag_string.auto_id }}_help" class="form-input-hint">
       {% translate "Enter tags separated by spaces and" %} <strong>{% translate "without" %}</strong>(#).
       {% translate "If a tag does not exist, it will be created automatically." %}
@@ -61,10 +65,9 @@
     <details class="description"{% if form.description.value %} open{% endif %}>
       <summary>
         <span class="form-label d-inline-block">{% translate "Description" %}</span>
-        <button ld-clear-button data-for="{{ form.description.id_for_label }}"
-                class="btn btn-link suffix-button clear-button"
-                type="button">{% translate "Clear" %}
-        </button>
+        <ld-clear-button data-for="{{ form.description.id_for_label }}">
+          <button class="btn btn-link suffix-button" type="button">{% translate "Clear" %}</button>
+        </ld-clear-button>
       </summary>
       {{ form.description|add_class:"form-input"|attr:"rows:3" }}
       {{ form.description.errors }}

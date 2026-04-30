@@ -25,7 +25,7 @@
               <button ld-asset-rename type="button" name="rename_asset" value="{{ asset.id }}"  data-asset-id="{{ asset.id }}" class="btn btn-link">
                 {% translate "Rename" %}
               </button>
-              <button ld-confirm-button type="submit" name="remove_asset" value="{{ asset.id }}" class="btn btn-link">
+              <button data-confirm type="submit" name="remove_asset" value="{{ asset.id }}" class="btn btn-link">
                 {% translate "Remove" %}
               </button>
             {% endif %}
@@ -43,9 +43,11 @@
         </button>
       {% endif %}
       {% if details.uploads_enabled %}
-        <button ld-upload-button id="upload-asset" name="upload_asset" value="{{ details.bookmark.id }}" type="submit"
-                class="btn btn-sm">{% translate "Upload file" %}
-        </button>
+        <ld-upload-button>
+          <button id="upload-asset" name="upload_asset" value="{{ details.bookmark.id }}" type="submit"
+                  class="btn btn-sm">{% translate "Upload file" %}
+          </button>
+        </ld-upload-button>
       {% endif %}
       <input id="upload-asset-file" name="upload_asset_file" type="file" class="d-hide">
     </div>

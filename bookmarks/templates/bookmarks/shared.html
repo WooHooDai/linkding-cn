@@ -14,7 +14,9 @@
         <div class="header-controls" ld-header-controls data-sticky-on="{{ request.user_profile.sticky_header_controls|yesno:'true,false' }}">
           {% bookmark_search bookmark_list.search mode='shared' %}
           {% random_sort bookmark_list.search %}
-          <button ld-filter-drawer-trigger class="btn ml-2">{% translate "Filters" %}</button>
+          <ld-filter-drawer-trigger>
+            <button class="btn ml-2">{% translate "Filters" %}</button>
+          </ld-filter-drawer-trigger>
         </div>
       </div>
 

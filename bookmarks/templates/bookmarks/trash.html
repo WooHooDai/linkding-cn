@@ -15,7 +15,9 @@
           {% bookmark_search bookmark_list.search mode='trash' %}
           {% include 'bookmarks/bulk_edit/toggle.html' %}
           {% random_sort bookmark_list.search %}
-          <button ld-filter-drawer-trigger class="btn ml-2">{% translate "Filters" %}</button>
+          <ld-filter-drawer-trigger>
+            <button class="btn ml-2">{% translate "Filters" %}</button>
+          </ld-filter-drawer-trigger>
         </div>
       </div>
 

@@ -52,7 +52,7 @@
               <td class="actions">
                 <div>
                   <a class="btn btn-link" href="{% url 'linkding:bundles.edit' bundle.id %}">{% translate "Edit" %}</a>
-                  <button ld-confirm-button type="submit" name="remove_bundle" value="{{ bundle.id }}"
+                  <button data-confirm type="submit" name="remove_bundle" value="{{ bundle.id }}"
                           class="btn btn-link">{% translate "Delete" %}
                   </button>
                 </div>

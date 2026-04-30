@@ -255,7 +255,7 @@ class TagsIndexViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
 
         self.assertInHTML(
             """
-            <select id="sort" name="sort" class="form-select" ld-auto-submit>
+            <select id="sort" name="sort" class="form-select" data-submit-on-change>
               <option value="name-asc" selected>Tag name ↑</option>
               <option value="name-desc">Tag name ↓</option>
               <option value="count-asc">Bookmark count ↑</option>
@@ -270,7 +270,7 @@ class TagsIndexViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
 
         self.assertInHTML(
             """
-            <select id="sort" name="sort" class="form-select" ld-auto-submit>
+            <select id="sort" name="sort" class="form-select" data-submit-on-change>
               <option value="name-asc">Tag name ↑</option>
               <option value="name-desc" selected>Tag name ↓</option>
               <option value="count-asc">Bookmark count ↑</option>

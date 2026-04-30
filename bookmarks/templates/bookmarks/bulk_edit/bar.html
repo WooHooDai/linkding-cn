@@ -62,10 +62,14 @@
           <option value="bulk_delete">{% translate "Delete permanently" %}</option>
         {% endif %}
       </select>
-      <div class="tag-autocomplete d-none" ld-tag-autocomplete>
-        <input name="bulk_tag_string" class="form-input input-sm" placeholder="{% translate 'Tag names' %}" variant="small">
+      <div class="tag-autocomplete d-none">
+        <ld-tag-autocomplete
+          input-name="bulk_tag_string"
+          input-placeholder="{% translate 'Tag names' %}"
+          variant="small"
+        ></ld-tag-autocomplete>
       </div>
-      <button ld-confirm-button type="submit" name="bulk_execute" class="btn btn-link btn-sm">
+      <button data-confirm type="submit" name="bulk_execute" class="btn btn-link btn-sm" disabled>
         <span>{% translate "Execute" %}</span>
       </button>
 

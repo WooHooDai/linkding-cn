@@ -1,14 +1,19 @@
-import { LitElement, html } from "lit";
+import { html, nothing } from "lit";
 import { cache } from "../cache.js";
+import { TurboLitElement } from "../utils/element.js";
+import { PositionController } from "../utils/position-controller.js";
 import { getCurrentWord, getCurrentWordBounds } from "../util.js";
 
-export class TagAutocomplete extends LitElement {
+export class TagAutocomplete extends TurboLitElement {
   static properties = {
-    id: { type: String },
-    name: { type: String },
-    value: { type: String },
-    placeholder: { type: String },
-    ariaDescribedBy: { type: String, attribute: "aria-described-by" },
+    inputId: { type: String, attribute: "input-id" },
+    inputName: { type: String, attribute: "input-name" },
+    inputValue: { type: String, attribute: "input-value" },
+    inputPlaceholder: { type: String, attribute: "input-placeholder" },
+    inputAriaDescribedBy: {
+      type: String,
+      attribute: "input-aria-describedby",
+    },
     variant: { type: String },
     isFocus: { state: true },
     isOpen: { state: true },
@@ -18,11 +23,11 @@ export class TagAutocomplete extends LitElement {
 
   constructor() {
     super();
-    this.id = "";
-    this.name = "";
-    this.value = "";
-    this.placeholder = "";
-    this.ariaDescribedBy = "";
+    this.inputId = "";
+    this.inputName = "";
+    this.inputValue = "";
+    this.inputPlaceholder = "";
+    this.inputAriaDescribedBy = "";
     this.variant = "default";
     this.isFocus = false;
     this.isOpen = false;
@@ -32,13 +37,20 @@ export class TagAutocomplete extends LitElement {
     this.suggestionList = null;
   }
 
-  createRenderRoot() {
-    return this;
-  }
-
   firstUpdated() {
     this.input = this.querySelector("input");
     this.suggestionList = this.querySelector(".menu");
+    this.positionController = new PositionController({
+      anchor: this.input,
+      overlay: this.suggestionList,
+      autoWidth: true,
+      placement: "bottom-start",
+    });
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.close();
   }
 
   handleFocus() {
@@ -50,8 +62,8 @@ export class TagAutocomplete extends LitElement {
     this.close();
   }
 
-  async handleInput(e) {
-    this.input = e.target;
+  async handleInput(event) {
+    this.input = event.target;
 
     const tags = await cache.getTags();
     const word = getCurrentWord(this.input);
@@ -69,35 +81,37 @@ export class TagAutocomplete extends LitElement {
     }
   }
 
-  handleKeyDown(e) {
-    if (this.isOpen && (e.keyCode === 13 || e.keyCode === 9)) {
+  handleKeyDown(event) {
+    if (this.isOpen && (event.keyCode === 13 || event.keyCode === 9)) {
       const suggestion = this.suggestions[this.selectedIndex];
       this.complete(suggestion);
-      e.preventDefault();
+      event.preventDefault();
     }
-    if (e.keyCode === 27) {
+    if (event.keyCode === 27) {
       this.close();
-      e.preventDefault();
+      event.preventDefault();
     }
-    if (e.keyCode === 38) {
+    if (event.keyCode === 38) {
       this.updateSelection(-1);
-      e.preventDefault();
+      event.preventDefault();
     }
-    if (e.keyCode === 40) {
+    if (event.keyCode === 40) {
       this.updateSelection(1);
-      e.preventDefault();
+      event.preventDefault();
     }
   }
 
   open() {
     this.isOpen = true;
     this.selectedIndex = 0;
+    this.positionController.enable();
   }
 
   close() {
     this.isOpen = false;
     this.suggestions = [];
     this.selectedIndex = 0;
+    this.positionController?.disable();
   }
 
   complete(suggestion) {
@@ -109,7 +123,6 @@ export class TagAutocomplete extends LitElement {
       " " +
       value.substring(bounds.end);
     this.dispatchEvent(new CustomEvent("input", { bubbles: true }));
-
     this.close();
   }
 
@@ -122,38 +135,30 @@ export class TagAutocomplete extends LitElement {
 
     this.selectedIndex = newIndex;
 
-    // Scroll to selected list item
     setTimeout(() => {
-      if (this.suggestionList) {
-        const selectedListItem =
-          this.suggestionList.querySelector("li.selected");
-        if (selectedListItem) {
-          selectedListItem.scrollIntoView({ block: "center" });
-        }
-      }
+      const selectedListItem = this.suggestionList?.querySelector("li.selected");
+      selectedListItem?.scrollIntoView({ block: "center" });
     }, 0);
   }
 
   render() {
     return html`
       <div class="form-autocomplete ${this.variant === "small" ? "small" : ""}">
-        <!-- autocomplete input container -->
         <div
           class="form-autocomplete-input form-input ${this.isFocus
             ? "is-focused"
             : ""}"
         >
-          <!-- autocomplete real input box -->
           <input
-            id="${this.id}"
-            name="${this.name}"
-            .value="${this.value || ""}"
-            placeholder="${this.placeholder || " "}"
+            id="${this.inputId || nothing}"
+            name="${this.inputName || nothing}"
+            .value="${this.inputValue || ""}"
+            placeholder="${this.inputPlaceholder || " "}"
             class="form-input"
             type="text"
             autocomplete="off"
             autocapitalize="off"
-            aria-describedby="${this.ariaDescribedBy}"
+            aria-describedby="${this.inputAriaDescribedBy || nothing}"
             @input=${this.handleInput}
             @keydown=${this.handleKeyDown}
             @focus=${this.handleFocus}
@@ -161,22 +166,18 @@ export class TagAutocomplete extends LitElement {
           />
         </div>
 
-        <!-- autocomplete suggestion list -->
         <ul
           class="menu ${this.isOpen && this.suggestions.length > 0
             ? "open"
             : ""}"
         >
-          <!-- menu list items -->
           ${this.suggestions.map(
-            (tag, i) => html`
-              <li
-                class="menu-item ${this.selectedIndex === i ? "selected" : ""}"
-              >
+            (tag, index) => html`
+              <li class="menu-item ${this.selectedIndex === index ? "selected" : ""}">
                 <a
                   href="#"
-                  @mousedown=${(e) => {
-                    e.preventDefault();
+                  @mousedown=${(event) => {
+                    event.preventDefault();
                     this.complete(tag);
                   }}
                 >

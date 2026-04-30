@@ -1,6 +1,8 @@
-import { LitElement, html } from "lit";
-import { SearchHistory } from "./SearchHistory.js";
+import { html } from "lit";
 import { api } from "../api.js";
+import { TurboLitElement } from "../utils/element.js";
+import { PositionController } from "../utils/position-controller.js";
+import { SearchHistory } from "./SearchHistory.js";
 import { cache } from "../cache.js";
 import {
   clampText,
@@ -9,14 +11,16 @@ import {
   getCurrentWordBounds,
 } from "../util.js";
 
-export class SearchAutocomplete extends LitElement {
+export class SearchAutocomplete extends TurboLitElement {
   static properties = {
-    name: { type: String },
-    placeholder: { type: String },
-    value: { type: String },
+    inputName: { type: String, attribute: "input-name" },
+    inputPlaceholder: { type: String, attribute: "input-placeholder" },
+    inputValue: { type: String, attribute: "input-value" },
     mode: { type: String },
-    search: { type: Object },
-    linkTarget: { type: String },
+    user: { type: String },
+    shared: { type: String },
+    unread: { type: String },
+    target: { type: String },
     isFocus: { state: true },
     isOpen: { state: true },
     suggestions: { state: true },
@@ -25,12 +29,14 @@ export class SearchAutocomplete extends LitElement {
 
   constructor() {
     super();
-    this.name = "";
-    this.placeholder = "";
-    this.value = "";
+    this.inputName = "";
+    this.inputPlaceholder = "";
+    this.inputValue = "";
     this.mode = "";
-    this.search = {};
-    this.linkTarget = "_blank";
+    this.user = "";
+    this.shared = "";
+    this.unread = "";
+    this.target = "_blank";
     this.isFocus = false;
     this.isOpen = false;
     this.suggestions = {
@@ -41,20 +47,28 @@ export class SearchAutocomplete extends LitElement {
     };
     this.selectedIndex = undefined;
     this.input = null;
+    this.menu = null;
     this.searchHistory = new SearchHistory();
     this.debouncedLoadSuggestions = debounce(() => this.loadSuggestions());
-  }
-
-  createRenderRoot() {
-    return this;
   }
 
   firstUpdated() {
     this.style.setProperty("--menu-max-height", "400px");
     this.input = this.querySelector("input");
-    // Track current search query after loading the page
+    this.menu = this.querySelector(".menu");
     this.searchHistory.pushCurrent();
     this.updateSuggestions();
+    this.positionController = new PositionController({
+      anchor: this.input,
+      overlay: this.menu,
+      autoWidth: true,
+      placement: "bottom-start",
+    });
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.close();
   }
 
   handleFocus() {
@@ -66,51 +80,51 @@ export class SearchAutocomplete extends LitElement {
     this.close();
   }
 
-  handleInput(e) {
-    this.value = e.target.value;
+  handleInput(event) {
+    this.inputValue = event.target.value;
     this.debouncedLoadSuggestions();
   }
 
-  handleKeyDown(e) {
-    // Enter
+  handleKeyDown(event) {
     if (
       this.isOpen &&
       this.selectedIndex !== undefined &&
-      (e.keyCode === 13 || e.keyCode === 9)
+      (event.keyCode === 13 || event.keyCode === 9)
     ) {
       const suggestion = this.suggestions.total[this.selectedIndex];
-      if (suggestion) this.completeSuggestion(suggestion);
-      e.preventDefault();
+      if (suggestion) {
+        this.completeSuggestion(suggestion);
+      }
+      event.preventDefault();
     }
-    // Escape
-    if (e.keyCode === 27) {
+    if (event.keyCode === 27) {
       this.close();
-      e.preventDefault();
+      event.preventDefault();
     }
-    // Up arrow
-    if (e.keyCode === 38) {
+    if (event.keyCode === 38) {
       this.updateSelection(-1);
-      e.preventDefault();
+      event.preventDefault();
     }
-    // Down arrow
-    if (e.keyCode === 40) {
+    if (event.keyCode === 40) {
       if (!this.isOpen) {
         this.loadSuggestions();
       } else {
         this.updateSelection(1);
       }
-      e.preventDefault();
+      event.preventDefault();
     }
   }
 
   open() {
     this.isOpen = true;
+    this.positionController.enable();
   }
 
   close() {
     this.isOpen = false;
     this.updateSuggestions();
     this.selectedIndex = undefined;
+    this.positionController?.disable();
   }
 
   hasSuggestions() {
@@ -119,17 +133,13 @@ export class SearchAutocomplete extends LitElement {
 
   async loadSuggestions() {
     let suggestionIndex = 0;
+    const nextIndex = () => suggestionIndex++;
 
-    function nextIndex() {
-      return suggestionIndex++;
-    }
-
-    // Tag suggestions
     const tags = await cache.getTags();
     let tagSuggestions = [];
     const currentWord = getCurrentWord(this.input);
     if (currentWord && currentWord.length > 1 && currentWord[0] === "#") {
-      const searchTag = currentWord.substring(1, currentWord.length);
+      const searchTag = currentWord.substring(1);
       tagSuggestions = (tags || [])
         .filter(
           (tag) =>
@@ -144,9 +154,8 @@ export class SearchAutocomplete extends LitElement {
         }));
     }
 
-    // Recent search suggestions
     const recentSearches = this.searchHistory
-      .getRecentSearches(this.value, 5)
+      .getRecentSearches(this.inputValue, 5)
       .map((value) => ({
         type: "search",
         index: nextIndex(),
@@ -154,14 +163,14 @@ export class SearchAutocomplete extends LitElement {
         value,
       }));
 
-    // Bookmark suggestions
     let bookmarks = [];
-
-    if (this.value && this.value.length >= 3) {
+    if (this.inputValue && this.inputValue.length >= 3) {
       const path = this.mode ? `/${this.mode}` : "";
       const suggestionSearch = {
-        ...this.search,
-        q: this.value,
+        user: this.user,
+        shared: this.shared,
+        unread: this.unread,
+        q: this.inputValue,
       };
       const fetchedBookmarks = await api.listBookmarks(suggestionSearch, {
         limit: 5,
@@ -170,11 +179,10 @@ export class SearchAutocomplete extends LitElement {
       });
       bookmarks = fetchedBookmarks.map((bookmark) => {
         const fullLabel = bookmark.title || bookmark.url;
-        const label = clampText(fullLabel, 60);
         return {
           type: "bookmark",
           index: nextIndex(),
-          label,
+          label: clampText(fullLabel, 60),
           bookmark,
         };
       });
@@ -190,24 +198,21 @@ export class SearchAutocomplete extends LitElement {
   }
 
   updateSuggestions(recentSearches, bookmarks, tagSuggestions) {
-    recentSearches = recentSearches || [];
-    bookmarks = bookmarks || [];
-    tagSuggestions = tagSuggestions || [];
     this.suggestions = {
-      recentSearches,
-      bookmarks,
-      tags: tagSuggestions,
-      total: [...tagSuggestions, ...recentSearches, ...bookmarks],
+      recentSearches: recentSearches || [],
+      bookmarks: bookmarks || [],
+      tags: tagSuggestions || [],
+      total: [...(tagSuggestions || []), ...(recentSearches || []), ...(bookmarks || [])],
     };
   }
 
   completeSuggestion(suggestion) {
     if (suggestion.type === "search") {
-      this.value = suggestion.value;
+      this.inputValue = suggestion.value;
       this.close();
     }
     if (suggestion.type === "bookmark") {
-      window.open(suggestion.bookmark.url, this.linkTarget);
+      window.open(suggestion.bookmark.url, this.target);
       this.close();
     }
     if (suggestion.type === "tag") {
@@ -223,8 +228,9 @@ export class SearchAutocomplete extends LitElement {
 
   updateSelection(dir) {
     const length = this.suggestions.total.length;
-
-    if (length === 0) return;
+    if (length === 0) {
+      return;
+    }
 
     if (this.selectedIndex === undefined) {
       this.selectedIndex = dir > 0 ? 0 : Math.max(length - 1, 0);
@@ -232,15 +238,15 @@ export class SearchAutocomplete extends LitElement {
     }
 
     let newIndex = this.selectedIndex + dir;
-
     if (newIndex < 0) newIndex = Math.max(length - 1, 0);
     if (newIndex >= length) newIndex = 0;
-
     this.selectedIndex = newIndex;
   }
 
   renderSuggestions(suggestions, title) {
-    if (suggestions.length === 0) return "";
+    if (suggestions.length === 0) {
+      return "";
+    }
 
     return html`
       <li class="menu-item group-item">${title}</li>
@@ -253,8 +259,8 @@ export class SearchAutocomplete extends LitElement {
           >
             <a
               href="#"
-              @mousedown=${(e) => {
-                e.preventDefault();
+              @mousedown=${(event) => {
+                event.preventDefault();
                 this.completeSuggestion(suggestion);
               }}
             >
@@ -277,10 +283,10 @@ export class SearchAutocomplete extends LitElement {
           <input
             type="search"
             class="form-input"
-            name="${this.name}"
-            placeholder="${this.placeholder}"
+            name="${this.inputName}"
+            placeholder="${this.inputPlaceholder}"
             autocomplete="off"
-            .value="${this.value}"
+            .value="${this.inputValue}"
             @input=${this.handleInput}
             @keydown=${this.handleKeyDown}
             @focus=${this.handleFocus}

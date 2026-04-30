@@ -1,9 +1,10 @@
 {% load i18n static %}
 {% load shared %}
 
-<form action="{{ details.action_url }}" method="post" enctype="multipart/form-data">
-  {% csrf_token %}
-  <input type="hidden" name="update_state" value="{{ details.bookmark.id }}">
+<ld-form data-submit-on-change>
+  <form action="{{ details.action_url }}" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="hidden" name="update_state" value="{{ details.bookmark.id }}">
 
   <div class="weblinks">
     <a class="weblink" href="{{ details.bookmark.url }}" rel="noopener"
@@ -51,14 +52,14 @@
         <div class="d-flex" style="gap: .8rem">
           <div class="form-group">
             <label class="form-switch">
-              <input ld-auto-submit type="checkbox" name="is_archived"
+              <input data-submit-on-change type="checkbox" name="is_archived"
                      {% if details.bookmark.is_archived %}checked{% endif %}>
               <i class="form-icon"></i> {% translate "Archived" %}
             </label>
           </div>
           <div class="form-group">
             <label class="form-switch">
-              <input ld-auto-submit type="checkbox" name="unread"
+              <input data-submit-on-change type="checkbox" name="unread"
                      {% if details.bookmark.unread %}checked{% endif %}>
               <i class="form-icon"></i> {% translate "Unread" %}
             </label>
@@ -66,7 +67,7 @@
           {% if details.profile.enable_sharing %}
             <div class="form-group">
               <label class="form-switch">
-                <input ld-auto-submit type="checkbox" name="shared"
+                <input data-submit-on-change type="checkbox" name="shared"
                        {% if details.bookmark.shared %}checked{% endif %}>
                 <i class="form-icon"></i> {% translate "Shared" %}
               </label>
@@ -128,4 +129,5 @@
       </section>
     {% endif %}
   </div>
-</form>
+  </form>
+</ld-form>

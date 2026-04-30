@@ -18,7 +18,7 @@
     <div class="section-title">
       <h2 id="sidebar-user-summary-heading">{{ sidebar_summary.username }}</h2>
       {% include "bookmarks/collapsed_button.html" with toggle_class="section-toggle" %}
-      <div ld-dropdown class="dropdown dropdown-right ml-auto">
+      <ld-dropdown class="dropdown dropdown-right ml-auto">
         <button class="btn btn-noborder dropdown-toggle"
                 aria-label="{% translate 'User summary menu' %}">
           <svg xmlns="http://www.w3.org/2000/svg"
@@ -47,7 +47,7 @@
             </li>
           {% endfor %}
         </ul>
-      </div>
+      </ld-dropdown>
     </div>
   </div>
 
@@ -159,7 +159,7 @@
             {% endif %}
 
             <div class="summary-week-pickers summary-month-pickers">
-              <div ld-dropdown class="summary-week-picker summary-month-year-picker dropdown">
+              <ld-dropdown class="summary-week-picker summary-month-year-picker dropdown">
                 <button type="button"
                         class="summary-month-picker-trigger summary-week-picker-trigger dropdown-toggle"
                         data-summary-month-year-picker-trigger>
@@ -178,11 +178,11 @@
                     </li>
                   {% endfor %}
                 </ul>
-              </div>
+              </ld-dropdown>
 
               <span class="summary-week-separator" aria-hidden="true">/</span>
 
-              <div ld-dropdown class="summary-week-picker summary-month-number-picker dropdown dropdown-right">
+              <ld-dropdown class="summary-week-picker summary-month-number-picker dropdown dropdown-right">
                 <button type="button"
                         class="summary-month-picker-trigger summary-week-picker-trigger dropdown-toggle"
                         data-summary-month-number-picker-trigger>
@@ -201,7 +201,7 @@
                     </li>
                   {% endfor %}
                 </ul>
-              </div>
+              </ld-dropdown>
             </div>
 
             {% if sidebar_summary.next_month_url %}
@@ -229,7 +229,7 @@
             {% endif %}
 
             <div class="summary-week-pickers">
-              <div ld-dropdown class="summary-week-picker summary-week-year-picker dropdown">
+              <ld-dropdown class="summary-week-picker summary-week-year-picker dropdown">
                 <button type="button"
                         class="summary-month-picker-trigger summary-week-picker-trigger dropdown-toggle"
                         data-summary-week-year-picker-trigger>
@@ -248,11 +248,11 @@
                     </li>
                   {% endfor %}
                 </ul>
-              </div>
+              </ld-dropdown>
 
               <span class="summary-week-separator" aria-hidden="true">/</span>
 
-              <div ld-dropdown class="summary-week-picker summary-week-number-picker dropdown dropdown-right">
+              <ld-dropdown class="summary-week-picker summary-week-number-picker dropdown dropdown-right">
                 <button type="button"
                         class="summary-month-picker-trigger summary-week-picker-trigger dropdown-toggle"
                         data-summary-week-number-picker-trigger>
@@ -271,7 +271,7 @@
                     </li>
                   {% endfor %}
                 </ul>
-              </div>
+              </ld-dropdown>
             </div>
 
             {% if sidebar_summary.next_week_url %}
