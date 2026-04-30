@@ -80,7 +80,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
     def assertArchiveLinkCount(self, html: str, bookmark: Bookmark, count=1):
         self.assertInHTML(
             f"""
-            <button data-confirm type="submit" name="archive" value="{bookmark.id}"
+            <button ld-confirm-button type="submit" name="archive" value="{bookmark.id}"
                class="btn btn-link btn-sm">Archive</button>
         """,
             html,
@@ -90,7 +90,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
     def assertDeleteLinkCount(self, html: str, bookmark: Bookmark, count=1):
         self.assertInHTML(
             f"""
-            <button data-confirm type="submit" name="trash" value="{bookmark.id}"
+            <button ld-confirm-button type="submit" name="trash" value="{bookmark.id}"
                class="btn btn-link btn-sm">Remove</button>
         """,
             html,
@@ -225,7 +225,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             f"""
         <button type="submit" name="unshare" value="{bookmark.id}"
                 class="btn btn-link btn-sm btn-icon"
-                data-confirm data-confirm-question="Unshare?">
+                ld-confirm-button ld-confirm-question="Unshare?">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
             <use xlink:href="#ld-icon-share"></use>
           </svg>
@@ -241,7 +241,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             f"""
         <button type="submit" name="mark_as_read" value="{bookmark.id}"
                 class="btn btn-link btn-sm btn-icon"
-                data-confirm data-confirm-question="Mark as read?">
+                ld-confirm-button ld-confirm-question="Mark as read?">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
             <use xlink:href="#ld-icon-unread"></use>
           </svg>

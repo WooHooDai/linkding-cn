@@ -9,6 +9,7 @@ import "./components/date-filter-fields.js";
 import "./components/settings-page.js";
 import "./components/clear-button.js";
 import "./components/confirm-dropdown.js";
+import "./components/confirm-inline.js";
 import "./components/details-modal.js";
 import "./components/dropdown.js";
 import "./components/filter-drawer.js";
