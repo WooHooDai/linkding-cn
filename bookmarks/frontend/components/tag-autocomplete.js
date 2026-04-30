@@ -1,8 +1,8 @@
 import { html, nothing } from "lit";
-import { cache } from "../cache.js";
+import { cache } from "../utils/tag-cache.js";
 import { TurboLitElement } from "../utils/element.js";
 import { PositionController } from "../utils/position-controller.js";
-import { getCurrentWord, getCurrentWordBounds } from "../util.js";
+import { getCurrentWord, getCurrentWordBounds } from "../utils/input.js";
 
 export class TagAutocomplete extends TurboLitElement {
   static properties = {

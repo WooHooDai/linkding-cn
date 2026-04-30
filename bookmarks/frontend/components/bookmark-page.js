@@ -1,4 +1,4 @@
-import { Behavior, registerBehavior, applyBehaviors } from "./index";
+import { Behavior, registerBehavior, applyBehaviors } from "./runtime.js";
 import {
   getStoredDomainState,
   storeDomainPreferenceTargets,

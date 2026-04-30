@@ -1,5 +1,5 @@
 import { html, render } from "lit";
-import { gettext } from "../behaviors/i18n.js";
+import { gettext } from "../utils/i18n.js";
 import { installDrawerReopenHook } from "../state/filter-drawer-state.js";
 import { isKeyboardActive } from "../utils/focus.js";
 import { HeadlessElement } from "../utils/element.js";

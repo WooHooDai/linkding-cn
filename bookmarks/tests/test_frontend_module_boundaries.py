@@ -10,7 +10,7 @@ class FrontendModuleBoundaryTestCase(SimpleTestCase):
         return (PROJECT_ROOT / relative_path).read_text()
 
     def test_bookmark_page_imports_summary_preferences_not_summary_behavior(self):
-        content = self.read_source("bookmarks/frontend/behaviors/bookmark-page.js")
+        content = self.read_source("bookmarks/frontend/components/bookmark-page.js")
 
         self.assertNotIn('from "./sidebar-user-summary"', content)
         self.assertRegex(
@@ -20,7 +20,7 @@ class FrontendModuleBoundaryTestCase(SimpleTestCase):
 
     def test_sidebar_summary_behavior_does_not_import_domain_preferences(self):
         content = self.read_source(
-            "bookmarks/frontend/behaviors/sidebar-user-summary.js"
+            "bookmarks/frontend/components/sidebar-user-summary.js"
         )
 
         self.assertNotIn('from "../state/domain-preferences"', content)
@@ -54,6 +54,6 @@ class FrontendModuleBoundaryTestCase(SimpleTestCase):
         )
 
     def test_filter_drawer_behavior_imports_drawer_state_from_state_directory(self):
-        content = self.read_source("bookmarks/frontend/behaviors/filter-drawer.js")
+        content = self.read_source("bookmarks/frontend/components/filter-drawer.js")
 
-        self.assertIn('from "../state/filter-drawer-state"', content)
+        self.assertIn('from "../state/filter-drawer-state.js"', content)

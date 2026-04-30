@@ -1,5 +1,5 @@
 import { html, LitElement } from "lit";
-import { gettext } from "../behaviors/i18n.js";
+import { gettext } from "../utils/i18n.js";
 import { FocusTrapController, isKeyboardActive } from "../utils/focus.js";
 import { PositionController } from "../utils/position-controller.js";
 

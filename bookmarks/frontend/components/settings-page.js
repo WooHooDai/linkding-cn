@@ -1,5 +1,5 @@
-import { Behavior, registerBehavior } from "./index";
-import { gettext } from "./i18n";
+import { Behavior, registerBehavior } from "./runtime.js";
+import { gettext } from "../utils/i18n.js";
 import {
   clearStoredSettingsDraft,
   getStoredSettingsDraft,

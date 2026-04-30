@@ -2,14 +2,14 @@ import { html } from "lit";
 import { api } from "../api.js";
 import { TurboLitElement } from "../utils/element.js";
 import { PositionController } from "../utils/position-controller.js";
-import { SearchHistory } from "./SearchHistory.js";
-import { cache } from "../cache.js";
+import { SearchHistory } from "../utils/search-history.js";
+import { cache } from "../utils/tag-cache.js";
 import {
   clampText,
   debounce,
   getCurrentWord,
   getCurrentWordBounds,
-} from "../util.js";
+} from "../utils/input.js";
 
 export class SearchAutocomplete extends TurboLitElement {
   static properties = {

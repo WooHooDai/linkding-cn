@@ -1,4 +1,4 @@
-import { Behavior, registerBehavior } from "./index";
+import { Behavior, registerBehavior } from "./runtime.js";
 
 class BulkEdit extends Behavior {
   constructor(element) {
