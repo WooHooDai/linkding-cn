@@ -100,11 +100,13 @@ class TagsIndexViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         view_link = tag1_row.find("a", string=lambda s: s and s.strip() == "2")
         expected_url = reverse("linkding:bookmarks.index") + "?q=%23python"
         self.assertEqual(view_link["href"], expected_url)
+        self.assertEqual(view_link["data-turbo-frame"], "_top")
 
         tag2_row = self.find_row(rows, tag2)
         view_link = tag2_row.find("a", string=lambda s: s and s.strip() == "1")
         expected_url = reverse("linkding:bookmarks.index") + "?q=%23django-framework"
         self.assertEqual(view_link["href"], expected_url)
+        self.assertEqual(view_link["data-turbo-frame"], "_top")
 
     def test_shows_tag_total(self):
         tag1 = self.setup_tag(name="python")
