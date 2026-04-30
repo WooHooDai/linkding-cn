@@ -268,6 +268,58 @@ def load_full_page(url: str, config: dict = None):
         raise e
 
 
+def get_request_config(url: str) -> dict | None:
+    settings_path = settings.LD_CUSTOM_WEBSITE_LOADER_SETTINGS
+    if not settings_path or not os.path.exists(settings_path):
+        return None
+    return search_config_for_domain(url, settings_path, _settings_cache)
+
+
+def detect_content_type(
+    url: str, config: dict | None = None, timeout: int = 10
+) -> str | None:
+    request_config = config if config is not None else get_request_config(url)
+    request_timeout = request_config.get("timeout", timeout) if request_config else timeout
+    request_kwargs = {
+        "allow_redirects": True,
+        "cookies": build_request_cookies(request_config),
+        "headers": build_request_headers(request_config),
+        "timeout": request_timeout,
+    }
+    proxies = request_config.get("proxy") if request_config else None
+    if proxies:
+        request_kwargs["proxies"] = proxies
+
+    try:
+        response = requests.head(url, **request_kwargs)
+        if response.status_code == 200:
+            return (
+                response.headers.get("Content-Type", "").split(";")[0].strip().lower()
+            )
+    except requests.RequestException:
+        pass
+
+    try:
+        with requests.get(url, stream=True, **request_kwargs) as response:
+            if response.status_code == 200:
+                return (
+                    response.headers.get("Content-Type", "")
+                    .split(";")[0]
+                    .strip()
+                    .lower()
+                )
+    except requests.RequestException:
+        pass
+
+    return None
+
+
+def is_pdf_content_type(content_type: str | None) -> bool:
+    if not content_type:
+        return False
+    return content_type in ("application/pdf", "application/x-pdf")
+
+
 def build_request_headers(config: dict = None):
     headers = {
         "Accept": "text/html,application/xhtml+xml,application/xml",

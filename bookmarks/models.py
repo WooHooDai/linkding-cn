@@ -142,7 +142,8 @@ class BookmarkAsset(models.Model):
     TYPE_SNAPSHOT = "snapshot"
     TYPE_UPLOAD = "upload"
 
-    CONTENT_TYPE_HTML = "text/html; charset=utf-8"
+    CONTENT_TYPE_HTML = "text/html"
+    CONTENT_TYPE_PDF = "application/pdf"
 
     STATUS_PENDING = "pending"
     STATUS_COMPLETE = "complete"
@@ -160,11 +161,11 @@ class BookmarkAsset(models.Model):
 
     @property
     def download_name(self):
-        return (
-            f"{self.display_name}.html"
-            if self.asset_type == BookmarkAsset.TYPE_SNAPSHOT
-            else self.display_name
-        )
+        if self.asset_type == BookmarkAsset.TYPE_SNAPSHOT:
+            if self.content_type == BookmarkAsset.CONTENT_TYPE_PDF:
+                return f"{self.display_name}.pdf"
+            return f"{self.display_name}.html"
+        return self.display_name
 
     def save(self, *args, **kwargs):
         if self.file:

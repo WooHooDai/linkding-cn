@@ -27,14 +27,14 @@ class BookmarkAssetViewTestCase(TestCase, BookmarkFactoryMixin):
         )
         return asset
 
-    def setup_asset_with_uploaded_file(self, bookmark):
+    def setup_asset_with_uploaded_file(self, bookmark, content_type="image/png"):
         filename = f"temp_{bookmark.id}.png.gzip"
         self.setup_asset_file(filename)
         asset = self.setup_asset(
             bookmark=bookmark,
             file=filename,
             asset_type=BookmarkAsset.TYPE_UPLOAD,
-            content_type="image/png",
+            content_type=content_type,
             display_name=f"Uploaded file {bookmark.id}.png",
         )
         return asset
@@ -174,6 +174,8 @@ class BookmarkAssetViewTestCase(TestCase, BookmarkFactoryMixin):
     def test_snapshot_download_name(self):
         bookmark = self.setup_bookmark()
         asset = self.setup_asset_with_file(bookmark)
+        asset.content_type = BookmarkAsset.CONTENT_TYPE_HTML
+        asset.save()
         response = self.client.get(reverse("linkding:assets.view", args=[asset.id]))
 
         self.assertEqual(response["Content-Type"], asset.content_type)
@@ -184,6 +186,29 @@ class BookmarkAssetViewTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(
             response["Content-Security-Policy"],
             "sandbox allow-scripts",
+        )
+
+    def test_pdf_snapshot_download_headers(self):
+        bookmark = self.setup_bookmark()
+        asset = self.setup_asset(
+            bookmark=bookmark,
+            file="temp.pdf.gzip",
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            content_type=BookmarkAsset.CONTENT_TYPE_PDF,
+            display_name="PDF download from Jan 1, 2025",
+        )
+        self.setup_asset_file(asset.file)
+
+        response = self.client.get(reverse("linkding:assets.view", args=[asset.id]))
+
+        self.assertEqual(response["Content-Type"], asset.content_type)
+        self.assertEqual(
+            response["Content-Disposition"],
+            f'inline; filename="{asset.display_name}.pdf"',
+        )
+        self.assertEqual(
+            response["Content-Security-Policy"],
+            "default-src 'none'; object-src 'self';",
         )
 
     def test_uploaded_file_download_name(self):
@@ -199,4 +224,19 @@ class BookmarkAssetViewTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(
             response["Content-Security-Policy"],
             "sandbox allow-scripts",
+        )
+
+    def test_uploaded_video_download_headers(self):
+        bookmark = self.setup_bookmark()
+        asset = self.setup_asset_with_uploaded_file(bookmark, content_type="video/mp4")
+        response = self.client.get(reverse("linkding:assets.view", args=[asset.id]))
+
+        self.assertEqual(response["Content-Type"], asset.content_type)
+        self.assertEqual(
+            response["Content-Disposition"],
+            f'inline; filename="{asset.display_name}"',
+        )
+        self.assertEqual(
+            response["Content-Security-Policy"],
+            "default-src 'none'; media-src 'self';",
         )

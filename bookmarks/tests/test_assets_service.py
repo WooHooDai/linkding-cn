@@ -5,7 +5,7 @@ from datetime import timedelta
 from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from bookmarks.models import Bookmark, BookmarkAsset
@@ -20,6 +20,7 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         self.get_or_create_test_user()
 
         self.html_content = "<html><body><h1>Hello, World!</h1></body></html>"
+        self.pdf_content = b"%PDF-1.4 test pdf content"
         self.mock_singlefile_create_snapshot_patcher = mock.patch(
             "bookmarks.services.snapshot_processor.create_snapshot",
         )
@@ -29,9 +30,15 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         self.mock_singlefile_create_snapshot.side_effect = lambda url, filepath: (
             open(filepath, "w").write(self.html_content)
         )
+        self.mock_detect_content_type_patcher = mock.patch(
+            "bookmarks.services.assets.detect_content_type",
+            return_value="text/html",
+        )
+        self.mock_detect_content_type = self.mock_detect_content_type_patcher.start()
 
     def tearDown(self) -> None:
         self.mock_singlefile_create_snapshot_patcher.stop()
+        self.mock_detect_content_type_patcher.stop()
 
     def get_saved_snapshot_file(self):
         # look up first file in the asset folder
@@ -47,8 +54,8 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         self.assertIsNotNone(asset)
         self.assertEqual(asset.bookmark, bookmark)
         self.assertEqual(asset.asset_type, BookmarkAsset.TYPE_SNAPSHOT)
-        self.assertEqual(asset.content_type, BookmarkAsset.CONTENT_TYPE_HTML)
-        self.assertIn("HTML snapshot from", asset.display_name)
+        self.assertEqual(asset.content_type, "")
+        self.assertEqual(asset.display_name, "New snapshot")
         self.assertEqual(asset.status, BookmarkAsset.STATUS_PENDING)
 
         # asset is not saved to the database
@@ -93,6 +100,8 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         # should update asset status and file
         asset.refresh_from_db()
         self.assertEqual(asset.status, BookmarkAsset.STATUS_COMPLETE)
+        self.assertEqual(asset.content_type, BookmarkAsset.CONTENT_TYPE_HTML)
+        self.assertIn("HTML snapshot from", asset.display_name)
         self.assertEqual(asset.file, expected_filename)
         self.assertTrue(asset.gzip)
 
@@ -146,6 +155,119 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(192, len(saved_file))
         self.assertTrue(saved_file.startswith("snapshot_"))
         self.assertTrue(saved_file.endswith("aaaa.html.gz"))
+
+    def create_mock_pdf_response(self, content=None, content_length=None):
+        if content is None:
+            content = self.pdf_content
+        mock_response = mock.Mock()
+        mock_response.status_code = 200
+        mock_response.headers = {"Content-Type": "application/pdf"}
+        if content_length is not None:
+            mock_response.headers["Content-Length"] = str(content_length)
+        mock_response.iter_content = mock.Mock(return_value=[content])
+        mock_response.raise_for_status = mock.Mock()
+        mock_response.__enter__ = mock.Mock(return_value=mock_response)
+        mock_response.__exit__ = mock.Mock(return_value=False)
+        return mock_response
+
+    def test_create_pdf_snapshot(self):
+        bookmark = self.setup_bookmark(url="https://example.com/doc.pdf")
+        asset = assets.create_snapshot_asset(bookmark)
+        asset.save()
+        asset.date_created = timezone.datetime(
+            2023, 8, 11, 21, 45, 11, tzinfo=datetime.timezone.utc
+        )
+
+        self.mock_detect_content_type.return_value = "application/pdf"
+
+        with mock.patch("bookmarks.services.assets.requests.get") as mock_get:
+            mock_get.return_value = self.create_mock_pdf_response()
+            assets.create_snapshot(asset)
+
+        expected_filename = (
+            "snapshot_2023-08-11_214511_https___example.com_doc.pdf.pdf.gz"
+        )
+        expected_filepath = os.path.join(self.assets_dir, expected_filename)
+
+        self.assertTrue(os.path.exists(expected_filepath))
+
+        with gzip.open(expected_filepath, "rb") as gz_file:
+            self.assertEqual(gz_file.read(), self.pdf_content)
+
+        asset.refresh_from_db()
+        self.assertEqual(asset.status, BookmarkAsset.STATUS_COMPLETE)
+        self.assertEqual(asset.file, expected_filename)
+        self.assertEqual(asset.content_type, BookmarkAsset.CONTENT_TYPE_PDF)
+        self.assertIn("PDF download from", asset.display_name)
+        self.assertTrue(asset.gzip)
+
+        bookmark.refresh_from_db()
+        self.assertEqual(bookmark.latest_snapshot, asset)
+
+    def test_create_snapshot_falls_back_to_singlefile_when_detection_fails(self):
+        bookmark = self.setup_bookmark(url="https://example.com")
+        asset = assets.create_snapshot_asset(bookmark)
+        asset.save()
+
+        self.mock_detect_content_type.return_value = None
+
+        assets.create_snapshot(asset)
+
+        asset.refresh_from_db()
+        self.assertEqual(asset.status, BookmarkAsset.STATUS_COMPLETE)
+        self.assertEqual(asset.content_type, BookmarkAsset.CONTENT_TYPE_HTML)
+        self.mock_singlefile_create_snapshot.assert_called()
+
+    @override_settings(LD_SNAPSHOT_PDF_MAX_SIZE=100)
+    def test_create_pdf_snapshot_fails_when_content_length_exceeds_limit(self):
+        bookmark = self.setup_bookmark(url="https://example.com/doc.pdf")
+        asset = assets.create_snapshot_asset(bookmark)
+        asset.save()
+
+        self.mock_detect_content_type.return_value = "application/pdf"
+
+        with mock.patch("bookmarks.services.assets.requests.get") as mock_get:
+            mock_get.return_value = self.create_mock_pdf_response(content_length=1000)
+
+            with self.assertRaises(assets.PdfTooLargeError):
+                assets.create_snapshot(asset)
+
+        asset.refresh_from_db()
+        self.assertEqual(asset.status, BookmarkAsset.STATUS_FAILURE)
+
+    @override_settings(LD_SNAPSHOT_PDF_MAX_SIZE=100)
+    def test_create_pdf_snapshot_fails_when_download_exceeds_limit(self):
+        bookmark = self.setup_bookmark(url="https://example.com/doc.pdf")
+        asset = assets.create_snapshot_asset(bookmark)
+        asset.save()
+
+        self.mock_detect_content_type.return_value = "application/pdf"
+        large_content = b"x" * 150
+
+        with mock.patch("bookmarks.services.assets.requests.get") as mock_get:
+            mock_get.return_value = self.create_mock_pdf_response(content=large_content)
+
+            with self.assertRaises(assets.PdfTooLargeError):
+                assets.create_snapshot(asset)
+
+        asset.refresh_from_db()
+        self.assertEqual(asset.status, BookmarkAsset.STATUS_FAILURE)
+
+    def test_create_pdf_snapshot_failure(self):
+        bookmark = self.setup_bookmark(url="https://example.com/doc.pdf")
+        asset = assets.create_snapshot_asset(bookmark)
+        asset.save()
+
+        self.mock_detect_content_type.return_value = "application/pdf"
+
+        with mock.patch("bookmarks.services.assets.requests.get") as mock_get:
+            mock_get.side_effect = Exception("Download failed")
+
+            with self.assertRaises(Exception):
+                assets.create_snapshot(asset)
+
+        asset.refresh_from_db()
+        self.assertEqual(asset.status, BookmarkAsset.STATUS_FAILURE)
 
     def test_upload_snapshot(self):
         initial_modified = timezone.datetime(

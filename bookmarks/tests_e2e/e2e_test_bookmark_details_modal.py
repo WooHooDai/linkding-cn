@@ -1,3 +1,5 @@
+import re
+
 from django.test import override_settings
 from django.urls import reverse
 from playwright.sync_api import sync_playwright, expect
@@ -161,7 +163,9 @@ class BookmarkDetailsModalE2ETestCase(LinkdingE2ETestCase):
             asset_list = details_modal.locator(".assets")
 
             # No snapshots initially
-            snapshot = asset_list.get_by_text("HTML snapshot from", exact=False)
+            snapshot = asset_list.get_by_text(
+                re.compile("snapshot|快照", re.IGNORECASE)
+            )
             expect(snapshot).not_to_be_visible()
 
             # Create snapshot

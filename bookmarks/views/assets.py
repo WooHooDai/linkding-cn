@@ -33,7 +33,12 @@ def view(request, asset_id: int):
 
     response = HttpResponse(content, content_type=asset.content_type)
     response["Content-Disposition"] = f'inline; filename="{asset.download_name}"'
-    response["Content-Security-Policy"] = "sandbox allow-scripts"
+    if asset.content_type and asset.content_type.startswith("video/"):
+        response["Content-Security-Policy"] = "default-src 'none'; media-src 'self';"
+    elif asset.content_type == "application/pdf":
+        response["Content-Security-Policy"] = "default-src 'none'; object-src 'self';"
+    else:
+        response["Content-Security-Policy"] = "sandbox allow-scripts"
     return response
 
 

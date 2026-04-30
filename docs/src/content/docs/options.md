@@ -283,6 +283,13 @@ Values: `Float` | Default =  60.0
 When creating HTML archive snapshots, control the timeout for how long to wait for the snapshot to complete, in `seconds`.
 Defaults to 60 seconds; on lower-powered hardware you may need to increase this value.
 
+### `LD_SNAPSHOT_PDF_MAX_SIZE`
+
+Values: `Integer` | Default = `15728640`
+
+When a bookmarked URL points directly to a PDF file, linkding downloads the PDF instead of creating an HTML snapshot.
+This option limits the maximum download size in bytes for those PDF snapshot downloads.
+
 ### `LD_SINGLEFILE_OPTIONS`
 
 Values: `String` | Default = None
