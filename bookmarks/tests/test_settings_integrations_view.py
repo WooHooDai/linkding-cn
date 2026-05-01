@@ -146,3 +146,13 @@ class SettingsIntegrationsViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestM
             '<a target="_blank" href="/feeds/shared">Public shared bookmarks</a>',
             html,
         )
+
+    def test_should_render_both_bookmarklet_variants(self):
+        response = self.client.get(reverse("linkding:settings.integrations"))
+        html = response.content.decode()
+
+        self.assertContains(response, 'name="bookmarklet-type"')
+        self.assertContains(response, 'id="bookmarklet-server"')
+        self.assertContains(response, 'id="bookmarklet-client"')
+        self.assertIn("&title=", html)
+        self.assertIn("&description=", html)

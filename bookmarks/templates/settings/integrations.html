@@ -153,16 +153,73 @@
       <h2>{% translate "Bookmarklet" %}</h2>
       <p>{% translate "The bookmarklet is another cross-browser way to quickly add the current page as a bookmark:" %}</p>
       <ul>
+        <li>
+          {% translate "Choose your preferred method for detecting website titles and descriptions below." %}
+          <a href="https://linkding.link/troubleshooting/#automatically-detected-title-and-description-are-incorrect"
+             target="_blank"
+             rel="noopener">{% translate "Help" %}</a>
+        </li>
         <li>{% translate "Drag the bookmarklet below to your browser toolbar or bookmarks bar." %}</li>
         <li>{% translate "Open the page you want to bookmark." %}</li>
         <li>{% translate "Click the bookmarklet from your browser toolbar." %}</li>
         <li>{% translate "Linkding opens a new bookmark page in a window or tab." %}</li>
         <li>{% translate "After saving, Linkding automatically closes the helper window and returns you to the page." %}</li>
       </ul>
+
+      <div class="form-group radio-group" role="radiogroup" aria-labelledby="detection-method-label">
+        <p id="detection-method-label">{% translate "Choose your preferred bookmarklet:" %}</p>
+        <label for="detection-method-server" class="form-radio">
+          <input id="detection-method-server" type="radio" name="bookmarklet-type" value="server" checked>
+          <i class="form-icon"></i>
+          {% translate "Detect title and description on the server" %}
+        </label>
+        <label for="detection-method-client" class="form-radio">
+          <input id="detection-method-client" type="radio" name="bookmarklet-type" value="client">
+          <i class="form-icon"></i>
+          {% translate "Detect title and description in the browser" %}
+        </label>
+      </div>
       <p>{% translate "Drag this bookmarklet to your toolbar:" %}</p>
-      <a href="javascript: {% include 'bookmarks/bookmarklet.js' %}" data-turbo="false" class="btn btn-primary">📎 {% translate "Add bookmark" %}</a>
+      <div class="bookmarklet-container">
+        <a id="bookmarklet-server"
+           href="javascript: {% include 'bookmarks/bookmarklet.js' %}"
+           data-turbo="false"
+           class="btn btn-primary">📎 {% translate "Add bookmark" %}</a>
+        <a id="bookmarklet-client"
+           href="javascript: {% include 'bookmarks/bookmarklet_clientside.js' %}"
+           data-turbo="false"
+           class="btn btn-primary"
+           style="display: none;">📎 {% translate "Add bookmark" %}</a>
+      </div>
     </section>
   </main>
+
+  <script>
+    (function initBookmarkletToggle() {
+      const radioButtons = document.querySelectorAll('input[name="bookmarklet-type"]');
+      const serverBookmarklet = document.getElementById("bookmarklet-server");
+      const clientBookmarklet = document.getElementById("bookmarklet-client");
+      if (!radioButtons.length || !serverBookmarklet || !clientBookmarklet) {
+        return;
+      }
+
+      function toggleBookmarklet() {
+        const selectedValue = document.querySelector('input[name="bookmarklet-type"]:checked')?.value;
+        if (selectedValue === "client") {
+          serverBookmarklet.style.display = "none";
+          clientBookmarklet.style.display = "inline-block";
+        } else {
+          serverBookmarklet.style.display = "inline-block";
+          clientBookmarklet.style.display = "none";
+        }
+      }
+
+      toggleBookmarklet();
+      radioButtons.forEach((radio) => {
+        radio.addEventListener("change", toggleBookmarklet);
+      });
+    })();
+  </script>
 {% endblock %}
 
 {% block overlays %}

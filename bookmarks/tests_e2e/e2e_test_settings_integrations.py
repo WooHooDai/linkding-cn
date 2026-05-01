@@ -35,3 +35,18 @@ class SettingsIntegrationsE2ETestCase(LinkdingE2ETestCase):
 
             expect(modal).to_be_hidden()
             expect(page.locator("#new-token-key")).to_be_visible()
+
+    def test_should_toggle_bookmarklet_variants(self):
+        with sync_playwright() as p:
+            page = self.open(reverse("linkding:settings.integrations"), p)
+
+            server_bookmarklet = page.locator("#bookmarklet-server")
+            client_bookmarklet = page.locator("#bookmarklet-client")
+
+            expect(server_bookmarklet).to_be_visible()
+            expect(client_bookmarklet).to_be_hidden()
+
+            page.get_by_label("Detect title and description in the browser").check()
+
+            expect(server_bookmarklet).to_be_hidden()
+            expect(client_bookmarklet).to_be_visible()
