@@ -37,35 +37,30 @@
       }
     }
   }
+}
 
-  .crud-table {
-    .btn.btn-link {
-      padding: 0;
-      height: unset;
-    }
+.crud-table {
+  .btn.btn-link {
+    padding: 0;
+    height: unset;
+  }
 
-    th:not(.actions),
-    td:not(.actions) {
-      max-width: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+  th,
+  td {
+    max-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-    th.actions,
-    td.actions {
-      width: 180px;
-      text-align: right;
+  th.actions,
+  td.actions {
+    width: 1%;
+    max-width: 150px;
+    text-align: right;
 
-      div {
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-  
-        *:not(:last-child) {
-          margin-right: var(--unit-2);
-        }
-      }
+    *:not(:last-child) {
+      margin-right: var(--unit-2);
     }
   }
 }

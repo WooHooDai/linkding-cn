@@ -12,22 +12,106 @@
   <main class="settings-page" aria-labelledby="main-heading">
     <h1 id="main-heading">{% translate "Integrations" %}</h1>
 
-    <section aria-labelledby="rest-api-heading">
-      <h2 id="rest-api-heading">REST API</h2>
-      <p>{% translate "The following token can be used to authenticate third-party applications against the REST API:" %}</p>
-      <div class="form-group">
-        <div class="width-50 width-md-100">
-          <input class="form-input" value="{{ api_token }}" readonly>
-        </div>
-      </div>
-      <p>
-        <strong>{% translate "Please treat this token as you would any other credential." %}</strong>
-        {% translate "Any party with access to this token can access and manage all your bookmarks." %}
-        {% translate "If you think the token was compromised, you can revoke it in the" %}
-        <a target="_blank" href="{% url 'admin:authtoken_tokenproxy_changelist' %}" rel="noopener">{% translate "admin panel" %}</a>.
-        {% translate "After deleting the token, reload this page to generate a new one." %}
-      </p>
-    </section>
+    <turbo-frame id="api-section">
+      <section aria-labelledby="rest-api-heading">
+        <h2 id="rest-api-heading">REST API</h2>
+
+        {% if api_success_message %}
+          <div class="toast toast-success mb-2">{{ api_success_message }}</div>
+        {% endif %}
+
+        {% if api_token_name and api_token_key %}
+          <div class="mt-4 mb-6">
+            <p class="mb-2">
+              <strong>{% translate "Copy this token now, it will only be shown once:" %}</strong>
+            </p>
+            <label class="text-assistive" for="new-token-key">{% translate "New token key" %}</label>
+            <div class="input-group">
+              <input class="form-input" value="{{ api_token_key }}" readonly id="new-token-key">
+              <button id="copy-new-token-key" class="btn input-group-btn" type="button">
+                {% translate "Copy" %}
+              </button>
+            </div>
+          </div>
+        {% endif %}
+
+        <p>
+          {% translate "API tokens can be used to authenticate third-party applications against the REST API." %}
+          <strong>{% translate "Please treat tokens as you would any other credential." %}</strong>
+          {% translate "Any party with access to a token can access and manage all your bookmarks." %}
+        </p>
+
+        {% if api_tokens %}
+          <form method="post"
+                action="{% url 'linkding:settings.integrations.delete_api_token' %}"
+                data-turbo-frame="api-section">
+            {% csrf_token %}
+            <table class="table crud-table mb-6">
+              <thead>
+                <tr>
+                  <th>{% translate "Name" %}</th>
+                  <th>{% translate "Created" %}</th>
+                  <th class="actions">
+                    <span class="text-assistive">{% translate "Actions" %}</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for token in api_tokens %}
+                  <tr>
+                    <td>{{ token.name }}</td>
+                    <td>{{ token.created|date:"M d, Y H:i" }}</td>
+                    <td class="actions">
+                      <button data-confirm
+                              name="token_id"
+                              value="{{ token.id }}"
+                              type="submit"
+                              class="btn btn-link">
+                        {% translate "Delete" %}
+                      </button>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </form>
+        {% endif %}
+
+        <a class="btn"
+           href="{% url 'linkding:settings.integrations.create_api_token' %}"
+           data-turbo-frame="api-modal">
+          {% translate "Create API token" %}
+        </a>
+      </section>
+
+      {% translate "Copied!" as copied_text %}
+      {% translate "Copy" as copy_text %}
+      <script>
+        (function initApiTokenClipboard() {
+          const copiedText = "{{ copied_text|escapejs }}";
+          const copyText = "{{ copy_text|escapejs }}";
+          const copyButton = document.getElementById("copy-new-token-key");
+          if (!copyButton) {
+            return;
+          }
+
+          copyButton.addEventListener("click", () => {
+            const tokenInput = document.getElementById("new-token-key");
+            const tokenValue = tokenInput?.value || "";
+            if (!tokenValue || !navigator.clipboard) {
+              return;
+            }
+
+            navigator.clipboard.writeText(tokenValue).then(() => {
+              copyButton.textContent = copiedText;
+              setTimeout(() => {
+                copyButton.textContent = copyText;
+              }, 2000);
+            });
+          });
+        })();
+      </script>
+    </turbo-frame>
 
     <section aria-labelledby="rss-feeds-heading">
       <h2 id="rss-feeds-heading">{% translate "RSS Feeds" %}</h2>
@@ -79,4 +163,8 @@
       <a href="javascript: {% include 'bookmarks/bookmarklet.js' %}" data-turbo="false" class="btn btn-primary">📎 {% translate "Add bookmark" %}</a>
     </section>
   </main>
+{% endblock %}
+
+{% block overlays %}
+  <turbo-frame id="api-modal"></turbo-frame>
 {% endblock %}

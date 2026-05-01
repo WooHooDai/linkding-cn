@@ -1,5 +1,6 @@
 import os
 
+from django import forms
 from django.contrib import admin, messages
 from django.contrib.admin import AdminSite
 from django.contrib.auth.admin import UserAdmin
@@ -10,10 +11,9 @@ from django.shortcuts import render
 from django.urls import path
 from django.utils.translation import gettext, ngettext
 from huey.contrib.djhuey import HUEY as huey
-from rest_framework.authtoken.admin import TokenAdmin
-from rest_framework.authtoken.models import TokenProxy
 
 from bookmarks.models import (
+    ApiToken,
     Bookmark,
     BookmarkAsset,
     BookmarkBundle,
@@ -330,12 +330,26 @@ class AdminFeedToken(admin.ModelAdmin):
     list_filter = ("user__username",)
 
 
+class ApiTokenAdminForm(forms.ModelForm):
+    class Meta:
+        model = ApiToken
+        fields = ("name", "user")
+
+
+class AdminApiToken(admin.ModelAdmin):
+    form = ApiTokenAdminForm
+    list_display = ("name", "user", "created")
+    search_fields = ["name", "user__username"]
+    list_filter = ("user__username",)
+    ordering = ("-created",)
+
+
 linkding_admin_site = LinkdingAdminSite()
 linkding_admin_site.register(Bookmark, AdminBookmark)
 linkding_admin_site.register(BookmarkAsset, AdminBookmarkAsset)
 linkding_admin_site.register(Tag, AdminTag)
 linkding_admin_site.register(BookmarkBundle, AdminBookmarkBundle)
 linkding_admin_site.register(User, AdminCustomUser)
-linkding_admin_site.register(TokenProxy, TokenAdmin)
+linkding_admin_site.register(ApiToken, AdminApiToken)
 linkding_admin_site.register(Toast, AdminToast)
 linkding_admin_site.register(FeedToken, AdminFeedToken)

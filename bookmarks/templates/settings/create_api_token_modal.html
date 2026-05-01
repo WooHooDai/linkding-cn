@@ -1,0 +1,63 @@
+{% load i18n %}
+<turbo-frame id="api-modal">
+  <form method="post"
+        action="{% url 'linkding:settings.integrations.create_api_token' %}"
+        data-turbo-frame="_top">
+    {% csrf_token %}
+    <ld-modal class="modal active"
+              data-close-url="{% url 'linkding:settings.integrations' %}"
+              data-turbo-frame="api-modal">
+      <a class="modal-overlay"
+         href="{% url 'linkding:settings.integrations' %}"
+         aria-label="{% translate 'Close dialog' %}"
+         data-close-modal
+         data-turbo-frame="_top"></a>
+      <div class="modal-container" role="dialog" aria-modal="true">
+        <div class="modal-header">
+          <h2 class="title">{% translate "Create API token" %}</h2>
+          <a class="btn btn-noborder close"
+             href="{% url 'linkding:settings.integrations' %}"
+             aria-label="{% translate 'Close dialog' %}"
+             data-close-modal
+             data-turbo-frame="_top">
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 width="24"
+                 height="24"
+                 viewBox="0 0 24 24"
+                 stroke-width="2"
+                 stroke="currentColor"
+                 fill="none"
+                 stroke-linecap="round"
+                 stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+              <path d="M18 6l-12 12"></path>
+              <path d="M6 6l12 12"></path>
+            </svg>
+          </a>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="token-name">{% translate "Token name" %}</label>
+            <input type="text"
+                   class="form-input"
+                   id="token-name"
+                   name="name"
+                   maxlength="128"
+                   value="API Token"
+                   placeholder="{% translate 'e.g., Browser Extension, Mobile App' %}">
+            <p class="form-input-hint">
+              {% translate "A descriptive name to identify the purpose of the token." %}
+            </p>
+          </div>
+        </div>
+        <div class="modal-footer d-flex justify-between">
+          <a class="btn btn-wide"
+             href="{% url 'linkding:settings.integrations' %}"
+             data-close-modal
+             data-turbo-frame="_top">{% translate "Cancel" %}</a>
+          <button type="submit" class="btn btn-primary btn-wide">{% translate "Create token" %}</button>
+        </div>
+      </div>
+    </ld-modal>
+  </form>
+</turbo-frame>

@@ -1,5 +1,9 @@
 /* Common styles */
 .bookmark-details {
+  .modal-container {
+    width: 100%;
+  }
+
   & .weblinks {
     display: flex;
     flex-direction: row;

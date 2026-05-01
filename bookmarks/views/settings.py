@@ -20,9 +20,9 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _
 from django.utils.translation import ngettext
 from django.views.i18n import LANGUAGE_QUERY_PARAMETER
-from rest_framework.authtoken.models import Token
 
 from bookmarks.models import (
+    ApiToken,
     Bookmark,
     FeedToken,
     GlobalSettings,
@@ -36,6 +36,7 @@ from bookmarks.models import (
 from bookmarks.services import exporter, importer, tasks
 from bookmarks.type_defs import HttpRequest
 from bookmarks.utils import app_version
+from bookmarks.views import access
 
 logger = logging.getLogger(__name__)
 LANGUAGE_OTHER_SENTINEL = "__other__"
@@ -394,7 +395,12 @@ def get_ttl_hash(seconds=3600):
 @login_required
 def integrations(request):
     application_url = request.build_absolute_uri(reverse("linkding:bookmarks.new"))
-    api_token = Token.objects.get_or_create(user=request.user)[0]
+    api_tokens = ApiToken.objects.filter(user=request.user).order_by("-created")
+    api_token_key = request.session.pop("api_token_key", None)
+    api_token_name = request.session.pop("api_token_name", None)
+    api_success_message = _find_message_with_tag(
+        messages.get_messages(request), "api_success_message"
+    )
     feed_token = FeedToken.objects.get_or_create(user=request.user)[0]
     all_feed_url = reverse("linkding:feeds.all", args=[feed_token.key])
     unread_feed_url = reverse("linkding:feeds.unread", args=[feed_token.key])
@@ -405,13 +411,58 @@ def integrations(request):
         "settings/integrations.html",
         {
             "application_url": application_url,
-            "api_token": api_token.key,
+            "api_tokens": api_tokens,
+            "api_token_key": api_token_key,
+            "api_token_name": api_token_name,
+            "api_success_message": api_success_message,
             "all_feed_url": all_feed_url,
             "unread_feed_url": unread_feed_url,
             "shared_feed_url": shared_feed_url,
             "public_shared_feed_url": public_shared_feed_url,
         },
     )
+
+
+@login_required
+def create_api_token(request: HttpRequest):
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        if not name:
+            name = "API Token"
+
+        token = ApiToken(user=request.user, name=name)
+        token.save()
+
+        request.session["api_token_key"] = token.key
+        request.session["api_token_name"] = token.name
+
+        messages.success(
+            request,
+            _('API token "%(token_name)s" created successfully')
+            % {"token_name": token.name},
+            "api_success_message",
+        )
+
+        return HttpResponseRedirect(reverse("linkding:settings.integrations"))
+
+    return render(request, "settings/create_api_token_modal.html")
+
+
+@login_required
+def delete_api_token(request: HttpRequest):
+    if request.method == "POST":
+        token_id = request.POST.get("token_id")
+        token = access.api_token_write(request, token_id)
+        token_name = token.name
+        token.delete()
+        messages.success(
+            request,
+            _('API token "%(token_name)s" has been deleted.')
+            % {"token_name": token_name},
+            "api_success_message",
+        )
+
+    return HttpResponseRedirect(reverse("linkding:settings.integrations"))
 
 
 @login_required
