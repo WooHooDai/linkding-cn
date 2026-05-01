@@ -9,7 +9,7 @@ class SettingsIntegrationsE2ETestCase(LinkdingE2ETestCase):
         with sync_playwright() as p:
             page = self.open(reverse("linkding:settings.integrations"), p)
 
-            page.get_by_role("link", name="Create API token").click()
+            page.get_by_role("link", name="Create").click()
 
             modal = page.locator("turbo-frame#api-modal ld-modal")
             expect(modal).to_be_visible()
@@ -25,7 +25,7 @@ class SettingsIntegrationsE2ETestCase(LinkdingE2ETestCase):
         with sync_playwright() as p:
             page = self.open(reverse("linkding:settings.integrations"), p)
 
-            page.get_by_role("link", name="Create API token").click()
+            page.get_by_role("link", name="Create").click()
 
             modal = page.locator("turbo-frame#api-modal ld-modal")
             expect(modal).to_be_visible()

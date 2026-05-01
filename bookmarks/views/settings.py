@@ -37,6 +37,7 @@ from bookmarks.services import exporter, importer, tasks
 from bookmarks.type_defs import HttpRequest
 from bookmarks.utils import app_version
 from bookmarks.views import access
+from bookmarks.views import turbo
 
 logger = logging.getLogger(__name__)
 LANGUAGE_OTHER_SENTINEL = "__other__"
@@ -443,7 +444,40 @@ def create_api_token(request: HttpRequest):
             "api_success_message",
         )
 
+        if turbo.accept(request) and turbo.is_frame(request, "api-modal"):
+            integration_context = {
+                "api_tokens": ApiToken.objects.filter(user=request.user).order_by(
+                    "-created"
+                ),
+                "api_token_key": token.key,
+                "api_token_name": token.name,
+                "api_success_message": _find_message_with_tag(
+                    messages.get_messages(request), "api_success_message"
+                ),
+            }
+            api_section_stream = turbo.replace(
+                request,
+                "api-section",
+                "settings/integrations_api_section.html",
+                integration_context,
+                method="morph",
+            )
+            api_modal_stream = turbo.replace(
+                request,
+                "api-modal",
+                "settings/empty_modal_frame.html",
+                {},
+                method="morph",
+            )
+            return HttpResponse(
+                api_section_stream.content.decode() + api_modal_stream.content.decode(),
+                content_type="text/vnd.turbo-stream.html",
+            )
+
         return HttpResponseRedirect(reverse("linkding:settings.integrations"))
+
+    if turbo.is_frame(request, "api-modal") and request.GET.get("close") == "1":
+        return render(request, "settings/empty_modal_frame.html")
 
     return render(request, "settings/create_api_token_modal.html")
 

@@ -1642,6 +1642,10 @@ msgid "Browser extension"
 msgstr "浏览器扩展"
 
 #: bookmarks/templates/settings/integrations.html:62
+msgid "The browser extension lets you quickly add the current page as a bookmark."
+msgstr "浏览器扩展可以帮你快速将当前页面添加为书签。"
+
+#: bookmarks/templates/settings/integrations.html:62
 msgid ""
 "The browser extension lets you quickly add the current page as a bookmark. "
 "It is available from the official stores for:"
@@ -1689,6 +1693,133 @@ msgstr "保存后，Linkding 会自动关闭辅助窗口，并将你带回原页
 #: bookmarks/templates/settings/integrations.html:78
 msgid "Drag this bookmarklet to your toolbar:"
 msgstr "将这个书签小程序拖拽到工具栏："
+
+#: bookmarks/templates/settings/integrations.html:201
+msgid ""
+"The bookmarklet is another fast way to add the current page as a bookmark, "
+"and it works across browsers. Here is how to use it:"
+msgstr "书签小程序是另一个快速添加当前页面为书签的方式，它是跨浏览器的。它的使用方式如下："
+
+#: bookmarks/templates/settings/integrations.html:204
+msgid "Choose your preferred method for detecting website titles and descriptions below"
+msgstr "在下方选择您偏好的检测网站标题和描述的方法"
+
+#: bookmarks/templates/settings/integrations.html:201
+msgid "Detect title and description on the server"
+msgstr "在服务器端检测网站标题和描述"
+
+#: bookmarks/templates/settings/integrations.html:206
+msgid "Detect title and description in the browser"
+msgstr "在浏览器端检测网站标题和描述"
+
+#: bookmarks/templates/settings/integrations.html:209
+msgid "Drag the bookmarklet below into your browser's bookmark bar / toolbar"
+msgstr "将下面的书签小程序拖拽到浏览器的书签栏/工具栏"
+
+#: bookmarks/templates/settings/integrations.html:210
+msgid "Open the website that you want to bookmark"
+msgstr "打开想添加为书签的网页"
+
+#: bookmarks/templates/settings/integrations.html:211
+msgid "Click the bookmarklet in your browser's toolbar"
+msgstr "点击浏览器工具栏上你刚添加的书签小程序"
+
+#: bookmarks/templates/settings/integrations.html:212
+msgid "Linkding opens a new bookmark page in a window or tab"
+msgstr "linkding 会在新窗口或标签页打开新建书签页面"
+
+#: bookmarks/templates/settings/integrations.html:213
+msgid "After saving, Linkding automatically closes the helper window and returns you to the page"
+msgstr "保存书签后，linkding 会自动关闭窗口返回网站"
+
+#: bookmarks/templates/settings/integrations.html:237
+#: bookmarks/templates/settings/integrations.html:248
+msgid "Drag to bookmarks bar"
+msgstr "拖到浏览器的书签栏"
+
+#: bookmarks/templates/settings/integrations_api_section.html:38
+msgid "Created at"
+msgstr "创建日期"
+
+#: bookmarks/templates/settings/integrations_api_section.html:69
+msgid "API tokens can be used to authenticate third-party applications against the REST API."
+msgstr "API Token 可用于对第三方应用程序进行 REST API 身份验证。"
+
+#: bookmarks/templates/settings/integrations_api_section.html:69
+msgid "API tokens can access and manage all of your bookmarks, so keep them safe."
+msgstr "API Token 可获取和管理你的所有书签，请谨慎保管。"
+
+#: bookmarks/templates/settings/integrations_api_section.html:71
+msgid "If you suspect an API token has leaked, delete it immediately."
+msgstr "如怀疑某个 API Token 泄漏，请及时删除。"
+
+#: bookmarks/templates/settings/create_api_token_modal.html:18
+msgid "Create API token"
+msgstr "创建 API Token"
+
+#: bookmarks/templates/settings/create_api_token_modal.html:41
+msgid "Token name"
+msgstr "Token 名称"
+
+#: bookmarks/templates/settings/create_api_token_modal.html:48
+msgid "e.g., Browser Extension, Mobile App"
+msgstr "例如：浏览器扩展、移动应用"
+
+#: bookmarks/templates/settings/create_api_token_modal.html:50
+msgid "A descriptive name to identify the purpose of the token."
+msgstr "使用一个描述性名称，便于识别此 Token 的用途。"
+
+#: bookmarks/templates/settings/create_api_token_modal.html:59
+msgid "Create token"
+msgstr "创建 Token"
+
+#: bookmarks/templates/settings/integrations_api_section.html:24
+msgid "Copy"
+msgstr "复制"
+
+#: bookmarks/templates/settings/integrations_api_section.html:82
+msgid "Copied!"
+msgstr "已复制！"
+
+#: bookmarks/templates/settings/integrations_api_section.html:20
+msgid "Copy this token now, it will only be shown once:"
+msgstr "请立即复制此 Token，它只会显示一次："
+
+#: bookmarks/templates/settings/integrations_api_section.html:21
+msgid "New token key"
+msgstr "新 Token 密钥"
+
+#: bookmarks/views/settings.py:443
+#, python-format
+msgid "API token \"%(token_name)s\" created successfully"
+msgstr "API Token “%(token_name)s” 创建成功"
+
+#: bookmarks/views/settings.py:477
+#, python-format
+msgid "API token \"%(token_name)s\" has been deleted."
+msgstr "API Token “%(token_name)s” 已删除。"
+
+#: bookmarks/templates/settings/integrations.html:279
+msgid "All feed URLs support the following URL parameters:"
+msgstr "所有 URL 均支持以下 URL 参数："
+
+#: bookmarks/templates/settings/integrations.html:302
+msgid ""
+"This feed does not include an authentication token and only shows bookmarks "
+"shared by users who explicitly enabled public sharing."
+msgstr "此订阅源不含认证令牌，只显示明确启用公开分享的用户所分享的书签。"
+
+#: bookmarks/templates/settings/integrations.html:312
+msgid "Feed links include a Feed Token and can be used to read all of your bookmarks, so keep them safe."
+msgstr "订阅链接包含 Feed Token，可读取你的所有书签，请谨慎保管。"
+
+#: bookmarks/templates/settings/integrations.html:314
+msgid "If you suspect a feed link has leaked, delete the Feed Token in the"
+msgstr "如怀疑订阅链接泄漏，可在"
+
+#: bookmarks/templates/settings/integrations.html:316
+msgid "After deletion, refresh this page to generate a new feed link."
+msgstr "删除后刷新本页，即可生成新的订阅链接。"
 
 #: bookmarks/templates/tags/edit.html:5
 msgid "Edit tag - Linkding"

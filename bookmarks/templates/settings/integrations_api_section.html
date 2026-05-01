@@ -1,0 +1,128 @@
+{% load i18n %}
+<turbo-frame id="api-section">
+  <section id="settings-rest-api" class="settings-section" aria-labelledby="rest-api-heading">
+    <div class="settings-section-heading settings-stack-header">
+      <div>
+        <div class="settings-label-row">
+          <h2 id="rest-api-heading" class="settings-label">REST API</h2>
+          <div class="settings-help" data-settings-help data-settings-help-open="false">
+            <button type="button"
+                    class="settings-help-button"
+                    data-settings-help-button
+                    aria-label="More info"
+                    aria-expanded="false">
+              <svg viewBox="0 0 1024 1024" aria-hidden="true">
+                <path d="M580.27008 273.07008c0 37.66272-30.5664 68.27008-68.27008 68.27008s-68.27008-30.59712-68.27008-68.27008a68.27008 68.27008 0 0 1 136.54016 0zM546.12992 750.94016v-307.2A34.10944 34.10944 0 0 0 512 409.6H375.47008v68.27008h102.4v273.07008h-102.4V819.2h273.05984v-68.25984h-102.4z" fill="currentColor"></path>
+              </svg>
+            </button>
+            <div class="settings-help-popover" role="tooltip" id="settings-rest-api-help">
+              <div class="form-input-hint">
+                {% translate "API tokens can be used to authenticate third-party applications against the REST API." %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if api_success_message %}
+      <div class="toast toast-success mb-2">{{ api_success_message }}</div>
+    {% endif %}
+
+    {% if api_token_name and api_token_key %}
+      <div class="settings-plain-block settings-token-card">
+        <div class="settings-token-preview">
+          <p><strong>{% translate "Copy this token now, it will only be shown once:" %}</strong></p>
+          <label class="text-assistive" for="new-token-key">{% translate "New token key" %}</label>
+          <div class="input-group">
+            <input class="form-input input-sm" value="{{ api_token_key }}" readonly id="new-token-key">
+            <button id="copy-new-token-key" class="btn btn-primary input-group-btn" type="button">
+              {% translate "Copy" %}
+            </button>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="settings-plain-block">
+      {% if api_tokens %}
+        <table class="table settings-token-table">
+          <thead>
+            <tr>
+              <th>{% translate "Name" %}</th>
+              <th>{% translate "Created at" %}</th>
+              <th class="actions">
+                <span class="text-assistive">{% translate "Actions" %}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for token in api_tokens %}
+              <tr>
+                <td>{{ token.name }}</td>
+                <td>{{ token.created|date:"Y/m/d H:i:s" }}</td>
+                <td class="actions">
+                  <form method="post"
+                        action="{% url 'linkding:settings.integrations.delete_api_token' %}"
+                        data-turbo-frame="api-section">
+                    {% csrf_token %}
+                    <button ld-confirm-button
+                            name="token_id"
+                            value="{{ token.id }}"
+                            type="submit"
+                            class="btn btn-link">
+                      {% translate "Delete" %}
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+
+      <div class="settings-api-actions">
+        <a class="btn btn-primary"
+           href="{% url 'linkding:settings.integrations.create_api_token' %}"
+           data-turbo-frame="api-modal">
+          {% translate "Create" %}
+        </a>
+      </div>
+    </div>
+
+    <div class="settings-card settings-warning-card">
+      <p class="settings-warning-title">{% translate "API tokens can access and manage all of your bookmarks, so keep them safe." %}</p>
+      <p class="settings-warning-copy">
+        {% translate "If you suspect an API token has leaked, delete it immediately." %}
+      </p>
+    </div>
+
+    {% translate "已复制！" as copied_text %}
+    {% translate "复制" as copy_text %}
+    <script>
+      (function initApiTokenClipboard() {
+        const copiedText = "{{ copied_text|escapejs }}";
+        const copyText = "{{ copy_text|escapejs }}";
+        const copyButton = document.getElementById("copy-new-token-key");
+        if (!copyButton) {
+          return;
+        }
+
+        copyButton.addEventListener("click", () => {
+          const tokenInput = document.getElementById("new-token-key");
+          const tokenValue = tokenInput?.value || "";
+          if (!tokenValue || !navigator.clipboard) {
+            return;
+          }
+
+          navigator.clipboard.writeText(tokenValue).then(() => {
+            copyButton.textContent = copiedText;
+            setTimeout(() => {
+              copyButton.textContent = copyText;
+            }, 2000);
+          });
+        });
+      })();
+    </script>
+  </section>
+</turbo-frame>

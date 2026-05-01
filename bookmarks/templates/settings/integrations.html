@@ -6,192 +6,336 @@
   {% with page_title=page_title %}
     {{ block.super }}
   {% endwith %}
+  <style>
+    .settings-page.settings-integrations-page .settings-content {
+      gap: var(--unit-5);
+    }
+
+    .settings-page.settings-integrations-page .settings-section {
+      gap: var(--unit-2);
+    }
+
+    .settings-page.settings-integrations-page .settings-section-heading .form-input-hint {
+      line-height: 1.35;
+      margin-top: 0;
+    }
+
+    .settings-page.settings-integrations-page .settings-section-heading .form-input-hint + .form-input-hint {
+      margin-top: var(--unit-1);
+    }
+
+    .settings-page.settings-integrations-page .settings-warning-card {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      gap: var(--unit-2);
+      padding: 0;
+    }
+
+    .settings-page.settings-integrations-page .settings-warning-title {
+      color: var(--warning-color);
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .settings-page.settings-integrations-page .settings-warning-copy {
+      margin: 0;
+      color: var(--text-color);
+    }
+
+    .settings-page.settings-integrations-page .settings-token-card {
+      gap: var(--unit-2);
+    }
+
+    .settings-page.settings-integrations-page .settings-token-preview {
+      display: grid;
+      gap: var(--unit-2);
+    }
+
+    .settings-page.settings-integrations-page .settings-token-preview p {
+      margin: 0;
+    }
+
+    .settings-page.settings-integrations-page .settings-token-preview .input-group {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .settings-page.settings-integrations-page .settings-token-preview .form-input {
+      height: var(--settings-button-height);
+      min-height: var(--settings-button-height);
+      padding: var(--control-padding-y-sm) var(--control-padding-x-sm);
+    }
+
+    .settings-page.settings-integrations-page .settings-token-preview .input-group-btn {
+      height: var(--settings-button-height);
+      min-height: var(--settings-button-height);
+    }
+
+    .settings-page.settings-integrations-page .settings-plain-block {
+      display: grid;
+      gap: var(--unit-1);
+    }
+
+    .settings-page.settings-integrations-page .settings-api-actions {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      width: 100%;
+    }
+
+    .settings-page.settings-integrations-page .settings-api-actions .btn {
+      height: 32px;
+      min-height: 32px;
+    }
+
+    .settings-page.settings-integrations-page .settings-link-list,
+    .settings-page.settings-integrations-page .settings-params-list {
+      margin: 0;
+      padding-left: 1.2rem;
+      display: grid;
+      gap: var(--unit-1);
+      list-style-position: outside;
+    }
+
+    .settings-page.settings-integrations-page .settings-link-list li,
+    .settings-page.settings-integrations-page .settings-params-list li {
+      color: var(--text-color);
+    }
+
+    .settings-page.settings-integrations-page .settings-help-popover ul,
+    .settings-page.settings-integrations-page .settings-help-popover ol {
+      margin: 0;
+      padding-left: 1.2rem;
+      display: grid;
+      gap: var(--unit-1);
+      list-style-position: outside;
+    }
+
+    .settings-page.settings-integrations-page .settings-bookmarklet-choice {
+      display: grid;
+      gap: var(--unit-2);
+    }
+
+    .settings-page.settings-integrations-page .settings-bookmarklet-selector {
+      display: inline-grid;
+      gap: var(--unit-1);
+      justify-items: start;
+      max-width: 100%;
+    }
+
+    .settings-page.settings-integrations-page .settings-bookmarklet-drag {
+      display: grid;
+      gap: var(--unit-1);
+      align-items: start;
+    }
+
+    .settings-page.settings-integrations-page .settings-bookmarklet-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--unit-2);
+      width: fit-content;
+      max-width: 100%;
+      height: 32px;
+      min-height: 32px;
+      padding: 0 var(--unit-4);
+      border: var(--border-width) solid var(--settings-surface-border);
+      border-radius: calc(var(--border-radius) * 2);
+      background: var(--settings-surface-bg);
+      color: var(--text-color);
+      text-decoration: none;
+      box-shadow: var(--box-shadow-xs);
+      transition:
+        border-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease;
+    }
+
+    .settings-page.settings-integrations-page .settings-bookmarklet-chip:hover,
+    .settings-page.settings-integrations-page .settings-bookmarklet-chip:focus-visible {
+      text-decoration: none;
+      border-color: color-mix(in srgb, var(--primary-color) 40%, var(--settings-surface-border));
+      box-shadow: var(--box-shadow);
+      transform: translateY(-1px);
+    }
+
+    .settings-page.settings-integrations-page .settings-feed-link {
+      word-break: break-all;
+    }
+
+    .settings-page.settings-integrations-page .settings-token-table .actions {
+      width: 280px;
+      max-width: none;
+      overflow: visible;
+      text-overflow: clip;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .settings-page.settings-integrations-page .settings-token-table .actions form {
+      display: inline-flex;
+      justify-content: flex-end;
+      min-width: 260px;
+      overflow: visible;
+    }
+
+    .settings-page.settings-integrations-page .settings-token-table .actions .confirmation {
+      display: inline-flex;
+      justify-content: flex-end;
+      gap: var(--unit-1);
+      width: 100%;
+    }
+
+  </style>
 {% endblock %}
 
 {% block content %}
-  <main class="settings-page" aria-labelledby="main-heading">
-    <h1 id="main-heading">{% translate "Integrations" %}</h1>
+  <main class="settings-page settings-integrations-page" aria-labelledby="main-heading" ld-settings-page>
+    <div class="settings-page-header">
+      <div>
+        <h1 id="main-heading">{% translate "Integrations" %}</h1>
+      </div>
+    </div>
 
-    <turbo-frame id="api-section">
-      <section aria-labelledby="rest-api-heading">
-        <h2 id="rest-api-heading">REST API</h2>
-
-        {% if api_success_message %}
-          <div class="toast toast-success mb-2">{{ api_success_message }}</div>
-        {% endif %}
-
-        {% if api_token_name and api_token_key %}
-          <div class="mt-4 mb-6">
-            <p class="mb-2">
-              <strong>{% translate "Copy this token now, it will only be shown once:" %}</strong>
-            </p>
-            <label class="text-assistive" for="new-token-key">{% translate "New token key" %}</label>
-            <div class="input-group">
-              <input class="form-input" value="{{ api_token_key }}" readonly id="new-token-key">
-              <button id="copy-new-token-key" class="btn input-group-btn" type="button">
-                {% translate "Copy" %}
-              </button>
+    <div class="settings-content">
+      <section id="settings-browser-extension" class="settings-section" aria-labelledby="browser-extension-heading">
+        <div class="settings-section-heading settings-stack-header">
+          <div>
+            <h2 id="browser-extension-heading" class="settings-label">{% translate "Browser extension" %}</h2>
+            <div class="form-input-hint">
+              {% translate "The browser extension lets you quickly add the current page as a bookmark." %}
+            </div>
+            <div class="form-input-hint">
+              {% translate "The extension is open source and can also be built and loaded manually into Chromium-based browsers." %}
             </div>
           </div>
-        {% endif %}
+        </div>
 
-        <p>
-          {% translate "API tokens can be used to authenticate third-party applications against the REST API." %}
-          <strong>{% translate "Please treat tokens as you would any other credential." %}</strong>
-          {% translate "Any party with access to a token can access and manage all your bookmarks." %}
-        </p>
-
-        {% if api_tokens %}
-          <form method="post"
-                action="{% url 'linkding:settings.integrations.delete_api_token' %}"
-                data-turbo-frame="api-section">
-            {% csrf_token %}
-            <table class="table crud-table mb-6">
-              <thead>
-                <tr>
-                  <th>{% translate "Name" %}</th>
-                  <th>{% translate "Created" %}</th>
-                  <th class="actions">
-                    <span class="text-assistive">{% translate "Actions" %}</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for token in api_tokens %}
-                  <tr>
-                    <td>{{ token.name }}</td>
-                    <td>{{ token.created|date:"M d, Y H:i" }}</td>
-                    <td class="actions">
-                      <button data-confirm
-                              name="token_id"
-                              value="{{ token.id }}"
-                              type="submit"
-                              class="btn btn-link">
-                        {% translate "Delete" %}
-                      </button>
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </form>
-        {% endif %}
-
-        <a class="btn"
-           href="{% url 'linkding:settings.integrations.create_api_token' %}"
-           data-turbo-frame="api-modal">
-          {% translate "Create API token" %}
-        </a>
+        <div class="settings-plain-block">
+          <ul class="settings-link-list">
+            <li><a href="https://addons.mozilla.org/firefox/addon/linkding-extension/" target="_blank" rel="noopener">Firefox</a></li>
+            <li><a href="https://chrome.google.com/webstore/detail/linkding-extension/beakmhbijpdhipnjhnclmhgjlddhidpe" target="_blank" rel="noopener">Chrome</a></li>
+          </ul>
+        </div>
       </section>
 
-      {% translate "Copied!" as copied_text %}
-      {% translate "Copy" as copy_text %}
-      <script>
-        (function initApiTokenClipboard() {
-          const copiedText = "{{ copied_text|escapejs }}";
-          const copyText = "{{ copy_text|escapejs }}";
-          const copyButton = document.getElementById("copy-new-token-key");
-          if (!copyButton) {
-            return;
-          }
+      <section id="settings-bookmarklet" class="settings-section" aria-labelledby="bookmarklet-heading">
+        <div class="settings-section-heading settings-stack-header">
+          <div>
+            <h2 id="bookmarklet-heading" class="settings-label">{% translate "Bookmarklet" %}</h2>
+            <div class="form-input-hint">
+              {% translate "The bookmarklet is another fast way to add the current page as a bookmark, and it works across browsers. Here is how to use it:" %}
+            </div>
+            <div class="form-input-hint">
+              1. {% translate "Choose your preferred method for detecting website titles and descriptions below" %}
+              (<a href="https://linkding.link/troubleshooting/#automatically-detected-title-and-description-are-incorrect"
+                  target="_blank"
+                  rel="noopener">{% translate "Help" %}</a>)
+            </div>
+            <div class="form-input-hint">2. {% translate "Drag the bookmarklet below into your browser's bookmark bar / toolbar" %}</div>
+            <div class="form-input-hint">3. {% translate "Open the website that you want to bookmark" %}</div>
+            <div class="form-input-hint">4. {% translate "Click the bookmarklet in your browser's toolbar" %}</div>
+            <div class="form-input-hint">5. {% translate "Linkding opens a new bookmark page in a window or tab" %}</div>
+            <div class="form-input-hint">6. {% translate "After saving, Linkding automatically closes the helper window and returns you to the page" %}</div>
+          </div>
+        </div>
 
-          copyButton.addEventListener("click", () => {
-            const tokenInput = document.getElementById("new-token-key");
-            const tokenValue = tokenInput?.value || "";
-            if (!tokenValue || !navigator.clipboard) {
-              return;
-            }
+        <div class="settings-plain-block settings-bookmarklet-choice">
+          <div class="settings-bookmarklet-selector form-group radio-group" role="radiogroup" aria-labelledby="detection-method-label">
+            <p id="detection-method-label" class="settings-label text-assistive">{% translate "Choose your preferred bookmarklet:" %}</p>
+            <label for="detection-method-server" class="form-radio">
+              <input id="detection-method-server" type="radio" name="bookmarklet-type" value="server" checked>
+              <i class="form-icon"></i>
+              {% translate "Detect title and description on the server" %}
+            </label>
+            <label for="detection-method-client" class="form-radio">
+              <input id="detection-method-client" type="radio" name="bookmarklet-type" value="client">
+              <i class="form-icon"></i>
+              {% translate "Detect title and description in the browser" %}
+            </label>
+          </div>
 
-            navigator.clipboard.writeText(tokenValue).then(() => {
-              copyButton.textContent = copiedText;
-              setTimeout(() => {
-                copyButton.textContent = copyText;
-              }, 2000);
-            });
-          });
-        })();
-      </script>
-    </turbo-frame>
+          <div class="settings-bookmarklet-drag">
+            <a id="bookmarklet-server"
+               href="javascript: {% include 'bookmarks/bookmarklet.js' %}"
+               data-turbo="false"
+               class="settings-bookmarklet-chip">
+              <span>📎</span>
+              <span>{% translate "Drag to bookmarks bar" %}</span>
+            </a>
+            <a id="bookmarklet-client"
+               href="javascript: {% include 'bookmarks/bookmarklet_clientside.js' %}"
+               data-turbo="false"
+               class="settings-bookmarklet-chip"
+               style="display: none;">
+              <span>📎</span>
+              <span>{% translate "Drag to bookmarks bar" %}</span>
+            </a>
+          </div>
+        </div>
+      </section>
 
-    <section aria-labelledby="rss-feeds-heading">
-      <h2 id="rss-feeds-heading">{% translate "RSS Feeds" %}</h2>
-      <p>{% translate "The following URLs provide RSS feeds for your bookmarks:" %}</p>
-      <ul style="list-style-position: outside;">
-        <li><a target="_blank" href="{{ all_feed_url }}">{% translate "All bookmarks" %}</a></li>
-        <li><a target="_blank" href="{{ unread_feed_url }}">{% translate "Unread bookmarks" %}</a></li>
-        <li><a target="_blank" href="{{ shared_feed_url }}">{% translate "Shared bookmarks" %}</a></li>
-        <li>
-          <a target="_blank" href="{{ public_shared_feed_url }}">{% translate "Public shared bookmarks" %}</a><br>
-          <span class="text-small text-secondary">{% translate "This public feed does not include an authentication token and only shows bookmarks from users who explicitly enabled public sharing." %}</span>
-        </li>
-      </ul>
-      <p>{% translate "All URLs support the following URL parameters:" %}</p>
-      <ul style="list-style-position: outside;">
-        <li><code>limit</code>: {% translate "specifies the maximum number of bookmarks in the feed. The default is 100." %}</li>
-        <li><code>q</code>: {% translate "specifies the search query. You can copy an example from the bookmark list URL after running a search." %}</li>
-        <li><code>unread</code>: {% translate "filters unread or read bookmarks. Use yes for unread and no for read." %}</li>
-        <li><code>shared</code>: {% translate "filters shared or unshared bookmarks. Use yes for shared and no for unshared." %}</li>
-      </ul>
-      <p>
-        <strong>{% translate "Please note that these URLs include an authentication token and should be handled like any other credential." %}</strong>
-        {% translate "Anyone with access to these URLs can read all your bookmarks." %}
-        {% translate "If you think a feed URL was compromised, delete the feed token in the" %}
-        <a target="_blank" href="{% url 'admin:bookmarks_feedtoken_changelist' %}" rel="noopener">{% translate "admin panel" %}</a>.
-        {% translate "After deleting the token, reload this page to generate new feed URLs." %}
-      </p>
-    </section>
+      {% include "settings/integrations_api_section.html" %}
 
-    <section aria-labelledby="browser-extension-heading">
-      <h2 id="browser-extension-heading">{% translate "Browser extension" %}</h2>
-      <p>{% translate "The browser extension lets you quickly add the current page as a bookmark. It is available from the official stores for:" %}</p>
-      <ul>
-        <li><a href="https://addons.mozilla.org/firefox/addon/linkding-extension/" target="_blank" rel="noopener">Firefox</a></li>
-        <li><a href="https://chrome.google.com/webstore/detail/linkding-extension/beakmhbijpdhipnjhnclmhgjlddhidpe" target="_blank" rel="noopener">Chrome</a></li>
-      </ul>
-      <p>{% translate "The extension is open source and can also be built and loaded manually into Chromium-based browsers." %}</p>
+      <section id="settings-rss" class="settings-section" aria-labelledby="rss-feeds-heading">
+        <div class="settings-section-heading settings-stack-header">
+          <div>
+            <h2 id="rss-feeds-heading" class="settings-label">{% translate "RSS Feeds" %}</h2>
+            <div class="form-input-hint">
+              {% translate "All feed URLs support the following URL parameters:" %}
+            </div>
+            <div class="form-input-hint">
+              <ul>
+                <li><code>limit</code>: {% translate "specifies the maximum number of bookmarks in the feed. The default is 100." %}</li>
+                <li><code>q</code>: {% translate "specifies the search query. You can copy an example from the bookmark list URL after running a search." %}</li>
+                <li><code>unread</code>: {% translate "filters unread or read bookmarks. Use yes for unread and no for read." %}</li>
+                <li><code>shared</code>: {% translate "filters shared or unshared bookmarks. Use yes for shared and no for unshared." %}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
 
-      <h2>{% translate "Bookmarklet" %}</h2>
-      <p>{% translate "The bookmarklet is another cross-browser way to quickly add the current page as a bookmark:" %}</p>
-      <ul>
-        <li>
-          {% translate "Choose your preferred method for detecting website titles and descriptions below." %}
-          <a href="https://linkding.link/troubleshooting/#automatically-detected-title-and-description-are-incorrect"
-             target="_blank"
-             rel="noopener">{% translate "Help" %}</a>
-        </li>
-        <li>{% translate "Drag the bookmarklet below to your browser toolbar or bookmarks bar." %}</li>
-        <li>{% translate "Open the page you want to bookmark." %}</li>
-        <li>{% translate "Click the bookmarklet from your browser toolbar." %}</li>
-        <li>{% translate "Linkding opens a new bookmark page in a window or tab." %}</li>
-        <li>{% translate "After saving, Linkding automatically closes the helper window and returns you to the page." %}</li>
-      </ul>
+        <div class="settings-plain-block">
+          <ul class="settings-link-list">
+            <li><a class="settings-feed-link" target="_blank" href="{{ all_feed_url }}">{% translate "All bookmarks" %}</a></li>
+            <li><a class="settings-feed-link" target="_blank" href="{{ unread_feed_url }}">{% translate "Unread bookmarks" %}</a></li>
+            <li><a class="settings-feed-link" target="_blank" href="{{ shared_feed_url }}">{% translate "Shared bookmarks" %}</a></li>
+            <li>
+              <div class="settings-label-row">
+                <a class="settings-feed-link" target="_blank" href="{{ public_shared_feed_url }}">{% translate "Public shared bookmarks" %}</a>
+                <div class="settings-help" data-settings-help data-settings-help-open="false">
+                  <button type="button"
+                          class="settings-help-button"
+                          data-settings-help-button
+                          aria-label="More info"
+                          aria-expanded="false">
+                    <svg viewBox="0 0 1024 1024" aria-hidden="true">
+                      <path d="M580.27008 273.07008c0 37.66272-30.5664 68.27008-68.27008 68.27008s-68.27008-30.59712-68.27008-68.27008a68.27008 68.27008 0 0 1 136.54016 0zM546.12992 750.94016v-307.2A34.10944 34.10944 0 0 0 512 409.6H375.47008v68.27008h102.4v273.07008h-102.4V819.2h273.05984v-68.25984h-102.4z" fill="currentColor"></path>
+                    </svg>
+                  </button>
+                  <div class="settings-help-popover" role="tooltip" id="settings-rss-public-help">
+                    <div class="form-input-hint">
+                      {% translate "This public feed does not include an authentication token and only shows bookmarks from users who explicitly enabled public sharing." %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
 
-      <div class="form-group radio-group" role="radiogroup" aria-labelledby="detection-method-label">
-        <p id="detection-method-label">{% translate "Choose your preferred bookmarklet:" %}</p>
-        <label for="detection-method-server" class="form-radio">
-          <input id="detection-method-server" type="radio" name="bookmarklet-type" value="server" checked>
-          <i class="form-icon"></i>
-          {% translate "Detect title and description on the server" %}
-        </label>
-        <label for="detection-method-client" class="form-radio">
-          <input id="detection-method-client" type="radio" name="bookmarklet-type" value="client">
-          <i class="form-icon"></i>
-          {% translate "Detect title and description in the browser" %}
-        </label>
-      </div>
-      <p>{% translate "Drag this bookmarklet to your toolbar:" %}</p>
-      <div class="bookmarklet-container">
-        <a id="bookmarklet-server"
-           href="javascript: {% include 'bookmarks/bookmarklet.js' %}"
-           data-turbo="false"
-           class="btn btn-primary">📎 {% translate "Add bookmark" %}</a>
-        <a id="bookmarklet-client"
-           href="javascript: {% include 'bookmarks/bookmarklet_clientside.js' %}"
-           data-turbo="false"
-           class="btn btn-primary"
-           style="display: none;">📎 {% translate "Add bookmark" %}</a>
-      </div>
-    </section>
+        <div class="settings-card settings-warning-card">
+          <p class="settings-warning-title">{% translate "Feed links include a Feed Token and can be used to read all of your bookmarks, so keep them safe." %}</p>
+          <p class="settings-warning-copy">
+            {% translate "If you suspect a feed link has leaked, delete the Feed Token in the" %}
+            <a target="_blank" href="{% url 'admin:bookmarks_feedtoken_changelist' %}" rel="noopener">{% translate "admin panel" %}</a>.
+            {% translate "After deletion, refresh this page to generate a new feed link." %}
+          </p>
+        </div>
+      </section>
+    </div>
   </main>
 
   <script>
@@ -206,10 +350,10 @@
       function toggleBookmarklet() {
         const selectedValue = document.querySelector('input[name="bookmarklet-type"]:checked')?.value;
         if (selectedValue === "client") {
+          clientBookmarklet.style.display = "inline-flex";
           serverBookmarklet.style.display = "none";
-          clientBookmarklet.style.display = "inline-block";
         } else {
-          serverBookmarklet.style.display = "inline-block";
+          serverBookmarklet.style.display = "inline-flex";
           clientBookmarklet.style.display = "none";
         }
       }

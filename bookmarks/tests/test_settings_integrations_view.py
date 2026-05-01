@@ -38,6 +38,21 @@ class SettingsIntegrationsViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestM
         self.assertEqual(token.user, self.user)
         self.assertEqual(token.name, "My Test Token")
 
+    def test_create_api_token_turbo_post_updates_section_and_closes_modal(self):
+        response = self.client.post(
+            reverse("linkding:settings.integrations.create_api_token"),
+            {"name": "My Turbo Token"},
+            HTTP_ACCEPT="text/vnd.turbo-stream.html",
+            HTTP_TURBO_FRAME="api-modal",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/vnd.turbo-stream.html")
+        content = response.content.decode()
+        self.assertIn('target="api-section"', content)
+        self.assertIn('target="api-modal"', content)
+        self.assertIn('id="new-token-key"', content)
+
     def test_create_api_token_with_empty_name(self):
         self.client.post(
             reverse("linkding:settings.integrations.create_api_token"),
@@ -130,22 +145,16 @@ class SettingsIntegrationsViewTestCase(TestCase, BookmarkFactoryMixin, HtmlTestM
         html = response.content.decode()
 
         token = FeedToken.objects.first()
-        self.assertInHTML(
-            f'<a target="_blank" href="/feeds/{token.key}/all">All bookmarks</a>',
-            html,
-        )
-        self.assertInHTML(
-            f'<a target="_blank" href="/feeds/{token.key}/unread">Unread bookmarks</a>',
-            html,
-        )
-        self.assertInHTML(
-            f'<a target="_blank" href="/feeds/{token.key}/shared">Shared bookmarks</a>',
-            html,
-        )
-        self.assertInHTML(
-            '<a target="_blank" href="/feeds/shared">Public shared bookmarks</a>',
-            html,
-        )
+        soup = self.make_soup(html)
+        links = {
+            link.get("href"): link.get_text(strip=True)
+            for link in soup.select("#settings-rss a")
+        }
+
+        self.assertEqual(links[f"/feeds/{token.key}/all"], "All bookmarks")
+        self.assertEqual(links[f"/feeds/{token.key}/unread"], "Unread bookmarks")
+        self.assertEqual(links[f"/feeds/{token.key}/shared"], "Shared bookmarks")
+        self.assertEqual(links["/feeds/shared"], "Public shared bookmarks")
 
     def test_should_render_both_bookmarklet_variants(self):
         response = self.client.get(reverse("linkding:settings.integrations"))

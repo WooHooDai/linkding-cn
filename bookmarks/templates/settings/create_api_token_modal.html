@@ -2,24 +2,25 @@
 <turbo-frame id="api-modal">
   <form method="post"
         action="{% url 'linkding:settings.integrations.create_api_token' %}"
-        data-turbo-frame="_top">
+        data-turbo-frame="api-section">
     {% csrf_token %}
     <ld-modal class="modal active"
-              data-close-url="{% url 'linkding:settings.integrations' %}"
+              data-close-url="{% url 'linkding:settings.integrations.create_api_token' %}?close=1"
+              data-turbo-action="replace"
               data-turbo-frame="api-modal">
       <a class="modal-overlay"
-         href="{% url 'linkding:settings.integrations' %}"
+         href="{% url 'linkding:settings.integrations.create_api_token' %}?close=1"
          aria-label="{% translate 'Close dialog' %}"
          data-close-modal
-         data-turbo-frame="_top"></a>
+         data-turbo-frame="api-modal"></a>
       <div class="modal-container" role="dialog" aria-modal="true">
         <div class="modal-header">
           <h2 class="title">{% translate "Create API token" %}</h2>
           <a class="btn btn-noborder close"
-             href="{% url 'linkding:settings.integrations' %}"
+             href="{% url 'linkding:settings.integrations.create_api_token' %}?close=1"
              aria-label="{% translate 'Close dialog' %}"
              data-close-modal
-             data-turbo-frame="_top">
+             data-turbo-frame="api-modal">
             <svg xmlns="http://www.w3.org/2000/svg"
                  width="24"
                  height="24"
@@ -52,9 +53,9 @@
         </div>
         <div class="modal-footer d-flex justify-between">
           <a class="btn btn-wide"
-             href="{% url 'linkding:settings.integrations' %}"
+             href="{% url 'linkding:settings.integrations.create_api_token' %}?close=1"
              data-close-modal
-             data-turbo-frame="_top">{% translate "Cancel" %}</a>
+             data-turbo-frame="api-modal">{% translate "Cancel" %}</a>
           <button type="submit" class="btn btn-primary btn-wide">{% translate "Create token" %}</button>
         </div>
       </div>
