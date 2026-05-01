@@ -25,7 +25,8 @@
   {% if search.date_filter_end %}
     <input type="hidden" name="date_filter_end" value="{{ search.date_filter_end }}">
   {% endif %}
-  <button type="submit" class="btn ml-2" title="Random sort">
+  {% load i18n %}
+  <button type="submit" class="btn ml-2" title="{% translate 'Random sort' %}">
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" stroke-width="2"
          stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
       <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>

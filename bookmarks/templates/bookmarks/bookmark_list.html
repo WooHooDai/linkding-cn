@@ -122,7 +122,7 @@
                   {% endif %}
                 {% else %}
                   {# Shared bookmark actions #}
-                  <span>Shared by
+                  <span>{% translate "Shared by" %}
                   <a href="?{% replace_query_param user=bookmark_item.owner.username %}">{{ bookmark_item.owner.username }}</a>
                 </span>
                 {% endif %}

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-25 23:29+0800\n"
+"POT-Creation-Date: 2026-05-02 00:05+0800\n"
 "PO-Revision-Date: 2026-04-22 20:55+0800\n"
 "Last-Translator: Codex\n"
 "Language-Team: Simplified Chinese\n"
@@ -17,322 +17,382 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: bookmarks/admin.py:146
+#: bookmarks/admin.py:149
 #, python-format
 msgid "%d bookmark was successfully deleted."
 msgid_plural "%d bookmarks were successfully deleted."
 msgstr[0] "已成功删除 %d 个书签。"
 msgstr[1] "已成功删除 %d 个书签。"
 
-#: bookmarks/admin.py:162
+#: bookmarks/admin.py:165
 #, python-format
 msgid "%d bookmark was successfully moved to trash."
 msgid_plural "%d bookmarks were successfully moved to trash."
 msgstr[0] "已成功将 %d 个书签移至回收站。"
 msgstr[1] "已成功将 %d 个书签移至回收站。"
 
-#: bookmarks/admin.py:177
+#: bookmarks/admin.py:180
 #, python-format
 msgid "%d bookmark was successfully archived."
 msgid_plural "%d bookmarks were successfully archived."
 msgstr[0] "已成功归档 %d 个书签。"
 msgstr[1] "已成功归档 %d 个书签。"
 
-#: bookmarks/admin.py:192
+#: bookmarks/admin.py:195
 #, python-format
 msgid "%d bookmark was successfully unarchived."
 msgid_plural "%d bookmarks were successfully unarchived."
 msgstr[0] "已成功取消归档 %d 个书签。"
 msgstr[1] "已成功取消归档 %d 个书签。"
 
-#: bookmarks/admin.py:206
+#: bookmarks/admin.py:209
 #, python-format
 msgid "%d bookmark marked as read."
 msgid_plural "%d bookmarks marked as read."
 msgstr[0] "已将 %d 个书签标记为已读。"
 msgstr[1] "已将 %d 个书签标记为已读。"
 
-#: bookmarks/admin.py:220
+#: bookmarks/admin.py:223
 #, python-format
 msgid "%d bookmark marked as unread."
 msgid_plural "%d bookmarks marked as unread."
 msgstr[0] "已将 %d 个书签标记为未读。"
 msgstr[1] "已将 %d 个书签标记为未读。"
 
-#: bookmarks/admin.py:269
+#: bookmarks/admin.py:272
 #, python-format
 msgid "%d unused tag was successfully deleted."
 msgid_plural "%d unused tags were successfully deleted."
 msgstr[0] "已成功删除 %d 个未使用标签。"
 msgstr[1] "已成功删除 %d 个未使用标签。"
 
-#: bookmarks/admin.py:280
+#: bookmarks/admin.py:283
 msgid "There were no unused tags in the selection"
 msgstr "所选项目中没有未使用标签"
 
-#: bookmarks/api/auth.py:20
+#: bookmarks/api/auth.py:24
 msgid "Invalid token header. No credentials provided."
 msgstr "无效的令牌请求头。未提供凭据。"
 
-#: bookmarks/api/auth.py:23
+#: bookmarks/api/auth.py:27
 msgid "Invalid token header. Token string should not contain spaces."
 msgstr "无效的令牌请求头。令牌字符串不应包含空格。"
 
-#: bookmarks/api/auth.py:30
-msgid ""
-"Invalid token header. Token string should not contain invalid characters."
+#: bookmarks/api/auth.py:34
+msgid "Invalid token header. Token string should not contain invalid characters."
 msgstr "无效的令牌请求头。令牌字符串不应包含无效字符。"
 
-#: bookmarks/forms.py:110
+#: bookmarks/forms.py:115
 msgid "A bookmark with this URL already exists."
 msgstr "该 URL 的书签已存在。"
 
-#: bookmarks/forms.py:124
+#: bookmarks/forms.py:129
 msgid "Sort"
 msgstr "排序"
 
-#: bookmarks/forms.py:129 bookmarks/templates/bookmarks/search.html:89
-#: bookmarks/templates/bundles/form.html:77
+#: bookmarks/forms.py:134 bookmarks/templates/bookmarks/search.html:51
+#: bookmarks/templates/bundles/form.html:89
 msgid "Shared filter"
 msgstr "分享筛选"
 
-#: bookmarks/forms.py:135 bookmarks/templates/bookmarks/search.html:104
-#: bookmarks/templates/bundles/form.html:88
+#: bookmarks/forms.py:140 bookmarks/templates/bookmarks/search.html:66
+#: bookmarks/templates/bundles/form.html:100
 msgid "Unread filter"
 msgstr "未读筛选"
 
-#: bookmarks/forms.py:141 bookmarks/templates/bookmarks/search.html:119
-#: bookmarks/templates/bundles/form.html:99
+#: bookmarks/forms.py:146 bookmarks/templates/bookmarks/search.html:81
+#: bookmarks/templates/bundles/form.html:111
 msgid "Tagged filter"
 msgstr "标签筛选"
 
-#: bookmarks/forms.py:147 bookmarks/templates/bookmarks/search.html:133
-#: bookmarks/templates/bundles/form.html:112
+#: bookmarks/forms.py:152 bookmarks/templates/bookmarks/search.html:95
+#: bookmarks/templates/bundles/form.html:124
 msgid "Date filter"
 msgstr "日期筛选"
 
-#: bookmarks/forms.py:153
+#: bookmarks/forms.py:158
 msgid "Date filter type"
 msgstr "筛选类型"
 
-#: bookmarks/forms.py:159 bookmarks/templates/bookmarks/search.html:155
-#: bookmarks/templates/bundles/form.html:136
+#: bookmarks/forms.py:164 bookmarks/templates/bookmarks/search.html:117
+#: bookmarks/templates/bundles/form.html:148
 msgid "Start date"
 msgstr "开始日期"
 
-#: bookmarks/forms.py:164 bookmarks/templates/bookmarks/search.html:161
-#: bookmarks/templates/bundles/form.html:142
+#: bookmarks/forms.py:169 bookmarks/templates/bookmarks/search.html:123
+#: bookmarks/templates/bundles/form.html:154
 msgid "End date"
 msgstr "结束日期"
 
-#: bookmarks/forms.py:167
+#: bookmarks/forms.py:172
 msgid "Relative date string"
 msgstr "相对日期字符串"
 
-#: bookmarks/forms.py:172 bookmarks/templates/bundles/form.html:185
+#: bookmarks/forms.py:177 bookmarks/templates/bundles/form.html:197
 msgid "HTML snapshot"
 msgstr "HTML 快照"
 
-#: bookmarks/forms.py:178 bookmarks/templates/bookmarks/details/form.html:122
-#: bookmarks/templates/bookmarks/form.html:91
-#: bookmarks/templates/bookmarks/form.html:98
-#: bookmarks/templates/bookmarks/form.html:104
-#: bookmarks/templates/bundles/form.html:196
+#: bookmarks/forms.py:183 bookmarks/templates/bookmarks/details/form.html:123
+#: bookmarks/templates/bookmarks/form.html:94
+#: bookmarks/templates/bookmarks/form.html:101
+#: bookmarks/templates/bookmarks/form.html:107
+#: bookmarks/templates/bundles/form.html:208
 msgid "Preview image"
 msgstr "预览图"
 
-#: bookmarks/forms.py:184 bookmarks/templates/bundles/form.html:207
+#: bookmarks/forms.py:189 bookmarks/templates/bundles/form.html:219
 msgid "Favicon"
 msgstr "Favicon"
 
-#: bookmarks/forms.py:264
+#: bookmarks/forms.py:306
 #, python-format
 msgid "Tag \"%(tag_name)s\" already exists."
 msgstr "标签“%(tag_name)s”已存在。"
 
-#: bookmarks/forms.py:295
+#: bookmarks/forms.py:337
 msgid "Please enter only one tag name for the target tag."
 msgstr "目标标签只能填写一个标签名。"
 
-#: bookmarks/forms.py:304 bookmarks/forms.py:324
+#: bookmarks/forms.py:346 bookmarks/forms.py:365
 #, python-format
 msgid "Tag \"%(tag_name)s\" does not exist."
 msgstr "标签“%(tag_name)s”不存在。"
 
-#: bookmarks/forms.py:315
+#: bookmarks/forms.py:356
 msgid "Please enter at least one tag to merge."
 msgstr "请至少输入一个要合并的标签。"
 
-#: bookmarks/forms.py:331
+#: bookmarks/forms.py:371
 msgid "The target tag cannot be selected for merging."
 msgstr "目标标签不能包含在待合并标签中。"
 
-#: bookmarks/models.py:203 bookmarks/templates/bundles/form.html:63
+#: bookmarks/models.py:203 bookmarks/templates/bundles/form.html:75
 msgid "Show bookmark count"
 msgstr "显示书签数"
 
-#: bookmarks/models.py:205
+#: bookmarks/models.py:207
 msgid "Search parameters"
 msgstr "搜索参数"
 
-#: bookmarks/models.py:533
+#: bookmarks/models.py:571
 msgid "Added ↑"
 msgstr "添加时间 ↑"
 
-#: bookmarks/models.py:534
+#: bookmarks/models.py:572
 msgid "Added ↓"
 msgstr "添加时间 ↓"
 
-#: bookmarks/models.py:535
+#: bookmarks/models.py:573
 msgid "Title ↑"
 msgstr "标题 ↑"
 
-#: bookmarks/models.py:536
+#: bookmarks/models.py:574
 msgid "Title ↓"
 msgstr "标题 ↓"
 
-#: bookmarks/models.py:537
+#: bookmarks/models.py:575
 msgid "Random"
 msgstr "随机"
 
-#: bookmarks/models.py:540 bookmarks/models.py:545 bookmarks/models.py:550
-#: bookmarks/models.py:555 bookmarks/models.py:560
+#: bookmarks/models.py:578 bookmarks/models.py:583 bookmarks/models.py:588
+#: bookmarks/models.py:593 bookmarks/models.py:598
 msgid "Off"
 msgstr "关闭"
 
-#: bookmarks/models.py:541 bookmarks/templates/bookmarks/details/form.html:71
+#: bookmarks/models.py:579 bookmarks/templates/bookmarks/details/form.html:72
 msgid "Shared"
 msgstr "已分享"
 
-#: bookmarks/models.py:542
+#: bookmarks/models.py:580
 msgid "Unshared"
 msgstr "未分享"
 
-#: bookmarks/models.py:546 bookmarks/templates/bookmarks/details/form.html:63
+#: bookmarks/models.py:584 bookmarks/templates/bookmarks/details/form.html:64
 msgid "Unread"
 msgstr "未读"
 
-#: bookmarks/models.py:547
+#: bookmarks/models.py:585
 msgid "Read"
 msgstr "已读"
 
-#: bookmarks/models.py:551
+#: bookmarks/models.py:589
 msgid "Tagged"
 msgstr "已打标签"
 
-#: bookmarks/models.py:552
+#: bookmarks/models.py:590
 msgid "Untagged"
 msgstr "未打标签"
 
-#: bookmarks/models.py:556
+#: bookmarks/models.py:594
 msgid "Has"
 msgstr "有"
 
-#: bookmarks/models.py:557
+#: bookmarks/models.py:595
 msgid "Missing"
 msgstr "无"
 
-#: bookmarks/models.py:561
+#: bookmarks/models.py:599
 msgid "Added"
 msgstr "添加时间"
 
-#: bookmarks/models.py:562
+#: bookmarks/models.py:600
 msgid "Modified"
 msgstr "修改时间"
 
-#: bookmarks/models.py:565 bookmarks/models.py:657
+#: bookmarks/models.py:603 bookmarks/models.py:704
 msgid "Absolute"
 msgstr "绝对"
 
-#: bookmarks/models.py:566 bookmarks/models.py:656
+#: bookmarks/models.py:604 bookmarks/models.py:703
 msgid "Relative"
 msgstr "相对"
 
-#: bookmarks/models.py:613
+#: bookmarks/models.py:659
 msgid "Everyone"
 msgstr "所有人"
 
-#: bookmarks/models.py:641
+#: bookmarks/models.py:687
 msgid "English"
 msgstr "英语"
 
-#: bookmarks/models.py:642
+#: bookmarks/models.py:688
 msgid "Simplified Chinese"
 msgstr "简体中文"
 
-#: bookmarks/models.py:648
+#: bookmarks/models.py:694
 msgid "Auto"
 msgstr "自动"
 
-#: bookmarks/models.py:649
+#: bookmarks/models.py:695
 msgid "Light"
-msgstr "明亮"
+msgstr "浅色"
 
-#: bookmarks/models.py:650
+#: bookmarks/models.py:696
 msgid "Dark"
-msgstr "暗色"
+msgstr "深色"
 
-#: bookmarks/models.py:658
+#: bookmarks/models.py:702
 msgid "Hidden"
 msgstr "隐藏"
 
-#: bookmarks/models.py:663
+#: bookmarks/models.py:709
 msgid "Inline"
 msgstr "同行"
 
-#: bookmarks/models.py:664
+#: bookmarks/models.py:710
 msgid "Separate"
 msgstr "分行"
 
-#: bookmarks/models.py:669
+#: bookmarks/models.py:715
 msgid "New page"
 msgstr "新页面"
 
-#: bookmarks/models.py:670
+#: bookmarks/models.py:716
 msgid "Same page"
 msgstr "当前页面"
 
-#: bookmarks/models.py:675 bookmarks/models.py:688
+#: bookmarks/models.py:721 bookmarks/models.py:734 bookmarks/models.py:932
 msgid "Disabled"
 msgstr "禁用"
 
-#: bookmarks/models.py:676
+#: bookmarks/models.py:722
 msgid "Enabled"
 msgstr "启用"
 
-#: bookmarks/models.py:681
+#: bookmarks/models.py:727
 msgid "Strict"
 msgstr "严格"
 
-#: bookmarks/models.py:682
+#: bookmarks/models.py:728
 msgid "Lax"
 msgstr "宽松"
 
-#: bookmarks/models.py:687
+#: bookmarks/models.py:733
 msgid "Alphabetical"
 msgstr "首字母"
 
-#: bookmarks/models.py:860 bookmarks/templates/bookmarks/layout.html:96
-#: bookmarks/templates/registration/login.html:19
-#: bookmarks/templates/registration/login.html:39
-msgid "Login"
-msgstr "登录"
+#: bookmarks/models.py:741
+msgid "User summary"
+msgstr "用户数据"
 
-#: bookmarks/models.py:861 bookmarks/templates/bookmarks/nav_menu.html:16
-#: bookmarks/templates/bookmarks/nav_menu.html:75
-#: bookmarks/templates/bookmarks/shared.html:13
-#: bookmarks/templates/settings/integrations.html:38
-msgid "Shared bookmarks"
-msgstr "已分享"
+#: bookmarks/models.py:742 bookmarks/templates/bookmarks/archive.html:21
+#: bookmarks/templates/bookmarks/index.html:23
+#: bookmarks/templates/bookmarks/shared.html:18
+#: bookmarks/templates/bookmarks/trash.html:19
+#: bookmarks/templates/bundles/index.html:14
+msgid "Filters"
+msgstr "过滤器"
 
-#: bookmarks/models.py:896
+#: bookmarks/models.py:743 bookmarks/templates/bookmarks/domain_section.html:5
+msgid "Domains"
+msgstr "域名"
+
+#: bookmarks/models.py:744 bookmarks/templates/bookmarks/details/form.html:87
+#: bookmarks/templates/bookmarks/form.html:27
+#: bookmarks/templates/bookmarks/tag_section.html:5
+#: bookmarks/templates/bundles/form.html:27
+#: bookmarks/templates/tags/index.html:16 bookmarks/views/contexts.py:404
+msgid "Tags"
+msgstr "标签"
+
+#: bookmarks/models.py:933
+msgid "Private sharing"
+msgstr "私密分享"
+
+#: bookmarks/models.py:934
+msgid "Public sharing"
+msgstr "公开分享"
+
+#: bookmarks/models.py:1016
+msgid "Invalid sidebar configuration."
+msgstr "无效的侧边栏配置。"
+
+#: bookmarks/models.py:1084
+msgid "This version replaces the search engine with a new implementation that supports logical operators (and, or, not). If you run into any issues with the new search, you can switch back to the old one by enabling legacy search in the settings."
+msgstr "此版本将搜索引擎替换为支持逻辑运算符（and、or、not）的新实现。如果你在新搜索中遇到问题，可在设置中启用搜索的 兼容模式 切回旧版。"
+
+#: bookmarks/models.py:1146
+msgid "Login page"
+msgstr "登录页"
+
+#: bookmarks/models.py:1147
+msgid "Shared page"
+msgstr "分享页"
+
+#: bookmarks/models.py:1182
 msgid "Standard profile"
 msgstr "标准配置"
 
-#: bookmarks/services/assets.py:27
+#: bookmarks/services/assets.py:41
+#, fuzzy
+#| msgid "HTML snapshot"
+msgid "New snapshot"
+msgstr "HTML 快照"
+
+#: bookmarks/services/assets.py:82 bookmarks/services/assets.py:175
 #, python-format
 msgid "HTML snapshot from %(timestamp)s"
 msgstr "%(timestamp)s 的 HTML 快照"
+
+#: bookmarks/services/assets.py:147
+#, fuzzy, python-format
+#| msgid "HTML snapshot from %(timestamp)s"
+msgid "PDF download from %(timestamp)s"
+msgstr "%(timestamp)s 的 HTML 快照"
+
+#: bookmarks/services/search_query_parser.py:201
+msgid "Expected RPAREN, got EOF"
+msgstr "缺少右括号"
+
+#: bookmarks/services/search_query_parser.py:335
+#, python-format
+msgid "Expected %(expected)s, got %(actual)s"
+msgstr "期望 %(expected)s，实际 %(actual)s"
+
+#: bookmarks/services/search_query_parser.py:350
+#, python-format
+msgid "Unexpected token %(token)s"
+msgstr "意外的标记 %(token)s"
 
 #: bookmarks/templates/bookmarks/archive.html:14
 #: bookmarks/templates/bookmarks/nav_menu.html:20
@@ -340,29 +400,21 @@ msgstr "%(timestamp)s 的 HTML 快照"
 msgid "Archived bookmarks"
 msgstr "已归档"
 
-#: bookmarks/templates/bookmarks/archive.html:20
-#: bookmarks/templates/bookmarks/index.html:20
-#: bookmarks/templates/bookmarks/shared.html:17
-#: bookmarks/templates/bookmarks/trash.html:18
-#: bookmarks/templates/bundles/index.html:14
-msgid "Filters"
-msgstr "过滤器"
-
 #: bookmarks/templates/bookmarks/bookmark_list.html:6
 msgid "Bookmark list"
 msgstr "书签列表"
 
 #: bookmarks/templates/bookmarks/bookmark_list.html:94
 #: bookmarks/templates/bookmarks/details/assets.html:22
-#: bookmarks/templates/settings/general.html:88
+#: bookmarks/templates/settings/general.html:702
 msgid "View"
 msgstr "查看"
 
 #: bookmarks/templates/bookmarks/bookmark_list.html:99
-#: bookmarks/templates/bookmarks/details/modal.html:28
+#: bookmarks/templates/bookmarks/details/modal.html:30
 #: bookmarks/templates/bundles/index.html:54
-#: bookmarks/templates/settings/general.html:92
-#: bookmarks/templates/tags/index.html:103
+#: bookmarks/templates/settings/general.html:707
+#: bookmarks/templates/tags/index.html:107
 msgid "Edit"
 msgstr "编辑"
 
@@ -373,7 +425,7 @@ msgstr "取消归档"
 
 #: bookmarks/templates/bookmarks/bookmark_list.html:108
 #: bookmarks/templates/bookmarks/bulk_edit/bar.html:47
-#: bookmarks/templates/settings/general.html:96
+#: bookmarks/templates/settings/general.html:712
 msgid "Archive"
 msgstr "归档"
 
@@ -387,21 +439,33 @@ msgstr "彻底删除"
 
 #: bookmarks/templates/bookmarks/bookmark_list.html:120
 #: bookmarks/templates/bookmarks/details/assets.html:29
-#: bookmarks/templates/settings/general.html:100
+#: bookmarks/templates/settings/general.html:717
 msgid "Remove"
 msgstr "删除"
+
+#: bookmarks/templates/bookmarks/bookmark_list.html:125
+msgid "Shared by"
+msgstr "分享者"
+
+#: bookmarks/templates/bookmarks/bookmark_list.html:135
+msgid "Mark as read?"
+msgstr "标记为已读？"
+
+#: bookmarks/templates/bookmarks/bookmark_list.html:145
+msgid "Unshare?"
+msgstr "取消分享？"
 
 #: bookmarks/templates/bookmarks/bulk_edit/bar.html:12
 msgid "Mark as read"
 msgstr "标记为已读"
 
 #: bookmarks/templates/bookmarks/bulk_edit/bar.html:15
-#: bookmarks/templates/bookmarks/form.html:115
+#: bookmarks/templates/bookmarks/form.html:118
 msgid "Mark as unread"
 msgstr "标记为未读"
 
 #: bookmarks/templates/bookmarks/bulk_edit/bar.html:19
-#: bookmarks/templates/bookmarks/form.html:126
+#: bookmarks/templates/bookmarks/form.html:129
 msgid "Share"
 msgstr "分享"
 
@@ -420,7 +484,7 @@ msgstr "移除标签"
 #: bookmarks/templates/bookmarks/bulk_edit/bar.html:34
 #: bookmarks/templates/bookmarks/form.html:15
 msgid "Refresh from website"
-msgstr "从网站刷新"
+msgstr "重新抓取"
 
 #: bookmarks/templates/bookmarks/bulk_edit/bar.html:38
 #: bookmarks/templates/bookmarks/details/assets.html:42
@@ -443,40 +507,44 @@ msgstr "移至回收站"
 msgid "Delete permanently"
 msgstr "永久删除"
 
-#: bookmarks/templates/bookmarks/bulk_edit/bar.html:66
+#: bookmarks/templates/bookmarks/bulk_edit/bar.html:68
 msgid "Tag names"
 msgstr "标签名称"
 
-#: bookmarks/templates/bookmarks/bulk_edit/bar.html:69
+#: bookmarks/templates/bookmarks/bulk_edit/bar.html:73
 msgid "Execute"
 msgstr "执行"
 
-#: bookmarks/templates/bookmarks/bulk_edit/bar.html:75
+#: bookmarks/templates/bookmarks/bulk_edit/bar.html:79
 msgid "All pages"
 msgstr "所有页面"
 
-#: bookmarks/templates/bookmarks/bulk_edit/bar.html:75
+#: bookmarks/templates/bookmarks/bulk_edit/bar.html:79
 msgid "bookmarks"
 msgstr "书签"
 
-#: bookmarks/templates/bookmarks/bundle_section.html:6
+#: bookmarks/templates/bookmarks/bundle_section.html:5
 msgid "Bundles"
 msgstr "过滤器"
 
-#: bookmarks/templates/bookmarks/bundle_section.html:9
+#: bookmarks/templates/bookmarks/bundle_section.html:8
 msgid "Bundles menu"
 msgstr "过滤器菜单"
 
-#: bookmarks/templates/bookmarks/bundle_section.html:20
+#: bookmarks/templates/bookmarks/bundle_section.html:19
 msgid "Manage bundles"
 msgstr "管理过滤器"
 
-#: bookmarks/templates/bookmarks/bundle_section.html:24
+#: bookmarks/templates/bookmarks/bundle_section.html:23
 msgid "Create bundle from search"
 msgstr "从搜索创建过滤器"
 
+#: bookmarks/templates/bookmarks/close.html:8
+msgid "You can now close this window."
+msgstr "你现在可以关闭这个窗口。"
+
 #: bookmarks/templates/bookmarks/collapsed_button.html:3
-#: bookmarks/templates/bookmarks/domain_tree_node.html:48
+#: bookmarks/templates/bookmarks/domain_tree_node.html:71
 msgid "Expand or collapse"
 msgstr "展开或折叠"
 
@@ -484,74 +552,68 @@ msgstr "展开或折叠"
 msgid "Rename"
 msgstr "重命名"
 
-#: bookmarks/templates/bookmarks/details/assets.html:47
+#: bookmarks/templates/bookmarks/details/assets.html:48
 msgid "Upload file"
 msgstr "上传文件"
 
-#: bookmarks/templates/bookmarks/details/form.html:16
+#: bookmarks/templates/bookmarks/details/form.html:17
 msgid "Original URL"
 msgstr "原始网址"
 
-#: bookmarks/templates/bookmarks/details/form.html:24
-#: bookmarks/templates/bookmarks/details/form.html:32
+#: bookmarks/templates/bookmarks/details/form.html:25
+#: bookmarks/templates/bookmarks/details/form.html:33
 msgid "Reader mode"
 msgstr "阅读模式"
 
-#: bookmarks/templates/bookmarks/details/form.html:43
+#: bookmarks/templates/bookmarks/details/form.html:44
+#: bookmarks/templates/settings/general.html:772
 msgid "Internet Archive"
 msgstr "互联网存档"
 
-#: bookmarks/templates/bookmarks/details/form.html:50
+#: bookmarks/templates/bookmarks/details/form.html:51
 msgid "Status"
 msgstr "状态"
 
-#: bookmarks/templates/bookmarks/details/form.html:56
+#: bookmarks/templates/bookmarks/details/form.html:57
 msgid "Archived"
 msgstr "已归档"
 
-#: bookmarks/templates/bookmarks/details/form.html:79
+#: bookmarks/templates/bookmarks/details/form.html:80
 msgid "Files"
 msgstr "文件"
 
-#: bookmarks/templates/bookmarks/details/form.html:86
-#: bookmarks/templates/bookmarks/form.html:28
-#: bookmarks/templates/bookmarks/tag_section.html:5
-#: bookmarks/templates/bundles/form.html:27
-#: bookmarks/templates/tags/index.html:15 bookmarks/views/contexts.py:367
-msgid "Tags"
-msgstr "标签"
-
-#: bookmarks/templates/bookmarks/details/form.html:95
+#: bookmarks/templates/bookmarks/details/form.html:96
 msgid "Date added"
 msgstr "添加时间"
 
-#: bookmarks/templates/bookmarks/details/form.html:102
-#: bookmarks/templatetags/bookmarks.py:29
+#: bookmarks/templates/bookmarks/details/form.html:103
+#: bookmarks/templatetags/bookmarks.py:47
 msgid "Date deleted"
 msgstr "删除时间"
 
-#: bookmarks/templates/bookmarks/details/form.html:110
-#: bookmarks/templates/bookmarks/form.html:63
+#: bookmarks/templates/bookmarks/details/form.html:111
+#: bookmarks/templates/bookmarks/form.html:67
 msgid "Description"
 msgstr "描述"
 
-#: bookmarks/templates/bookmarks/details/form.html:116
-#: bookmarks/templates/bookmarks/form.html:76
-#: bookmarks/templates/bookmarks/form.html:78
+#: bookmarks/templates/bookmarks/details/form.html:117
+#: bookmarks/templates/bookmarks/form.html:79
+#: bookmarks/templates/bookmarks/form.html:81
 msgid "Notes"
 msgstr "笔记"
 
-#: bookmarks/templates/bookmarks/details/modal.html:8
+#: bookmarks/templates/bookmarks/details/modal.html:10
+#: bookmarks/templates/settings/create_api_token_modal.html:13
+#: bookmarks/templates/settings/create_api_token_modal.html:21
+#: bookmarks/templates/tags/edit_modal.html:15
+#: bookmarks/templates/tags/merge_modal.html:10
+#: bookmarks/templates/tags/new_modal.html:11
 msgid "Close dialog"
 msgstr "关闭对话框"
 
-#: bookmarks/templates/bookmarks/details/modal.html:36
+#: bookmarks/templates/bookmarks/details/modal.html:38
 msgid "Delete..."
 msgstr "删除..."
-
-#: bookmarks/templates/bookmarks/domain_section.html:5
-msgid "Domains"
-msgstr "域名"
 
 #: bookmarks/templates/bookmarks/domain_section.html:8
 msgid "Domains menu"
@@ -571,13 +633,8 @@ msgstr "无效的搜索语句"
 
 #: bookmarks/templates/bookmarks/empty_bookmarks.html:6
 #, python-format
-msgid ""
-"The search query you entered is not valid. Common reasons are unclosed "
-"parentheses or a logical operator (AND, OR, NOT) without operands. The error "
-"message from the parser is: \"%(error_message)s\"."
-msgstr ""
-"你输入的搜索语句无效。常见原因是括号未闭合，或逻辑运算符（AND、OR、NOT）缺少"
-"操作数。解析器返回的错误信息为：“%(error_message)s”。"
+msgid "The search query you entered is not valid. Common reasons are unclosed parentheses or a logical operator (AND, OR, NOT) without operands. The error message from the parser is: \"%(error_message)s\"."
+msgstr "你输入的搜索语句无效。常见原因是括号未闭合，或逻辑运算符（AND、OR、NOT）缺少操作数。解析器返回的错误信息为：“%(error_message)s”。"
 
 #: bookmarks/templates/bookmarks/empty_bookmarks.html:11
 msgid "You have no bookmarks yet"
@@ -585,94 +642,93 @@ msgstr "你还没有书签"
 
 #: bookmarks/templates/bookmarks/empty_bookmarks.html:16
 #, python-format
-msgid ""
-"You can get started by <a href=\"%(add_bookmark_url)s\">adding</a> "
-"bookmarks, <a href=\"%(settings_url)s\">importing</a> your existing "
-"bookmarks or configuring the <a href=\"%(integrations_url)s\">browser "
-"extension</a> or the <a href=\"%(integrations_url)s\">bookmarklet</a>."
-msgstr ""
-"你可以通过 <a href=\"%(add_bookmark_url)s\">新增</a> 书签、<a "
-"href=\"%(settings_url)s\">导入</a> 现有书签，或配置 <a "
-"href=\"%(integrations_url)s\">浏览器扩展</a> 或 <a "
-"href=\"%(integrations_url)s\">书签小程序</a> 来开始使用。"
+msgid "You can get started by <a href=\"%(add_bookmark_url)s\">adding</a> bookmarks, <a href=\"%(settings_url)s\">importing</a> your existing bookmarks or configuring the <a href=\"%(integrations_url)s\">browser extension</a> or the <a href=\"%(integrations_url)s\">bookmarklet</a>."
+msgstr "你可以通过 <a href=\"%(add_bookmark_url)s\">新增</a> 书签、<a href=\"%(settings_url)s\">导入</a> 现有书签，或配置 <a href=\"%(integrations_url)s\">浏览器扩展</a> 或 <a href=\"%(integrations_url)s\">书签小程序</a> 来开始使用。"
 
 #: bookmarks/templates/bookmarks/form.html:13
 msgid "Title"
 msgstr "标题"
 
-#: bookmarks/templates/bookmarks/form.html:18
-#: bookmarks/templates/bookmarks/form.html:66
+#: bookmarks/templates/bookmarks/form.html:17
+#: bookmarks/templates/bookmarks/form.html:69
 msgid "Clear"
 msgstr "清空"
 
-#: bookmarks/templates/bookmarks/form.html:31
+#: bookmarks/templates/bookmarks/form.html:35
 msgid "Enter tags separated by spaces and"
 msgstr "多个标签用空格隔开，且"
 
-#: bookmarks/templates/bookmarks/form.html:31
+#: bookmarks/templates/bookmarks/form.html:35
 msgid "without"
 msgstr "不需要"
 
-#: bookmarks/templates/bookmarks/form.html:32
+#: bookmarks/templates/bookmarks/form.html:36
 msgid "If a tag does not exist, it will be created automatically."
 msgstr "如果标签不存在，它会被自动创建。"
 
-#: bookmarks/templates/bookmarks/form.html:51
+#: bookmarks/templates/bookmarks/form.html:55
 msgid "This URL is already bookmarked."
 msgstr "该 URL 书签已存在。"
 
-#: bookmarks/templates/bookmarks/form.html:52
-msgid ""
-"The form has been pre-filled with the existing bookmark, and saving it will "
-"update the existing bookmark."
+#: bookmarks/templates/bookmarks/form.html:56
+msgid "The form has been pre-filled with the existing bookmark, and saving it will update the existing bookmark."
 msgstr "本页面将使用现有书签的信息填充，保存本页面将更新现有书签信息。"
 
-#: bookmarks/templates/bookmarks/form.html:55
-msgid ""
-"This URL is already bookmarked, but the bookmark is currently in the trash."
+#: bookmarks/templates/bookmarks/form.html:59
+msgid "This URL is already bookmarked, but the bookmark is currently in the trash."
 msgstr "该 URL 书签已存在，但当前位于回收站。"
 
-#: bookmarks/templates/bookmarks/form.html:56
-msgid ""
-"The form has been pre-filled with the existing bookmark, and saving it will "
-"update and restore that bookmark."
+#: bookmarks/templates/bookmarks/form.html:60
+msgid "The form has been pre-filled with the existing bookmark, and saving it will update and restore that bookmark."
 msgstr "本页面将使用现有书签的信息填充，保存本页面将更新并恢复该书签。"
 
-#: bookmarks/templates/bookmarks/form.html:81
+#: bookmarks/templates/bookmarks/form.html:84
 msgid "Additional notes. Markdown is supported."
 msgstr "额外的笔记，支持 Markdown 格式。"
 
-#: bookmarks/templates/bookmarks/form.html:118
-msgid ""
-"Unread bookmarks can be filtered and marked as read after you have reviewed "
-"them."
+#: bookmarks/templates/bookmarks/form.html:121
+msgid "Unread bookmarks can be filtered and marked as read after you have reviewed them."
 msgstr "未读书签可以被筛选，并可在查看后标记为已读。"
 
-#: bookmarks/templates/bookmarks/form.html:130
+#: bookmarks/templates/bookmarks/form.html:133
 msgid "Share this bookmark with registered users and anonymous visitors."
 msgstr "将此书签分享给已注册用户和匿名访客。"
 
-#: bookmarks/templates/bookmarks/form.html:132
+#: bookmarks/templates/bookmarks/form.html:135
 msgid "Share this bookmark with registered users."
 msgstr "将此书签分享给已注册用户。"
 
-#: bookmarks/templates/bookmarks/form.html:140
+#: bookmarks/templates/bookmarks/form.html:143
 msgid "Save and close"
 msgstr "保存并关闭"
 
-#: bookmarks/templates/bookmarks/form.html:142
-#: bookmarks/templates/bundles/form.html:218
-#: bookmarks/templates/settings/general.html:321
-#: bookmarks/templates/settings/general.html:356
-#: bookmarks/templates/tags/form.html:17
+#: bookmarks/templates/bookmarks/form.html:145
+#: bookmarks/templates/bundles/form.html:230
+#: bookmarks/templates/settings/general.html:168
+#: bookmarks/templates/settings/general.html:497
+#: bookmarks/templates/settings/general.html:552
+#: bookmarks/templates/tags/edit.html:23
+#: bookmarks/templates/tags/edit_modal.html:30
+#: bookmarks/templates/tags/new.html:23
+#: bookmarks/templates/tags/new_modal.html:26
 msgid "Save"
 msgstr "保存"
 
-#: bookmarks/templates/bookmarks/form.html:144
-#: bookmarks/templates/bundles/form.html:219
-#: bookmarks/templates/tags/form.html:18
+#: bookmarks/templates/bookmarks/form.html:147
+#: bookmarks/templates/bundles/form.html:231
+#: bookmarks/templates/settings/create_api_token_modal.html:58
+#: bookmarks/templates/tags/edit.html:24
+#: bookmarks/templates/tags/edit_modal.html:29
+#: bookmarks/templates/tags/merge.html:71
+#: bookmarks/templates/tags/merge_modal.html:68
+#: bookmarks/templates/tags/new.html:24
+#: bookmarks/templates/tags/new_modal.html:25
 msgid "Cancel"
 msgstr "取消"
+
+#: bookmarks/templates/bookmarks/form.html:342
+msgid "Auto tags:"
+msgstr "自动标签："
 
 #: bookmarks/templates/bookmarks/head.html:2
 msgid "Self-hosted bookmark service"
@@ -682,20 +738,28 @@ msgstr "自托管书签服务"
 msgid "Linkding"
 msgstr "Linkding"
 
-#: bookmarks/templates/bookmarks/index.html:6 bookmarks/views/bookmarks.py:78
+#: bookmarks/templates/bookmarks/index.html:6 bookmarks/views/bookmarks.py:112
 msgid "Bookmarks - Linkding"
 msgstr "书签 - Linkding"
 
 #: bookmarks/templates/bookmarks/index.html:15
 #: bookmarks/templates/bookmarks/nav_menu.html:12
 #: bookmarks/templates/bookmarks/nav_menu.html:71
-#: bookmarks/views/contexts.py:363
+#: bookmarks/templates/settings/general.html:403
+#: bookmarks/templates/settings/general.html:1007
+#: bookmarks/views/contexts.py:400
 msgid "Bookmarks"
 msgstr "书签"
 
 #: bookmarks/templates/bookmarks/layout.html:86
 msgid "Application logo"
 msgstr "应用图标"
+
+#: bookmarks/templates/bookmarks/layout.html:96
+#: bookmarks/templates/registration/login.html:19
+#: bookmarks/templates/registration/login.html:38
+msgid "Login"
+msgstr "登录"
 
 #: bookmarks/templates/bookmarks/nav_menu.html:5
 msgid "Add"
@@ -705,6 +769,13 @@ msgstr "新增"
 msgid "Categories"
 msgstr "分类"
 
+#: bookmarks/templates/bookmarks/nav_menu.html:16
+#: bookmarks/templates/bookmarks/nav_menu.html:75
+#: bookmarks/templates/bookmarks/shared.html:13
+#: bookmarks/templates/settings/integrations.html:304
+msgid "Shared bookmarks"
+msgstr "已分享"
+
 #: bookmarks/templates/bookmarks/nav_menu.html:23
 #: bookmarks/templates/bookmarks/nav_menu.html:82
 #: bookmarks/templates/bookmarks/trash.html:13
@@ -712,18 +783,18 @@ msgid "Trash"
 msgstr "回收站"
 
 #: bookmarks/templates/bookmarks/nav_menu.html:29
-#: bookmarks/templates/settings/general.html:13
 msgid "Settings"
 msgstr "设置"
 
 #: bookmarks/templates/bookmarks/nav_menu.html:33
 #: bookmarks/templates/bookmarks/nav_menu.html:86
+#: bookmarks/templates/settings/general.html:15
 msgid "General"
 msgstr "通用"
 
 #: bookmarks/templates/bookmarks/nav_menu.html:36
 #: bookmarks/templates/bookmarks/nav_menu.html:89
-#: bookmarks/templates/settings/integrations.html:13
+#: bookmarks/templates/settings/integrations.html:198
 msgid "Integrations"
 msgstr "集成"
 
@@ -737,14 +808,18 @@ msgstr "管理后台"
 msgid "Logout"
 msgstr "退出登录"
 
+#: bookmarks/templates/bookmarks/nav_menu.html:55
+#: bookmarks/templates/bookmarks/new.html:15
+msgid "Add bookmark"
+msgstr "新增书签"
+
+#: bookmarks/templates/bookmarks/nav_menu.html:62
+msgid "Navigation menu"
+msgstr "导航菜单"
+
 #: bookmarks/templates/bookmarks/new.html:5
 msgid "Add bookmark - Linkding"
 msgstr "新增书签 - Linkding"
-
-#: bookmarks/templates/bookmarks/new.html:15
-#: bookmarks/templates/settings/integrations.html:79
-msgid "Add bookmark"
-msgstr "新增书签"
 
 #: bookmarks/templates/bookmarks/pagination.html:6
 #: bookmarks/templates/bookmarks/pagination.html:10
@@ -756,119 +831,134 @@ msgstr "上一页"
 msgid "Next"
 msgstr "下一页"
 
-#: bookmarks/templates/bookmarks/search.html:5
+#: bookmarks/templates/bookmarks/random_sort.html:29
+msgid "Random sort"
+msgstr "随机排序"
+
+#: bookmarks/templates/bookmarks/search.html:7
 msgid "Search for words or #tags"
 msgstr "输入关键词或 #标签"
 
-#: bookmarks/templates/bookmarks/search.html:39
+#: bookmarks/templates/bookmarks/search.html:15
+#: bookmarks/templates/settings/general.html:241
+#: bookmarks/templates/settings/general.html:1006
+#: bookmarks/templates/tags/index.html:33
+msgid "Search"
+msgstr "搜索"
+
+#: bookmarks/templates/bookmarks/search.html:21
 msgid "Search preferences"
 msgstr "搜索偏好"
 
-#: bookmarks/templates/bookmarks/search.html:81
-#: bookmarks/templates/bundles/form.html:72
-#: bookmarks/templates/tags/index.html:35
+#: bookmarks/templates/bookmarks/search.html:43
+#: bookmarks/templates/bundles/form.html:84
+#: bookmarks/templates/tags/index.html:37
 msgid "Sort by"
 msgstr "排序依据"
 
-#: bookmarks/templates/bookmarks/search.html:143
-#: bookmarks/templates/bundles/form.html:123
+#: bookmarks/templates/bookmarks/search.html:105
+#: bookmarks/templates/bundles/form.html:135
 msgid "Filter type"
 msgstr "筛选类型"
 
-#: bookmarks/templates/bookmarks/search.html:171
-#: bookmarks/templates/bundles/form.html:153
+#: bookmarks/templates/bookmarks/search.html:133
+#: bookmarks/templates/bundles/form.html:165
 msgid "Preset"
 msgstr "预设"
 
-#: bookmarks/templates/bookmarks/search.html:174
-#: bookmarks/templates/bundles/form.html:156 bookmarks/utils.py:66
-#: bookmarks/utils.py:97 bookmarks/utils.py:118
+#: bookmarks/templates/bookmarks/search.html:136
+#: bookmarks/templates/bundles/form.html:168 bookmarks/utils.py:68
+#: bookmarks/utils.py:99 bookmarks/utils.py:123
 msgid "Yesterday"
 msgstr "昨天"
 
-#: bookmarks/templates/bookmarks/search.html:175
-#: bookmarks/templates/bundles/form.html:157 bookmarks/utils.py:64
-#: bookmarks/utils.py:95 bookmarks/utils.py:116
+#: bookmarks/templates/bookmarks/search.html:137
+#: bookmarks/templates/bundles/form.html:169 bookmarks/utils.py:66
+#: bookmarks/utils.py:97 bookmarks/utils.py:121
 msgid "Today"
 msgstr "今天"
 
-#: bookmarks/templates/bookmarks/search.html:176
-#: bookmarks/templates/bundles/form.html:158
+#: bookmarks/templates/bookmarks/search.html:138
+#: bookmarks/templates/bundles/form.html:170
 msgid "This week"
 msgstr "本周"
 
-#: bookmarks/templates/bookmarks/search.html:177
-#: bookmarks/templates/bundles/form.html:159 bookmarks/views/contexts.py:1025
+#: bookmarks/templates/bookmarks/search.html:139
+#: bookmarks/templates/bundles/form.html:171
 msgid "This month"
 msgstr "本月"
 
-#: bookmarks/templates/bookmarks/search.html:178
-#: bookmarks/templates/bundles/form.html:160
+#: bookmarks/templates/bookmarks/search.html:140
+#: bookmarks/templates/bundles/form.html:172
 msgid "This year"
 msgstr "本年"
 
-#: bookmarks/templates/bookmarks/search.html:185
-#: bookmarks/templates/bundles/form.html:167
+#: bookmarks/templates/bookmarks/search.html:147
+#: bookmarks/templates/bundles/form.html:179
 msgid "Custom"
 msgstr "自定义"
 
-#: bookmarks/templates/bookmarks/search.html:188
-#: bookmarks/templates/bundles/form.html:170
+#: bookmarks/templates/bookmarks/search.html:150
+#: bookmarks/templates/bundles/form.html:182
 msgid "Last"
 msgstr "近"
 
-#: bookmarks/templates/bookmarks/search.html:191
-#: bookmarks/templates/bundles/form.html:173
+#: bookmarks/templates/bookmarks/search.html:153
+#: bookmarks/templates/bundles/form.html:185
 msgid "days"
 msgstr "天"
 
-#: bookmarks/templates/bookmarks/search.html:192
-#: bookmarks/templates/bundles/form.html:174
+#: bookmarks/templates/bookmarks/search.html:154
+#: bookmarks/templates/bundles/form.html:186
 msgid "weeks"
 msgstr "周"
 
-#: bookmarks/templates/bookmarks/search.html:193
-#: bookmarks/templates/bundles/form.html:175
+#: bookmarks/templates/bookmarks/search.html:155
+#: bookmarks/templates/bundles/form.html:187
 msgid "months"
 msgstr "月"
 
-#: bookmarks/templates/bookmarks/search.html:194
-#: bookmarks/templates/bundles/form.html:176
+#: bookmarks/templates/bookmarks/search.html:156
+#: bookmarks/templates/bundles/form.html:188
 msgid "years"
 msgstr "年"
 
-#: bookmarks/templates/bookmarks/search.html:202
+#: bookmarks/templates/bookmarks/search.html:164
+#: bookmarks/templates/bookmarks/user_select.html:12
 msgid "Apply"
 msgstr "应用"
 
-#: bookmarks/templates/bookmarks/search.html:204
+#: bookmarks/templates/bookmarks/search.html:166
 msgid "Save as default"
 msgstr "保存为默认"
 
-#: bookmarks/templates/bookmarks/shared.html:35
+#: bookmarks/templates/bookmarks/shared.html:37
 msgid "User"
 msgstr "用户"
 
-msgid "User & Visitors"
-msgstr "用户 & 访客"
-
-#: bookmarks/templates/bookmarks/sidebar_user_summary.html:20
+#: bookmarks/templates/bookmarks/sidebar_user_summary.html:23
 msgid "User summary menu"
 msgstr "用户信息菜单"
 
-#: bookmarks/templates/bookmarks/sidebar_user_summary.html:129
+#: bookmarks/templates/bookmarks/sidebar_user_summary.html:105
+#, fuzzy
+#| msgid "Expand or collapse"
+msgid "Expand or collapse activity panel"
+msgstr "展开或折叠"
+
+#: bookmarks/templates/bookmarks/sidebar_user_summary.html:156
 msgid "Previous month"
 msgstr "上个月"
 
-#: bookmarks/templates/bookmarks/sidebar_user_summary.html:180
+#: bookmarks/templates/bookmarks/sidebar_user_summary.html:213
 msgid "Next month"
 msgstr "下个月"
 
-#: bookmarks/templates/bookmarks/sidebar_user_summary.html:191
+#: bookmarks/templates/bookmarks/sidebar_user_summary.html:226
 msgid "Previous week"
 msgstr "上一周"
 
-#: bookmarks/templates/bookmarks/sidebar_user_summary.html:242
+#: bookmarks/templates/bookmarks/sidebar_user_summary.html:283
 msgid "Next week"
 msgstr "下一周"
 
@@ -905,37 +995,35 @@ msgstr "搜索词"
 msgid "Search terms that must appear in the bookmark."
 msgstr "书签中要出现的搜索词。"
 
-#: bookmarks/templates/bundles/form.html:30
+#: bookmarks/templates/bundles/form.html:34
 msgid "The bookmark must contain at least one of these tags."
 msgstr "书签至少包含一个这里的标签。"
 
-#: bookmarks/templates/bundles/form.html:35
+#: bookmarks/templates/bundles/form.html:39
 msgid "Required tags"
 msgstr "必选标签"
 
-#: bookmarks/templates/bundles/form.html:38
+#: bookmarks/templates/bundles/form.html:46
 msgid "The bookmark must contain all of these tags."
 msgstr "书签必须包含所有这些标签。"
 
-#: bookmarks/templates/bundles/form.html:43
+#: bookmarks/templates/bundles/form.html:51
 msgid "Excluded tags"
 msgstr "排除标签"
 
-#: bookmarks/templates/bundles/form.html:46
+#: bookmarks/templates/bundles/form.html:58
 msgid "The bookmark must not contain any of these tags."
 msgstr "书签不能包含任何一个这些标签。"
 
-#: bookmarks/templates/bundles/form.html:53
+#: bookmarks/templates/bundles/form.html:65
 msgid "Top-level filter"
 msgstr "一级过滤器"
 
-#: bookmarks/templates/bundles/form.html:56
-msgid ""
-"If disabled, this filter can be collapsed or expanded by the nearest top-"
-"level filter above it."
+#: bookmarks/templates/bundles/form.html:68
+msgid "If disabled, this filter can be collapsed or expanded by the nearest top-level filter above it."
 msgstr "若关闭，则该过滤器可被上方最近的一级过滤器折叠或展开。"
 
-#: bookmarks/templates/bundles/form.html:66
+#: bookmarks/templates/bundles/form.html:78
 msgid "Show the number of bookmarks in this group in the sidebar."
 msgstr "是否在侧边栏显示该分组下的书签数量。"
 
@@ -949,17 +1037,20 @@ msgid "Add filter"
 msgstr "新增过滤器"
 
 #: bookmarks/templates/bundles/index.html:26
-#: bookmarks/templates/tags/form.html:4 bookmarks/templates/tags/index.html:83
+#: bookmarks/templates/settings/integrations_api_section.html:52
+#: bookmarks/templates/tags/form.html:4 bookmarks/templates/tags/index.html:86
 msgid "Name"
 msgstr "名称"
 
 #: bookmarks/templates/bundles/index.html:28
-#: bookmarks/templates/tags/index.html:86
+#: bookmarks/templates/settings/integrations_api_section.html:55
+#: bookmarks/templates/tags/index.html:89
 msgid "Actions"
 msgstr "操作"
 
 #: bookmarks/templates/bundles/index.html:56
-#: bookmarks/templates/tags/index.html:106
+#: bookmarks/templates/settings/integrations_api_section.html:74
+#: bookmarks/templates/tags/index.html:110
 msgid "Delete"
 msgstr "删除"
 
@@ -986,55 +1077,25 @@ msgid_plural "Found %(count)s matching bookmarks."
 msgstr[0] "找到 %(count)s 个匹配过滤器的书签。"
 msgstr[1] "找到 %(count)s 个匹配过滤器的书签。"
 
-#: bookmarks/templates/django_registration/registration_complete.html:5
-msgid "Registration complete - Linkding"
-msgstr "注册完成 - Linkding"
-
-#: bookmarks/templates/django_registration/registration_complete.html:14
-msgid "Registration complete"
-msgstr "注册完成"
-
-#: bookmarks/templates/django_registration/registration_complete.html:17
-msgid "You can start using Linkding right away."
-msgstr "您可即刻开始使用。"
-
-#: bookmarks/templates/django_registration/registration_form.html:5
-msgid "Register - Linkding"
-msgstr "注册 - Linkding"
-
-#: bookmarks/templates/django_registration/registration_form.html:14
-#: bookmarks/templates/django_registration/registration_form.html:39
-#: bookmarks/templates/registration/login.html:45
-msgid "Register"
-msgstr "注册"
-
-#: bookmarks/templates/django_registration/registration_form.html:19
-#: bookmarks/templates/registration/login.html:29
-msgid "Username"
-msgstr "用户名"
-
-#: bookmarks/templates/django_registration/registration_form.html:24
-msgid "Email"
-msgstr "邮箱"
-
-#: bookmarks/templates/django_registration/registration_form.html:29
-#: bookmarks/templates/registration/login.html:33
-msgid "Password"
-msgstr "密码"
-
-#: bookmarks/templates/django_registration/registration_form.html:34
-msgid "Confirm password"
-msgstr "确认密码"
-
 #: bookmarks/templates/registration/login.html:6
 msgid "Login - Linkding"
 msgstr "登录 - Linkding"
 
-#: bookmarks/templates/registration/login.html:25
+#: bookmarks/templates/registration/login.html:26
 msgid "Your username and password didn't match. Please try again."
 msgstr "用户名和密码不匹配，请重试。"
 
-#: bookmarks/templates/registration/login.html:42
+#: bookmarks/templates/registration/login.html:30
+#: bookmarks/templates/settings/general.html:841
+msgid "Username"
+msgstr "用户名"
+
+#: bookmarks/templates/registration/login.html:34
+#: bookmarks/templates/settings/general.html:847
+msgid "Password"
+msgstr "密码"
+
+#: bookmarks/templates/registration/login.html:43
 msgid "Login with OIDC"
 msgstr "使用 OIDC 登录"
 
@@ -1055,8 +1116,7 @@ msgid "Change password - Linkding"
 msgstr "修改密码 - Linkding"
 
 #: bookmarks/templates/registration/password_change_form.html:14
-#: bookmarks/templates/registration/password_change_form.html:47
-#: bookmarks/templates/settings/general.html:33
+#: bookmarks/templates/registration/password_change_form.html:45
 msgid "Change password"
 msgstr "修改密码"
 
@@ -1071,687 +1131,6 @@ msgstr "新密码"
 #: bookmarks/templates/registration/password_change_form.html:37
 msgid "Confirm new password"
 msgstr "确认新密码"
-
-#: bookmarks/templates/settings/general.html:5
-msgid "General - Linkding"
-msgstr "通用 - Linkding"
-
-#: bookmarks/templates/settings/general.html:23
-#: bookmarks/templates/shared/language_switcher.html:8
-#: bookmarks/templates/shared/language_switcher.html:46
-msgid "Language"
-msgstr "语言"
-
-#: bookmarks/templates/settings/general.html:900
-msgid "General sections"
-msgstr "通用分组"
-
-#: bookmarks/templates/settings/general.html:26
-msgid ""
-"Choose the interface language. After saving, the selected language takes "
-"precedence over the browser language."
-msgstr "选择界面语言。保存后，所选语言将优先于浏览器语言。"
-
-#: bookmarks/templates/settings/general.html:31
-msgid "Profile"
-msgstr "个人资料"
-
-#: bookmarks/templates/settings/general.html:38
-msgid "Theme"
-msgstr "主题"
-
-#: bookmarks/templates/settings/general.html:41
-msgid ""
-"Choose a light or dark theme, or automatically follow your system setting."
-msgstr "手动选择明暗主题，或基于系统设置自动切换。"
-
-#: bookmarks/templates/settings/general.html:45
-msgid "Bookmark date format"
-msgstr "书签日期格式"
-
-#: bookmarks/templates/settings/general.html:48
-msgid ""
-"Show bookmark dates as relative dates, absolute dates, or hide them entirely."
-msgstr "书签日期显示为相对日期、绝对日期，或隐藏。"
-
-#: bookmarks/templates/settings/general.html:52
-msgid "Bookmark description"
-msgstr "书签描述"
-
-#: bookmarks/templates/settings/general.html:55
-msgid ""
-"Show bookmark descriptions and tags in one line, or render them in separate "
-"blocks."
-msgstr "书签描述与标签同行显示，或另起分块显示。"
-
-#: bookmarks/templates/settings/general.html:59
-msgid "Bookmark description max lines"
-msgstr "书签描述最大行数"
-
-#: bookmarks/templates/settings/general.html:62
-msgid "Limit how many lines are shown for bookmark descriptions."
-msgstr "限制书签描述显示的最大行数。"
-
-#: bookmarks/templates/settings/general.html:68
-msgid "Show bookmark URL"
-msgstr "显示书签 URL"
-
-#: bookmarks/templates/settings/general.html:71
-msgid "Display the bookmark URL below the title."
-msgstr "在书签标题下显示书签 URL。"
-
-#: bookmarks/templates/settings/general.html:77
-msgid "Show notes permanently"
-msgstr "永久显示笔记"
-
-#: bookmarks/templates/settings/general.html:80
-msgid "Keep notes expanded by default instead of toggling them individually."
-msgstr "默认展开笔记，而不是逐条手动切换。"
-
-#: bookmarks/templates/settings/general.html:81
-msgid "You can also temporarily show all notes with the keyboard shortcut"
-msgstr "你也可以通过键盘快捷键临时显示全部笔记"
-
-#: bookmarks/templates/settings/general.html:85
-msgid "Bookmark actions"
-msgstr "书签动作"
-
-#: bookmarks/templates/settings/general.html:103
-msgid "Choose which actions are shown for each bookmark."
-msgstr "选择每条书签要显示的动作。"
-
-#: bookmarks/templates/settings/general.html:107
-msgid "Open bookmarks in"
-msgstr "书签打开方式"
-
-#: bookmarks/templates/settings/general.html:110
-msgid "Open bookmarks in the current page or in a new page."
-msgstr "在当前页面或新页面中打开书签。"
-
-#: bookmarks/templates/settings/general.html:114
-msgid "Items per page"
-msgstr "每页书签数量"
-
-#: bookmarks/templates/settings/general.html:122
-msgid "Choose how many bookmarks are shown on each page."
-msgstr "选择每页显示多少条书签。"
-
-#: bookmarks/templates/settings/general.html:128
-msgid "Sticky search bar"
-msgstr "粘性搜索栏"
-
-#: bookmarks/templates/settings/general.html:131
-msgid "Keep the search and action controls pinned to the top while you scroll."
-msgstr "滚动时将搜索栏和操作区固定在顶部。"
-
-#: bookmarks/templates/settings/general.html:137
-msgid "Sticky pagination"
-msgstr "粘性分页"
-
-#: bookmarks/templates/settings/general.html:140
-msgid "Keep the pagination controls pinned to the bottom while you scroll."
-msgstr "滚动时将分页控件固定在底部。"
-
-#: bookmarks/templates/settings/general.html:146
-msgid "Sticky side panel"
-msgstr "侧边栏跟随"
-
-#: bookmarks/templates/settings/general.html:149
-msgid "Keep the side panel visible while scrolling on wider screens."
-msgstr "在较宽屏幕上滚动时保持侧边栏可见。"
-
-#: bookmarks/templates/settings/general.html:150
-msgid "This option is automatically disabled when the side panel is collapsed."
-msgstr "当侧边栏折叠时，此选项会自动禁用。"
-
-#: bookmarks/templates/settings/general.html:156
-msgid "Collapse side panel"
-msgstr "折叠侧边栏"
-
-#: bookmarks/templates/settings/general.html:159
-msgid "Collapse the side panel by default to give the bookmark list more room."
-msgstr "默认折叠侧边栏，为书签列表留出更多空间。"
-
-#: bookmarks/templates/settings/general.html:165
-msgid "Hide bundles"
-msgstr "隐藏过滤器"
-
-#: bookmarks/templates/settings/general.html:168
-msgid "Hide the bundles panel in the sidebar if you do not use bundles."
-msgstr "如果你不使用过滤器，可在侧边栏中隐藏过滤器面板。"
-
-#: bookmarks/templates/settings/general.html:172
-msgid "Tag search"
-msgstr "标签搜索"
-
-#: bookmarks/templates/settings/general.html:175
-msgid "In strict mode, tags must be prefixed with a hash character (#)."
-msgstr "在严格模式下，标签必须带有井号前缀（#）。"
-
-#: bookmarks/templates/settings/general.html:176
-msgid "In lax mode, tags can also be found without the hash character."
-msgstr "在宽松模式下，没有“#”前缀的标签也能被搜索到。"
-
-#: bookmarks/templates/settings/general.html:177
-msgid ""
-"Without the hash character, tags are harder to distinguish from ordinary "
-"search terms, so unrelated results may also match."
-msgstr "如果没有井号前缀，标签与普通关键词更难区分，因此也可能匹配到无关结果。"
-
-#: bookmarks/templates/settings/general.html:181
-msgid "Tag grouping"
-msgstr "标签聚合"
-
-#: bookmarks/templates/settings/general.html:184
-msgid "In alphabetical mode, tags are grouped by the first letter."
-msgstr "在 首字母 模式下，标签会按首字母分组。"
-
-#: bookmarks/templates/settings/general.html:185
-msgid "If disabled, tags are shown without grouping."
-msgstr "关闭后，标签将不进行分组显示。"
-
-msgid "This setting applies to the Tags module in the sidebar."
-msgstr "此设置仅作用于侧边栏中的标签模块。"
-
-msgid "Enable the Tags module in Sidebar modules to configure this setting."
-msgstr "请先在“侧边栏模块”中启用“标签”模块，再配置此设置。"
-
-#: bookmarks/templates/settings/general.html:191
-#: bookmarks/templates/settings/general.html:193
-msgid "Auto Tagging"
-msgstr "自动标签"
-
-#: bookmarks/templates/settings/general.html:199
-msgid "Automatically add tags to bookmarks based on custom rules."
-msgstr "根据自定义规则为书签自动添加标签。"
-
-#: bookmarks/templates/settings/general.html:200
-msgid "Each line is one rule that maps a URL to one or more tags. For example:"
-msgstr "每行是一条规则，将 URL 映射到一个或多个标签。例如："
-
-#: bookmarks/templates/settings/general.html:208
-msgid "Enable Favicons"
-msgstr "启用 Favicons"
-
-#: bookmarks/templates/settings/general.html:211
-msgid ""
-"Automatically load favicons for bookmarked websites and display them next to "
-"each bookmark."
-msgstr "自动为已收藏的网站加载 favicon，并显示在每条书签旁边。"
-
-#: bookmarks/templates/settings/general.html:212
-msgid "Enabling this feature downloads all missing favicons in the background."
-msgstr "启用后会在后台下载所有缺失的 favicon。"
-
-#: bookmarks/templates/settings/general.html:213
-msgid "By default, this feature uses a Google service to fetch favicons."
-msgstr "默认情况下，此功能使用 Google 的服务获取 favicon。"
-
-#: bookmarks/templates/settings/general.html:214
-msgid "If you prefer a different provider, check the"
-msgstr "如果你更喜欢其他提供方，请查看"
-
-#: bookmarks/templates/settings/general.html:214
-msgid "options documentation"
-msgstr "配置文档"
-
-#: bookmarks/templates/settings/general.html:217
-msgid "Refresh Favicons"
-msgstr "刷新 Favicons"
-
-#: bookmarks/templates/settings/general.html:223
-msgid "Enable Preview Images"
-msgstr "启用预览图"
-
-#: bookmarks/templates/settings/general.html:226
-msgid ""
-"Automatically load preview images for bookmarked websites and display them "
-"next to each bookmark."
-msgstr "自动为已收藏的网站加载预览图，并显示在每条书签旁边。"
-
-#: bookmarks/templates/settings/general.html:227
-msgid ""
-"Enabling this feature downloads missing preview images in the background."
-msgstr "启用后会在后台下载缺失的预览图。"
-
-#: bookmarks/templates/settings/general.html:231
-msgid "Internet Archive integration"
-msgstr "Internet Archive 集成"
-
-#: bookmarks/templates/settings/general.html:234
-msgid ""
-"When enabled, snapshots of bookmarked websites are automatically created on "
-"the Internet Archive Wayback Machine."
-msgstr ""
-"启用后，会自动在 Internet Archive Wayback Machine 上为已收藏的网站创建快照。"
-
-#: bookmarks/templates/settings/general.html:235
-msgid "This helps preserve websites as they looked when you bookmarked them."
-msgstr "这有助于保留网站在你收藏时的样貌。"
-
-#: bookmarks/templates/settings/general.html:236
-msgid ""
-"Please consider supporting the Internet Archive if you rely on this feature."
-msgstr "如果你依赖此功能，请考虑支持 Internet Archive。"
-
-#: bookmarks/templates/settings/general.html:242
-msgid "Enable bookmark sharing"
-msgstr "启用书签分享"
-
-#: bookmarks/templates/settings/general.html:245
-msgid ""
-"Allow bookmarks to be shared with other users and allow viewing bookmarks "
-"shared by others."
-msgstr "允许将书签分享给其他用户，并允许查看其他人分享的书签。"
-
-#: bookmarks/templates/settings/general.html:251
-msgid "Enable public bookmark sharing"
-msgstr "启用公开书签分享"
-
-#: bookmarks/templates/settings/general.html:254
-msgid "Make shared bookmarks visible without requiring a login."
-msgstr "无需登录即可查看已分享书签。"
-
-#: bookmarks/templates/settings/general.html:255
-msgid "Anyone who can access this instance can then browse the"
-msgstr "任何可访问本实例的人随后都可以浏览"
-
-#: bookmarks/templates/settings/general.html:255
-msgid "shared bookmarks page"
-msgstr "已分享书签页面"
-
-#: bookmarks/templates/settings/general.html:262
-msgid "Automatically create HTML snapshots"
-msgstr "自动创建 HTML 快照"
-
-#: bookmarks/templates/settings/general.html:265
-msgid "Automatically create HTML snapshots when adding new bookmarks."
-msgstr "添加新书签时自动创建 HTML 快照。"
-
-#: bookmarks/templates/settings/general.html:266
-msgid ""
-"If disabled, snapshots can still be created manually from the bookmark "
-"details view."
-msgstr "即使关闭，也仍可以在书签详情页手动创建快照。"
-
-#: bookmarks/templates/settings/general.html:268
-msgid "Create missing HTML snapshots"
-msgstr "创建缺失的 HTML 快照"
-
-#: bookmarks/templates/settings/general.html:274
-msgid "Create bookmarks as unread by default"
-msgstr "默认将新书签标记为未读"
-
-#: bookmarks/templates/settings/general.html:277
-msgid "Set newly created bookmarks to unread by default."
-msgstr "默认将新建书签标记为未读。"
-
-#: bookmarks/templates/settings/general.html:283
-msgid "Create bookmarks as shared by default"
-msgstr "默认将新书签标记为已分享"
-
-#: bookmarks/templates/settings/general.html:286
-msgid "Set newly created bookmarks to shared by default."
-msgstr "默认将新建书签标记为已分享。"
-
-#: bookmarks/templates/settings/general.html:292
-#: bookmarks/templates/settings/general.html:294
-msgid "Custom CSS"
-msgstr "自定义 CSS"
-
-#: bookmarks/templates/settings/general.html:300
-msgid "Add custom CSS that is loaded for your profile."
-msgstr "为你的个人配置添加自定义 CSS。"
-
-#: bookmarks/templates/settings/general.html:306
-#: bookmarks/templates/settings/general.html:308
-msgid "Custom domain normalization"
-msgstr "自定义域名归一化"
-
-#: bookmarks/templates/settings/general.html:314
-msgid "Configure one root domain per line."
-msgstr "每行配置一个根域名。"
-
-#: bookmarks/templates/settings/general.html:315
-msgid ""
-"All matching subdomains are normalized to the configured root domain, which "
-"affects favicon-based domain filters."
-msgstr ""
-"所有匹配的子域名都会归一化为所配置的根域名，这会影响基于 favicon 的域名筛选。"
-
-#: bookmarks/templates/settings/general.html:316
-msgid ""
-"Example: setting example.com normalizes a.example.com and b.example.com to "
-"example.com."
-msgstr ""
-"例如：设置 example.com 后，a.example.com 和 b.example.com 会被归一化为 "
-"example.com。"
-
-#: bookmarks/templates/settings/general.html:317
-msgid ""
-"If you also set a.example.com explicitly, that subdomain remains separate "
-"while other subdomains still normalize to example.com."
-msgstr ""
-"如果你同时显式设置 a.example.com，那么该子域名会保持独立，其他子域名仍会归一"
-"化为 example.com。"
-
-#: bookmarks/templates/settings/general.html:328
-msgid "Global settings"
-msgstr "全局设置"
-
-#: bookmarks/templates/settings/general.html:332
-msgid "Landing page"
-msgstr "默认首页"
-
-#: bookmarks/templates/settings/general.html:335
-msgid ""
-"Choose which page unauthenticated users are redirected to when they open the "
-"root URL."
-msgstr "选择未登录用户打开根路径时将被重定向到哪个页面。"
-
-#: bookmarks/templates/settings/general.html:339
-msgid "Guest user profile"
-msgstr "访客用户配置"
-
-#: bookmarks/templates/settings/general.html:342
-msgid ""
-"Choose which profile is used for anonymous visitors viewing publicly shared "
-"bookmarks."
-msgstr "选择匿名访客查看公开分享书签时使用的用户配置。"
-
-#: bookmarks/templates/settings/general.html:348
-msgid "Enable hover prefetching for internal links"
-msgstr "启用内部链接悬停预取"
-
-#: bookmarks/templates/settings/general.html:351
-msgid ""
-"Prefetch internal links when users hover over them. This improves perceived "
-"speed, but increases server load."
-msgstr ""
-"用户悬停在内部链接上时预取目标页面。这样可以提升体感速度，但也会增加服务器负"
-"载。"
-
-#: bookmarks/templates/settings/general.html:363
-msgid "Import"
-msgstr "导入"
-
-#: bookmarks/templates/settings/general.html:364
-msgid ""
-"Import bookmarks and tags from a Netscape HTML file. Existing bookmarks are "
-"updated when the imported URL already exists."
-msgstr ""
-"从 Netscape HTML 文件导入书签和标签。如果导入的 URL 已存在，则更新现有书签。"
-
-#: bookmarks/templates/settings/general.html:370
-msgid "Import public bookmarks as shared bookmarks"
-msgstr "将公开书签导入为已分享书签"
-
-#: bookmarks/templates/settings/general.html:373
-msgid ""
-"If the imported file marks bookmarks as public or private using the PRIVATE "
-"attribute, non-private bookmarks are imported as shared bookmarks and "
-"private bookmarks remain private."
-msgstr ""
-"如果导入文件使用 PRIVATE 属性标记书签的公开或私有状态，则非私有书签会作为已分"
-"享书签导入，私有书签保持私有。"
-
-#: bookmarks/templates/settings/general.html:379
-msgid "Upload"
-msgstr "上传"
-
-#: bookmarks/templates/settings/general.html:386
-msgid "Export"
-msgstr "导出"
-
-#: bookmarks/templates/settings/general.html:387
-msgid "Export all bookmarks as a Netscape HTML file."
-msgstr "将全部书签导出为 Netscape HTML 文件。"
-
-#: bookmarks/templates/settings/general.html:388
-msgid "Download"
-msgstr "下载"
-
-#: bookmarks/templates/settings/general.html:399
-msgid "About"
-msgstr "关于"
-
-#: bookmarks/templates/settings/general.html:403
-msgid "Version"
-msgstr "版本"
-
-#: bookmarks/templates/settings/general.html:407
-msgid "Links"
-msgstr "链接"
-
-#: bookmarks/templates/settings/general.html:412
-msgid "Changelog"
-msgstr "更新日志"
-
-#: bookmarks/templates/settings/general.html:417
-msgid "Based on"
-msgstr "基于"
-
-#: bookmarks/templates/settings/general.html:420
-#, python-format
-msgid "sissbruecker's <a href=\"%(project_url)s\" target=\"_blank\" rel=\"noopener\">linkding</a>"
-msgstr "sissbruecker 的 <a href=\"%(project_url)s\" target=\"_blank\" rel=\"noopener\">linkding</a>"
-
-#: bookmarks/templates/settings/integrations.html:5
-msgid "Integrations - Linkding"
-msgstr "集成 - Linkding"
-
-#: bookmarks/templates/settings/integrations.html:17
-msgid ""
-"The following token can be used to authenticate third-party applications "
-"against the REST API:"
-msgstr "下方令牌（token）可用于第三方应用通过 REST API 进行身份验证："
-
-#: bookmarks/templates/settings/integrations.html:24
-msgid "Please treat this token as you would any other credential."
-msgstr "请像保管其他凭据一样妥善保管该令牌。"
-
-#: bookmarks/templates/settings/integrations.html:25
-msgid ""
-"Any party with access to this token can access and manage all your bookmarks."
-msgstr "任何持有该令牌的人都可以访问并管理你的全部书签。"
-
-#: bookmarks/templates/settings/integrations.html:26
-msgid "If you think the token was compromised, you can revoke it in the"
-msgstr "如果你认为该令牌可能已经泄露，可以在"
-
-#: bookmarks/templates/settings/integrations.html:27
-#: bookmarks/templates/settings/integrations.html:55
-msgid "admin panel"
-msgstr "管理后台"
-
-#: bookmarks/templates/settings/integrations.html:28
-msgid "After deleting the token, reload this page to generate a new one."
-msgstr "删除令牌后，刷新本页即可生成新的令牌。"
-
-#: bookmarks/templates/settings/integrations.html:33
-msgid "RSS Feeds"
-msgstr "RSS 订阅源"
-
-#: bookmarks/templates/settings/integrations.html:34
-msgid "The following URLs provide RSS feeds for your bookmarks:"
-msgstr "下述链接提供你的书签 RSS 订阅："
-
-#: bookmarks/templates/settings/integrations.html:36
-msgid "All bookmarks"
-msgstr "全部书签"
-
-#: bookmarks/templates/settings/integrations.html:37
-msgid "Unread bookmarks"
-msgstr "未读书签"
-
-#: bookmarks/templates/settings/integrations.html:40
-msgid "Public shared bookmarks"
-msgstr "已公开分享书签"
-
-#: bookmarks/templates/settings/integrations.html:41
-msgid ""
-"This public feed does not include an authentication token and only shows "
-"bookmarks from users who explicitly enabled public sharing."
-msgstr ""
-"这个公开订阅源不包含认证令牌，只会显示明确启用了公开分享的用户所分享的书签。"
-
-#: bookmarks/templates/settings/integrations.html:44
-msgid "All URLs support the following URL parameters:"
-msgstr "所有链接都支持以下 URL 参数："
-
-#: bookmarks/templates/settings/integrations.html:46
-msgid ""
-"specifies the maximum number of bookmarks in the feed. The default is 100."
-msgstr "指定订阅源中书签数量的最大值，默认值为 100。"
-
-#: bookmarks/templates/settings/integrations.html:47
-msgid ""
-"specifies the search query. You can copy an example from the bookmark list "
-"URL after running a search."
-msgstr "指定搜索语句。你可以在书签列表执行搜索后，从浏览器地址栏复制一个示例。"
-
-#: bookmarks/templates/settings/integrations.html:48
-msgid "filters unread or read bookmarks. Use yes for unread and no for read."
-msgstr "筛选未读或已读书签。使用 yes 表示未读，no 表示已读。"
-
-#: bookmarks/templates/settings/integrations.html:49
-msgid ""
-"filters shared or unshared bookmarks. Use yes for shared and no for unshared."
-msgstr "筛选已分享或未分享书签。使用 yes 表示已分享，no 表示未分享。"
-
-#: bookmarks/templates/settings/integrations.html:52
-msgid ""
-"Please note that these URLs include an authentication token and should be "
-"handled like any other credential."
-msgstr "请注意，这些链接包含认证令牌，应像其他凭据一样妥善保管。"
-
-#: bookmarks/templates/settings/integrations.html:53
-msgid "Anyone with access to these URLs can read all your bookmarks."
-msgstr "任何持有这些链接的人都可以读取你的全部书签。"
-
-#: bookmarks/templates/settings/integrations.html:54
-msgid "If you think a feed URL was compromised, delete the feed token in the"
-msgstr "如果你认为订阅链接可能已经泄露，请在"
-
-#: bookmarks/templates/settings/integrations.html:56
-msgid "After deleting the token, reload this page to generate new feed URLs."
-msgstr "删除令牌后，刷新本页即可生成新的订阅链接。"
-
-#: bookmarks/templates/settings/integrations.html:61
-msgid "Browser extension"
-msgstr "浏览器扩展"
-
-#: bookmarks/templates/settings/integrations.html:62
-msgid "The browser extension lets you quickly add the current page as a bookmark."
-msgstr "浏览器扩展可以帮你快速将当前页面添加为书签。"
-
-#: bookmarks/templates/settings/integrations.html:62
-msgid ""
-"The browser extension lets you quickly add the current page as a bookmark. "
-"It is available from the official stores for:"
-msgstr ""
-"浏览器扩展可以帮你快速将当前页面添加为书签。它可从以下官方扩展商店获取："
-
-#: bookmarks/templates/settings/integrations.html:67
-msgid ""
-"The extension is open source and can also be built and loaded manually into "
-"Chromium-based browsers."
-msgstr "该扩展是开源的，也可以手动构建并加载到基于 Chromium 的浏览器中。"
-
-#: bookmarks/templates/settings/integrations.html:69
-msgid "Bookmarklet"
-msgstr "书签小程序"
-
-#: bookmarks/templates/settings/integrations.html:70
-msgid ""
-"The bookmarklet is another cross-browser way to quickly add the current page "
-"as a bookmark:"
-msgstr "书签小程序是另一种跨浏览器快速添加当前页面为书签的方式："
-
-#: bookmarks/templates/settings/integrations.html:72
-msgid "Drag the bookmarklet below to your browser toolbar or bookmarks bar."
-msgstr "将下面的书签小程序拖拽到浏览器工具栏或书签栏。"
-
-#: bookmarks/templates/settings/integrations.html:73
-msgid "Open the page you want to bookmark."
-msgstr "打开你想添加为书签的页面。"
-
-#: bookmarks/templates/settings/integrations.html:74
-msgid "Click the bookmarklet from your browser toolbar."
-msgstr "点击浏览器工具栏中的书签小程序。"
-
-#: bookmarks/templates/settings/integrations.html:75
-msgid "Linkding opens a new bookmark page in a window or tab."
-msgstr "Linkding 会在新窗口或标签页中打开新增书签页面。"
-
-#: bookmarks/templates/settings/integrations.html:76
-msgid ""
-"After saving, Linkding automatically closes the helper window and returns "
-"you to the page."
-msgstr "保存后，Linkding 会自动关闭辅助窗口，并将你带回原页面。"
-
-#: bookmarks/templates/settings/integrations.html:78
-msgid "Drag this bookmarklet to your toolbar:"
-msgstr "将这个书签小程序拖拽到工具栏："
-
-#: bookmarks/templates/settings/integrations.html:201
-msgid ""
-"The bookmarklet is another fast way to add the current page as a bookmark, "
-"and it works across browsers. Here is how to use it:"
-msgstr "书签小程序是另一个快速添加当前页面为书签的方式，它是跨浏览器的。它的使用方式如下："
-
-#: bookmarks/templates/settings/integrations.html:204
-msgid "Choose your preferred method for detecting website titles and descriptions below"
-msgstr "在下方选择您偏好的检测网站标题和描述的方法"
-
-#: bookmarks/templates/settings/integrations.html:201
-msgid "Detect title and description on the server"
-msgstr "在服务器端检测网站标题和描述"
-
-#: bookmarks/templates/settings/integrations.html:206
-msgid "Detect title and description in the browser"
-msgstr "在浏览器端检测网站标题和描述"
-
-#: bookmarks/templates/settings/integrations.html:209
-msgid "Drag the bookmarklet below into your browser's bookmark bar / toolbar"
-msgstr "将下面的书签小程序拖拽到浏览器的书签栏/工具栏"
-
-#: bookmarks/templates/settings/integrations.html:210
-msgid "Open the website that you want to bookmark"
-msgstr "打开想添加为书签的网页"
-
-#: bookmarks/templates/settings/integrations.html:211
-msgid "Click the bookmarklet in your browser's toolbar"
-msgstr "点击浏览器工具栏上你刚添加的书签小程序"
-
-#: bookmarks/templates/settings/integrations.html:212
-msgid "Linkding opens a new bookmark page in a window or tab"
-msgstr "linkding 会在新窗口或标签页打开新建书签页面"
-
-#: bookmarks/templates/settings/integrations.html:213
-msgid "After saving, Linkding automatically closes the helper window and returns you to the page"
-msgstr "保存书签后，linkding 会自动关闭窗口返回网站"
-
-#: bookmarks/templates/settings/integrations.html:237
-#: bookmarks/templates/settings/integrations.html:248
-msgid "Drag to bookmarks bar"
-msgstr "拖到浏览器的书签栏"
-
-#: bookmarks/templates/settings/integrations_api_section.html:38
-msgid "Created at"
-msgstr "创建日期"
-
-#: bookmarks/templates/settings/integrations_api_section.html:69
-msgid "API tokens can be used to authenticate third-party applications against the REST API."
-msgstr "API Token 可用于对第三方应用程序进行 REST API 身份验证。"
-
-#: bookmarks/templates/settings/integrations_api_section.html:69
-msgid "API tokens can access and manage all of your bookmarks, so keep them safe."
-msgstr "API Token 可获取和管理你的所有书签，请谨慎保管。"
-
-#: bookmarks/templates/settings/integrations_api_section.html:71
-msgid "If you suspect an API token has leaked, delete it immediately."
-msgstr "如怀疑某个 API Token 泄漏，请及时删除。"
 
 #: bookmarks/templates/settings/create_api_token_modal.html:18
 msgid "Create API token"
@@ -1773,287 +1152,895 @@ msgstr "使用一个描述性名称，便于识别此 Token 的用途。"
 msgid "Create token"
 msgstr "创建 Token"
 
-#: bookmarks/templates/settings/integrations_api_section.html:24
-msgid "Copy"
-msgstr "复制"
+#: bookmarks/templates/settings/general.html:5
+msgid "General - Linkding"
+msgstr "通用 - Linkding"
 
-#: bookmarks/templates/settings/integrations_api_section.html:82
-msgid "Copied!"
-msgstr "已复制！"
+#: bookmarks/templates/settings/general.html:38
+#: bookmarks/templates/settings/general.html:1004
+msgid "Interface"
+msgstr "界面"
 
-#: bookmarks/templates/settings/integrations_api_section.html:20
-msgid "Copy this token now, it will only be shown once:"
-msgstr "请立即复制此 Token，它只会显示一次："
+#: bookmarks/templates/settings/general.html:48
+#: bookmarks/templates/settings/general.html:75
+#: bookmarks/templates/shared/language_switcher.html:8
+#: bookmarks/templates/shared/language_switcher.html:46
+msgid "Language"
+msgstr "语言"
 
-#: bookmarks/templates/settings/integrations_api_section.html:21
-msgid "New token key"
-msgstr "新 Token 密钥"
+#: bookmarks/templates/settings/general.html:50
+msgid "Choose the interface language. After saving, the selected language takes precedence over the browser language."
+msgstr "选择界面语言。保存后，所选语言将优先于浏览器语言。"
 
-#: bookmarks/views/settings.py:443
+#: bookmarks/templates/settings/general.html:100
+msgid "Theme"
+msgstr "主题"
+
+#: bookmarks/templates/settings/general.html:102
+msgid "Choose a light or dark theme, or automatically follow your system setting."
+msgstr "手动选择明暗主题，或基于系统设置自动切换。"
+
+#: bookmarks/templates/settings/general.html:126
+msgid "Custom CSS"
+msgstr "自定义 CSS"
+
+#: bookmarks/templates/settings/general.html:128
+msgid "Add custom CSS that is loaded for your profile."
+msgstr "为你的个人配置添加自定义 CSS。"
+
+#: bookmarks/templates/settings/general.html:135
+#: bookmarks/templates/settings/general.html:334
+#: bookmarks/templates/settings/general.html:464
+#: bookmarks/templates/settings/general.html:519
+msgid "Collapse"
+msgstr "折叠"
+
+#: bookmarks/templates/settings/general.html:136
+#: bookmarks/templates/settings/general.html:138
+#: bookmarks/templates/settings/general.html:141
+#: bookmarks/templates/settings/general.html:335
+#: bookmarks/templates/settings/general.html:337
+#: bookmarks/templates/settings/general.html:340
+#: bookmarks/templates/settings/general.html:465
+#: bookmarks/templates/settings/general.html:467
+#: bookmarks/templates/settings/general.html:470
+#: bookmarks/templates/settings/general.html:520
+#: bookmarks/templates/settings/general.html:522
+#: bookmarks/templates/settings/general.html:525
+msgid "Expand"
+msgstr "展开"
+
+#: bookmarks/templates/settings/general.html:156
+#: bookmarks/templates/settings/general.html:165
+#: bookmarks/templates/settings/general.html:485
+#: bookmarks/templates/settings/general.html:494
+#: bookmarks/templates/settings/general.html:540
+#: bookmarks/templates/settings/general.html:549
+msgid "Restore draft"
+msgstr "恢复草稿"
+
+#: bookmarks/templates/settings/general.html:157
+#: bookmarks/templates/settings/general.html:486
+#: bookmarks/templates/settings/general.html:541
+msgid "Discard draft"
+msgstr "放弃草稿"
+
+#: bookmarks/templates/settings/general.html:180
+msgid "Bookmarks per page"
+msgstr "每页书签数量"
+
+#: bookmarks/templates/settings/general.html:182
+msgid "Choose how many bookmarks are shown on each page."
+msgstr "选择每页显示多少条书签。"
+
+#: bookmarks/templates/settings/general.html:192
+msgid "Search bar follows"
+msgstr "搜索栏跟随"
+
+#: bookmarks/templates/settings/general.html:194
+msgid "Keep the search and action controls pinned to the top while you scroll."
+msgstr "滚动时将搜索栏和操作区固定在顶部。"
+
+#: bookmarks/templates/settings/general.html:204
+msgid "Paginator follows"
+msgstr "分页器跟随"
+
+#: bookmarks/templates/settings/general.html:206
+msgid "Keep pagination controls pinned to the bottom while you scroll."
+msgstr "滚动时将分页控件固定在底部。"
+
+#: bookmarks/templates/settings/general.html:224
+msgid "Prefetch internal links"
+msgstr "预读取内部链接"
+
+#: bookmarks/templates/settings/general.html:226
+msgid "Prefetch internal links when users hover over them. This improves perceived speed, but increases server load."
+msgstr "用户悬停在内部链接上时预取目标页面。这样可以提升体感速度，但也会增加服务器负载。"
+
+#: bookmarks/templates/settings/general.html:250
+msgid "Compatibility mode"
+msgstr "兼容模式"
+
+#: bookmarks/templates/settings/general.html:252
+msgid "Enable the old search behavior if the new logical search syntax causes unexpected results."
+msgstr "如果新的逻辑搜索语法出现不符合预期的结果，可启用旧版搜索行为。"
+
+#: bookmarks/templates/settings/general.html:262
+msgid "Tag search mode"
+msgstr "标签搜索模式"
+
+#: bookmarks/templates/settings/general.html:264
+msgid "In strict mode, tags must be prefixed with a hash character (#)."
+msgstr "在严格模式下，标签必须带有井号前缀（#）。"
+
+#: bookmarks/templates/settings/general.html:265
+msgid "In lax mode, tags can also be found without the hash character."
+msgstr "在宽松模式下，没有“#”前缀的标签也能被搜索到。"
+
+#: bookmarks/templates/settings/general.html:266
+msgid "Without the hash character, tags are harder to distinguish from ordinary search terms, so unrelated results may also match."
+msgstr "如果没有井号前缀，标签与普通关键词更难区分，因此也可能匹配到无关结果。"
+
+#: bookmarks/templates/settings/general.html:288
+#: bookmarks/templates/settings/general.html:1005
+msgid "Sidebar"
+msgstr "侧边栏"
+
+#: bookmarks/templates/settings/general.html:298
+msgid "Show sidebar"
+msgstr "显示侧边栏"
+
+#: bookmarks/templates/settings/general.html:300
+msgid "Turn this off to collapse the side panel by default and give the bookmark list more room."
+msgstr "关闭后将默认折叠侧边栏，为书签列表腾出更多空间。"
+
+#: bookmarks/templates/settings/general.html:310
+msgid "Sidebar follows"
+msgstr "侧边栏跟随"
+
+#: bookmarks/templates/settings/general.html:312
+msgid "Keep the sidebar visible while scrolling on wider screens."
+msgstr "在较宽屏幕上滚动时保持侧边栏可见。"
+
+#: bookmarks/templates/settings/general.html:325
+msgid "Sidebar modules"
+msgstr "侧边栏模块"
+
+#: bookmarks/templates/settings/general.html:327
+msgid "Drag to reorder modules and toggle whether they are shown in the sidebar."
+msgstr "拖拽排序模块，并切换其是否在侧边栏显示。"
+
+#: bookmarks/templates/settings/general.html:352
+#, fuzzy
+#| msgid "Tags to merge"
+msgid "Drag to reorder"
+msgstr "待合并标签"
+
+#: bookmarks/templates/settings/general.html:377
+msgid "Tag aggregation mode"
+msgstr "标签聚合模式"
+
+#: bookmarks/templates/settings/general.html:379
+msgid "In alphabetical mode, tags are grouped by the first letter."
+msgstr "在 首字母 模式下，标签会按首字母分组。"
+
+#: bookmarks/templates/settings/general.html:380
+msgid "If disabled, tags are shown without grouping."
+msgstr "关闭后，标签将不进行分组显示。"
+
+#: bookmarks/templates/settings/general.html:381
+msgid "This setting applies to the Tags module in the sidebar."
+msgstr "此设置仅作用于侧边栏中的标签模块。"
+
+#: bookmarks/templates/settings/general.html:413
+msgid "Open mode"
+msgstr "打开方式"
+
+#: bookmarks/templates/settings/general.html:415
+msgid "Open bookmarks in the current page or in a new page."
+msgstr "在当前页面或新页面中打开书签。"
+
+#: bookmarks/templates/settings/general.html:435
+msgid "Default unread"
+msgstr "默认未读"
+
+#: bookmarks/templates/settings/general.html:437
+msgid "Set newly created bookmarks to unread by default."
+msgstr "默认将新建书签标记为未读。"
+
+#: bookmarks/templates/settings/general.html:452
+msgid "Auto tagging"
+msgstr "自动标签"
+
+#: bookmarks/templates/settings/general.html:454
+msgid "Automatically add tags to bookmarks based on custom rules."
+msgstr "根据自定义规则为书签自动添加标签。"
+
+#: bookmarks/templates/settings/general.html:455
+msgid "Each line is one rule that maps a URL to one or more tags. For example:"
+msgstr "每行是一条规则，将 URL 映射到一个或多个标签。例如："
+
+#: bookmarks/templates/settings/general.html:507
+msgid "Custom domain normalization"
+msgstr "自定义域名归一化"
+
+#: bookmarks/templates/settings/general.html:509
+msgid "Configure one root domain per line."
+msgstr "每行配置一个根域名。"
+
+#: bookmarks/templates/settings/general.html:510
+msgid "All matching subdomains are normalized to the configured root domain, which affects favicon-based domain filters."
+msgstr "所有匹配的子域名都会归一化为所配置的根域名，这会影响基于 favicon 的域名筛选。"
+
+#: bookmarks/templates/settings/general.html:511
+msgid "Example: setting example.com normalizes a.example.com and b.example.com to example.com."
+msgstr "例如：设置 example.com 后，a.example.com 和 b.example.com 会被归一化为 example.com。"
+
+#: bookmarks/templates/settings/general.html:512
+msgid "If you also set a.example.com explicitly, that subdomain remains separate while other subdomains still normalize to example.com."
+msgstr "如果你同时显式设置 a.example.com，那么该子域名会保持独立，其他子域名仍会归一化为 example.com。"
+
+#: bookmarks/templates/settings/general.html:564
+msgid "Date format"
+msgstr "日期格式"
+
+#: bookmarks/templates/settings/general.html:566
+msgid "Show bookmark dates as relative dates, absolute dates, or hide them entirely."
+msgstr "书签日期显示为相对日期、绝对日期，或隐藏。"
+
+#: bookmarks/templates/settings/general.html:586
+msgid "Show URL"
+msgstr "显示 URL"
+
+#: bookmarks/templates/settings/general.html:588
+msgid "Display the bookmark URL below the title."
+msgstr "在书签标题下显示书签 URL。"
+
+#: bookmarks/templates/settings/general.html:599
+msgid "Description style"
+msgstr "描述样式"
+
+#: bookmarks/templates/settings/general.html:601
+msgid "Show bookmark descriptions and tags in one line, or render them in separate blocks."
+msgstr "书签描述与标签同行显示，或另起分块显示。"
+
+#: bookmarks/templates/settings/general.html:621
+msgid "Description max lines"
+msgstr "描述最大行数"
+
+#: bookmarks/templates/settings/general.html:623
+msgid "Limit how many lines are shown for bookmark descriptions."
+msgstr "限制书签描述显示的最大行数。"
+
+#: bookmarks/templates/settings/general.html:634
+msgid "Display Favicons"
+msgstr "显示 Favicons"
+
+#: bookmarks/templates/settings/general.html:636
+msgid "Automatically load favicons for bookmarked websites and display them next to each bookmark."
+msgstr "自动为已收藏的网站加载 favicon，并显示在每条书签旁边。"
+
+#: bookmarks/templates/settings/general.html:637
+msgid "Enabling this feature downloads all missing favicons in the background."
+msgstr "启用后会在后台下载所有缺失的 favicon。"
+
+#: bookmarks/templates/settings/general.html:638
+msgid "By default, this feature uses a Google service to fetch favicons."
+msgstr "默认情况下，此功能使用 Google 的服务获取 favicon。"
+
+#: bookmarks/templates/settings/general.html:639
+msgid "If you prefer a different provider, check the"
+msgstr "如果你更喜欢其他提供方，请查看"
+
+#: bookmarks/templates/settings/general.html:639
+msgid "options documentation"
+msgstr "配置文档"
+
+#: bookmarks/templates/settings/general.html:653
+msgid "Refresh Favicons"
+msgstr "刷新 Favicons"
+
+#: bookmarks/templates/settings/general.html:660
+msgid "Refresh"
+msgstr "刷新"
+
+#: bookmarks/templates/settings/general.html:667
+msgid "Display preview images"
+msgstr "显示预览图"
+
+#: bookmarks/templates/settings/general.html:669
+msgid "Automatically load preview images for bookmarked websites and display them next to each bookmark."
+msgstr "自动为已收藏的网站加载预览图，并显示在每条书签旁边。"
+
+#: bookmarks/templates/settings/general.html:670
+msgid "Enabling this feature downloads missing preview images in the background."
+msgstr "启用后会在后台下载缺失的预览图。"
+
+#: bookmarks/templates/settings/general.html:681
+msgid "Expand notes"
+msgstr "默认展开笔记"
+
+#: bookmarks/templates/settings/general.html:683
+msgid "Keep notes expanded by default instead of toggling them individually."
+msgstr "默认展开笔记，而不是逐条手动切换。"
+
+#: bookmarks/templates/settings/general.html:684
+msgid "You can also temporarily show all notes with the keyboard shortcut"
+msgstr "你也可以通过键盘快捷键临时显示全部笔记"
+
+#: bookmarks/templates/settings/general.html:695
+msgid "Display actions"
+msgstr "显示动作"
+
+#: bookmarks/templates/settings/general.html:697
+msgid "Choose which actions are shown for each bookmark."
+msgstr "选择每条书签要显示的动作。"
+
+#: bookmarks/templates/settings/general.html:732
+#: bookmarks/templates/settings/general.html:758
+msgid "HTML snapshots"
+msgstr "HTML 快照"
+
+#: bookmarks/templates/settings/general.html:734
+msgid "Automatically create HTML snapshots when adding new bookmarks."
+msgstr "添加新书签时自动创建 HTML 快照。"
+
+#: bookmarks/templates/settings/general.html:735
+msgid "If disabled, snapshots can still be created manually from the bookmark details view."
+msgstr "即使关闭，也仍可以在书签详情页手动创建快照。"
+
+#: bookmarks/templates/settings/general.html:745
+msgid "Create missing HTML snapshots"
+msgstr "创建缺失的 HTML 快照"
+
+#: bookmarks/templates/settings/general.html:752
+#: bookmarks/templates/settings/integrations_api_section.html:88
+msgid "Create"
+msgstr "创建"
+
+#: bookmarks/templates/settings/general.html:760
+msgid "This instance does not currently support HTML snapshots."
+msgstr "当前实例暂不支持 HTML 快照。"
+
+#: bookmarks/templates/settings/general.html:774
+msgid "When enabled, snapshots of bookmarked websites are automatically created on the Internet Archive Wayback Machine."
+msgstr "启用后，会自动在 Internet Archive Wayback Machine 上为已收藏的网站创建快照。"
+
+#: bookmarks/templates/settings/general.html:775
+msgid "This helps preserve websites as they looked when you bookmarked them."
+msgstr "这有助于保留网站在你收藏时的样貌。"
+
+#: bookmarks/templates/settings/general.html:776
+msgid "Please consider supporting the Internet Archive if you rely on this feature."
+msgstr "如果你依赖此功能，请考虑支持 Internet Archive。"
+
+#: bookmarks/templates/settings/general.html:789
+#: bookmarks/templates/settings/general.html:1008
+msgid "Sharing"
+msgstr "分享"
+
+#: bookmarks/templates/settings/general.html:798
+msgid "Bookmark sharing"
+msgstr "书签分享"
+
+#: bookmarks/templates/settings/general.html:800
+msgid "Allow bookmarks to be shared with other users and allow viewing bookmarks shared by others."
+msgstr "允许将书签分享给其他用户，并允许查看其他人分享的书签。"
+
+#: bookmarks/templates/settings/general.html:801
+msgid "Make shared bookmarks visible without requiring a login."
+msgstr "无需登录即可查看已分享书签。"
+
+#: bookmarks/templates/settings/general.html:802
+msgid "Anyone who can access this instance can then browse the"
+msgstr "任何可访问本实例的人随后都可以浏览"
+
+#: bookmarks/templates/settings/general.html:802
+msgid "shared bookmarks page"
+msgstr "已分享书签页面"
+
+#: bookmarks/templates/settings/general.html:821
+msgid "Default sharing"
+msgstr "默认分享"
+
+#: bookmarks/templates/settings/general.html:823
+msgid "Set newly created bookmarks to shared by default."
+msgstr "默认将新建书签标记为已分享。"
+
+#: bookmarks/templates/settings/general.html:836
+#: bookmarks/templates/settings/general.html:1009
+msgid "User & Visitors"
+msgstr "用户 & 访客"
+
+#: bookmarks/templates/settings/general.html:850
+msgid "Change"
+msgstr "修改"
+
+#: bookmarks/templates/settings/general.html:862
+msgid "Default page for visitors"
+msgstr "访客默认落地页"
+
+#: bookmarks/templates/settings/general.html:864
+msgid "Choose which page unauthenticated users are redirected to when they open the root URL."
+msgstr "选择未登录用户打开根路径时将被重定向到哪个页面。"
+
+#: bookmarks/templates/settings/general.html:883
+msgid "Anonymous visitor profile"
+msgstr "匿名访客配置"
+
+#: bookmarks/templates/settings/general.html:885
+msgid "Choose which profile is used for anonymous visitors viewing publicly shared bookmarks."
+msgstr "选择匿名访客查看公开分享书签时使用的用户配置。"
+
+#: bookmarks/templates/settings/general.html:900
+#: bookmarks/templates/settings/general.html:1010
+msgid "Import & Export"
+msgstr "导入 & 导出"
+
+#: bookmarks/templates/settings/general.html:907
+msgid "Import public bookmarks as shared bookmarks"
+msgstr "将公开书签导入为已分享书签"
+
+#: bookmarks/templates/settings/general.html:909
+msgid "If the imported file marks bookmarks as public or private using the PRIVATE attribute, non-private bookmarks are imported as shared bookmarks and private bookmarks remain private."
+msgstr "如果导入文件使用 PRIVATE 属性标记书签的公开或私有状态，则非私有书签会作为已分享书签导入，私有书签保持私有。"
+
+#: bookmarks/templates/settings/general.html:919
+msgid "Import bookmarks"
+msgstr "导入书签"
+
+#: bookmarks/templates/settings/general.html:921
+msgid "Import bookmarks and tags from a Netscape HTML file. Existing bookmarks are updated when the imported URL already exists."
+msgstr "从 Netscape HTML 文件导入书签和标签。如果导入的 URL 已存在，则更新现有书签。"
+
+#: bookmarks/templates/settings/general.html:929
+#: bookmarks/templates/settings/general.html:935
+msgid "Choose file"
+msgstr "选择文件"
+
+#: bookmarks/templates/settings/general.html:938
+msgid "Upload"
+msgstr "上传"
+
+#: bookmarks/templates/settings/general.html:948
+msgid "Export bookmarks"
+msgstr "导出书签"
+
+#: bookmarks/templates/settings/general.html:950
+msgid "Export all bookmarks as a Netscape HTML file."
+msgstr "将全部书签导出为 Netscape HTML 文件。"
+
+#: bookmarks/templates/settings/general.html:955
+msgid "Download"
+msgstr "下载"
+
+#: bookmarks/templates/settings/general.html:970
+#: bookmarks/templates/settings/general.html:1011
+msgid "About"
+msgstr "关于"
+
+#: bookmarks/templates/settings/general.html:976
+msgid "Version"
+msgstr "版本"
+
+#: bookmarks/templates/settings/general.html:980
+msgid "Links"
+msgstr "链接"
+
+#: bookmarks/templates/settings/general.html:985
+msgid "Changelog"
+msgstr "更新日志"
+
+#: bookmarks/templates/settings/general.html:990
+msgid "Based on"
+msgstr "基于"
+
+#: bookmarks/templates/settings/general.html:992
 #, python-format
-msgid "API token \"%(token_name)s\" created successfully"
-msgstr "API Token “%(token_name)s” 创建成功"
+msgid "sissbruecker's <a href=\"%(project_url)s\" target=\"_blank\" rel=\"noopener\">linkding</a>"
+msgstr "sissbruecker 的 <a href=\"%(project_url)s\" target=\"_blank\" rel=\"noopener\">linkding</a>"
 
-#: bookmarks/views/settings.py:477
-#, python-format
-msgid "API token \"%(token_name)s\" has been deleted."
-msgstr "API Token “%(token_name)s” 已删除。"
+#: bookmarks/templates/settings/general.html:1003
+msgid "General sections"
+msgstr "通用分组"
 
-#: bookmarks/templates/settings/integrations.html:279
+#: bookmarks/templates/settings/integrations.html:5
+msgid "Integrations - Linkding"
+msgstr "集成 - Linkding"
+
+#: bookmarks/templates/settings/integrations.html:206
+msgid "Browser extension"
+msgstr "浏览器扩展"
+
+#: bookmarks/templates/settings/integrations.html:208
+msgid "The browser extension lets you quickly add the current page as a bookmark."
+msgstr "浏览器扩展可以帮你快速将当前页面添加为书签。"
+
+#: bookmarks/templates/settings/integrations.html:211
+msgid "The extension is open source and can also be built and loaded manually into Chromium-based browsers."
+msgstr "该扩展是开源的，也可以手动构建并加载到基于 Chromium 的浏览器中。"
+
+#: bookmarks/templates/settings/integrations.html:227
+msgid "Bookmarklet"
+msgstr "书签小程序"
+
+#: bookmarks/templates/settings/integrations.html:229
+msgid "The bookmarklet is another fast way to add the current page as a bookmark, and it works across browsers. Here is how to use it:"
+msgstr "书签小程序是另一个快速添加当前页面为书签的方式，它是跨浏览器的。它的使用方式如下："
+
+#: bookmarks/templates/settings/integrations.html:232
+msgid "Choose your preferred method for detecting website titles and descriptions below"
+msgstr "在下方选择您偏好的检测网站标题和描述的方法"
+
+#: bookmarks/templates/settings/integrations.html:235
+msgid "Help"
+msgstr ""
+
+#: bookmarks/templates/settings/integrations.html:237
+msgid "Drag the bookmarklet below into your browser's bookmark bar / toolbar"
+msgstr "将下面的书签小程序拖拽到浏览器的书签栏/工具栏"
+
+#: bookmarks/templates/settings/integrations.html:238
+msgid "Open the website that you want to bookmark"
+msgstr "打开想添加为书签的网页"
+
+#: bookmarks/templates/settings/integrations.html:239
+msgid "Click the bookmarklet in your browser's toolbar"
+msgstr "点击浏览器工具栏上你刚添加的书签小程序"
+
+#: bookmarks/templates/settings/integrations.html:240
+msgid "Linkding opens a new bookmark page in a window or tab"
+msgstr "linkding 会在新窗口或标签页打开新建书签页面"
+
+#: bookmarks/templates/settings/integrations.html:241
+msgid "After saving, Linkding automatically closes the helper window and returns you to the page"
+msgstr "保存书签后，linkding 会自动关闭窗口返回网站"
+
+#: bookmarks/templates/settings/integrations.html:247
+msgid "Choose your preferred bookmarklet:"
+msgstr ""
+
+#: bookmarks/templates/settings/integrations.html:251
+msgid "Detect title and description on the server"
+msgstr "在服务器端检测网站标题和描述"
+
+#: bookmarks/templates/settings/integrations.html:256
+msgid "Detect title and description in the browser"
+msgstr "在浏览器端检测网站标题和描述"
+
+#: bookmarks/templates/settings/integrations.html:266
+#: bookmarks/templates/settings/integrations.html:274
+msgid "Drag to bookmarks bar"
+msgstr "拖到浏览器的书签栏"
+
+#: bookmarks/templates/settings/integrations.html:285
+msgid "RSS Feeds"
+msgstr "RSS 订阅源"
+
+#: bookmarks/templates/settings/integrations.html:287
 msgid "All feed URLs support the following URL parameters:"
 msgstr "所有 URL 均支持以下 URL 参数："
 
-#: bookmarks/templates/settings/integrations.html:302
-msgid ""
-"This feed does not include an authentication token and only shows bookmarks "
-"shared by users who explicitly enabled public sharing."
-msgstr "此订阅源不含认证令牌，只显示明确启用公开分享的用户所分享的书签。"
+#: bookmarks/templates/settings/integrations.html:291
+msgid "specifies the maximum number of bookmarks in the feed. The default is 100."
+msgstr "指定订阅源中书签数量的最大值，默认值为 100。"
 
-#: bookmarks/templates/settings/integrations.html:312
+#: bookmarks/templates/settings/integrations.html:292
+msgid "specifies the search query. You can copy an example from the bookmark list URL after running a search."
+msgstr "指定搜索语句。你可以在书签列表执行搜索后，从浏览器地址栏复制一个示例。"
+
+#: bookmarks/templates/settings/integrations.html:293
+msgid "filters unread or read bookmarks. Use yes for unread and no for read."
+msgstr "筛选未读或已读书签。使用 yes 表示未读，no 表示已读。"
+
+#: bookmarks/templates/settings/integrations.html:294
+msgid "filters shared or unshared bookmarks. Use yes for shared and no for unshared."
+msgstr "筛选已分享或未分享书签。使用 yes 表示已分享，no 表示未分享。"
+
+#: bookmarks/templates/settings/integrations.html:302
+msgid "All bookmarks"
+msgstr "全部书签"
+
+#: bookmarks/templates/settings/integrations.html:303
+msgid "Unread bookmarks"
+msgstr "未读书签"
+
+#: bookmarks/templates/settings/integrations.html:307
+msgid "Public shared bookmarks"
+msgstr "已公开分享书签"
+
+#: bookmarks/templates/settings/integrations.html:320
+msgid "This public feed does not include an authentication token and only shows bookmarks from users who explicitly enabled public sharing."
+msgstr "这个公开订阅源不包含认证令牌，只会显示明确启用了公开分享的用户所分享的书签。"
+
+#: bookmarks/templates/settings/integrations.html:330
 msgid "Feed links include a Feed Token and can be used to read all of your bookmarks, so keep them safe."
 msgstr "订阅链接包含 Feed Token，可读取你的所有书签，请谨慎保管。"
 
-#: bookmarks/templates/settings/integrations.html:314
+#: bookmarks/templates/settings/integrations.html:332
 msgid "If you suspect a feed link has leaked, delete the Feed Token in the"
 msgstr "如怀疑订阅链接泄漏，可在"
 
-#: bookmarks/templates/settings/integrations.html:316
+#: bookmarks/templates/settings/integrations.html:333
+msgid "admin panel"
+msgstr "管理后台"
+
+#: bookmarks/templates/settings/integrations.html:334
 msgid "After deletion, refresh this page to generate a new feed link."
 msgstr "删除后刷新本页，即可生成新的订阅链接。"
+
+#: bookmarks/templates/settings/integrations_api_section.html:20
+msgid "API tokens can be used to authenticate third-party applications against the REST API."
+msgstr "API Token 可用于对第三方应用程序进行 REST API 身份验证。"
+
+#: bookmarks/templates/settings/integrations_api_section.html:35
+msgid "Copy this token now, it will only be shown once:"
+msgstr "请立即复制此 Token，它只会显示一次："
+
+#: bookmarks/templates/settings/integrations_api_section.html:36
+msgid "New token key"
+msgstr "新 Token 密钥"
+
+#: bookmarks/templates/settings/integrations_api_section.html:40
+msgid "Copy"
+msgstr "复制"
+
+#: bookmarks/templates/settings/integrations_api_section.html:53
+msgid "Created at"
+msgstr "创建日期"
+
+#: bookmarks/templates/settings/integrations_api_section.html:94
+msgid "API tokens can access and manage all of your bookmarks, so keep them safe."
+msgstr "API Token 可获取和管理你的所有书签，请谨慎保管。"
+
+#: bookmarks/templates/settings/integrations_api_section.html:96
+msgid "If you suspect an API token has leaked, delete it immediately."
+msgstr "如怀疑某个 API Token 泄漏，请及时删除。"
+
+#: bookmarks/templates/settings/integrations_api_section.html:100
+msgid "已复制！"
+msgstr ""
+
+#: bookmarks/templates/settings/integrations_api_section.html:101
+msgid "复制"
+msgstr ""
 
 #: bookmarks/templates/tags/edit.html:5
 msgid "Edit tag - Linkding"
 msgstr "编辑标签 - Linkding"
 
 #: bookmarks/templates/tags/edit.html:15
+#: bookmarks/templates/tags/edit_modal.html:14
 msgid "Edit tag"
 msgstr "编辑标签"
 
 #: bookmarks/templates/tags/form.html:6
-msgid ""
-"Tag names are case-sensitive and cannot contain spaces. Spaces are replaced "
-"with hyphens (`-`)."
+msgid "Tag names are case-sensitive and cannot contain spaces. Spaces are replaced with hyphens (`-`)."
 msgstr "标签名称区分大小写，且不能包含空格。空格会被替换为连字符 `-`。"
 
 #: bookmarks/templates/tags/index.html:5
 msgid "Tags - Linkding"
 msgstr "标签 - Linkding"
 
-#: bookmarks/templates/tags/index.html:17 bookmarks/templates/tags/new.html:15
+#: bookmarks/templates/tags/index.html:18 bookmarks/templates/tags/new.html:15
+#: bookmarks/templates/tags/new_modal.html:10
 msgid "Add tag"
 msgstr "新增标签"
 
-#: bookmarks/templates/tags/index.html:18
+#: bookmarks/templates/tags/index.html:19
+#: bookmarks/templates/tags/merge.html:15
+#: bookmarks/templates/tags/merge.html:70
+#: bookmarks/templates/tags/merge_modal.html:9
+#: bookmarks/templates/tags/merge_modal.html:69
 msgid "Merge tags"
 msgstr "合并标签"
 
-#: bookmarks/templates/tags/merge.html:5
-msgid "Merge tags - Linkding"
-msgstr "合并标签 - Linkding"
-
-#: bookmarks/templates/tags/merge.html:17
-msgid "How to merge tags"
-msgstr "如何合并标签"
-
-#: bookmarks/templates/tags/merge.html:20
-msgid "Enter the name of the tag you want to keep"
-msgstr "输入你要保留的标签名称"
-
-#: bookmarks/templates/tags/merge.html:21
-msgid "Enter the names of tags to merge into the target tag"
-msgstr "输入要合并到目标标签中的标签名称"
-
-#: bookmarks/templates/tags/merge.html:22
-msgid "The target tag is added to all bookmarks that have any of the merge tags"
-msgstr "目标标签会被添加到所有包含任一待合并标签的书签中"
-
-#: bookmarks/templates/tags/merge.html:23
-msgid "The merged tags are deleted"
-msgstr "被合并的标签会被删除"
-
-#: bookmarks/templates/tags/merge.html:31
-msgid "Target tag"
-msgstr "目标标签"
-
-#: bookmarks/templates/tags/merge.html:38
-msgid ""
-"Enter the name of the tag you want to keep. The tags entered below will "
-"be merged into this one."
-msgstr "输入你要保留的标签名称。下方输入的标签都会合并到这个标签中。"
-
-#: bookmarks/templates/tags/merge.html:51
-msgid "Tags to merge"
-msgstr "待合并标签"
-
-#: bookmarks/templates/tags/merge.html:58
-msgid ""
-"Enter the names of tags to merge into the target tag, separated by spaces. "
-"These tags will be deleted after merging."
-msgstr ""
-"输入要合并到目标标签中的标签名称，多个标签请用空格分隔。合并完成后，这些标"
-"签会被删除。"
-
-#: bookmarks/templates/tags/index.html:27
+#: bookmarks/templates/tags/index.html:29
 msgid "Search tags"
 msgstr "搜索标签"
 
-#: bookmarks/templates/tags/index.html:29
+#: bookmarks/templates/tags/index.html:31
 msgid "Search tags..."
 msgstr "搜索标签..."
 
-#: bookmarks/templates/tags/index.html:31
-msgid "Search"
-msgstr "搜索"
-
-#: bookmarks/templates/tags/index.html:44
+#: bookmarks/templates/tags/index.html:46
 msgid "Tag name ↑"
 msgstr "标签名称 ↑"
 
-#: bookmarks/templates/tags/index.html:45
+#: bookmarks/templates/tags/index.html:47
 msgid "Tag name ↓"
 msgstr "标签名称 ↓"
 
-#: bookmarks/templates/tags/index.html:46
+#: bookmarks/templates/tags/index.html:48
 msgid "Bookmark count ↑"
 msgstr "书签数量 ↑"
 
-#: bookmarks/templates/tags/index.html:47
+#: bookmarks/templates/tags/index.html:49
 msgid "Bookmark count ↓"
 msgstr "书签数量 ↓"
 
-#: bookmarks/templates/tags/index.html:54
+#: bookmarks/templates/tags/index.html:56
 msgid "Show unused tags only"
 msgstr "仅显示未使用标签"
 
-#: bookmarks/templates/tags/index.html:61
+#: bookmarks/templates/tags/index.html:64
 #, python-format
 msgid "%(count)s tag (%(total)s total)"
 msgid_plural "%(count)s tags (%(total)s total)"
 msgstr[0] "%(count)s 个标签（共 %(total)s 个）"
 msgstr[1] "%(count)s 个标签（共 %(total)s 个）"
 
-#: bookmarks/templates/tags/index.html:67
+#: bookmarks/templates/tags/index.html:70
 #, python-format
 msgid "%(count)s tag total"
 msgid_plural "%(count)s tags total"
 msgstr[0] "共 %(count)s 个标签"
 msgstr[1] "共 %(count)s 个标签"
 
-#: bookmarks/templates/tags/index.html:84
+#: bookmarks/templates/tags/index.html:87
 msgid "Bookmark count"
 msgstr "书签数量"
 
-#: bookmarks/templates/tags/index.html:122
+#: bookmarks/templates/tags/index.html:126
 msgid "No tags found"
 msgstr "无标签"
 
-#: bookmarks/templates/tags/index.html:123
+#: bookmarks/templates/tags/index.html:127
 msgid "Try adjusting your search"
 msgstr "请尝试调整搜索内容"
 
-#: bookmarks/templates/tags/index.html:125
+#: bookmarks/templates/tags/index.html:129
 msgid "You do not have any tags yet"
 msgstr "你还没有标签"
 
-#: bookmarks/templates/tags/index.html:126
+#: bookmarks/templates/tags/index.html:130
 msgid "Tags will appear here after you add them to bookmarks"
 msgstr "你为书签添加标签后，标签将出现在这里"
+
+#: bookmarks/templates/tags/merge.html:5
+msgid "Merge tags - Linkding"
+msgstr "合并标签 - Linkding"
+
+#: bookmarks/templates/tags/merge.html:20
+#: bookmarks/templates/tags/merge_modal.html:23
+msgid "How to merge tags"
+msgstr "如何合并标签"
+
+#: bookmarks/templates/tags/merge.html:23
+#: bookmarks/templates/tags/merge_modal.html:26
+msgid "Enter the name of the tag you want to keep"
+msgstr "输入你要保留的标签名称"
+
+#: bookmarks/templates/tags/merge.html:24
+#: bookmarks/templates/tags/merge_modal.html:27
+msgid "Enter the names of tags to merge into the target tag"
+msgstr "输入要合并到目标标签中的标签名称"
+
+#: bookmarks/templates/tags/merge.html:25
+#: bookmarks/templates/tags/merge_modal.html:28
+msgid "The target tag is added to all bookmarks that have any of the merge tags"
+msgstr "目标标签会被添加到所有包含任一待合并标签的书签中"
+
+#: bookmarks/templates/tags/merge.html:26
+#: bookmarks/templates/tags/merge_modal.html:29
+msgid "The merged tags are deleted"
+msgstr "被合并的标签会被删除"
+
+#: bookmarks/templates/tags/merge.html:34
+#: bookmarks/templates/tags/merge_modal.html:34
+msgid "Target tag"
+msgstr "目标标签"
+
+#: bookmarks/templates/tags/merge.html:41
+#: bookmarks/templates/tags/merge_modal.html:41
+msgid "Enter the name of the tag you want to keep. The tags entered below will be merged into this one."
+msgstr "输入你要保留的标签名称。下方输入的标签都会合并到这个标签中。"
+
+#: bookmarks/templates/tags/merge.html:51
+#: bookmarks/templates/tags/merge_modal.html:51
+msgid "Tags to merge"
+msgstr "待合并标签"
+
+#: bookmarks/templates/tags/merge.html:58
+#: bookmarks/templates/tags/merge_modal.html:58
+msgid "Enter the names of tags to merge into the target tag, separated by spaces. These tags will be deleted after merging."
+msgstr "输入要合并到目标标签中的标签名称，多个标签请用空格分隔。合并完成后，这些标签会被删除。"
 
 #: bookmarks/templates/tags/new.html:5
 msgid "Add tag - Linkding"
 msgstr "新增标签 - Linkding"
 
-#: bookmarks/utils.py:32
+#: bookmarks/utils.py:33
 msgid "Monday"
 msgstr "周一"
 
-#: bookmarks/utils.py:33
+#: bookmarks/utils.py:34
 msgid "Tuesday"
 msgstr "周二"
 
-#: bookmarks/utils.py:34
+#: bookmarks/utils.py:35
 msgid "Wednesday"
 msgstr "周三"
 
-#: bookmarks/utils.py:35
+#: bookmarks/utils.py:36
 msgid "Thursday"
 msgstr "周四"
 
-#: bookmarks/utils.py:36
+#: bookmarks/utils.py:37
 msgid "Friday"
 msgstr "周五"
 
-#: bookmarks/utils.py:37
+#: bookmarks/utils.py:38
 msgid "Saturday"
 msgstr "周六"
 
-#: bookmarks/utils.py:38
+#: bookmarks/utils.py:39
 msgid "Sunday"
 msgstr "周日"
 
-#: bookmarks/utils.py:81
+#: bookmarks/utils.py:83
 #, python-format
 msgid "%(count)s year ago"
 msgid_plural "%(count)s years ago"
 msgstr[0] "%(count)s 年前"
 msgstr[1] "%(count)s 年前"
 
-#: bookmarks/utils.py:85
+#: bookmarks/utils.py:87
 #, python-format
 msgid "%(count)s month ago"
 msgid_plural "%(count)s months ago"
 msgstr[0] "%(count)s 个月前"
 msgstr[1] "%(count)s 个月前"
 
-#: bookmarks/utils.py:89
+#: bookmarks/utils.py:91
 #, python-format
 msgid "%(count)s week ago"
 msgid_plural "%(count)s weeks ago"
 msgstr[0] "%(count)s 周前"
 msgstr[1] "%(count)s 周前"
 
-#: bookmarks/views/bookmarks.py:111
+#: bookmarks/views/bookmarks.py:145
 msgid "Archived bookmarks - Linkding"
 msgstr "已归档 - Linkding"
 
-#: bookmarks/views/bookmarks.py:144
+#: bookmarks/views/bookmarks.py:178
 msgid "Shared bookmarks - Linkding"
 msgstr "已分享 - Linkding"
 
-#: bookmarks/views/bookmarks.py:184
+#: bookmarks/views/bookmarks.py:218
 msgid "Trash - Linkding"
 msgstr "回收站 - Linkding"
 
-#: bookmarks/views/bookmarks.py:197
+#: bookmarks/views/bookmarks.py:233
 msgid "Bookmark details - Linkding"
 msgstr "书签详情 - Linkding"
 
-#: bookmarks/views/bookmarks.py:388 bookmarks/views/bookmarks.py:409
+#: bookmarks/views/bookmarks.py:439 bookmarks/views/bookmarks.py:460
 msgid "URL parameter is missing"
 msgstr "缺少 URL 参数"
 
-#: bookmarks/views/bookmarks.py:402
+#: bookmarks/views/bookmarks.py:453
 msgid "Failed to prefetch favicon"
 msgstr "预取 favicon 失败"
 
-#: bookmarks/views/bookmarks.py:422
+#: bookmarks/views/bookmarks.py:473
 #, python-format
 msgid "Failed to download image: %(error)s"
 msgstr "下载图片失败：%(error)s"
 
-#: bookmarks/views/bookmarks.py:433
+#: bookmarks/views/bookmarks.py:484
 msgid "Asset upload is disabled"
 msgstr "资源上传已禁用"
 
-#: bookmarks/views/bookmarks.py:438
+#: bookmarks/views/bookmarks.py:489
 msgid "No file provided"
 msgstr "未提供文件"
 
-#: bookmarks/views/bookmarks.py:499
+#: bookmarks/views/bookmarks.py:550
 msgid "View does not support bulk actions"
 msgstr "当前视图不支持批量操作"
 
-#: bookmarks/views/bookmarks.py:622
+#: bookmarks/views/bookmarks.py:673
 #, python-format
 msgid "Unable to load page content: %(error)s"
 msgstr "无法加载页面内容：%(error)s"
@@ -2063,491 +2050,502 @@ msgstr "无法加载页面内容：%(error)s"
 msgid "Bundle '%(bundle_name)s' removed successfully."
 msgstr "已成功删除过滤器“%(bundle_name)s”。"
 
-#: bookmarks/views/bundles.py:101
+#: bookmarks/views/bundles.py:103
 msgid "Bundle saved successfully."
 msgstr "过滤器已成功保存。"
 
-#: bookmarks/views/contexts.py:306
+#: bookmarks/views/contexts.py:341
 msgid "Since"
 msgstr "自"
 
-#: bookmarks/views/contexts.py:368
+#: bookmarks/views/contexts.py:405
 msgid "Days"
 msgstr "天"
 
-#: bookmarks/views/contexts.py:381
+#: bookmarks/views/contexts.py:416
 msgid "Heatmap"
 msgstr "热力图"
 
-#: bookmarks/views/contexts.py:392
+#: bookmarks/views/contexts.py:427
 msgid "Calendar"
 msgstr "日历图"
 
-#: bookmarks/views/contexts.py:713
+#: bookmarks/views/contexts.py:740
 #, python-format
 msgid "%(count)s bookmark - %(date)s"
 msgid_plural "%(count)s bookmarks - %(date)s"
 msgstr[0] "%(count)s 个书签 - %(date)s"
 msgstr[1] "%(count)s 个书签 - %(date)s"
 
-#: bookmarks/views/contexts.py:915
+#: bookmarks/views/contexts.py:930
 msgid "Reset date range"
 msgstr "重置日期范围"
 
-#: bookmarks/views/contexts.py:924
+#: bookmarks/views/contexts.py:939
 msgid "Go to current month"
 msgstr "转到本月"
 
-#: bookmarks/views/contexts.py:933
+#: bookmarks/views/contexts.py:950
 msgid "Go to current week"
 msgstr "转到本周"
 
-#: bookmarks/views/contexts.py:940
+#: bookmarks/views/contexts.py:959
 msgid "Sun"
 msgstr "日"
 
-#: bookmarks/views/contexts.py:941
+#: bookmarks/views/contexts.py:960
 msgid "Mon"
 msgstr "一"
 
-#: bookmarks/views/contexts.py:942
+#: bookmarks/views/contexts.py:961
 msgid "Tue"
 msgstr "二"
 
-#: bookmarks/views/contexts.py:943
+#: bookmarks/views/contexts.py:962
 msgid "Wed"
 msgstr "三"
 
-#: bookmarks/views/contexts.py:944
+#: bookmarks/views/contexts.py:963
 msgid "Thu"
 msgstr "四"
 
-#: bookmarks/views/contexts.py:945
+#: bookmarks/views/contexts.py:964
 msgid "Fri"
 msgstr "五"
 
-#: bookmarks/views/contexts.py:946
+#: bookmarks/views/contexts.py:965
 msgid "Sat"
 msgstr "六"
 
-#: bookmarks/views/contexts.py:953
+#: bookmarks/views/contexts.py:972
 msgid "Hide weekdays"
 msgstr "隐藏星期"
 
-#: bookmarks/views/contexts.py:953
+#: bookmarks/views/contexts.py:974
 msgid "Show weekdays"
 msgstr "显示星期"
 
-#: bookmarks/views/contexts.py:960
+#: bookmarks/views/contexts.py:980
 msgid "Hide summary"
 msgstr "隐藏总结"
 
-#: bookmarks/views/contexts.py:960
+#: bookmarks/views/contexts.py:980
 msgid "Show summary"
 msgstr "显示总结"
 
-#: bookmarks/views/contexts.py:1027
-msgid "Shown month"
-msgstr "当月"
-
-#: bookmarks/views/contexts.py:1030
-#, python-format
-msgid ""
-"%(period)s bookmarked %(bookmarks)s items, active on %(days)s days, longest "
-"streak %(streak)s days."
-msgstr "%(period)s收藏书签 %(bookmarks)s 个，共活跃 %(days)s 天，最高连续活跃 %(streak)s 天。"
-
-#: bookmarks/views/contexts.py:1010
+#: bookmarks/views/contexts.py:1033
 #, python-brace-format
 msgid "Selected range ({start} - {end}):"
 msgstr "所选周期（{start} - {end}）："
 
-#: bookmarks/views/contexts.py:1020
+#: bookmarks/views/contexts.py:1043
 #, python-brace-format
 msgid "This week ({start} - {end}):"
 msgstr "本周（{start} - {end}）："
 
-#: bookmarks/views/contexts.py:1021
+#: bookmarks/views/contexts.py:1045
 #, python-brace-format
 msgid "Shown week ({start} - {end}):"
 msgstr "当周（{start} - {end}）："
 
-#: bookmarks/views/contexts.py:1030
+#: bookmarks/views/contexts.py:1059
+#, python-brace-format
 msgid "This month ({start} - {end}):"
 msgstr "本月（{start} - {end}）："
 
-#: bookmarks/views/contexts.py:1030
+#: bookmarks/views/contexts.py:1061
+#, python-brace-format
 msgid "Shown month ({start} - {end}):"
 msgstr "当月（{start} - {end}）："
 
-#: bookmarks/views/contexts.py:1054
-#, python-format
-msgid "Bookmarked %(count)s item"
-msgid_plural "Bookmarked %(count)s items"
-msgstr[0] "收藏书签 %(count)s 个"
-msgstr[1] "收藏书签 %(count)s 个"
-
-#: bookmarks/views/contexts.py:1059
-#, python-format
-msgid "active on %(count)s day"
-msgid_plural "active on %(count)s days"
-msgstr[0] "共活跃 %(count)s 天"
-msgstr[1] "共活跃 %(count)s 天"
-
-#: bookmarks/views/contexts.py:1064
-#, python-format
-msgid "longest streak %(count)s day"
-msgid_plural "longest streak %(count)s days"
-msgstr[0] "最高连续活跃 %(count)s 天"
-msgstr[1] "最高连续活跃 %(count)s 天"
-
-#: bookmarks/views/contexts.py:1069
+#: bookmarks/views/contexts.py:1117 bookmarks/views/contexts.py:1132
 #, python-brace-format
 msgid "{bookmarks}, {days}, {streak}."
 msgstr "{bookmarks}，{days}，{streak}。"
 
-#: bookmarks/views/contexts.py:1074
+#: bookmarks/views/contexts.py:1122
 #, python-brace-format
 msgid "{lead} {copy}"
 msgstr "{lead}{copy}"
 
-#: bookmarks/views/contexts.py:1419
+#: bookmarks/views/contexts.py:1655
 msgid "Full mode"
 msgstr "完整模式"
 
-#: bookmarks/views/contexts.py:1419
+#: bookmarks/views/contexts.py:1655
 msgid "Icon mode"
 msgstr "图标模式"
 
-#: bookmarks/views/contexts.py:1426
+#: bookmarks/views/contexts.py:1659
 msgid "All domains"
 msgstr "全部域名"
 
-#: bookmarks/views/contexts.py:1426
+#: bookmarks/views/contexts.py:1659
 msgid "Only important domains"
 msgstr "仅重要域名"
 
-#: bookmarks/views/contexts.py:1533
+#: bookmarks/views/contexts.py:1765
 msgid "Other"
 msgstr "其他"
 
-#: bookmarks/views/settings.py:137
-msgid "Global settings updated"
-msgstr "全局设置已更新"
-
-#: bookmarks/views/settings.py:142
+#: bookmarks/views/settings.py:181
 msgid "Scheduled favicon update. This may take a while..."
 msgstr "已安排 favicon 更新任务，可能需要一些时间……"
 
-#: bookmarks/views/settings.py:151
+#: bookmarks/views/settings.py:190
 #, python-format
 msgid "Queued %(count)s missing snapshot. This may take a while..."
 msgid_plural "Queued %(count)s missing snapshots. This may take a while..."
 msgstr[0] "已将 %(count)s 个缺失快照加入队列，可能需要一些时间……"
 msgstr[1] "已将 %(count)s 个缺失快照加入队列，可能需要一些时间……"
 
-#: bookmarks/views/settings.py:159
+#: bookmarks/views/settings.py:200
 msgid "No missing snapshots found."
 msgstr "未发现缺失快照。"
 
-#: bookmarks/views/settings.py:172
-msgid "Profile updated"
-msgstr "个人资料已更新"
-
-#: bookmarks/views/settings.py:184
-msgid "Profile update failed, check the form below for errors"
-msgstr "个人资料更新失败，请检查下方表单中的错误"
-
-#: bookmarks/views/settings.py:252
+#: bookmarks/views/settings.py:257
 msgid "Settings update failed, check the form below for errors"
 msgstr "设置更新失败，请检查下方表单中的错误"
 
-#: bookmarks/templates/settings/general.html:176
-#: bookmarks/templates/settings/general.html:733
-#: bookmarks/templates/settings/general.html:780
-msgid "Restore draft"
-msgstr "恢复草稿"
+#: bookmarks/views/settings.py:274
+msgid "Global settings updated"
+msgstr "全局设置已更新"
 
-#: bookmarks/templates/settings/general.html:180
-#: bookmarks/templates/settings/general.html:750
-#: bookmarks/templates/settings/general.html:816
-msgid "Discard draft"
-msgstr "放弃草稿"
+#: bookmarks/views/settings.py:276
+msgid "Profile updated"
+msgstr "个人资料已更新"
 
-#: bookmarks/views/settings.py:270
+#: bookmarks/views/settings.py:442
+#, python-format
+msgid "API token \"%(token_name)s\" created successfully"
+msgstr "API Token “%(token_name)s” 创建成功"
+
+#: bookmarks/views/settings.py:494
+#, python-format
+msgid "API token \"%(token_name)s\" has been deleted."
+msgstr "API Token “%(token_name)s” 已删除。"
+
+#: bookmarks/views/settings.py:511
 msgid "Please select a file to import."
 msgstr "请选择要导入的文件。"
 
-#: bookmarks/views/settings.py:278
+#: bookmarks/views/settings.py:519
 #, python-format
 msgid "%(count)s bookmark was imported successfully."
 msgid_plural "%(count)s bookmarks were imported successfully."
 msgstr[0] "已成功导入 %(count)s 个书签。"
 msgstr[1] "已成功导入 %(count)s 个书签。"
 
-#: bookmarks/views/settings.py:285
+#: bookmarks/views/settings.py:526
 #, python-format
-msgid ""
-"%(count)s bookmark could not be imported. Please check the logs for more "
-"details."
-msgid_plural ""
-"%(count)s bookmarks could not be imported. Please check the logs for more "
-"details."
+msgid "%(count)s bookmark could not be imported. Please check the logs for more details."
+msgid_plural "%(count)s bookmarks could not be imported. Please check the logs for more details."
 msgstr[0] "有 %(count)s 个书签无法导入，请查看日志了解更多详情。"
 msgstr[1] "有 %(count)s 个书签无法导入，请查看日志了解更多详情。"
 
-#: bookmarks/views/settings.py:294
+#: bookmarks/views/settings.py:535
 msgid "An error occurred during bookmark import."
 msgstr "导入书签时发生错误。"
 
-#: bookmarks/views/settings.py:323
+#: bookmarks/views/settings.py:564
 msgid "An error occurred during bookmark export."
 msgstr "导出书签时发生错误。"
 
-#: bookmarks/views/tags.py:25
+#: bookmarks/views/tags.py:29
 #, python-format
 msgid "Tag \"%(tag_name)s\" deleted successfully."
 msgstr "标签“%(tag_name)s”已成功删除。"
 
-#: bookmarks/views/tags.py:84
+#: bookmarks/views/tags.py:83
 #, python-format
 msgid "Tag \"%(tag_name)s\" created successfully."
 msgstr "标签“%(tag_name)s”已成功创建。"
 
-#: bookmarks/views/tags.py:104
+#: bookmarks/views/tags.py:116
 #, python-format
 msgid "Tag \"%(tag_name)s\" updated successfully."
 msgstr "标签“%(tag_name)s”已成功更新。"
 
-#: bookmarks/views/tags.py:159
+#: bookmarks/views/tags.py:180
 #, python-format
-msgid ""
-"Successfully merged %(count)s tag (%(tag_names)s) into \"%(target_tag)s\"."
-msgid_plural ""
-"Successfully merged %(count)s tags (%(tag_names)s) into \"%(target_tag)s\"."
-msgstr[0] ""
-"已成功将 %(count)s 个标签（%(tag_names)s）合并到“%(target_tag)s”中。"
-msgstr[1] ""
-"已成功将 %(count)s 个标签（%(tag_names)s）合并到“%(target_tag)s”中。"
+msgid "Successfully merged %(count)s tag (%(tag_names)s) into \"%(target_tag)s\"."
+msgid_plural "Successfully merged %(count)s tags (%(tag_names)s) into \"%(target_tag)s\"."
+msgstr[0] "已成功将 %(count)s 个标签（%(tag_names)s）合并到“%(target_tag)s”中。"
+msgstr[1] "已成功将 %(count)s 个标签（%(tag_names)s）合并到“%(target_tag)s”中。"
 
-msgid "Access & Visitors"
-msgstr "访问 & 访客"
+#~ msgid "Registration complete - Linkding"
+#~ msgstr "注册完成 - Linkding"
 
-msgid "Adjust your personal preferences, sharing behavior, and bookmark list experience."
-msgstr "调整你的个人偏好、分享行为和书签列表体验。"
+#~ msgid "Registration complete"
+#~ msgstr "注册完成"
 
-msgid "Admin only"
-msgstr "仅管理员"
+#~ msgid "You can start using Linkding right away."
+#~ msgstr "您可即刻开始使用。"
 
-msgid "Aggregation mode"
-msgstr "聚合模式"
+#~ msgid "Register - Linkding"
+#~ msgstr "注册 - Linkding"
 
-msgid "Anonymous visitor profile"
-msgstr "匿名访客配置"
+#~ msgid "Register"
+#~ msgstr "注册"
 
-msgid "Auto tagging"
-msgstr "自动标签"
+#~ msgid "Email"
+#~ msgstr "邮箱"
 
-msgid "Bookmark sharing"
-msgstr "书签分享"
+#~ msgid "Confirm password"
+#~ msgstr "确认密码"
 
-msgid "Bookmarks per page"
-msgstr "每页书签数量"
+#~ msgid "Profile"
+#~ msgstr "个人资料"
 
-msgid "Collapse"
-msgstr "折叠"
+#~ msgid "Bookmark date format"
+#~ msgstr "书签日期格式"
 
-msgid "Create"
-msgstr "创建"
+#~ msgid "Bookmark description"
+#~ msgstr "书签描述"
 
-msgid "Current username"
-msgstr "当前用户名"
+#~ msgid "Bookmark description max lines"
+#~ msgstr "书签描述最大行数"
 
-msgid "Date format"
-msgstr "日期格式"
+#~ msgid "Show bookmark URL"
+#~ msgstr "显示书签 URL"
 
-msgid "Default page for visitors"
-msgstr "访客默认落地页"
+#~ msgid "Show notes permanently"
+#~ msgstr "永久显示笔记"
 
-msgid "Default sharing"
-msgstr "默认分享"
+#~ msgid "Bookmark actions"
+#~ msgstr "书签动作"
 
-msgid "Default unread"
-msgstr "默认未读"
+#~ msgid "Open bookmarks in"
+#~ msgstr "书签打开方式"
 
-msgid "Display actions"
-msgstr "显示动作"
+#~ msgid "Items per page"
+#~ msgstr "每页书签数量"
 
-msgid "Display Favicons"
-msgstr "显示 Favicons"
+#~ msgid "Sticky search bar"
+#~ msgstr "粘性搜索栏"
 
-msgid "Display preview images"
-msgstr "显示预览图"
+#~ msgid "Sticky pagination"
+#~ msgstr "粘性分页"
 
-msgid "Description max lines"
-msgstr "描述最大行数"
+#~ msgid "Keep the pagination controls pinned to the bottom while you scroll."
+#~ msgstr "滚动时将分页控件固定在底部。"
 
-msgid "Description style"
-msgstr "描述样式"
+#~ msgid "Sticky side panel"
+#~ msgstr "侧边栏跟随"
 
-msgid "Drag to reorder modules and toggle whether they are shown in the sidebar."
-msgstr "拖拽排序模块，并切换其是否在侧边栏显示。"
+#~ msgid "Keep the side panel visible while scrolling on wider screens."
+#~ msgstr "在较宽屏幕上滚动时保持侧边栏可见。"
 
-msgid "Enable HTML snapshots"
-msgstr "启用 HTML 快照"
+#~ msgid "This option is automatically disabled when the side panel is collapsed."
+#~ msgstr "当侧边栏折叠时，此选项会自动禁用。"
 
-msgid "Enable preview images"
-msgstr "启用预览图"
+#~ msgid "Collapse side panel"
+#~ msgstr "折叠侧边栏"
 
-msgid "Enabled actions"
-msgstr "启用动作"
+#~ msgid "Collapse the side panel by default to give the bookmark list more room."
+#~ msgstr "默认折叠侧边栏，为书签列表留出更多空间。"
 
-msgid "Expand"
-msgstr "展开"
+#~ msgid "Hide bundles"
+#~ msgstr "隐藏过滤器"
 
-msgid "Expand notes"
-msgstr "默认展开笔记"
+#~ msgid "Hide the bundles panel in the sidebar if you do not use bundles."
+#~ msgstr "如果你不使用过滤器，可在侧边栏中隐藏过滤器面板。"
 
-msgid "Export bookmarks"
-msgstr "导出书签"
+#~ msgid "Tag search"
+#~ msgstr "标签搜索"
 
-msgid "Import & Export"
-msgstr "导入 & 导出"
+#~ msgid "Tag grouping"
+#~ msgstr "标签聚合"
 
-msgid "Import bookmarks"
-msgstr "导入书签"
+#~ msgid "Enable the Tags module in Sidebar modules to configure this setting."
+#~ msgstr "请先在“侧边栏模块”中启用“标签”模块，再配置此设置。"
 
-msgid "Interface"
-msgstr "界面"
+#~ msgid "Auto Tagging"
+#~ msgstr "自动标签"
 
-msgid "Keep pagination controls pinned to the bottom while you scroll."
-msgstr "滚动时将分页控件固定在底部。"
+#~ msgid "Enable Favicons"
+#~ msgstr "启用 Favicons"
 
-msgid "Keep the sidebar visible while scrolling on wider screens."
-msgstr "在较宽屏幕上滚动时保持侧边栏可见。"
+#~ msgid "Enable Preview Images"
+#~ msgstr "启用预览图"
 
-msgid "Module configuration"
-msgstr "模块配置"
+#~ msgid "Internet Archive integration"
+#~ msgstr "Internet Archive 集成"
 
-msgid "Open mode"
-msgstr "打开方式"
+#~ msgid "Enable bookmark sharing"
+#~ msgstr "启用书签分享"
 
-msgid "Paginator follows"
-msgstr "分页器跟随"
+#~ msgid "Enable public bookmark sharing"
+#~ msgstr "启用公开书签分享"
 
-msgid "Prefetch internal links"
-msgstr "预读取内部链接"
+#~ msgid "Automatically create HTML snapshots"
+#~ msgstr "自动创建 HTML 快照"
 
-msgid "Prefetch internal links on hover"
-msgstr "鼠标悬浮预读取链接"
+#~ msgid "Create bookmarks as unread by default"
+#~ msgstr "默认将新书签标记为未读"
 
-msgid "Refresh"
-msgstr "刷新"
+#~ msgid "Create bookmarks as shared by default"
+#~ msgstr "默认将新书签标记为已分享"
 
-msgid "Search bar follows"
-msgstr "搜索栏跟随"
+#~ msgid "Global settings"
+#~ msgstr "全局设置"
 
-msgid "Search mode"
-msgstr "搜索模式"
+#~ msgid "Landing page"
+#~ msgstr "默认首页"
 
-msgid "Compatibility search mode"
-msgstr "兼容搜索模式"
+#~ msgid "Guest user profile"
+#~ msgstr "访客用户配置"
 
-msgid "Compatibility mode"
-msgstr "兼容模式"
+#~ msgid "Enable hover prefetching for internal links"
+#~ msgstr "启用内部链接悬停预取"
 
-msgid "Tag search mode"
-msgstr "标签搜索模式"
+#~ msgid "Import"
+#~ msgstr "导入"
 
-msgid "Tag aggregation mode"
-msgstr "标签聚合模式"
+#~ msgid "Export"
+#~ msgstr "导出"
 
-msgid "Sharing"
-msgstr "分享"
+#~ msgid "The following token can be used to authenticate third-party applications against the REST API:"
+#~ msgstr "下方令牌（token）可用于第三方应用通过 REST API 进行身份验证："
 
-msgid "Show URL"
-msgstr "显示 URL"
+#~ msgid "Please treat this token as you would any other credential."
+#~ msgstr "请像保管其他凭据一样妥善保管该令牌。"
 
-msgid "Show sidebar by default (desktop)"
-msgstr "默认显示侧边栏（桌面）"
+#~ msgid "Any party with access to this token can access and manage all your bookmarks."
+#~ msgstr "任何持有该令牌的人都可以访问并管理你的全部书签。"
 
-msgid "Show sidebar"
-msgstr "显示侧边栏"
+#~ msgid "If you think the token was compromised, you can revoke it in the"
+#~ msgstr "如果你认为该令牌可能已经泄露，可以在"
 
-msgid "Sidebar"
-msgstr "侧边栏"
+#~ msgid "After deleting the token, reload this page to generate a new one."
+#~ msgstr "删除令牌后，刷新本页即可生成新的令牌。"
 
-msgid "Sidebar follows"
-msgstr "侧边栏跟随"
+#~ msgid "The following URLs provide RSS feeds for your bookmarks:"
+#~ msgstr "下述链接提供你的书签 RSS 订阅："
 
-msgid "Sidebar modules"
-msgstr "侧边栏模块"
+#~ msgid "All URLs support the following URL parameters:"
+#~ msgstr "所有链接都支持以下 URL 参数："
 
-msgid "HTML snapshots"
-msgstr "HTML 快照"
+#~ msgid "Please note that these URLs include an authentication token and should be handled like any other credential."
+#~ msgstr "请注意，这些链接包含认证令牌，应像其他凭据一样妥善保管。"
 
-msgid "This instance does not currently support HTML snapshots."
-msgstr "当前实例暂不支持 HTML 快照。"
+#~ msgid "Anyone with access to these URLs can read all your bookmarks."
+#~ msgstr "任何持有这些链接的人都可以读取你的全部书签。"
 
-msgid "This version replaces the search engine with a new implementation that supports logical operators (and, or, not). If you run into any issues with the new search, you can switch back to the old one by enabling legacy search in the settings."
-msgstr "此版本将搜索引擎替换为支持逻辑运算符（and、or、not）的新实现。如果你在新搜索中遇到问题，可在设置中启用搜索的 兼容模式 切回旧版。"
+#~ msgid "If you think a feed URL was compromised, delete the feed token in the"
+#~ msgstr "如果你认为订阅链接可能已经泄露，请在"
 
-msgid "Turn this off to collapse the side panel by default and give the bookmark list more room."
-msgstr "关闭后将默认折叠侧边栏，为书签列表腾出更多空间。"
+#~ msgid "After deleting the token, reload this page to generate new feed URLs."
+#~ msgstr "删除令牌后，刷新本页即可生成新的订阅链接。"
 
-msgid "Enable the old search behavior if the new logical search syntax causes unexpected results."
-msgstr "如果新的逻辑搜索语法出现不符合预期的结果，可启用旧版搜索行为。"
+#~ msgid "The browser extension lets you quickly add the current page as a bookmark. It is available from the official stores for:"
+#~ msgstr "浏览器扩展可以帮你快速将当前页面添加为书签。它可从以下官方扩展商店获取："
 
-msgid "Use a separate flow to change your account password."
-msgstr "通过单独的流程修改你的账户密码。"
+#~ msgid "The bookmarklet is another cross-browser way to quickly add the current page as a bookmark:"
+#~ msgstr "书签小程序是另一种跨浏览器快速添加当前页面为书签的方式："
 
-msgid "Your current account name for login and ownership display."
-msgstr "你当前用于登录和显示归属的账户名称。"
+#~ msgid "Drag the bookmarklet below to your browser toolbar or bookmarks bar."
+#~ msgstr "将下面的书签小程序拖拽到浏览器工具栏或书签栏。"
 
-msgid "Invalid sidebar configuration."
-msgstr "无效的侧边栏配置。"
+#~ msgid "Open the page you want to bookmark."
+#~ msgstr "打开你想添加为书签的页面。"
 
-msgid "Login page"
-msgstr "登录页"
+#~ msgid "Click the bookmarklet from your browser toolbar."
+#~ msgstr "点击浏览器工具栏中的书签小程序。"
 
-msgid "Private sharing"
-msgstr "私密分享"
+#~ msgid "Linkding opens a new bookmark page in a window or tab."
+#~ msgstr "Linkding 会在新窗口或标签页中打开新增书签页面。"
 
-msgid "Public sharing"
-msgstr "公开分享"
+#~ msgid "After saving, Linkding automatically closes the helper window and returns you to the page."
+#~ msgstr "保存后，Linkding 会自动关闭辅助窗口，并将你带回原页面。"
 
-msgid "Shared page"
-msgstr "分享页"
+#~ msgid "Drag this bookmarklet to your toolbar:"
+#~ msgstr "将这个书签小程序拖拽到工具栏："
 
-msgid "User summary"
-msgstr "用户数据"
+#~ msgid "Copied!"
+#~ msgstr "已复制！"
 
-msgid "Choose file"
-msgstr "选择文件"
+#~ msgid "This feed does not include an authentication token and only shows bookmarks shared by users who explicitly enabled public sharing."
+#~ msgstr "此订阅源不含认证令牌，只显示明确启用公开分享的用户所分享的书签。"
 
-msgid "No file chosen"
-msgstr "未选择文件"
+#~ msgid "Shown month"
+#~ msgstr "当月"
 
-#~ msgid "Shared by"
-#~ msgstr "分享者"
+#, python-format
+#~ msgid "%(period)s bookmarked %(bookmarks)s items, active on %(days)s days, longest streak %(streak)s days."
+#~ msgstr "%(period)s收藏书签 %(bookmarks)s 个，共活跃 %(days)s 天，最高连续活跃 %(streak)s 天。"
 
-#~ msgid "Mark as read?"
-#~ msgstr "标记为已读？"
+#, python-format
+#~ msgid "Bookmarked %(count)s item"
+#~ msgid_plural "Bookmarked %(count)s items"
+#~ msgstr[0] "收藏书签 %(count)s 个"
+#~ msgstr[1] "收藏书签 %(count)s 个"
 
-#~ msgid "Unshare?"
-#~ msgstr "取消分享？"
+#, python-format
+#~ msgid "active on %(count)s day"
+#~ msgid_plural "active on %(count)s days"
+#~ msgstr[0] "共活跃 %(count)s 天"
+#~ msgstr[1] "共活跃 %(count)s 天"
+
+#, python-format
+#~ msgid "longest streak %(count)s day"
+#~ msgid_plural "longest streak %(count)s days"
+#~ msgstr[0] "最高连续活跃 %(count)s 天"
+#~ msgstr[1] "最高连续活跃 %(count)s 天"
+
+#~ msgid "Profile update failed, check the form below for errors"
+#~ msgstr "个人资料更新失败，请检查下方表单中的错误"
+
+#~ msgid "Access & Visitors"
+#~ msgstr "访问 & 访客"
+
+#~ msgid "Adjust your personal preferences, sharing behavior, and bookmark list experience."
+#~ msgstr "调整你的个人偏好、分享行为和书签列表体验。"
+
+#~ msgid "Admin only"
+#~ msgstr "仅管理员"
+
+#~ msgid "Aggregation mode"
+#~ msgstr "聚合模式"
+
+#~ msgid "Current username"
+#~ msgstr "当前用户名"
+
+#~ msgid "Enable HTML snapshots"
+#~ msgstr "启用 HTML 快照"
+
+#~ msgid "Enable preview images"
+#~ msgstr "启用预览图"
+
+#~ msgid "Enabled actions"
+#~ msgstr "启用动作"
+
+#~ msgid "Module configuration"
+#~ msgstr "模块配置"
+
+#~ msgid "Prefetch internal links on hover"
+#~ msgstr "鼠标悬浮预读取链接"
+
+#~ msgid "Search mode"
+#~ msgstr "搜索模式"
+
+#~ msgid "Compatibility search mode"
+#~ msgstr "兼容搜索模式"
+
+#~ msgid "Show sidebar by default (desktop)"
+#~ msgstr "默认显示侧边栏（桌面）"
+
+#~ msgid "Use a separate flow to change your account password."
+#~ msgstr "通过单独的流程修改你的账户密码。"
+
+#~ msgid "Your current account name for login and ownership display."
+#~ msgstr "你当前用于登录和显示归属的账户名称。"
+
+#~ msgid "No file chosen"
+#~ msgstr "未选择文件"
 
 #~ msgid "Bulk edit"
 #~ msgstr "批量编辑"
-
-#~ msgid "You can now close this window."
-#~ msgstr "你现在可以关闭这个窗口。"
-
-#~ msgid "Navigation menu"
-#~ msgstr "导航菜单"
-
-#~ msgid "Random sort"
-#~ msgstr "随机排序"
 
 #~ msgid "Reader view"
 #~ msgstr "阅读视图"

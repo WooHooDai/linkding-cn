@@ -12,7 +12,7 @@
       shared="{{ search.shared }}"
       unread="{{ search.unread }}"
     ></ld-search-autocomplete>
-    <input type="submit" value="Search" class="d-none">
+    <input type="submit" value="{% translate 'Search' %}" class="d-none">
     {% for hidden_field in search_form.hidden_fields %}
       {{ hidden_field }}
     {% endfor %}

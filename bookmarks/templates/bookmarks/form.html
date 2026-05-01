@@ -65,7 +65,7 @@
     <details class="description"{% if form.description.value %} open{% endif %}>
       <summary>
         <span class="form-label d-inline-block">{% translate "Description" %}</span>
-        <ld-clear-button data-for="{{ form.description.id_for_label }}">
+        <ld-clear-button class="clear-button" data-for="{{ form.description.id_for_label }}">
           <button class="btn btn-link suffix-button" type="button">{% translate "Clear" %}</button>
         </ld-clear-button>
       </summary>
@@ -339,7 +339,7 @@
             if (autoTags.length > 0) {
               autoTags.sort();
               autoTagsHint.style['display'] = 'block';
-              autoTagsHint.innerHTML = `Auto tags: ${autoTags.join(" ")}`;
+              autoTagsHint.innerHTML = `{% translate 'Auto tags:' %} ${autoTags.join(" ")}`;
             } else {
               autoTagsHint.style['display'] = 'none';
             }

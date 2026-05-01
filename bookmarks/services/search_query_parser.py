@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
 
+from django.utils.translation import gettext_lazy as _
+
 from bookmarks.models import UserProfile
 
 
@@ -196,7 +198,7 @@ class SearchQueryTokenizer:
                 content = self.read_parenthesized_content()
                 if content is None:
                     raise SearchQueryParseError(
-                        "Expected RPAREN, got EOF", self.position
+                        str(_("Expected RPAREN, got EOF")), self.position
                     )
 
                 return (field_name, content)
@@ -307,7 +309,7 @@ class SearchQueryParseError(Exception):
     def __init__(self, message: str, position: int):
         self.message = message
         self.position = position
-        super().__init__(f"{message} at position {position}")
+        super().__init__("%(message)s at position %(position)d" % {"message": message, "position": position})
 
 
 class SearchQueryParser:
@@ -330,7 +332,7 @@ class SearchQueryParser:
             return token
         else:
             raise SearchQueryParseError(
-                f"Expected {expected_type.value}, got {self.current_token.type.value}",
+                str(_("Expected %(expected)s, got %(actual)s") % {"expected": expected_type.value, "actual": self.current_token.type.value}),
                 self.current_token.position,
             )
 
@@ -345,7 +347,7 @@ class SearchQueryParser:
 
         if self.current_token.type != TokenType.EOF:
             raise SearchQueryParseError(
-                f"Unexpected token {self.current_token.type.value}",
+                str(_("Unexpected token %(token)s") % {"token": self.current_token.type.value}),
                 self.current_token.position,
             )
 

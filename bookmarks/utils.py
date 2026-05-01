@@ -28,15 +28,17 @@ def unique(elements, key):
     return list({key(element): element for element in elements}.values())
 
 
-weekday_names = {
-    1: _("Monday"),
-    2: _("Tuesday"),
-    3: _("Wednesday"),
-    4: _("Thursday"),
-    5: _("Friday"),
-    6: _("Saturday"),
-    7: _("Sunday"),
-}
+def _weekday_name(isoweekday: int) -> str:
+    names = {
+        1: _("Monday"),
+        2: _("Tuesday"),
+        3: _("Wednesday"),
+        4: _("Thursday"),
+        5: _("Friday"),
+        6: _("Saturday"),
+        7: _("Sunday"),
+    }
+    return names[isoweekday]
 
 
 def _localize_datetime(value: datetime.datetime) -> datetime.datetime:
@@ -65,7 +67,7 @@ def humanize_absolute_date(
     elif value_local.date() == yesterday.date():
         return _("Yesterday")
     else:
-        return weekday_names[value_local.isoweekday()]
+        return _weekday_name(value_local.isoweekday())
 
 
 def humanize_relative_date(
@@ -96,7 +98,7 @@ def humanize_relative_date(
         elif value_local.date() == yesterday.date():
             return _("Yesterday")
         else:
-            return weekday_names[value_local.isoweekday()]
+            return _weekday_name(value_local.isoweekday())
 
 
 def humanize_absolute_date_short(

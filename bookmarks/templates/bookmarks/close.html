@@ -1,9 +1,10 @@
 {% extends "bookmarks/layout.html" %}
+{% load i18n %}
 
 {% block content %}
   <script type="application/javascript">
     window.close()
   </script>
-  <p>You can now close this window.</p>
+  <p>{% translate "You can now close this window." %}</p>
 {% endblock %}
 
