@@ -1543,7 +1543,13 @@ ul.bookmark-list {
 
 
 .side-panel {
-  max-height: 80vh;
+  max-height: 100vh;
+  &.paginate-sticky {
+    max-height: 85vh;
+    &.sticky {
+      max-height: calc(100vh - var(--unit-4) - 41px);
+    }
+  }
   &.sticky {
     position: fixed;
     top: 0;
