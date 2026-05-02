@@ -1950,6 +1950,13 @@ class TrashedBookmarkListContext(BookmarkListContext):
 class TrashedTagCloudContext(TagCloudContext):
     request_context = TrashedBookmarksContext
 
+    def get_selected_tags(self):
+        return list(
+            queries.get_tags_for_query(
+                self.request.user, self.request.user_profile, self.search.q
+            )
+        )
+
 
 class TrashedDomainsContext(DomainsContext):
     request_context = TrashedBookmarksContext
