@@ -1026,3 +1026,186 @@
     }
   }
 }
+
+/* Integrations page */
+.settings-page.settings-integrations-page {
+  & .settings-content {
+    gap: var(--unit-5);
+  }
+
+  & .settings-section {
+    gap: var(--unit-2);
+  }
+
+  & .settings-section-heading .form-input-hint {
+    line-height: 1.35;
+    margin-top: 0;
+  }
+
+  & .settings-section-heading .form-input-hint + .form-input-hint {
+    margin-top: var(--unit-1);
+  }
+
+  & .settings-warning-card {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    gap: var(--unit-2);
+    padding: 0;
+  }
+
+  & .settings-warning-title {
+    color: var(--warning-color);
+    font-weight: 700;
+    margin: 0;
+  }
+
+  & .settings-warning-copy {
+    margin: 0;
+    color: var(--text-color);
+  }
+
+  & .settings-token-card {
+    gap: var(--unit-2);
+  }
+
+  & .settings-token-preview {
+    display: grid;
+    gap: var(--unit-2);
+
+    & p {
+      margin: 0;
+    }
+
+    & .input-group {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    & .form-input {
+      height: var(--settings-button-height);
+      min-height: var(--settings-button-height);
+      padding: var(--control-padding-y-sm) var(--control-padding-x-sm);
+    }
+
+    & .input-group-btn {
+      height: var(--settings-button-height);
+      min-height: var(--settings-button-height);
+    }
+  }
+
+  & .settings-plain-block {
+    display: grid;
+    gap: var(--unit-1);
+  }
+
+  & .settings-api-actions {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    width: 100%;
+
+    & .btn {
+      height: 32px;
+      min-height: 32px;
+    }
+  }
+
+  & .settings-link-list,
+  & .settings-params-list {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: var(--unit-1);
+    list-style-position: outside;
+
+    & li {
+      color: var(--text-color);
+    }
+  }
+
+  & .settings-help-popover ul,
+  & .settings-help-popover ol {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: var(--unit-1);
+    list-style-position: outside;
+  }
+
+  & .settings-bookmarklet-choice {
+    display: grid;
+    gap: var(--unit-2);
+  }
+
+  & .settings-bookmarklet-selector {
+    display: inline-grid;
+    gap: var(--unit-1);
+    justify-items: start;
+    max-width: 100%;
+  }
+
+  & .settings-bookmarklet-drag {
+    display: grid;
+    gap: var(--unit-1);
+    align-items: start;
+  }
+
+  & .settings-bookmarklet-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--unit-2);
+    width: fit-content;
+    max-width: 100%;
+    height: 32px;
+    min-height: 32px;
+    padding: 0 var(--unit-4);
+    border: var(--border-width) solid var(--settings-surface-border);
+    border-radius: calc(var(--border-radius) * 2);
+    background: var(--settings-surface-bg);
+    color: var(--text-color);
+    text-decoration: none;
+    box-shadow: var(--box-shadow-xs);
+    transition:
+      border-color 0.2s ease,
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      background 0.2s ease;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration: none;
+      border-color: color-mix(in srgb, var(--primary-color) 40%, var(--settings-surface-border));
+      box-shadow: var(--box-shadow);
+      transform: translateY(-1px);
+    }
+  }
+
+  & .settings-feed-link {
+    word-break: break-all;
+  }
+
+  & .settings-token-table .actions {
+    width: 280px;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    text-align: right;
+    white-space: nowrap;
+
+    & form {
+      display: inline-flex;
+      justify-content: flex-end;
+      min-width: 260px;
+      overflow: visible;
+    }
+
+    & .confirmation {
+      display: inline-flex;
+      justify-content: flex-end;
+      gap: var(--unit-1);
+      width: 100%;
+    }
+  }
+}

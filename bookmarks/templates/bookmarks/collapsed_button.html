@@ -6,33 +6,3 @@
   </svg>
 </button>
 {% endwith %}
-<style>
-.folder-toggle, .section-toggle {
-  background: none;
-  border: none;
-  padding: 0 4px;
-  margin-left: 4px;
-  cursor: pointer;
-  vertical-align: middle;
-  display: inline-flex;
-  align-items: center;
-  transition: color 0.2s;
-  color: #888;
-}
-.folder-toggle:hover, .folder-toggle:focus,
-.section-toggle:hover, .section-toggle:focus {
-  color: #333;
-  outline: none;
-}
-.folder-toggle .icon, .section-toggle .icon {
-  transition: transform 0.2s;
-}
-.folder-toggle[aria-expanded="false"] .icon,
-.section-toggle[aria-expanded="false"] .icon {
-  transform: rotate(-90deg);
-}
-.folder-toggle[aria-expanded="true"] .icon,
-.section-toggle[aria-expanded="true"] .icon {
-  transform: rotate(0deg);
-}
-</style> 
