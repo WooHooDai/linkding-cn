@@ -856,7 +856,7 @@ class SettingsPageBehavior extends Behavior {
     );
 
     this.setRowVisibility(row, visible);
-    this.setRowVisibility(modulesRow, visible);
+    this.setRowVisibility(modulesRow, true);
     // Keep the stored "Sidebar follows" value unchanged when the sidebar is hidden.
     if (input) {
       input.disabled = false;
@@ -870,11 +870,6 @@ class SettingsPageBehavior extends Behavior {
             control.disabled = !visible;
           }
         });
-
-      const panelToggle = modulesRow.querySelector("[data-settings-panel-toggle]");
-      if (panelToggle instanceof HTMLButtonElement) {
-        panelToggle.disabled = !visible;
-      }
     }
 
     this.setRowVisibility(tagGroupingRow, visible && tagsModuleEnabled);
