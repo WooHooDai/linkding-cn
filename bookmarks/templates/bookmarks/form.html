@@ -386,6 +386,18 @@
 
       refreshButton.addEventListener('click', refreshMetadata);
 
+      // Extract URL from pasted text
+      urlInput.addEventListener('paste', function(e) {
+        const text = (e.clipboardData || window.clipboardData).getData('text');
+        if (!text) return;
+        const match = text.match(/https?:\/\/[^\s<>\]\)\"\']+/);
+        if (match && match[0] !== text.trim()) {
+          e.preventDefault();
+          urlInput.value = match[0];
+          urlInput.dispatchEvent(new Event('input'));
+        }
+      });
+
       // Fetch website metadata when page loads and when URL changes, unless we are editing an existing bookmark
       if (!editedBookmarkId) {
         checkUrl();

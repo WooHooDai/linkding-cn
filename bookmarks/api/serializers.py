@@ -14,7 +14,8 @@ from bookmarks.models import (
 from bookmarks.services import bookmarks, bundles, tasks, website_loader
 from bookmarks.services.tags import get_or_create_tag
 from bookmarks.services.wayback import generate_fallback_webarchive_url
-from bookmarks.utils import app_version
+from bookmarks.utils import app_version, extract_url
+from bookmarks.validators import BookmarkURLValidator
 
 
 class TagListField(serializers.ListField):
@@ -97,6 +98,8 @@ class BookmarkSerializer(serializers.ModelSerializer):
         ]
         list_serializer_class = BookmarkListSerializer
 
+    # Override model field to remove BookmarkURLValidator — validation runs after extract_url in validate_url()
+    url = serializers.CharField(max_length=2048)
     # Custom tag_names field to allow passing a list of tag names to create/update
     tag_names = TagListField(required=False)
     # Custom fields to generate URLs for favicon, preview image, and web archive snapshot
@@ -167,6 +170,11 @@ class BookmarkSerializer(serializers.ModelSerializer):
                 setattr(instance, field_name, validated_data[field_name])
 
         return bookmarks.update_bookmark(instance, tag_string, self.context["user"])
+
+    def validate_url(self, value):
+        value = extract_url(value)
+        BookmarkURLValidator()(value)
+        return value
 
     def validate(self, attrs):
         # When creating a bookmark, the service logic prevents duplicate URLs by

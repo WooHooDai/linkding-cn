@@ -330,6 +330,15 @@ def parse_relative_date_string(date_filter_relative_string):
     return None, None
 
 
+_URL_RE = re.compile(r'https?://[^\s<>\]\)\"\']+')
+
+def extract_url(text: str) -> str:
+    if not text or not isinstance(text, str):
+        return text
+    match = _URL_RE.search(text)
+    return match.group(0) if match else text
+
+
 def normalize_url(url: str) -> str:
     if not url or not isinstance(url, str):
         return ""

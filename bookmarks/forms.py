@@ -15,6 +15,7 @@ from bookmarks.models import (
 )
 from bookmarks.services.bookmarks import create_bookmark, update_bookmark
 from bookmarks.type_defs import HttpRequest
+from bookmarks.utils import extract_url
 from bookmarks.validators import BookmarkURLValidator
 
 
@@ -103,7 +104,8 @@ class BookmarkForm(forms.ModelForm):
         # the form's UI. When editing a bookmark, there is no assumption that
         # it would update a different bookmark if the URL is a duplicate, so
         # raise a validation error in that case.
-        url = self.cleaned_data["url"]
+        url = extract_url(self.cleaned_data["url"])
+        self.cleaned_data["url"] = url
         if self.instance.pk:
             is_duplicate = (
                 Bookmark.query_existing(self.instance.owner, url)
