@@ -137,9 +137,12 @@ def _import_batch(
     tag_cache: TagCache,
     result: ImportResult,
 ):
-    # Query existing bookmarks
+    # Query existing bookmarks using normalized URLs for deduplication
     batch_urls = [bookmark.href for bookmark in netscape_bookmarks]
-    existing_bookmarks = Bookmark.objects.filter(owner=user, url__in=batch_urls)
+    batch_normalized_urls = [normalize_url(url) for url in batch_urls]
+    existing_bookmarks = Bookmark.objects.filter(
+        owner=user, url_normalized__in=batch_normalized_urls
+    )
 
     # Create or update bookmarks from parsed Netscape bookmarks
     bookmarks_to_create = []
@@ -148,12 +151,13 @@ def _import_batch(
     for netscape_bookmark in netscape_bookmarks:
         result.total = result.total + 1
         try:
-            # Lookup existing bookmark by URL, or create new bookmark if there is no bookmark for that URL yet
+            # Lookup existing bookmark by normalized URL
+            normalized_url = normalize_url(netscape_bookmark.href)
             bookmark = next(
                 (
                     bookmark
                     for bookmark in existing_bookmarks
-                    if bookmark.url == netscape_bookmark.href
+                    if bookmark.url_normalized == normalized_url
                 ),
                 None,
             )
@@ -201,18 +205,21 @@ def _import_batch(
     # Bulk assign tags
     # In Django 3, bulk_create does not return the auto-generated IDs when bulk inserting,
     # so we have to reload the inserted bookmarks, and match them to the parsed bookmarks by URL
-    existing_bookmarks = Bookmark.objects.filter(owner=user, url__in=batch_urls)
+    existing_bookmarks = Bookmark.objects.filter(
+        owner=user, url_normalized__in=batch_normalized_urls
+    )
 
     BookmarkToTagRelationShip = Bookmark.tags.through
     relationships = []
 
     for netscape_bookmark in netscape_bookmarks:
-        # Lookup bookmark by URL again
+        # Lookup bookmark by normalized URL again
+        normalized_url = normalize_url(netscape_bookmark.href)
         bookmark = next(
             (
                 bookmark
                 for bookmark in existing_bookmarks
-                if bookmark.url == netscape_bookmark.href
+                if bookmark.url_normalized == normalized_url
             ),
             None,
         )

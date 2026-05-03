@@ -138,7 +138,15 @@ class BookmarkFactoryMixin:
 
         for i in range(1, count + 1):
             title = f"{prefix} {i}{suffix}"
-            url = f"https://example.com/{prefix}/{i}"
+            url_suffix_parts = []
+            if archived:
+                url_suffix_parts.append("archived")
+            if unread:
+                url_suffix_parts.append("unread")
+            if shared:
+                url_suffix_parts.append("shared")
+            url_suffix = "/" + "/".join(url_suffix_parts) if url_suffix_parts else ""
+            url = f"https://example.com/{prefix}/{i}{url_suffix}"
             tags = []
             if with_tags:
                 tag_name = f"{tag_prefix} {i}{suffix}"

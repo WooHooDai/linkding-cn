@@ -1,10 +1,12 @@
 import logging
 
+from django.db import transaction
 from django.utils import timezone
 
 from bookmarks.models import Bookmark, BookmarkAsset, User, parse_tag_string
 from bookmarks.services import auto_tagging, tasks, website_loader
 from bookmarks.services.tags import get_or_create_tags
+from bookmarks.utils import normalize_url
 
 logger = logging.getLogger(__name__)
 
@@ -16,25 +18,41 @@ def create_bookmark(
     disable_html_snapshot: bool = False,
     schedule_metadata_enrichment: bool = False,
 ):
-    # If URL is already bookmarked, then update it
-    existing_bookmark: Bookmark = Bookmark.query_existing(
-        current_user, bookmark.url
-    ).first()
+    from django.db.models import Q
 
-    if existing_bookmark is not None:
-        _merge_bookmark_data(bookmark, existing_bookmark)
-        return update_bookmark(existing_bookmark, tag_string, current_user)
+    # Use transaction and select_for_update to prevent TOCTOU race condition
+    with transaction.atomic():
+        normalized_url = normalize_url(bookmark.url)
+        # Lock the row if it exists, preventing concurrent creates for the same URL
+        # Fall back to exact URL match if normalized URL is empty (for legacy data)
+        existing_bookmark: Bookmark = (
+            Bookmark.objects.select_for_update()
+            .filter(
+                Q(owner=current_user)
+                & (
+                    Q(url_normalized=normalized_url)
+                    | Q(url_normalized="", url=bookmark.url)
+                )
+            )
+            .first()
+        )
 
-    # Set currently logged in user as owner
-    bookmark.owner = current_user
-    if not bookmark.date_added:
-        bookmark.date_added = timezone.now()
-    if not bookmark.date_modified:
-        bookmark.date_modified = timezone.now()
-    bookmark.save()
-    # Update tag list
-    _update_bookmark_tags(bookmark, tag_string, current_user)
-    bookmark.save()
+        if existing_bookmark is not None:
+            _merge_bookmark_data(bookmark, existing_bookmark)
+            return update_bookmark(existing_bookmark, tag_string, current_user)
+
+        # Set currently logged in user as owner
+        bookmark.owner = current_user
+        if not bookmark.date_added:
+            bookmark.date_added = timezone.now()
+        if not bookmark.date_modified:
+            bookmark.date_modified = timezone.now()
+        bookmark.save()
+        # Update tag list
+        _update_bookmark_tags(bookmark, tag_string, current_user)
+        bookmark.save()
+
+    # Tasks that don't need to be in the transaction
     # Create snapshot on web archive
     tasks.create_web_archive_snapshot(current_user, bookmark, False)
     # Load favicon and let task logic decide whether to reuse cached state

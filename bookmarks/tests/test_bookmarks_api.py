@@ -128,8 +128,8 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
 
     def test_list_bookmarks_filter_unread(self):
         self.authenticate()
-        unread_bookmarks = self.setup_numbered_bookmarks(5, unread=True)
-        read_bookmarks = self.setup_numbered_bookmarks(5, unread=False)
+        unread_bookmarks = self.setup_numbered_bookmarks(5, prefix="Unread Bookmark", unread=True)
+        read_bookmarks = self.setup_numbered_bookmarks(5, prefix="Read Bookmark", unread=False)
 
         # Filter off
         response = self.get(

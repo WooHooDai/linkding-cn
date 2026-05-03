@@ -56,7 +56,7 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
             self.setup_bookmark(description=random_sentence(including_word="tag1")),
         ]
         self.term1_tag1_bookmarks = [
-            self.setup_bookmark(url="http://example.com/term1", tags=[tag1]),
+            self.setup_bookmark(url="http://example.com/term1+t1", tags=[tag1]),
             self.setup_bookmark(
                 title=random_sentence(including_word="term1"), tags=[tag1]
             ),
@@ -135,7 +135,7 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         ]
         self.term1_tag1_bookmarks = [
             self.setup_bookmark(
-                url="http://example.com/term1", tags=[tag1, self.setup_tag()]
+                url="http://example.com/term1+t1", tags=[tag1, self.setup_tag()]
             ),
             self.setup_bookmark(
                 title=random_sentence(including_word="term1"),
@@ -1211,18 +1211,18 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
             self.setup_bookmark(title="A_1_2"),
             self.setup_bookmark(title="b_1_1"),
             self.setup_bookmark(title="B_1_2"),
-            self.setup_bookmark(title="", url="a_3_1"),
-            self.setup_bookmark(title="", url="A_3_2"),
-            self.setup_bookmark(title="", url="b_3_1"),
-            self.setup_bookmark(title="", url="B_3_2"),
-            self.setup_bookmark(title="a_5_1", url="0"),
-            self.setup_bookmark(title="A_5_2", url="0"),
-            self.setup_bookmark(title="b_5_1", url="0"),
-            self.setup_bookmark(title="B_5_2", url="0"),
-            self.setup_bookmark(title="", url="0"),
-            self.setup_bookmark(title="", url="0"),
-            self.setup_bookmark(title="", url="0"),
-            self.setup_bookmark(title="", url="0"),
+            self.setup_bookmark(title="", url="https://example.com/a_3_1"),
+            self.setup_bookmark(title="", url="https://example.com/A_3_2"),
+            self.setup_bookmark(title="", url="https://example.com/b_3_1"),
+            self.setup_bookmark(title="", url="https://example.com/B_3_2"),
+            self.setup_bookmark(title="a_5_1", url="https://example.com/sort_0_1"),
+            self.setup_bookmark(title="A_5_2", url="https://example.com/sort_0_2"),
+            self.setup_bookmark(title="b_5_1", url="https://example.com/sort_0_3"),
+            self.setup_bookmark(title="B_5_2", url="https://example.com/sort_0_4"),
+            self.setup_bookmark(title="", url="https://example.com/sort_0_5"),
+            self.setup_bookmark(title="", url="https://example.com/sort_0_6"),
+            self.setup_bookmark(title="", url="https://example.com/sort_0_7"),
+            self.setup_bookmark(title="", url="https://example.com/sort_0_8"),
         ]
         return bookmarks
 
