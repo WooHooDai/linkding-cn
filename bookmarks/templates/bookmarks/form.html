@@ -254,14 +254,21 @@
         }
       }
 
+      let checkUrlTimer = null;
+      let checkUrlRequestId = 0;
+
       function checkUrl() {
         if (!urlInput.value) {
           return;
         }
 
+        const currentUrl = urlInput.value;
+        checkUrlRequestId++;
+        const requestId = checkUrlRequestId;
+
         {% if request.user_profile.enable_favicons %}
         // Prefetch favicon
-        const faviconUrl = encodeURIComponent(urlInput.value);
+        const faviconUrl = encodeURIComponent(currentUrl);
         const faviconRequestUrl = `{% url 'linkding:bookmarks.prefetch_favicon' %}?url=${faviconUrl}`;
         const faviconInput = document.getElementById('{{ form.favicon_file.id_for_label }}');
         fetch(faviconRequestUrl)
@@ -276,16 +283,20 @@
 
         toggleLoadingIcon(urlInput, true);
 
-        const websiteUrl = encodeURIComponent(urlInput.value);
+        const websiteUrl = encodeURIComponent(currentUrl);
         const requestUrl = `{% url 'linkding:api-root' %}bookmarks/check?url=${websiteUrl}`;
         fetch(requestUrl)
           .then(response => response.json())
           .then(data => {
+            // Skip stale responses if user has continued typing
+            if (requestId !== checkUrlRequestId) {
+              return;
+            }
             const metadata = data.metadata;
             toggleLoadingIcon(urlInput, false);
 
-            // Always update the URL input if the metadata provides a different, canonical URL
-            if (metadata.url && metadata.url !== urlInput.value) {
+            // Only update URL if user hasn't changed it since the request was sent
+            if (metadata.url && metadata.url !== urlInput.value && urlInput.value === currentUrl) {
               updateInput(urlInput, metadata.url);
             }
 
@@ -401,7 +412,10 @@
       // Fetch website metadata when page loads and when URL changes, unless we are editing an existing bookmark
       if (!editedBookmarkId) {
         checkUrl();
-        urlInput.addEventListener('input', checkUrl);
+        urlInput.addEventListener('input', function() {
+          clearTimeout(checkUrlTimer);
+          checkUrlTimer = setTimeout(checkUrl, 300);
+        });
         titleInput.addEventListener('input', () => {
           isTitleModified = true;
         });
