@@ -244,3 +244,53 @@ class AutoTaggingTestCase(TestCase):
         tags = auto_tagging.get_tags(script, url)
 
         self.assertEqual(tags, {"section1"})
+
+    def test_auto_tag_empty_script(self):
+        tags = auto_tagging.get_tags("", "https://example.com/")
+        self.assertEqual(tags, set())
+
+    def test_auto_tag_comment_only_script(self):
+        script = """
+            # This is a comment
+            # Another comment
+        """
+        tags = auto_tagging.get_tags(script, "https://example.com/")
+        self.assertEqual(tags, set())
+
+    def test_auto_tag_whitespace_only_script(self):
+        script = "   \n  \n   "
+        tags = auto_tagging.get_tags(script, "https://example.com/")
+        self.assertEqual(tags, set())
+
+    def test_auto_tag_multiple_rules_match_same_url(self):
+        script = """
+            example.com tag1
+            example.com tag2
+            example.com tag3
+        """
+        tags = auto_tagging.get_tags(script, "https://example.com/")
+        self.assertEqual(tags, {"tag1", "tag2", "tag3"})
+
+    def test_auto_tag_path_trailing_slash(self):
+        script = """
+            example.com/path tag1
+        """
+        url = "https://example.com/path/"
+        tags = auto_tagging.get_tags(script, url)
+        self.assertEqual(tags, {"tag1"})
+
+    def test_auto_tag_no_match_returns_empty(self):
+        script = """
+            other.com tag1
+        """
+        tags = auto_tagging.get_tags(script, "https://example.com/")
+        self.assertEqual(tags, set())
+
+    def test_auto_tag_mixed_matching_and_non_matching(self):
+        script = """
+            example.com match
+            other.com nomatch
+            test.example.com submatch
+        """
+        tags = auto_tagging.get_tags(script, "https://example.com/")
+        self.assertEqual(tags, {"match"})

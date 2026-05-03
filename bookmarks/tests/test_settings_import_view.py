@@ -44,7 +44,7 @@ class SettingsImportViewTestCase(TestCase, BookmarkFactoryMixin):
 
             self.assertRedirects(response, reverse("linkding:settings.general"))
             self.assertSuccessMessage(
-                response, "3 bookmarks were successfully imported."
+                response, "3 bookmarks were imported successfully."
             )
             self.assertNoErrorMessage(response)
 
@@ -95,11 +95,11 @@ class SettingsImportViewTestCase(TestCase, BookmarkFactoryMixin):
 
             self.assertRedirects(response, reverse("linkding:settings.general"))
             self.assertSuccessMessage(
-                response, "2 bookmarks were successfully imported."
+                response, "2 bookmarks were imported successfully."
             )
             self.assertErrorMessage(
                 response,
-                "1 bookmarks could not be imported. Please check the logs for more details.",
+                "1 bookmark could not be imported. Please check the logs for more details.",
             )
 
     def test_should_respect_map_private_flag_option(self):

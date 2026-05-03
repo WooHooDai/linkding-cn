@@ -1,4 +1,5 @@
 import calendar
+from datetime import timedelta
 
 from bs4 import BeautifulSoup
 from django.test import TestCase
@@ -36,7 +37,7 @@ class I18nTestCase(TestCase, BookmarkFactoryMixin):
         menu = soup.select_one("nav .language-switcher .menu")
 
         self.assertIsNotNone(nav)
-        self.assertIsNotNone(nav.find("div", class_="language-switcher"))
+        self.assertIsNotNone(nav.find(class_="language-switcher"))
         self.assertIsNotNone(trigger)
         self.assertIn("btn-link", trigger.get("class", []))
         self.assertIn("dropdown-toggle", trigger.get("class", []))
@@ -176,11 +177,9 @@ class I18nTestCase(TestCase, BookmarkFactoryMixin):
     def test_sidebar_summary_uses_english_labels_for_english_profile(self):
         user = self.login_user_with_english_profile()
         today = timezone.localdate()
-        activity_days = [
-            today.replace(day=max(today.day - 5, 1)),
-            today.replace(day=max(today.day - 4, 1)),
-            today.replace(day=max(today.day - 2, 1)),
-        ]
+        # Use 3 distinct days within the current month, with 2 consecutive for streak
+        first_day = today.replace(day=1)
+        activity_days = [first_day, first_day + timedelta(days=1), first_day + timedelta(days=3)]
 
         for index, bookmark_day in enumerate(activity_days):
             bookmark_added = timezone.make_aware(

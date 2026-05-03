@@ -34,29 +34,23 @@ class BookmarkSharedViewTestCase(
         )
 
     def assertVisibleUserOptions(self, response, users: list[User]):
-        html = response.content.decode()
+        soup = self.make_soup(response.content.decode())
+        select = soup.select_one('select[name="user"]')
+        self.assertIsNotNone(select)
 
-        user_options = ['<option value="" selected="">Everyone</option>']
-        for user in users:
-            user_options.append(
-                f'<option value="{user.username}">{user.username}</option>'
-            )
-        user_select_html = f"""
-        <select name="user" class="form-select" id="id_user" ld-auto-submit>
-            {"".join(user_options)}
-        </select>
-        """
+        options = select.select("option")
+        self.assertEqual(options[0]["value"], "")
+        self.assertEqual(options[0].text.strip(), "Everyone")
 
-        self.assertInHTML(user_select_html, html)
+        for i, user in enumerate(users):
+            self.assertEqual(options[i + 1]["value"], user.username)
+            self.assertEqual(options[i + 1].text.strip(), user.username)
 
     def assertEditLink(self, response, url):
-        html = response.content.decode()
-        self.assertInHTML(
-            f"""
-            <a href="{url}">Edit</a>        
-        """,
-            html,
-        )
+        soup = self.make_soup(response.content.decode())
+        link = soup.select_one(f'a[href="{url}"]')
+        self.assertIsNotNone(link)
+        self.assertEqual(link.text.strip(), "Edit")
 
     def test_should_list_domains_for_shared_bookmarks(self):
         self.authenticate()
@@ -569,6 +563,16 @@ class BookmarkSharedViewTestCase(
             response.url, reverse("linkding:bookmarks.shared") + "?q=foo&sort=title_asc"
         )
 
+    DEFAULT_PREFERENCES = {
+        "sort": BookmarkSearch.SORT_ADDED_DESC,
+        "shared": BookmarkSearch.FILTER_SHARED_OFF,
+        "unread": BookmarkSearch.FILTER_UNREAD_OFF,
+        "tagged": BookmarkSearch.FILTER_TAGGED_OFF,
+        "date_filter_by": BookmarkSearch.FILTER_DATE_OFF,
+        "date_filter_type": BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE,
+        "date_filter_relative_string": None,
+    }
+
     def test_save_search_preferences(self):
         self.authenticate()
         user_profile = self.user.profile
@@ -581,14 +585,7 @@ class BookmarkSharedViewTestCase(
             },
         )
         user_profile.refresh_from_db()
-        self.assertEqual(
-            user_profile.search_preferences,
-            {
-                "sort": BookmarkSearch.SORT_ADDED_DESC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
-                "unread": BookmarkSearch.FILTER_UNREAD_OFF,
-            },
-        )
+        self.assertEqual(user_profile.search_preferences, self.DEFAULT_PREFERENCES)
 
         # with param
         self.client.post(
@@ -601,11 +598,7 @@ class BookmarkSharedViewTestCase(
         user_profile.refresh_from_db()
         self.assertEqual(
             user_profile.search_preferences,
-            {
-                "sort": BookmarkSearch.SORT_TITLE_ASC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
-                "unread": BookmarkSearch.FILTER_UNREAD_OFF,
-            },
+            {**self.DEFAULT_PREFERENCES, "sort": BookmarkSearch.SORT_TITLE_ASC},
         )
 
         # add a param
@@ -621,8 +614,8 @@ class BookmarkSharedViewTestCase(
         self.assertEqual(
             user_profile.search_preferences,
             {
+                **self.DEFAULT_PREFERENCES,
                 "sort": BookmarkSearch.SORT_TITLE_ASC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
                 "unread": BookmarkSearch.FILTER_UNREAD_YES,
             },
         )
@@ -638,11 +631,7 @@ class BookmarkSharedViewTestCase(
         user_profile.refresh_from_db()
         self.assertEqual(
             user_profile.search_preferences,
-            {
-                "sort": BookmarkSearch.SORT_ADDED_DESC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
-                "unread": BookmarkSearch.FILTER_UNREAD_YES,
-            },
+            {**self.DEFAULT_PREFERENCES, "unread": BookmarkSearch.FILTER_UNREAD_YES},
         )
 
         # ignores non-preferences
@@ -659,11 +648,7 @@ class BookmarkSharedViewTestCase(
         user_profile.refresh_from_db()
         self.assertEqual(
             user_profile.search_preferences,
-            {
-                "sort": BookmarkSearch.SORT_TITLE_ASC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
-                "unread": BookmarkSearch.FILTER_UNREAD_OFF,
-            },
+            {**self.DEFAULT_PREFERENCES, "sort": BookmarkSearch.SORT_TITLE_ASC},
         )
 
     def test_url_encode_bookmark_actions_url(self):

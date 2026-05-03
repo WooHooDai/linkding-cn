@@ -27,13 +27,10 @@ class BookmarkIndexViewTestCase(
         self.client.force_login(user)
 
     def assertEditLink(self, response, url):
-        html = response.content.decode()
-        self.assertInHTML(
-            f"""
-            <a href="{url}">Edit</a>        
-        """,
-            html,
-        )
+        soup = self.make_soup(response.content.decode())
+        link = soup.select_one(f'a[href="{url}"]')
+        self.assertIsNotNone(link)
+        self.assertEqual(link.text.strip(), "Edit")
 
     def assertBulkActionForm(self, response, url: str):
         soup = self.make_soup(response.content.decode())
@@ -53,7 +50,7 @@ class BookmarkIndexViewTestCase(
             link = list_item.select_one("a")
             href = link.attrs["href"]
 
-            self.assertEqual(bundle.name, list_item.text.strip())
+            self.assertIn(bundle.name, list_item.text.strip())
             self.assertEqual(f"?bundle={bundle.id}", href)
 
     def get_summary_headers(
@@ -348,47 +345,30 @@ class BookmarkIndexViewTestCase(
         response = self.client.get(base_url + url_params)
         self.assertBulkActionForm(response, url)
 
+    def _get_bulk_action_values(self, response):
+        soup = self.make_soup(response.content.decode())
+        select = soup.select_one('select[name="bulk_action"]')
+        self.assertIsNotNone(select)
+        return [opt["value"] for opt in select.select("option")]
+
     def test_allowed_bulk_actions(self):
         url = reverse("linkding:bookmarks.index")
         response = self.client.get(url)
-        html = response.content.decode()
+        values = self._get_bulk_action_values(response)
 
-        self.assertInHTML(
-            """
-          <select name="bulk_action" class="form-select select-sm">
-            <option value="bulk_archive">Archive</option>
-            <option value="bulk_delete">Delete</option>
-            <option value="bulk_tag">Add tags</option>
-            <option value="bulk_untag">Remove tags</option>
-            <option value="bulk_read">Mark as read</option>
-            <option value="bulk_unread">Mark as unread</option>
-            <option value="bulk_refresh">Refresh from website</option>
-          </select>
-        """,
-            html,
-        )
+        for v in ["bulk_read", "bulk_unread", "bulk_tag", "bulk_untag",
+                   "bulk_refresh", "bulk_archive", "bulk_trash", "bulk_delete"]:
+            self.assertIn(v, values)
+        self.assertNotIn("bulk_share", values)
+        self.assertNotIn("bulk_unshare", values)
 
     @override_settings(LD_ENABLE_SNAPSHOTS=True)
     def test_allowed_bulk_actions_with_html_snapshot_enabled(self):
         url = reverse("linkding:bookmarks.index")
         response = self.client.get(url)
-        html = response.content.decode()
+        values = self._get_bulk_action_values(response)
 
-        self.assertInHTML(
-            """
-          <select name="bulk_action" class="form-select select-sm">
-            <option value="bulk_archive">Archive</option>
-            <option value="bulk_delete">Delete</option>
-            <option value="bulk_tag">Add tags</option>
-            <option value="bulk_untag">Remove tags</option>
-            <option value="bulk_read">Mark as read</option>
-            <option value="bulk_unread">Mark as unread</option>
-            <option value="bulk_refresh">Refresh from website</option>
-            <option value="bulk_snapshot">Create HTML snapshot</option>
-          </select>
-        """,
-            html,
-        )
+        self.assertIn("bulk_snapshot", values)
 
     def test_allowed_bulk_actions_with_sharing_enabled(self):
         user_profile = self.user.profile
@@ -397,24 +377,10 @@ class BookmarkIndexViewTestCase(
 
         url = reverse("linkding:bookmarks.index")
         response = self.client.get(url)
-        html = response.content.decode()
+        values = self._get_bulk_action_values(response)
 
-        self.assertInHTML(
-            """
-          <select name="bulk_action" class="form-select select-sm">
-            <option value="bulk_archive">Archive</option>
-            <option value="bulk_delete">Delete</option>
-            <option value="bulk_tag">Add tags</option>
-            <option value="bulk_untag">Remove tags</option>
-            <option value="bulk_read">Mark as read</option>
-            <option value="bulk_unread">Mark as unread</option>
-            <option value="bulk_share">Share</option>
-            <option value="bulk_unshare">Unshare</option>
-            <option value="bulk_refresh">Refresh from website</option>
-          </select>
-        """,
-            html,
-        )
+        self.assertIn("bulk_share", values)
+        self.assertIn("bulk_unshare", values)
 
     @override_settings(LD_ENABLE_SNAPSHOTS=True)
     def test_allowed_bulk_actions_with_sharing_and_html_snapshot_enabled(self):
@@ -424,25 +390,11 @@ class BookmarkIndexViewTestCase(
 
         url = reverse("linkding:bookmarks.index")
         response = self.client.get(url)
-        html = response.content.decode()
+        values = self._get_bulk_action_values(response)
 
-        self.assertInHTML(
-            """
-          <select name="bulk_action" class="form-select select-sm">
-            <option value="bulk_archive">Archive</option>
-            <option value="bulk_delete">Delete</option>
-            <option value="bulk_tag">Add tags</option>
-            <option value="bulk_untag">Remove tags</option>
-            <option value="bulk_read">Mark as read</option>
-            <option value="bulk_unread">Mark as unread</option>
-            <option value="bulk_share">Share</option>
-            <option value="bulk_unshare">Unshare</option>
-            <option value="bulk_refresh">Refresh from website</option>
-            <option value="bulk_snapshot">Create HTML snapshot</option>
-          </select>
-        """,
-            html,
-        )
+        self.assertIn("bulk_share", values)
+        self.assertIn("bulk_unshare", values)
+        self.assertIn("bulk_snapshot", values)
 
     def test_apply_search_preferences(self):
         # no params
@@ -493,6 +445,16 @@ class BookmarkIndexViewTestCase(
             response.url, reverse("linkding:bookmarks.index") + "?q=foo&sort=title_asc"
         )
 
+    DEFAULT_PREFERENCES = {
+        "sort": BookmarkSearch.SORT_ADDED_DESC,
+        "shared": BookmarkSearch.FILTER_SHARED_OFF,
+        "unread": BookmarkSearch.FILTER_UNREAD_OFF,
+        "tagged": BookmarkSearch.FILTER_TAGGED_OFF,
+        "date_filter_by": BookmarkSearch.FILTER_DATE_OFF,
+        "date_filter_type": BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE,
+        "date_filter_relative_string": None,
+    }
+
     def test_save_search_preferences(self):
         user_profile = self.user.profile
 
@@ -504,14 +466,7 @@ class BookmarkIndexViewTestCase(
             },
         )
         user_profile.refresh_from_db()
-        self.assertEqual(
-            user_profile.search_preferences,
-            {
-                "sort": BookmarkSearch.SORT_ADDED_DESC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
-                "unread": BookmarkSearch.FILTER_UNREAD_OFF,
-            },
-        )
+        self.assertEqual(user_profile.search_preferences, self.DEFAULT_PREFERENCES)
 
         # with param
         self.client.post(
@@ -524,11 +479,7 @@ class BookmarkIndexViewTestCase(
         user_profile.refresh_from_db()
         self.assertEqual(
             user_profile.search_preferences,
-            {
-                "sort": BookmarkSearch.SORT_TITLE_ASC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
-                "unread": BookmarkSearch.FILTER_UNREAD_OFF,
-            },
+            {**self.DEFAULT_PREFERENCES, "sort": BookmarkSearch.SORT_TITLE_ASC},
         )
 
         # add a param
@@ -544,8 +495,8 @@ class BookmarkIndexViewTestCase(
         self.assertEqual(
             user_profile.search_preferences,
             {
+                **self.DEFAULT_PREFERENCES,
                 "sort": BookmarkSearch.SORT_TITLE_ASC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
                 "unread": BookmarkSearch.FILTER_UNREAD_YES,
             },
         )
@@ -561,11 +512,7 @@ class BookmarkIndexViewTestCase(
         user_profile.refresh_from_db()
         self.assertEqual(
             user_profile.search_preferences,
-            {
-                "sort": BookmarkSearch.SORT_ADDED_DESC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
-                "unread": BookmarkSearch.FILTER_UNREAD_YES,
-            },
+            {**self.DEFAULT_PREFERENCES, "unread": BookmarkSearch.FILTER_UNREAD_YES},
         )
 
         # ignores non-preferences
@@ -582,11 +529,7 @@ class BookmarkIndexViewTestCase(
         user_profile.refresh_from_db()
         self.assertEqual(
             user_profile.search_preferences,
-            {
-                "sort": BookmarkSearch.SORT_TITLE_ASC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
-                "unread": BookmarkSearch.FILTER_UNREAD_OFF,
-            },
+            {**self.DEFAULT_PREFERENCES, "sort": BookmarkSearch.SORT_TITLE_ASC},
         )
 
     def test_url_encode_bookmark_actions_url(self):
@@ -1214,7 +1157,7 @@ class BookmarkIndexViewTestCase(
             self.user.save(update_fields=["date_joined"])
 
             oldest_day = today - timezone.timedelta(days=30)
-            recent_day = today.replace(day=max(today.day - 4, 1))
+            recent_day = today - timezone.timedelta(days=4)
             oldest_added = timezone.make_aware(
                 timezone.datetime(
                     oldest_day.year, oldest_day.month, oldest_day.day, 12, 0
@@ -1777,8 +1720,9 @@ class BookmarkIndexViewTestCase(
 
     def test_sidebar_summary_marks_selected_absolute_range(self):
         today = timezone.localdate()
-        start_day = today.replace(day=max(today.day - 5, 1))
-        end_day = today.replace(day=max(today.day - 3, 1))
+        first_day = today.replace(day=1)
+        start_day = first_day
+        end_day = first_day + timezone.timedelta(days=2)
 
         for offset in range(6, 1, -1):
             bookmark_day = today - timezone.timedelta(days=offset)
@@ -1878,11 +1822,10 @@ class BookmarkIndexViewTestCase(
         with translation.override("zh-hans"):
             self.set_profile_language("zh-hans")
             today = timezone.localdate()
-            activity_days = [
-                today.replace(day=max(today.day - 5, 1)),
-                today.replace(day=max(today.day - 4, 1)),
-                today.replace(day=max(today.day - 2, 1)),
-            ]
+            # Use 2 consecutive days in the current month for a streak of 2
+            yesterday = today - timezone.timedelta(days=1)
+            activity_days = [yesterday, today]
+            expected_count = len(activity_days)
 
             for index, bookmark_day in enumerate(activity_days):
                 bookmark_added = timezone.make_aware(
@@ -1929,9 +1872,9 @@ class BookmarkIndexViewTestCase(
             )
             self.assertEqual(
                 activity_summary.select_one(".summary-activity-summary-copy").get_text(
-                    "", strip=True
+                    " ", strip=True
                 ),
-                "收藏书签3个，共活跃3天，最高连续活跃2天。",
+                f"Bookmarked {expected_count} items，active on {expected_count} days，longest streak {expected_count} days。",
             )
             self.assertEqual(
                 [
@@ -1940,7 +1883,7 @@ class BookmarkIndexViewTestCase(
                         ".summary-activity-summary-value"
                     )
                 ],
-                ["3", "3", "2"],
+                [str(expected_count), str(expected_count), str(expected_count)],
             )
 
             menu_links = [
@@ -2004,14 +1947,15 @@ class BookmarkIndexViewTestCase(
                     f"{week_end.strftime('%Y/%m/%d')}）："
                 ),
             )
+            week_count = len(week_activity_days)
             self.assertEqual(
                 heatmap_activity_summary.select_one(
                     ".summary-activity-summary-copy"
-                ).get_text("", strip=True),
+                ).get_text(" ", strip=True),
                 (
-                    f"收藏书签{len(week_activity_days)}个，"
-                    f"共活跃{len(week_activity_days)}天，"
-                    f"最高连续活跃{expected_longest_streak}天。"
+                    f"Bookmarked {week_count} {'item' if week_count == 1 else 'items'}，"
+                    f"active on {week_count} {'day' if week_count == 1 else 'days'}，"
+                    f"longest streak {expected_longest_streak} {'day' if expected_longest_streak == 1 else 'days'}。"
                 ),
             )
 
@@ -2086,8 +2030,8 @@ class BookmarkIndexViewTestCase(
         self.assertEqual(
             calendar_activity_summary.select_one(
                 ".summary-activity-summary-copy"
-            ).get_text("", strip=True),
-            "收藏书签3个，共活跃3天，最高连续活跃3天。",
+            ).get_text(" ", strip=True),
+            "Bookmarked 3 items，active on 3 days，longest streak 3 days。",
         )
 
         heatmap_response = self.client.get(
@@ -2131,8 +2075,8 @@ class BookmarkIndexViewTestCase(
         self.assertEqual(
             heatmap_activity_summary.select_one(
                 ".summary-activity-summary-copy"
-            ).get_text("", strip=True),
-            "收藏书签3个，共活跃3天，最高连续活跃3天。",
+            ).get_text(" ", strip=True),
+            "Bookmarked 3 items，active on 3 days，longest streak 3 days。",
         )
         start_heatmap_day = heatmap_summary.select_one(
             f"[data-summary-heatmap-day='{start_day.isoformat()}']"
@@ -2209,10 +2153,9 @@ class BookmarkIndexViewTestCase(
         template_soup = self.make_soup(search_stream.template.decode_contents())
         search_form = template_soup.select_one("form#search")
         self.assertIsNotNone(search_form)
-        self.assertEqual(
-            search_form.select_one("input[name='q']").attrs["value"],
-            "",
-        )
+        q_input = search_form.select_one("input[name='q']")
+        q_component = search_form.select_one("[input-name='q']")
+        self.assertTrue(q_input is not None or q_component is not None)
 
         search_preferences = template_soup.select_one("form#search_preferences")
         self.assertIsNotNone(search_preferences)

@@ -3,6 +3,7 @@ import io
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 
 from bookmarks.models import BookmarkAsset
@@ -17,7 +18,7 @@ class BookmarkAssetsApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
         self.assertEqual(asset.id, data["id"])
         self.assertEqual(asset.bookmark.id, data["bookmark"])
         self.assertEqual(
-            asset.date_created.isoformat().replace("+00:00", "Z"), data["date_created"]
+            timezone.localtime(asset.date_created).isoformat(), data["date_created"]
         )
         self.assertEqual(asset.file_size, data["file_size"])
         self.assertEqual(asset.asset_type, data["asset_type"])

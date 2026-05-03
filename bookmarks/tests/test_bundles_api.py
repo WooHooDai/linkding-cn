@@ -1,4 +1,5 @@
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 
 from bookmarks.models import BookmarkBundle
@@ -15,10 +16,10 @@ class BundlesApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
         self.assertEqual(bundle.excluded_tags, data["excluded_tags"])
         self.assertEqual(bundle.order, data["order"])
         self.assertEqual(
-            bundle.date_created.isoformat().replace("+00:00", "Z"), data["date_created"]
+            timezone.localtime(bundle.date_created).isoformat(), data["date_created"]
         )
         self.assertEqual(
-            bundle.date_modified.isoformat().replace("+00:00", "Z"),
+            timezone.localtime(bundle.date_modified).isoformat(),
             data["date_modified"],
         )
 

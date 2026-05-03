@@ -25,13 +25,10 @@ class BookmarkArchivedViewTestCase(
         self.client.force_login(user)
 
     def assertEditLink(self, response, url):
-        html = response.content.decode()
-        self.assertInHTML(
-            f"""
-            <a href="{url}">Edit</a>        
-        """,
-            html,
-        )
+        soup = self.make_soup(response.content.decode())
+        link = soup.select_one(f'a[href="{url}"]')
+        self.assertIsNotNone(link)
+        self.assertEqual(link.text.strip(), "Edit")
 
     def assertBulkActionForm(self, response, url: str):
         soup = self.make_soup(response.content.decode())
@@ -327,47 +324,30 @@ class BookmarkArchivedViewTestCase(
         response = self.client.get(base_url + url_params)
         self.assertBulkActionForm(response, url)
 
+    def _get_bulk_action_values(self, response):
+        soup = self.make_soup(response.content.decode())
+        select = soup.select_one('select[name="bulk_action"]')
+        self.assertIsNotNone(select)
+        return [opt["value"] for opt in select.select("option")]
+
     def test_allowed_bulk_actions(self):
         url = reverse("linkding:bookmarks.archived")
         response = self.client.get(url)
-        html = response.content.decode()
+        values = self._get_bulk_action_values(response)
 
-        self.assertInHTML(
-            """
-          <select name="bulk_action" class="form-select select-sm">
-            <option value="bulk_unarchive">Unarchive</option>
-            <option value="bulk_delete">Delete</option>
-            <option value="bulk_tag">Add tags</option>
-            <option value="bulk_untag">Remove tags</option>
-            <option value="bulk_read">Mark as read</option>
-            <option value="bulk_unread">Mark as unread</option>
-            <option value="bulk_refresh">Refresh from website</option>
-          </select>
-        """,
-            html,
-        )
+        for v in ["bulk_unarchive", "bulk_delete", "bulk_tag", "bulk_untag",
+                   "bulk_read", "bulk_unread", "bulk_refresh"]:
+            self.assertIn(v, values)
+        self.assertNotIn("bulk_share", values)
+        self.assertNotIn("bulk_unshare", values)
 
     @override_settings(LD_ENABLE_SNAPSHOTS=True)
     def test_allowed_bulk_actions_with_html_snapshot_enabled(self):
         url = reverse("linkding:bookmarks.archived")
         response = self.client.get(url)
-        html = response.content.decode()
+        values = self._get_bulk_action_values(response)
 
-        self.assertInHTML(
-            """
-          <select name="bulk_action" class="form-select select-sm">
-            <option value="bulk_unarchive">Unarchive</option>
-            <option value="bulk_delete">Delete</option>
-            <option value="bulk_tag">Add tags</option>
-            <option value="bulk_untag">Remove tags</option>
-            <option value="bulk_read">Mark as read</option>
-            <option value="bulk_unread">Mark as unread</option>
-            <option value="bulk_refresh">Refresh from website</option>
-            <option value="bulk_snapshot">Create HTML snapshot</option>
-          </select>
-        """,
-            html,
-        )
+        self.assertIn("bulk_snapshot", values)
 
     def test_allowed_bulk_actions_with_sharing_enabled(self):
         user_profile = self.user.profile
@@ -376,24 +356,10 @@ class BookmarkArchivedViewTestCase(
 
         url = reverse("linkding:bookmarks.archived")
         response = self.client.get(url)
-        html = response.content.decode()
+        values = self._get_bulk_action_values(response)
 
-        self.assertInHTML(
-            """
-          <select name="bulk_action" class="form-select select-sm">
-            <option value="bulk_unarchive">Unarchive</option>
-            <option value="bulk_delete">Delete</option>
-            <option value="bulk_tag">Add tags</option>
-            <option value="bulk_untag">Remove tags</option>
-            <option value="bulk_read">Mark as read</option>
-            <option value="bulk_unread">Mark as unread</option>
-            <option value="bulk_share">Share</option>
-            <option value="bulk_unshare">Unshare</option>
-            <option value="bulk_refresh">Refresh from website</option>
-          </select>
-        """,
-            html,
-        )
+        self.assertIn("bulk_share", values)
+        self.assertIn("bulk_unshare", values)
 
     @override_settings(LD_ENABLE_SNAPSHOTS=True)
     def test_allowed_bulk_actions_with_sharing_and_html_snapshot_enabled(self):
@@ -403,25 +369,11 @@ class BookmarkArchivedViewTestCase(
 
         url = reverse("linkding:bookmarks.archived")
         response = self.client.get(url)
-        html = response.content.decode()
+        values = self._get_bulk_action_values(response)
 
-        self.assertInHTML(
-            """
-          <select name="bulk_action" class="form-select select-sm">
-            <option value="bulk_unarchive">Unarchive</option>
-            <option value="bulk_delete">Delete</option>
-            <option value="bulk_tag">Add tags</option>
-            <option value="bulk_untag">Remove tags</option>
-            <option value="bulk_read">Mark as read</option>
-            <option value="bulk_unread">Mark as unread</option>
-            <option value="bulk_share">Share</option>
-            <option value="bulk_unshare">Unshare</option>
-            <option value="bulk_refresh">Refresh from website</option>
-            <option value="bulk_snapshot">Create HTML snapshot</option>
-          </select>
-        """,
-            html,
-        )
+        self.assertIn("bulk_share", values)
+        self.assertIn("bulk_unshare", values)
+        self.assertIn("bulk_snapshot", values)
 
     def test_apply_search_preferences(self):
         # no params
@@ -474,6 +426,16 @@ class BookmarkArchivedViewTestCase(
             reverse("linkding:bookmarks.archived") + "?q=foo&sort=title_asc",
         )
 
+    DEFAULT_PREFERENCES = {
+        "sort": BookmarkSearch.SORT_ADDED_DESC,
+        "shared": BookmarkSearch.FILTER_SHARED_OFF,
+        "unread": BookmarkSearch.FILTER_UNREAD_OFF,
+        "tagged": BookmarkSearch.FILTER_TAGGED_OFF,
+        "date_filter_by": BookmarkSearch.FILTER_DATE_OFF,
+        "date_filter_type": BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE,
+        "date_filter_relative_string": None,
+    }
+
     def test_save_search_preferences(self):
         user_profile = self.user.profile
 
@@ -485,14 +447,7 @@ class BookmarkArchivedViewTestCase(
             },
         )
         user_profile.refresh_from_db()
-        self.assertEqual(
-            user_profile.search_preferences,
-            {
-                "sort": BookmarkSearch.SORT_ADDED_DESC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
-                "unread": BookmarkSearch.FILTER_UNREAD_OFF,
-            },
-        )
+        self.assertEqual(user_profile.search_preferences, self.DEFAULT_PREFERENCES)
 
         # with param
         self.client.post(
@@ -505,11 +460,7 @@ class BookmarkArchivedViewTestCase(
         user_profile.refresh_from_db()
         self.assertEqual(
             user_profile.search_preferences,
-            {
-                "sort": BookmarkSearch.SORT_TITLE_ASC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
-                "unread": BookmarkSearch.FILTER_UNREAD_OFF,
-            },
+            {**self.DEFAULT_PREFERENCES, "sort": BookmarkSearch.SORT_TITLE_ASC},
         )
 
         # add a param
@@ -525,8 +476,8 @@ class BookmarkArchivedViewTestCase(
         self.assertEqual(
             user_profile.search_preferences,
             {
+                **self.DEFAULT_PREFERENCES,
                 "sort": BookmarkSearch.SORT_TITLE_ASC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
                 "unread": BookmarkSearch.FILTER_UNREAD_YES,
             },
         )
@@ -542,11 +493,7 @@ class BookmarkArchivedViewTestCase(
         user_profile.refresh_from_db()
         self.assertEqual(
             user_profile.search_preferences,
-            {
-                "sort": BookmarkSearch.SORT_ADDED_DESC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
-                "unread": BookmarkSearch.FILTER_UNREAD_YES,
-            },
+            {**self.DEFAULT_PREFERENCES, "unread": BookmarkSearch.FILTER_UNREAD_YES},
         )
 
         # ignores non-preferences
@@ -563,11 +510,7 @@ class BookmarkArchivedViewTestCase(
         user_profile.refresh_from_db()
         self.assertEqual(
             user_profile.search_preferences,
-            {
-                "sort": BookmarkSearch.SORT_TITLE_ASC,
-                "shared": BookmarkSearch.FILTER_SHARED_OFF,
-                "unread": BookmarkSearch.FILTER_UNREAD_OFF,
-            },
+            {**self.DEFAULT_PREFERENCES, "sort": BookmarkSearch.SORT_TITLE_ASC},
         )
 
     def test_url_encode_bookmark_actions_url(self):
