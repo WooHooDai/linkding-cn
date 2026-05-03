@@ -78,7 +78,7 @@
 
 @media (max-width: 600px) {
   .section-header:not(.no-wrap) {
-    flex-direction: column;
+    flex-wrap: wrap;
   }
 }
 
