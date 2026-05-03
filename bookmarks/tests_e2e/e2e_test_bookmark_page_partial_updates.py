@@ -48,6 +48,7 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             self.assertVisibleBookmarks(["foo 1", "foo 2", "foo 3", "foo 4", "foo 5"])
 
             self.locate_bookmark("foo 2").get_by_text("Archive").click()
+            self.locate_bookmark("foo 2").get_by_text("Confirm").click()
             self.assertVisibleBookmarks(["foo 1", "foo 3", "foo 4", "foo 5"])
 
     def test_partial_update_respects_sort(self):
@@ -61,6 +62,7 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             expect(first_item).to_contain_text("foo 1")
 
             first_item.get_by_text("Archive").click()
+            first_item.get_by_text("Confirm").click()
 
             first_item = page.locator("li[ld-bookmark-item]").first
             expect(first_item).to_contain_text("foo 2")
@@ -78,6 +80,7 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             self.assertVisibleBookmarks(expected_titles)
 
             self.locate_bookmark("foo 20-").get_by_text("Archive").click()
+            self.locate_bookmark("foo 20-").get_by_text("Confirm").click()
 
             expected_titles = [f"foo {i}-" for i in range(1, 20)]
             self.assertVisibleBookmarks(expected_titles)
@@ -90,14 +93,17 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             self.open(url, p)
 
             self.locate_bookmark("Bookmark 1").get_by_text("Archive").click()
+            self.locate_bookmark("Bookmark 1").get_by_text("Confirm").click()
             self.assertVisibleBookmarks(
                 ["Bookmark 2", "Bookmark 3", "Bookmark 4", "Bookmark 5"]
             )
 
             self.locate_bookmark("Bookmark 2").get_by_text("Archive").click()
+            self.locate_bookmark("Bookmark 2").get_by_text("Confirm").click()
             self.assertVisibleBookmarks(["Bookmark 3", "Bookmark 4", "Bookmark 5"])
 
             self.locate_bookmark("Bookmark 3").get_by_text("Archive").click()
+            self.locate_bookmark("Bookmark 3").get_by_text("Confirm").click()
             self.assertVisibleBookmarks(["Bookmark 4", "Bookmark 5"])
 
             self.assertReloads(0)
@@ -109,6 +115,7 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             self.open(reverse("linkding:bookmarks.index"), p)
 
             self.locate_bookmark("Bookmark 2").get_by_text("Archive").click()
+            self.locate_bookmark("Bookmark 2").get_by_text("Confirm").click()
 
             self.assertVisibleBookmarks(["Bookmark 1", "Bookmark 3"])
             self.assertVisibleTags(["Tag 1", "Tag 3"])
@@ -146,7 +153,7 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             self.locate_bookmark("Bookmark 2").locator(
                 'button[name="mark_as_read"]'
             ).click()
-            self.page.get_by_text("是", exact=True).click()
+            self.page.get_by_text("Yes", exact=True).click()
 
             expect(self.locate_bookmark("Bookmark 2")).not_to_have_class("unread")
             self.assertReloads(0)
@@ -168,7 +175,7 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
                 }"""
             )
             self.locate_bookmark("Bookmark 2").locator('button[name="unshare"]').click()
-            self.page.get_by_text("是", exact=True).click()
+            self.page.get_by_text("Yes", exact=True).click()
 
             expect(self.locate_bookmark("Bookmark 2")).not_to_have_class("shared")
             self.assertReloads(0)
@@ -185,7 +192,7 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             ).click()
             self.select_bulk_action("Archive")
             self.locate_bulk_edit_bar().get_by_text("Execute").click()
-            self.locate_bulk_edit_bar().get_by_text("Confirm").click()
+            self.page.get_by_text("Confirm").click()
 
             self.assertVisibleBookmarks(["Bookmark 1", "Bookmark 3"])
             self.assertVisibleTags(["Tag 1", "Tag 3"])
@@ -201,9 +208,9 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             self.locate_bookmark("Bookmark 2").locator(
                 "label.bulk-edit-checkbox"
             ).click()
-            self.select_bulk_action("Delete")
+            self.select_bulk_action("Move to trash")
             self.locate_bulk_edit_bar().get_by_text("Execute").click()
-            self.locate_bulk_edit_bar().get_by_text("Confirm").click()
+            self.page.get_by_text("Confirm").click()
 
             self.assertVisibleBookmarks(["Bookmark 1", "Bookmark 3"])
             self.assertVisibleTags(["Tag 1", "Tag 3"])
@@ -216,6 +223,7 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             self.open(reverse("linkding:bookmarks.archived"), p)
 
             self.locate_bookmark("Archived Bookmark 2").get_by_text("Unarchive").click()
+            self.locate_bookmark("Archived Bookmark 2").get_by_text("Confirm").click()
 
             self.assertVisibleBookmarks(["Archived Bookmark 1", "Archived Bookmark 3"])
             self.assertVisibleTags(["Archived Tag 1", "Archived Tag 3"])
@@ -246,7 +254,7 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             ).click()
             self.select_bulk_action("Unarchive")
             self.locate_bulk_edit_bar().get_by_text("Execute").click()
-            self.locate_bulk_edit_bar().get_by_text("Confirm").click()
+            self.page.get_by_text("Confirm").click()
 
             self.assertVisibleBookmarks(["Archived Bookmark 1", "Archived Bookmark 3"])
             self.assertVisibleTags(["Archived Tag 1", "Archived Tag 3"])
@@ -262,9 +270,9 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             self.locate_bookmark("Archived Bookmark 2").locator(
                 "label.bulk-edit-checkbox"
             ).click()
-            self.select_bulk_action("Delete")
+            self.select_bulk_action("Delete permanently")
             self.locate_bulk_edit_bar().get_by_text("Execute").click()
-            self.locate_bulk_edit_bar().get_by_text("Confirm").click()
+            self.page.get_by_text("Confirm").click()
 
             self.assertVisibleBookmarks(["Archived Bookmark 1", "Archived Bookmark 3"])
             self.assertVisibleTags(["Archived Tag 1", "Archived Tag 3"])

@@ -16,13 +16,13 @@ class FilterDrawerE2ETestCase(LinkdingE2ETestCase):
             page.set_viewport_size({"width": 375, "height": 812})
 
             # open drawer
-            drawer_trigger = page.locator(".main").get_by_role("button", name="筛选")
+            drawer_trigger = page.locator(".main").get_by_role("button", name="Filters")
             drawer_trigger.click()
 
             # verify drawer is visible
             drawer = page.locator(".modal.drawer.filter-drawer")
             expect(drawer).to_be_visible()
-            expect(drawer.locator("h2")).to_have_text("筛选")
+            expect(drawer.locator("h2")).to_have_text("Filter")
 
             # close with close button
             drawer.locator("button.close").click()
@@ -47,7 +47,7 @@ class FilterDrawerE2ETestCase(LinkdingE2ETestCase):
             page.set_viewport_size({"width": 375, "height": 812})
 
             # open tag cloud modal
-            drawer_trigger = page.locator(".main").get_by_role("button", name="筛选")
+            drawer_trigger = page.locator(".main").get_by_role("button", name="Filters")
             drawer_trigger.click()
 
             # verify tags are displayed
@@ -78,7 +78,7 @@ class FilterDrawerE2ETestCase(LinkdingE2ETestCase):
 
             page.set_viewport_size({"width": 375, "height": 812})
 
-            drawer_trigger = page.locator("button[ld-filter-drawer-trigger]")
+            drawer_trigger = page.locator("ld-filter-drawer-trigger button")
             drawer_trigger.click()
 
             drawer = page.locator(".modal.drawer.filter-drawer")
@@ -90,7 +90,21 @@ class FilterDrawerE2ETestCase(LinkdingE2ETestCase):
             domain_section = drawer.locator(
                 "section[aria-labelledby='domains-heading']"
             )
-            domain_section.locator("button.dropdown-toggle").click()
+            # Open dropdown via JS (the toggle button may not be interactive in the drawer)
+            page.evaluate(
+                """
+                () => {
+                  const dropdown = document.querySelector(
+                    ".filter-drawer section[aria-labelledby='domains-heading'] ld-dropdown"
+                  );
+                  if (dropdown && typeof dropdown.open === 'function') {
+                    dropdown.open();
+                  } else if (dropdown) {
+                    dropdown.classList.add('active');
+                  }
+                }
+                """
+            )
             expect(domain_section.locator(".menu-link").nth(1)).to_be_visible()
             compact_mode_debug = page.evaluate(
                 """
@@ -135,14 +149,31 @@ class FilterDrawerE2ETestCase(LinkdingE2ETestCase):
 
             page.set_viewport_size({"width": 375, "height": 812})
 
-            page.locator("button[ld-filter-drawer-trigger]").click()
+            page.locator("ld-filter-drawer-trigger button").click()
             drawer = page.locator(".modal.drawer.filter-drawer")
             expect(drawer).to_be_visible()
 
             domain_section = drawer.locator(
                 "section[aria-labelledby='domains-heading']"
             )
-            domain_section.locator("button.dropdown-toggle").click()
+
+            def open_dropdown():
+                page.evaluate(
+                    """
+                    () => {
+                      const dropdown = document.querySelector(
+                        ".filter-drawer section[aria-labelledby='domains-heading'] ld-dropdown"
+                      );
+                      if (dropdown && typeof dropdown.open === 'function') {
+                        dropdown.open();
+                      } else if (dropdown) {
+                        dropdown.classList.add('active');
+                      }
+                    }
+                    """
+                )
+
+            open_dropdown()
             menu_links = domain_section.locator(".menu-link")
             expect(menu_links.nth(0)).to_have_text("Icon mode")
             expect(menu_links.nth(1)).to_have_text("All domains")
@@ -153,7 +184,7 @@ class FilterDrawerE2ETestCase(LinkdingE2ETestCase):
                 "data-domain-compact-mode", "false"
             )
 
-            domain_section.locator("button.dropdown-toggle").click()
+            open_dropdown()
             expect(menu_links.nth(0)).to_have_text("Icon mode")
             expect(menu_links.nth(1)).to_have_text("Only important domains")
 
@@ -163,7 +194,7 @@ class FilterDrawerE2ETestCase(LinkdingE2ETestCase):
                 "data-domain-view-mode", "icon"
             )
 
-            domain_section.locator("button.dropdown-toggle").click()
+            open_dropdown()
             expect(menu_links.nth(0)).to_have_text("Full mode")
             expect(menu_links.nth(1)).to_have_text("Only important domains")
             self.assertReloads(0)

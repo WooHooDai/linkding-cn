@@ -42,7 +42,7 @@ class LinkdingE2ETestCase(LiveServerTestCase, BookmarkFactoryMixin):
         self.num_loads = 0
 
     def locate_bookmark_list(self):
-        return self.page.locator("ul[ld-bookmark-list]")
+        return self.page.locator("ul.bookmark-list")
 
     def locate_bookmark(self, title: str):
         bookmark_tags = self.page.locator("li[ld-bookmark-item]")
@@ -84,10 +84,13 @@ class LinkdingE2ETestCase(LiveServerTestCase, BookmarkFactoryMixin):
         )
 
     def navigate_menu(self, main_menu_item: str, sub_menu_item: str | None = None):
+        nav = self.page.locator("nav")
         if sub_menu_item:
-            self.page.locator("nav").get_by_role("button", name=main_menu_item).click()
-            self.page.locator("nav ul.menu").get_by_text(
+            nav.get_by_role("button", name=main_menu_item).click()
+            nav.locator("ul.menu:visible").get_by_text(
                 sub_menu_item, exact=True
             ).click()
         else:
-            self.page.locator("nav").get_by_text(main_menu_item, exact=True).click()
+            nav.get_by_role(
+                "link", name=main_menu_item, exact=True
+            ).first.click()

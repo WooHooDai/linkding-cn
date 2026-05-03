@@ -22,6 +22,8 @@ class A11yNavigationFocusTest(LinkdingE2ETestCase):
 
             # Bookmark form views should focus the URL input
             page.goto(self.live_server_url + reverse("linkding:bookmarks.new"))
+            # Wait for focusInput's setTimeout(150ms) to fire
+            page.wait_for_timeout(300)
             focused_tag = page.evaluate(
                 "document.activeElement?.tagName + '|' + document.activeElement?.name"
             )
@@ -35,12 +37,12 @@ class A11yNavigationFocusTest(LinkdingE2ETestCase):
 
             # Subsequent navigation should move focus to main content
             self.reset_focus()
-            self.navigate_menu("Bookmarks", "Active")
+            self.navigate_menu("Categories", "Bookmarks")
             focused = page.locator("main:focus")
             expect(focused).to_be_visible()
 
             self.reset_focus()
-            self.navigate_menu("Bookmarks", "Archived")
+            self.navigate_menu("Categories", "Archived bookmarks")
             focused = page.locator("main:focus")
             expect(focused).to_be_visible()
 
@@ -51,12 +53,12 @@ class A11yNavigationFocusTest(LinkdingE2ETestCase):
 
             # Bookmark form views should focus the URL input
             self.reset_focus()
-            self.navigate_menu("Add bookmark")
+            self.navigate_menu("Add")
             focused = page.locator("input[name='url']:focus")
             expect(focused).to_be_visible()
 
             # Opening details modal should move focus to close button
-            self.navigate_menu("Bookmarks", "Active")
+            self.navigate_menu("Categories", "Bookmarks")
             self.open_details_modal(bookmark)
             focused = page.locator(".modal button.close:focus")
             expect(focused).to_be_visible()

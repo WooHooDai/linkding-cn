@@ -46,7 +46,7 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             page.wait_for_timeout(timeout=1000)
 
             title = page.get_by_label("Title")
-            description = page.get_by_label("Description")
+            description = page.locator("#id_description")
             expect(title).to_have_value(bookmark.title)
             expect(description).to_have_value(bookmark.description)
 
@@ -60,7 +60,7 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             page.wait_for_timeout(timeout=1000)
 
             title = page.get_by_label("Title")
-            description = page.get_by_label("Description")
+            description = page.locator("#id_description")
             expect(title).to_have_value(bookmark.title)
             expect(description).to_have_value(bookmark.description)
 
@@ -84,6 +84,9 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
                 p,
             )
 
+            # Wait for the tag autocomplete web component to render its input,
+            # otherwise the form submission will be missing the tag_string field.
+            page.locator("#id_tag_string").wait_for(state="attached")
             page.locator("input[type='submit']").click()
 
             expect(page).to_have_url(self.live_server_url + return_url)

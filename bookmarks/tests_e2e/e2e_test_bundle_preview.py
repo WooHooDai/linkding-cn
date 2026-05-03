@@ -14,7 +14,7 @@ class BookmarkItemE2ETestCase(LinkdingE2ETestCase):
             page = self.open(reverse("linkding:bundles.new"), p)
 
             expect(
-                page.get_by_text("Found 6 bookmarks matching this bundle")
+                page.get_by_text("Found 6 matching bookmarks.")
             ).to_be_visible()
             self.assertVisibleBookmarks(group1 + group2)
 
@@ -23,7 +23,7 @@ class BookmarkItemE2ETestCase(LinkdingE2ETestCase):
             search.fill("foo")
 
             expect(
-                page.get_by_text("Found 3 bookmarks matching this bundle")
+                page.get_by_text("Found 3 matching bookmarks.")
             ).to_be_visible()
             self.assertVisibleBookmarks(group1)
 
@@ -31,7 +31,7 @@ class BookmarkItemE2ETestCase(LinkdingE2ETestCase):
             search.fill("bar")
 
             expect(
-                page.get_by_text("Found 3 bookmarks matching this bundle")
+                page.get_by_text("Found 3 matching bookmarks.")
             ).to_be_visible()
             self.assertVisibleBookmarks(group2)
 
@@ -39,7 +39,7 @@ class BookmarkItemE2ETestCase(LinkdingE2ETestCase):
             search.fill("invalid")
 
             expect(
-                page.get_by_text("No bookmarks match the current bundle")
+                page.get_by_text("No bookmarks match the current filter.")
             ).to_be_visible()
             self.assertVisibleBookmarks([])
 

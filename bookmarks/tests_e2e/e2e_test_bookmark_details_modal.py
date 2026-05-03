@@ -50,7 +50,7 @@ class BookmarkDetailsModalE2ETestCase(LinkdingE2ETestCase):
             self.open(url, p)
 
             details_modal = self.open_details_modal(bookmark)
-            details_modal.get_by_text("Archived", exact=False).click()
+            details_modal.get_by_role("checkbox", name="Archived").click()
             expect(self.locate_bookmark(bookmark.title)).not_to_be_visible()
             self.assertReloads(0)
 
@@ -60,7 +60,7 @@ class BookmarkDetailsModalE2ETestCase(LinkdingE2ETestCase):
             self.resetReloads()
 
             details_modal = self.open_details_modal(bookmark)
-            details_modal.get_by_text("Archived", exact=False).click()
+            details_modal.get_by_role("checkbox", name="Archived").click()
             expect(self.locate_bookmark(bookmark.title)).not_to_be_visible()
             self.assertReloads(0)
 
@@ -74,15 +74,15 @@ class BookmarkDetailsModalE2ETestCase(LinkdingE2ETestCase):
 
             details_modal = self.open_details_modal(bookmark)
 
-            details_modal.get_by_text("Unread").click()
+            details_modal.get_by_role("checkbox", name="Unread").click()
             bookmark_item = self.locate_bookmark(bookmark.title)
-            expect(bookmark_item.get_by_text("Unread")).to_be_visible()
+            expect(bookmark_item).to_have_class("unread")
             self.assertReloads(0)
 
             # mark as read
-            details_modal.get_by_text("Unread").click()
+            details_modal.get_by_role("checkbox", name="Unread").click()
             bookmark_item = self.locate_bookmark(bookmark.title)
-            expect(bookmark_item.get_by_text("Unread")).not_to_be_visible()
+            expect(bookmark_item).not_to_have_class("unread")
             self.assertReloads(0)
 
     def test_toggle_shared(self):
@@ -99,15 +99,15 @@ class BookmarkDetailsModalE2ETestCase(LinkdingE2ETestCase):
 
             details_modal = self.open_details_modal(bookmark)
 
-            details_modal.get_by_text("Shared").click()
+            details_modal.get_by_role("checkbox", name="Shared").click()
             bookmark_item = self.locate_bookmark(bookmark.title)
-            expect(bookmark_item.get_by_text("Shared")).to_be_visible()
+            expect(bookmark_item).to_have_class("shared")
             self.assertReloads(0)
 
             # unshare bookmark
-            details_modal.get_by_text("Shared").click()
+            details_modal.get_by_role("checkbox", name="Shared").click()
             bookmark_item = self.locate_bookmark(bookmark.title)
-            expect(bookmark_item.get_by_text("Shared")).not_to_be_visible()
+            expect(bookmark_item).not_to_have_class("shared")
             self.assertReloads(0)
 
     def test_edit_return_url(self):
@@ -137,19 +137,17 @@ class BookmarkDetailsModalE2ETestCase(LinkdingE2ETestCase):
 
             details_modal = self.open_details_modal(bookmark)
 
-            # Wait for confirm button to be initialized
-            self.page.wait_for_timeout(1000)
-
             # Delete bookmark, verify return url
+            details_modal.get_by_text("Delete...").click()
+            self.page.get_by_text("Confirm").wait_for(state="visible")
             with self.page.expect_navigation(url=self.live_server_url + url):
-                details_modal.get_by_text("Delete...").click()
-                details_modal.get_by_text("Confirm").click()
+                self.page.get_by_text("Confirm").click()
 
             # verify bookmark is deleted
-            self.locate_bookmark(bookmark.title)
             expect(self.locate_bookmark(bookmark.title)).not_to_be_visible()
 
-        self.assertEqual(Bookmark.objects.count(), 0)
+        bookmark.refresh_from_db()
+        self.assertTrue(bookmark.is_deleted)
 
     @override_settings(LD_ENABLE_SNAPSHOTS=True)
     def test_create_snapshot_remove_snapshot(self):
@@ -169,15 +167,15 @@ class BookmarkDetailsModalE2ETestCase(LinkdingE2ETestCase):
             expect(snapshot).not_to_be_visible()
 
             # Create snapshot
-            details_modal.get_by_text("生成HTML快照", exact=False).click()
+            details_modal.get_by_text("Create HTML snapshot", exact=False).click()
             self.assertReloads(0)
 
             # Has new snapshots
             expect(snapshot).to_be_visible()
 
             # Remove snapshot
-            asset_list.get_by_text("移除", exact=False).click()
-            asset_list.get_by_text("确认", exact=False).click()
+            asset_list.get_by_text("Remove", exact=False).click()
+            self.page.get_by_text("Confirm", exact=False).click()
 
             # Snapshot is removed
             expect(snapshot).not_to_be_visible()

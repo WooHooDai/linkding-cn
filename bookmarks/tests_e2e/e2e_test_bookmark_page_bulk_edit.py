@@ -44,16 +44,16 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             self.locate_bulk_edit_select_all().click()
             self.locate_bulk_edit_select_across().click()
 
-            self.select_bulk_action("Delete")
+            self.select_bulk_action("Move to trash")
             self.locate_bulk_edit_bar().get_by_text("Execute").click()
-            self.locate_bulk_edit_bar().get_by_text("Confirm").click()
+            self.page.get_by_text("Confirm").click()
             # Wait until bookmark list is updated (old reference becomes invisible)
             expect(bookmark_list).not_to_be_visible()
 
         self.assertEqual(
             0,
             Bookmark.objects.filter(
-                is_archived=False, title__startswith="Bookmark"
+                is_archived=False, is_deleted=False, title__startswith="Bookmark"
             ).count(),
         )
         self.assertEqual(
@@ -64,7 +64,7 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
         )
         self.assertEqual(
             0,
-            Bookmark.objects.filter(is_archived=False, title__startswith="foo").count(),
+            Bookmark.objects.filter(is_archived=False, is_deleted=False, title__startswith="foo").count(),
         )
         self.assertEqual(
             50,
@@ -82,9 +82,9 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             self.locate_bulk_edit_select_all().click()
             self.locate_bulk_edit_select_across().click()
 
-            self.select_bulk_action("Delete")
+            self.select_bulk_action("Delete permanently")
             self.locate_bulk_edit_bar().get_by_text("Execute").click()
-            self.locate_bulk_edit_bar().get_by_text("Confirm").click()
+            self.page.get_by_text("Confirm").click()
             # Wait until bookmark list is updated (old reference becomes invisible)
             expect(bookmark_list).not_to_be_visible()
 
@@ -120,16 +120,16 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             self.locate_bulk_edit_select_all().click()
             self.locate_bulk_edit_select_across().click()
 
-            self.select_bulk_action("Delete")
+            self.select_bulk_action("Move to trash")
             self.locate_bulk_edit_bar().get_by_text("Execute").click()
-            self.locate_bulk_edit_bar().get_by_text("Confirm").click()
+            self.page.get_by_text("Confirm").click()
             # Wait until bookmark list is updated (old reference becomes invisible)
             expect(bookmark_list).not_to_be_visible()
 
         self.assertEqual(
             50,
             Bookmark.objects.filter(
-                is_archived=False, title__startswith="Bookmark"
+                is_archived=False, is_deleted=False, title__startswith="Bookmark"
             ).count(),
         )
         self.assertEqual(
@@ -140,7 +140,7 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
         )
         self.assertEqual(
             0,
-            Bookmark.objects.filter(is_archived=False, title__startswith="foo").count(),
+            Bookmark.objects.filter(is_archived=False, is_deleted=False, title__startswith="foo").count(),
         )
         self.assertEqual(
             50,
@@ -158,9 +158,9 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             self.locate_bulk_edit_select_all().click()
             self.locate_bulk_edit_select_across().click()
 
-            self.select_bulk_action("Delete")
+            self.select_bulk_action("Delete permanently")
             self.locate_bulk_edit_bar().get_by_text("Execute").click()
-            self.locate_bulk_edit_bar().get_by_text("Confirm").click()
+            self.page.get_by_text("Confirm").click()
             # Wait until bookmark list is updated (old reference becomes invisible)
             expect(bookmark_list).not_to_be_visible()
 
@@ -281,8 +281,6 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             url = reverse("linkding:bookmarks.index")
             page = self.open(url, p)
 
-            bookmark_list = self.locate_bookmark_list()
-
             # Select all bookmarks, enable select across
             self.locate_bulk_edit_toggle().click()
             self.locate_bulk_edit_select_all().click()
@@ -291,10 +289,10 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
             # Execute bulk action
             self.select_bulk_action("Mark as unread")
             self.locate_bulk_edit_bar().get_by_text("Execute").click()
-            self.locate_bulk_edit_bar().get_by_text("Confirm").click()
+            self.page.get_by_text("Confirm").click()
 
-            # Wait until bookmark list is updated (old reference becomes invisible)
-            expect(bookmark_list).not_to_be_visible()
+            # Wait for turbo stream to update the page (checkboxes get reset)
+            page.wait_for_timeout(1000)
 
             # Verify bulk edit checkboxes are reset
             checkboxes = page.locator("label.bulk-edit-checkbox input")
@@ -311,9 +309,8 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
 
         with sync_playwright() as p:
             url = reverse("linkding:bookmarks.index")
-            self.open(url, p)
+            page = self.open(url, p)
 
-            bookmark_list = self.locate_bookmark_list()
             self.locate_bulk_edit_toggle().click()
             self.locate_bulk_edit_select_all().click()
 
@@ -321,11 +318,11 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
                 self.locate_bulk_edit_bar().get_by_text("All pages (100 bookmarks)")
             ).to_be_visible()
 
-            self.select_bulk_action("Delete")
+            self.select_bulk_action("Move to trash")
             self.locate_bulk_edit_bar().get_by_text("Execute").click()
-            self.locate_bulk_edit_bar().get_by_text("Confirm").click()
-            # Wait until bookmark list is updated (old reference becomes invisible)
-            expect(bookmark_list).not_to_be_visible()
+            self.page.get_by_text("Confirm").click()
+            # Wait for turbo stream to update the page
+            page.wait_for_timeout(1000)
 
             expect(self.locate_bulk_edit_select_all()).not_to_be_checked()
             self.locate_bulk_edit_select_all().click()

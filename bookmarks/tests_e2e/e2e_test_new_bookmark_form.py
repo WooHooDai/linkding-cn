@@ -33,7 +33,7 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             page = self.open(reverse("linkding:bookmarks.new"), p)
             url = page.get_by_label("URL")
             title = page.get_by_label("Title")
-            description = page.get_by_label("Description")
+            description = page.locator("#id_description")
 
             url.fill("https://example.com")
             expect(title).to_have_value("Example Domain")
@@ -46,9 +46,11 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             page = self.open(reverse("linkding:bookmarks.new"), p)
             url = page.get_by_label("URL")
             title = page.get_by_label("Title")
-            description = page.get_by_label("Description")
+            description = page.locator("#id_description")
 
             title.fill("Modified title")
+            # Open the description details element so the textarea is visible
+            page.locator("details.description summary").click()
             description.fill("Modified description")
             url.fill("https://example.com")
             page.wait_for_timeout(timeout=1000)
@@ -65,7 +67,7 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             page = self.open(page_url, p)
             url = page.get_by_label("URL")
             title = page.get_by_label("Title")
-            description = page.get_by_label("Description")
+            description = page.locator("#id_description")
 
             page.wait_for_timeout(timeout=1000)
 
@@ -86,7 +88,7 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             page = self.open(page_url, p)
             url = page.get_by_label("URL")
             title = page.get_by_label("Title")
-            description = page.get_by_label("Description")
+            description = page.locator("#id_description")
 
             page.wait_for_timeout(timeout=1000)
 
@@ -117,7 +119,7 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             )
             self.assertEqual(
                 existing_bookmark.description,
-                page.get_by_label("Description").input_value(),
+                page.locator("#id_description").input_value(),
             )
             self.assertEqual(
                 existing_bookmark.notes, page.get_by_label("Notes").input_value()
@@ -173,10 +175,10 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             page = self.open(reverse("linkding:bookmarks.new"), p)
 
             title_field = page.get_by_label("Title")
-            title_clear_button = page.locator("[ld-clear-button][data-for='id_title']")
-            description_field = page.get_by_label("Description")
+            title_clear_button = page.locator("ld-clear-button[data-for='id_title']")
+            description_field = page.locator("#id_description")
             description_clear_button = page.locator(
-                "[ld-clear-button][data-for='id_description']"
+                "ld-clear-button[data-for='id_description']"
             )
 
             # Initially, clear buttons should be hidden because fields are empty
@@ -187,6 +189,8 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             title_field.fill("Test title")
             expect(title_clear_button).to_be_visible()
 
+            # Open the description details so the textarea is visible
+            page.locator("details.description summary").click()
             # Add content to description field, its clear button should become visible
             description_field.fill("Test description")
             expect(description_clear_button).to_be_visible()
@@ -236,7 +240,7 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             page = self.open(reverse("linkding:bookmarks.new"), p)
             url_field = page.get_by_label("URL")
             title_field = page.get_by_label("Title")
-            description_field = page.get_by_label("Description")
+            description_field = page.locator("#id_description")
             refresh_button = page.locator("#refresh-button")
 
             # Enter the URL of the existing bookmark to make refresh button visible
@@ -280,8 +284,16 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             page = self.open(reverse("linkding:bookmarks.new"), p)
             url_field = page.get_by_label("URL")
             title_field = page.get_by_label("Title")
-            description_field = page.get_by_label("Description")
+            description_field = page.locator("#id_description")
             refresh_button = page.locator("#refresh-button")
+
+            # Update mock to use the bookmark URL so checkUrl doesn't change the URL input
+            self.website_loader_mock.return_value = website_loader.WebsiteMetadata(
+                url=existing_bookmark.url,
+                title="Example Domain",
+                description="This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.",
+                preview_image=None,
+            )
 
             # Enter the URL of the existing bookmark to make refresh button visible
             url_field.fill(existing_bookmark.url)
@@ -294,7 +306,7 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             # Update the mock to return same metadata when refresh is requested
             self.website_loader_mock.reset_mock()
             self.website_loader_mock.return_value = website_loader.WebsiteMetadata(
-                url="https://example.com",
+                url=existing_bookmark.url,
                 title="Existing title",
                 description="Existing description",
                 preview_image=None,
@@ -316,7 +328,7 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
         with sync_playwright() as p:
             page = self.open(reverse("linkding:bookmarks.new"), p)
             url_field = page.get_by_label("URL")
-            description_field = page.get_by_label("Description")
+            description_field = page.locator("#id_description")
 
             url_field.fill("https://example.com")
             description_field.fill("Test description")
