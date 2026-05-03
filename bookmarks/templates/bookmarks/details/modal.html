@@ -33,7 +33,7 @@
             <form action="{{ details.delete_url }}" method="post" data-turbo-action="replace">
               {% csrf_token %}
               <input type="hidden" name="disable_turbo" value="true">
-              <button data-confirm class="btn btn-error btn-wide"
+              <button ld-confirm-button class="btn btn-error btn-wide"
                       type="submit" name="trash" value="{{ details.bookmark.id }}">
                 {% translate "Delete..." %}
               </button>

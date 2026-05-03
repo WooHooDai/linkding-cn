@@ -106,7 +106,7 @@
                     <a class="btn btn-link" href="{% url 'linkding:tags.edit' tag.id %}?{{ request.GET.urlencode }}"
                        data-turbo-frame="tag-modal">{% translate "Edit" %}</a>
                     <button type="submit" name="delete_tag" value="{{ tag.id }}" class="btn btn-link text-error"
-                            data-confirm>
+                            ld-confirm-button>
                       {% translate "Delete" %}
                     </button>
                   </div>

@@ -35,6 +35,10 @@ msgstr "是"
 msgid "Confirm"
 msgstr "确认"
 
+#: bookmarks/frontend/components/confirm-inline.js
+msgid "Are you sure?"
+msgstr "确认执行操作？"
+
 #: bookmarks/frontend/behaviors/filter-drawer.js:27
 msgid "Filter"
 msgstr "筛选"

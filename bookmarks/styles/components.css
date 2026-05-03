@@ -83,22 +83,28 @@
 }
 
 /* Confirm button component */
-span.confirmation {
-  display: flex;
-  align-items: baseline;
-  gap: var(--unit-1);
-  color: var(--error-color) !important;
+ld-confirm-popup {
+  position: fixed;
+  z-index: calc(var(--zindex-4) + 2);
+  background: var(--body-color);
+  border: solid 1px var(--modal-container-border-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow-lg);
+  padding: var(--unit-3) var(--unit-4);
+  animation: fade-in 0.15s ease 1;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--unit-2);
+  font-size: var(--font-size-sm);
 
-  svg {
-    align-self: center;
+  .confirm-popup-question {
+    font-weight: bold;
   }
 
-  .btn.btn-link {
-    color: var(--error-color) !important;
-
-    &:hover {
-      text-decoration: underline;
-    }
+  .confirm-popup-actions {
+    display: flex;
+    gap: var(--unit-2);
   }
 }
 
