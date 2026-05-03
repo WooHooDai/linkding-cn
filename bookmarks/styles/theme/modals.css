@@ -39,6 +39,7 @@
     }
 
     & .modal-container {
+      position: relative;
       animation: fade-in 0.15s ease 1;
       z-index: var(--zindex-0);
     }
@@ -50,6 +51,11 @@
       animation: fade-out 0.15s ease 1;
     }
   }
+}
+
+ld-confirm-dropdown {
+  position: relative;
+  z-index: calc(var(--zindex-4) + 1);
 }
 
 .modal-container {

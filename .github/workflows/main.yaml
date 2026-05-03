@@ -30,7 +30,7 @@ jobs:
           uv sync
           mkdir data
       - name: Run tests
-        run: uv run manage.py test bookmarks.tests
+        run: uv run pytest bookmarks/tests/ -n auto
   e2e_tests:
     name: E2E Tests
     runs-on: ubuntu-latest
