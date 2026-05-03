@@ -1,17 +1,4 @@
 import { Behavior, registerBehavior } from "./runtime.js";
-import {
-  buildBookmarkPageStreamRequestHeaders,
-  stripPagePreferenceParams,
-} from "../state/page-preferences";
-import {
-  buildStoredSummaryPreferenceState,
-  getStoredSummaryState,
-  getSummaryStateFromElement,
-  storeRenderedSummaryPreferences,
-  storeSummaryPreferenceTargets,
-  storeSummaryPreferences,
-} from "../state/summary-preferences";
-import { persistOpenDrawerState } from "../state/filter-drawer-state";
 
 const DEFAULT_HEATMAP_MIN_COLUMN_WIDTH = 18;
 const DEFAULT_HEATMAP_MIN_VISIBLE_COLUMNS = 8;
@@ -83,10 +70,6 @@ class SidebarUserSummaryBehavior extends Behavior {
       this.handleCollectionToggle();
     }
 
-    if (this.applyStoredDisplayPreferences()) {
-      return;
-    }
-    this.syncStoredDisplayPreferencesFromDom();
     this.initializeHeatmapLayout();
   }
 
@@ -115,15 +98,13 @@ class SidebarUserSummaryBehavior extends Behavior {
       return;
     }
 
-    this.persistDisplayPreferenceFromLink(link);
-
     if (link.dataset.summaryCalendarDay) {
       this.handleCalendarDayClick(event, link);
       return;
     }
 
-    event.preventDefault();
-    this.visitStream(link.href);
+    // All other links (mode switch, month/week nav, settings, etc.)
+    // are regular <a> tags with sum_* query params — let browser navigate.
   }
 
   handleCalendarDayClick(event, link) {
@@ -203,66 +184,7 @@ class SidebarUserSummaryBehavior extends Behavior {
     const url = new URL(this.element.dataset.summaryRangeUrl, window.location.origin);
     url.searchParams.set("date_filter_start", start);
     url.searchParams.set("date_filter_end", end);
-    this.visitStream(url.toString());
-  }
-
-  async visitStream(url) {
-    const requestUrl = stripPagePreferenceParams(url);
-
-    try {
-      const response = await fetch(requestUrl, {
-        headers: buildBookmarkPageStreamRequestHeaders(),
-        credentials: "same-origin",
-      });
-
-      if (!response.ok) {
-        throw new Error(`Unexpected status ${response.status}`);
-      }
-
-      const contentType = response.headers.get("content-type") || "";
-      const html = await response.text();
-      if (!contentType.includes("text/vnd.turbo-stream.html")) {
-        throw new Error("Expected turbo stream response");
-      }
-
-      Turbo.renderStreamMessage(html);
-      window.history.pushState({}, "", requestUrl);
-      this.draftStart = null;
-    } catch (_error) {
-      persistOpenDrawerState();
-      Turbo.visit(requestUrl);
-    }
-  }
-
-  applyStoredDisplayPreferences() {
-    const preferenceState = buildStoredSummaryPreferenceState({
-      ...getSummaryStateFromElement(this.element),
-      hasSelectedRange: this.hasCommittedRange(),
-      ...getStoredSummaryState(),
-    });
-
-    if (!preferenceState) {
-      return false;
-    }
-
-    storeSummaryPreferences(preferenceState);
-
-    this.visitStream(window.location.href);
-    return true;
-  }
-
-  syncStoredDisplayPreferencesFromDom() {
-    storeRenderedSummaryPreferences(getSummaryStateFromElement(this.element));
-  }
-
-  persistDisplayPreferenceFromLink(link) {
-    storeSummaryPreferenceTargets({
-      targetMode: link.dataset.summaryTargetMode,
-      targetMonth: link.dataset.summaryTargetMonth,
-      targetWeek: link.dataset.summaryTargetWeek,
-      targetShowWeekdays: link.dataset.summaryTargetShowWeekdays,
-      targetShowDetails: link.dataset.summaryTargetShowDetails,
-    });
+    window.location.href = url.toString();
   }
 
   initializeHeatmapLayout() {

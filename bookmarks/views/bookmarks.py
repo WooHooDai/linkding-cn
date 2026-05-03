@@ -87,9 +87,68 @@ def _build_sidebar_modules(request: HttpRequest, context: dict) -> list[dict]:
     return modules
 
 
+SUMMARY_ACTIONS = {"toggle_mode", "toggle_show_weekdays", "toggle_show_details", "nav_month", "nav_week"}
+DOMAIN_ACTIONS = {"toggle_domain_view_mode", "toggle_domain_compact_mode"}
+
+
+def _handle_preference_toggle(request: HttpRequest):
+    action = request.POST["pref_action"]
+    profile = request.user_profile
+
+    if action == "toggle_mode":
+        profile.sum_mode = request.POST["value"]
+        profile.save()
+    elif action == "toggle_show_weekdays":
+        profile.sum_show_weekdays = request.POST["value"] == "1"
+        profile.save()
+    elif action == "toggle_show_details":
+        profile.sum_show_details = request.POST["value"] == "1"
+        profile.save()
+    elif action == "toggle_domain_view_mode":
+        profile.domain_view_mode = request.POST["value"]
+        profile.save()
+    elif action == "toggle_domain_compact_mode":
+        profile.domain_compact_mode = request.POST["value"] == "1"
+        profile.save()
+
+    # For nav_month/nav_week, inject the target value into GET so the context picks it up
+    if action == "nav_month":
+        request.GET = request.GET.copy()
+        request.GET["sum_month"] = request.POST["value"]
+    elif action == "nav_week":
+        request.GET = request.GET.copy()
+        request.GET["sum_week"] = request.POST["value"]
+
+    search = BookmarkSearch.from_request(
+        request, request.GET, profile.search_preferences
+    )
+
+    if action in SUMMARY_ACTIONS:
+        sidebar_summary = contexts.SidebarUserSummaryContext(request, search)
+        return turbo.update(
+            request,
+            "sidebar-user-summary-container",
+            "bookmarks/sidebar_user_summary.html",
+            {"sidebar_summary": sidebar_summary},
+        )
+
+    if action in DOMAIN_ACTIONS:
+        domains = contexts.ActiveDomainsContext(request, search)
+        return turbo.update(
+            request,
+            "domain-section-container",
+            "bookmarks/domain_section.html",
+            {"domains": domains},
+        )
+
+    return HttpResponseRedirect(reverse("linkding:bookmarks.index"))
+
+
 @login_required
 def index(request: HttpRequest):
     if request.method == "POST":
+        if "pref_action" in request.POST:
+            return _handle_preference_toggle(request)
         return search_action(request)
 
     search = BookmarkSearch.from_request(
@@ -124,6 +183,8 @@ def index(request: HttpRequest):
 @login_required
 def archived(request: HttpRequest):
     if request.method == "POST":
+        if "pref_action" in request.POST:
+            return _handle_preference_toggle(request)
         return search_action(request)
 
     search = BookmarkSearch.from_request(
@@ -155,6 +216,8 @@ def archived(request: HttpRequest):
 
 def shared(request: HttpRequest):
     if request.method == "POST":
+        if "pref_action" in request.POST:
+            return _handle_preference_toggle(request)
         return search_action(request)
 
     search = BookmarkSearch.from_request(
@@ -190,6 +253,8 @@ def shared(request: HttpRequest):
 @login_required
 def trashed(request: HttpRequest):
     if request.method == "POST":
+        if "pref_action" in request.POST:
+            return _handle_preference_toggle(request)
         return search_action(request)
 
     # 如果用户的回收站搜索偏好为空，设置默认的删除时间降序

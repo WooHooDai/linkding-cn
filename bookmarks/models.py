@@ -818,6 +818,37 @@ class UserProfile(models.Model):
     collapse_side_panel = models.BooleanField(default=False, null=False)
     hide_bundles = models.BooleanField(default=False, null=False)
 
+    # Summary display preferences
+    SUM_MODE_CALENDAR = "calendar"
+    SUM_MODE_HEATMAP = "heatmap"
+    SUM_MODE_CHOICES = [
+        (SUM_MODE_CALENDAR, _("Calendar")),
+        (SUM_MODE_HEATMAP, _("Heatmap")),
+    ]
+    sum_mode = models.CharField(
+        max_length=20,
+        choices=SUM_MODE_CHOICES,
+        blank=False,
+        default=SUM_MODE_CALENDAR,
+    )
+    sum_show_weekdays = models.BooleanField(default=False, null=False)
+    sum_show_details = models.BooleanField(default=False, null=False)
+
+    # Domain display preferences
+    DOMAIN_VIEW_FULL = "full"
+    DOMAIN_VIEW_ICON = "icon"
+    DOMAIN_VIEW_CHOICES = [
+        (DOMAIN_VIEW_FULL, _("Full")),
+        (DOMAIN_VIEW_ICON, _("Icon")),
+    ]
+    domain_view_mode = models.CharField(
+        max_length=20,
+        choices=DOMAIN_VIEW_CHOICES,
+        blank=False,
+        default=DOMAIN_VIEW_ICON,
+    )
+    domain_compact_mode = models.BooleanField(default=True, null=False)
+
     def save(self, *args, **kwargs):
         if self.custom_css:
             self.custom_css_hash = hashlib.md5(

@@ -1573,6 +1573,28 @@ ul.bookmark-list {
     color: var(--primary-color);
     font-weight: 700;
   }
+
+  & .summary-nav-form,
+  & .summary-mode-switch-form,
+  & .summary-toolbar-action-form {
+    display: contents;
+  }
+
+  & button.summary-mode-switch {
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  & button.summary-toolbar-action {
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+  }
 }
 
 

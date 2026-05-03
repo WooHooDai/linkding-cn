@@ -16,10 +16,20 @@
         </button>
         <ul class="menu" role="list" tabindex="-1">
           <li class="menu-item">
-            <a href="{{ domains.menu_url }}" class="menu-link" data-domain-target-view-mode="{{ domains.toggle_view_mode_target }}" onclick="return window.ldHandleDomainPreferenceClick ? window.ldHandleDomainPreferenceClick(event) : true">{{ domains.toggle_view_mode_label }}</a>
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="pref_action" value="{{ domains.toggle_view_mode_action }}">
+              <input type="hidden" name="value" value="{{ domains.toggle_view_mode_value }}">
+              <button type="submit" class="menu-link">{{ domains.toggle_view_mode_label }}</button>
+            </form>
           </li>
           <li class="menu-item">
-            <a href="{{ domains.menu_url }}" class="menu-link" data-domain-target-compact-mode="{{ domains.toggle_compact_mode_target }}" onclick="return window.ldHandleDomainPreferenceClick ? window.ldHandleDomainPreferenceClick(event) : true">{{ domains.toggle_compact_mode_label }}</a>
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="pref_action" value="{{ domains.toggle_compact_mode_action }}">
+              <input type="hidden" name="value" value="{{ domains.toggle_compact_mode_value }}">
+              <button type="submit" class="menu-link">{{ domains.toggle_compact_mode_label }}</button>
+            </form>
           </li>
         </ul>
       </ld-dropdown>

@@ -42,7 +42,6 @@ CJK_RE = re.compile(r"[\u4e00-\u9fff]+")
 class RequestContext:
     index_view = "linkding:bookmarks.index"
     action_view = "linkding:bookmarks.index.action"
-    DOMAIN_PREFERENCE_QUERY_PARAMS = ("domain_view", "domain_compact")
 
     def __init__(self, request: HttpRequest):
         self.request = request
@@ -50,8 +49,6 @@ class RequestContext:
         self.action_url = reverse(self.action_view)
         self.query_params = request.GET.copy()
         self.query_params.pop("details", None)
-        for key in self.DOMAIN_PREFERENCE_QUERY_PARAMS:
-            self.query_params.pop(key, None)
 
         self.query_is_valid = True
         self.query_error_message = None
@@ -280,23 +277,7 @@ class SidebarCalendarDay:
 class SidebarUserSummaryContext:
     MODE_CALENDAR = "calendar"
     MODE_HEATMAP = "heatmap"
-    SUMMARY_QUERY_PARAMS = (
-        "summary_mode",
-        "summary_month",
-        "summary_week",
-        "summary_year",
-        "summary_month_number",
-        "summary_show_weekdays",
-        "summary_show_details",
-    )
     PRESERVED_QUERY_PARAMS = ()
-    SUMMARY_HEADER_NAMES = {
-        "summary_mode": "X-Linkding-Summary-Mode",
-        "summary_month": "X-Linkding-Summary-Month",
-        "summary_week": "X-Linkding-Summary-Week",
-        "summary_show_weekdays": "X-Linkding-Summary-Show-Weekdays",
-        "summary_show_details": "X-Linkding-Summary-Show-Details",
-    }
     RESET_SEARCH_PARAMS = (
         "q",
         "bundle",
@@ -314,7 +295,7 @@ class SidebarUserSummaryContext:
         self.request = request
         self.search = search
         self.username = request.user.username
-        self.mode = self._coerce_mode(self._get_summary_value("summary_mode"))
+        self.mode = self._coerce_mode(request.user_profile.sum_mode)
 
         active_bookmarks = Bookmark.objects.filter(
             owner=request.user,
@@ -340,8 +321,8 @@ class SidebarUserSummaryContext:
         self.collection_start_label = self.collection_start_day.strftime("%Y/%m/%d")
         self.collection_start_prefix = _("Since")
         self.has_bookmarks = oldest_bookmark is not None
-        self.show_weekdays = self._is_toggle_enabled("summary_show_weekdays")
-        self.show_details = self._is_toggle_enabled("summary_show_details")
+        self.show_weekdays = self._is_toggle_enabled("sum_show_weekdays")
+        self.show_details = self._is_toggle_enabled("sum_show_details")
         self.selected_start, self.selected_end = self._get_selected_range()
         self.selected_start_iso = (
             self.selected_start.isoformat() if self.selected_start else ""
@@ -407,56 +388,36 @@ class SidebarUserSummaryContext:
         self.settings_options = self._build_settings_options()
 
         if self.mode == self.MODE_CALENDAR:
-            target_week = self._format_week_key(
-                self._get_calendar_mode_switch_week_start(today)
-            )
             self.mode_switch = {
                 "key": self.MODE_HEATMAP,
-                "url": self._build_url(),
+                "action": "toggle_mode",
+                "value": self.MODE_HEATMAP,
                 "title": _("Heatmap"),
-                "target_mode": self.MODE_HEATMAP,
-                "target_week": target_week,
             }
         else:
-            target_month = self._get_visible_heatmap_month_start(today).strftime(
-                "%Y-%m"
-            )
             self.mode_switch = {
                 "key": self.MODE_CALENDAR,
-                "url": self._build_url(),
+                "action": "toggle_mode",
+                "value": self.MODE_CALENDAR,
                 "title": _("Calendar"),
-                "target_mode": self.MODE_CALENDAR,
-                "target_month": target_month,
             }
 
         previous_month = self._shift_month(self.visible_month_start, -1)
         next_month = self._shift_month(self.visible_month_start, 1)
-        self.previous_month_url = (
-            self._build_url() if previous_month >= earliest_month_start else None
-        )
         self.previous_month_key = (
             previous_month.strftime("%Y-%m")
             if previous_month >= earliest_month_start
             else None
-        )
-        self.next_month_url = (
-            self._build_url() if next_month <= current_month_start else None
         )
         self.next_month_key = (
             next_month.strftime("%Y-%m") if next_month <= current_month_start else None
         )
         previous_week = self.visible_week_start - timedelta(days=7)
         next_week = self.visible_week_start + timedelta(days=7)
-        self.previous_week_url = (
-            self._build_url() if previous_week >= self.earliest_week_start else None
-        )
         self.previous_week_key = (
             self._format_week_key(previous_week)
             if previous_week >= self.earliest_week_start
             else None
-        )
-        self.next_week_url = (
-            self._build_url() if next_week <= self.current_week_start else None
         )
         self.next_week_key = (
             self._format_week_key(next_week)
@@ -473,8 +434,6 @@ class SidebarUserSummaryContext:
             date_filter_start=None,
             date_filter_end=None,
         )
-        self.current_month_url = self._build_url()
-        self.current_week_url = self._build_url()
         self.calendar_weeks = self._build_calendar_weeks(active_bookmarks, today)
         self.heatmap_weeks = self._build_heatmap_weeks(active_bookmarks, today)
         self.heatmap_week_headers = self._build_heatmap_week_headers()
@@ -619,9 +578,9 @@ class SidebarUserSummaryContext:
         return SidebarUserSummaryContext.MODE_CALENDAR
 
     def _get_requested_month_value(self) -> str | None:
-        summary_month = self._get_summary_value("summary_month")
-        if summary_month:
-            return summary_month
+        sum_month = self.request.GET.get("sum_month")
+        if sum_month:
+            return sum_month
 
         if self.selected_end:
             return self.selected_end.strftime("%Y-%m")
@@ -629,9 +588,9 @@ class SidebarUserSummaryContext:
         return None
 
     def _get_requested_week_value(self) -> str | None:
-        summary_week = self._get_summary_value("summary_week")
-        if summary_week:
-            return summary_week
+        sum_week = self.request.GET.get("sum_week")
+        if sum_week:
+            return sum_week
 
         if self.selected_end:
             return self._format_week_key(self._start_of_week(self.selected_end))
@@ -784,12 +743,13 @@ class SidebarUserSummaryContext:
                 earliest_month_start,
                 current_month_start,
             )
+            month_key = target_month.strftime("%Y-%m")
             options.append(
                 {
                     "value": year,
                     "label": str(year),
-                    "url": self._build_url(),
-                    "target_month": target_month.strftime("%Y-%m"),
+                    "action": "nav_month",
+                    "month_key": month_key,
                     "is_selected": year == self.visible_year,
                 }
             )
@@ -803,12 +763,13 @@ class SidebarUserSummaryContext:
             month_start = date(self.visible_year, month, 1)
             if not earliest_month_start <= month_start <= current_month_start:
                 continue
+            month_key = month_start.strftime("%Y-%m")
             options.append(
                 {
                     "value": month,
                     "label": f"{month:02d}",
-                    "url": self._build_url(),
-                    "target_month": month_start.strftime("%Y-%m"),
+                    "action": "nav_month",
+                    "month_key": month_key,
                     "is_selected": month == self.visible_month_number,
                 }
             )
@@ -879,12 +840,13 @@ class SidebarUserSummaryContext:
         options = []
         for year in sorted(self.heatmap_year_groups.keys(), reverse=True):
             target_week = self._pick_week_for_year(year)
+            week_key = self._format_week_key(target_week)
             options.append(
                 {
                     "value": year,
                     "label": str(year),
-                    "url": self._build_url(),
-                    "target_week": self._format_week_key(target_week),
+                    "action": "nav_week",
+                    "week_key": week_key,
                     "is_selected": year == self.visible_week_year,
                 }
             )
@@ -897,8 +859,8 @@ class SidebarUserSummaryContext:
                 {
                     "value": week["week_number"],
                     "label": week["label"],
-                    "url": self._build_url(),
-                    "target_week": week["key"],
+                    "action": "nav_week",
+                    "week_key": week["key"],
                     "is_selected": week["start"] == self.visible_week_start,
                 }
             )
@@ -935,22 +897,20 @@ class SidebarUserSummaryContext:
             if self.visible_month_start != current_month_start:
                 return {
                     "key": "current-month",
-                    "url": self.current_month_url,
+                    "action": "nav_month",
+                    "value": self.current_month_key,
                     "title": _("Go to current month"),
                     "icon": "target",
-                    "target_mode": self.MODE_CALENDAR,
-                    "target_month": self.current_month_key,
                 }
             return None
 
         if self.visible_week_start != self.current_week_start:
             return {
                 "key": "current-week",
-                "url": self.current_week_url,
+                "action": "nav_week",
+                "value": self.current_week_key,
                 "title": _("Go to current week"),
                 "icon": "target",
-                "target_mode": self.MODE_HEATMAP,
-                "target_week": self.current_week_key,
             }
         return None
 
@@ -972,26 +932,19 @@ class SidebarUserSummaryContext:
                 "label": _("Hide weekdays")
                 if self.show_weekdays
                 else _("Show weekdays"),
-                "url": self._build_url(),
-                "target_show_weekdays": "0" if self.show_weekdays else "1",
+                "action": "toggle_show_weekdays",
+                "value": "0" if self.show_weekdays else "1",
             },
             {
                 "key": "details",
                 "label": _("Hide summary") if self.show_details else _("Show summary"),
-                "url": self._build_url(),
-                "target_show_details": "0" if self.show_details else "1",
+                "action": "toggle_show_details",
+                "value": "0" if self.show_details else "1",
             },
         ]
 
     def _is_toggle_enabled(self, key: str) -> bool:
-        return self._get_summary_value(key) == "1"
-
-    def _get_summary_value(self, key: str) -> str | None:
-        header_name = self.SUMMARY_HEADER_NAMES.get(key)
-        header_value = self.request.headers.get(header_name) if header_name else None
-        if header_value not in (None, ""):
-            return header_value
-        return None
+        return bool(getattr(self.request.user_profile, key, False))
 
     def _get_visible_heatmap_month_start(self, today: date) -> date:
         reference_day = min(today, self.visible_week_start + timedelta(days=6))
@@ -1067,17 +1020,18 @@ class SidebarUserSummaryContext:
         return period_start, period_end, lead
 
     @staticmethod
+    @staticmethod
     def _build_activity_count_fragment(
-        singular: str, plural: str, count: int
+        translated_text: str, count: int
     ) -> dict[str, str | int]:
         count_token = "__count__"
-        template = ngettext(singular, plural, count) % {"count": count_token}
+        template = translated_text % {"count": count_token}
         prefix, _separator, suffix = template.partition(count_token)
         return {
             "count": count,
             "prefix": prefix,
             "suffix": suffix,
-            "text": ngettext(singular, plural, count) % {"count": count},
+            "text": translated_text % {"count": count},
         }
 
     @staticmethod
@@ -1100,18 +1054,27 @@ class SidebarUserSummaryContext:
             daily_counts, period_start, period_end
         )
         bookmark_fragment = self._build_activity_count_fragment(
-            "Bookmarked %(count)s item",
-            "Bookmarked %(count)s items",
+            ngettext(
+                "Bookmarked %(count)s item",
+                "Bookmarked %(count)s items",
+                bookmark_total,
+            ),
             bookmark_total,
         )
         active_days_fragment = self._build_activity_count_fragment(
-            "active on %(count)s day",
-            "active on %(count)s days",
+            ngettext(
+                "active on %(count)s day",
+                "active on %(count)s days",
+                active_days,
+            ),
             active_days,
         )
         longest_streak_fragment = self._build_activity_count_fragment(
-            "longest streak %(count)s day",
-            "longest streak %(count)s days",
+            ngettext(
+                "longest streak %(count)s day",
+                "longest streak %(count)s days",
+                longest_streak,
+            ),
             longest_streak,
         )
         copy_text = _("{bookmarks}, {days}, {streak}.").format(
@@ -1153,12 +1116,8 @@ class SidebarUserSummaryContext:
         if reset_search:
             for key in self.RESET_SEARCH_PARAMS:
                 query_params.pop(key, None)
-        for key in self.SUMMARY_QUERY_PARAMS:
-            query_params.pop(key, None)
 
         for key, value in updates.items():
-            if key in self.SUMMARY_QUERY_PARAMS:
-                continue
             if value in (None, ""):
                 query_params.pop(key, None)
             else:
@@ -1641,8 +1600,6 @@ class DomainItem:
 class DomainsContext:
     request_context = RequestContext
     TOP_ROOT_LIMIT = 10
-    VIEW_MODE_HEADER = "X-Linkding-Domain-View"
-    COMPACT_MODE_HEADER = "X-Linkding-Domain-Compact"
 
     def __init__(self, request: HttpRequest, search: BookmarkSearch) -> None:
         request_context = self.request_context(request)
@@ -1650,15 +1607,16 @@ class DomainsContext:
         self.view_mode = self._parse_view_mode(request)
         self.is_icon_mode = self.view_mode == "icon"
         self.is_compact_mode = self._parse_compact_mode(request)
-        self.menu_url = self._build_menu_url(request)
         self.toggle_view_mode_label = (
             _("Full mode") if self.is_icon_mode else _("Icon mode")
         )
-        self.toggle_view_mode_target = "full" if self.is_icon_mode else "icon"
+        self.toggle_view_mode_action = "toggle_domain_view_mode"
+        self.toggle_view_mode_value = "full" if self.is_icon_mode else "icon"
         self.toggle_compact_mode_label = (
             _("All domains") if self.is_compact_mode else _("Only important domains")
         )
-        self.toggle_compact_mode_target = "0" if self.is_compact_mode else "1"
+        self.toggle_compact_mode_action = "toggle_domain_compact_mode"
+        self.toggle_compact_mode_value = "0" if self.is_compact_mode else "1"
 
         parsed_query = queries.parse_query_string(search.q)
         selected_domain_terms = [
@@ -1723,26 +1681,11 @@ class DomainsContext:
 
     @staticmethod
     def _parse_view_mode(request: HttpRequest) -> str:
-        header_value = request.headers.get(DomainsContext.VIEW_MODE_HEADER)
-        if header_value in ("icon", "full"):
-            return header_value
-        return "icon" if request.GET.get("domain_view") == "icon" else "full"
+        return request.user_profile.domain_view_mode
 
     @staticmethod
     def _parse_compact_mode(request: HttpRequest) -> bool:
-        header_value = request.headers.get(DomainsContext.COMPACT_MODE_HEADER)
-        if header_value in ("0", "1"):
-            return header_value != "0"
-        return request.GET.get("domain_compact") != "0"
-
-    @staticmethod
-    def _build_menu_url(request: HttpRequest) -> str:
-        query_params = request.GET.copy()
-        for key in RequestContext.DOMAIN_PREFERENCE_QUERY_PARAMS:
-            query_params.pop(key, None)
-
-        encoded_query = query_params.urlencode()
-        return request.path + ("?" + encoded_query if encoded_query else "")
+        return request.user_profile.domain_compact_mode
 
     @classmethod
     def _compact_root_nodes(

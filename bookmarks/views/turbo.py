@@ -43,3 +43,20 @@ def replace(
     response = HttpResponse(stream_content, status=status)
     response["Content-Type"] = "text/vnd.turbo-stream.html"
     return response
+
+
+def update(
+    request: HttpRequest,
+    target_id: str,
+    template_name: str,
+    context: dict,
+    status: int = 200,
+) -> HttpResponse:
+    content = loader.render_to_string(template_name, context, request)
+    stream_content = (
+        f'<turbo-stream action="update" target="{target_id}">'
+        f"<template>{content}</template></turbo-stream>"
+    )
+    response = HttpResponse(stream_content, status=status)
+    response["Content-Type"] = "text/vnd.turbo-stream.html"
+    return response

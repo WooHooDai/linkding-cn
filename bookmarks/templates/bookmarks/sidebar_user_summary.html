@@ -39,11 +39,14 @@
         <ul class="menu" role="list" tabindex="-1">
           {% for option in sidebar_summary.settings_options %}
             <li class="menu-item">
-              <a href="{{ option.url }}"
-                 class="menu-link"
-                 data-summary-setting="{{ option.key }}"
-                 {% if option.target_show_weekdays %}data-summary-target-show-weekdays="{{ option.target_show_weekdays }}"{% endif %}
-                 {% if option.target_show_details %}data-summary-target-show-details="{{ option.target_show_details }}"{% endif %}>{{ option.label }}</a>
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="pref_action" value="{{ option.action }}">
+                <input type="hidden" name="value" value="{{ option.value }}">
+                <button type="submit"
+                        class="menu-link"
+                        data-summary-setting="{{ option.key }}">{{ option.label }}</button>
+              </form>
             </li>
           {% endfor %}
         </ul>
@@ -119,41 +122,57 @@
              data-summary-selected-end="{{ sidebar_summary.selected_end_iso }}">
       <div class="summary-activity-toolbar">
         {% if sidebar_summary.toolbar_action %}
-          <a class="summary-toolbar-action"
-             data-summary-toolbar-action="{{ sidebar_summary.toolbar_action.key }}"
-             href="{{ sidebar_summary.toolbar_action.url }}"
-             {% if sidebar_summary.toolbar_action.target_mode %}data-summary-target-mode="{{ sidebar_summary.toolbar_action.target_mode }}"{% endif %}
-             {% if sidebar_summary.toolbar_action.target_month %}data-summary-target-month="{{ sidebar_summary.toolbar_action.target_month }}"{% endif %}
-             {% if sidebar_summary.toolbar_action.target_week %}data-summary-target-week="{{ sidebar_summary.toolbar_action.target_week }}"{% endif %}
-             aria-label="{{ sidebar_summary.toolbar_action.title }}"
-             title="{{ sidebar_summary.toolbar_action.title }}">
-            {% if sidebar_summary.toolbar_action.icon == "reset" %}
-              <svg viewBox="0 0 1024 1024"
-                   class="summary-toolbar-icon-reset"
-                   aria-hidden="true"
-                   focusable="false">
-                <path d="M808 602.9c-23.6 164.2-181.8 285.5-358.7 248.3C336.9 827.6 245.6 736.8 222 624.4c-40.3-192 92-361.8 290.4-361.8v99.2l248-148.8-248-148.8v99.2c-248 0-438 222.4-388.6 476.5 30.1 154.7 155 279.4 309.7 309.5C668 995 875.6 833.9 906.2 616.1c4.2-29.6-19.7-55.8-49.5-55.8h0.1c-24.7 0-45.3 18.2-48.8 42.6z"></path>
-              </svg>
-            {% else %}
-              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-                <circle cx="8" cy="8" r="4.4" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
-                <path d="M8 1.8v2.1M8 12.1v2.1M1.8 8h2.1M12.1 8h2.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
-              </svg>
-            {% endif %}
-          </a>
+          {% if sidebar_summary.toolbar_action.url %}
+            <a class="summary-toolbar-action"
+               data-summary-toolbar-action="{{ sidebar_summary.toolbar_action.key }}"
+               href="{{ sidebar_summary.toolbar_action.url }}"
+               aria-label="{{ sidebar_summary.toolbar_action.title }}"
+               title="{{ sidebar_summary.toolbar_action.title }}">
+              {% if sidebar_summary.toolbar_action.icon == "reset" %}
+                <svg viewBox="0 0 1024 1024"
+                     class="summary-toolbar-icon-reset"
+                     aria-hidden="true"
+                     focusable="false">
+                  <path d="M808 602.9c-23.6 164.2-181.8 285.5-358.7 248.3C336.9 827.6 245.6 736.8 222 624.4c-40.3-192 92-361.8 290.4-361.8v99.2l248-148.8-248-148.8v99.2c-248 0-438 222.4-388.6 476.5 30.1 154.7 155 279.4 309.7 309.5C668 995 875.6 833.9 906.2 616.1c4.2-29.6-19.7-55.8-49.5-55.8h0.1c-24.7 0-45.3 18.2-48.8 42.6z"></path>
+                </svg>
+              {% else %}
+                <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                  <circle cx="8" cy="8" r="4.4" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
+                  <path d="M8 1.8v2.1M8 12.1v2.1M1.8 8h2.1M12.1 8h2.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+                </svg>
+              {% endif %}
+            </a>
+          {% else %}
+            <form method="post" class="summary-toolbar-action-form">
+              {% csrf_token %}
+              <input type="hidden" name="pref_action" value="{{ sidebar_summary.toolbar_action.action }}">
+              <input type="hidden" name="value" value="{{ sidebar_summary.toolbar_action.value }}">
+              <button type="submit"
+                      class="summary-toolbar-action"
+                      data-summary-toolbar-action="{{ sidebar_summary.toolbar_action.key }}"
+                      aria-label="{{ sidebar_summary.toolbar_action.title }}"
+                      title="{{ sidebar_summary.toolbar_action.title }}">
+                <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                  <circle cx="8" cy="8" r="4.4" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
+                  <path d="M8 1.8v2.1M8 12.1v2.1M1.8 8h2.1M12.1 8h2.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+                </svg>
+              </button>
+            </form>
+          {% endif %}
         {% else %}
           <div class="summary-activity-toolbar-spacer" aria-hidden="true"></div>
         {% endif %}
 
         {% if sidebar_summary.mode == 'calendar' %}
           <div class="summary-month-controls">
-            {% if sidebar_summary.previous_month_url %}
-              <a class="summary-month-nav-link"
-                 data-summary-month-nav="previous"
-                 href="{{ sidebar_summary.previous_month_url }}"
-                 data-summary-target-mode="calendar"
-                 data-summary-target-month="{{ sidebar_summary.previous_month_key }}"
-                 aria-label="{% translate 'Previous month' %}">&lt;</a>
+            {% if sidebar_summary.previous_month_key %}
+              <form method="post" class="summary-nav-form">
+                {% csrf_token %}
+                <input type="hidden" name="pref_action" value="nav_month">
+                <input type="hidden" name="value" value="{{ sidebar_summary.previous_month_key }}">
+                <button type="submit" class="summary-month-nav-link"
+                        aria-label="{% translate 'Previous month' %}">&lt;</button>
+              </form>
             {% else %}
               <span class="summary-month-nav-link is-disabled" aria-hidden="true">&lt;</span>
             {% endif %}
@@ -168,13 +187,16 @@
                 <ul class="menu summary-week-picker-menu" role="list" tabindex="-1">
                   {% for option in sidebar_summary.calendar_year_options %}
                     <li class="menu-item">
-                      <a class="menu-link{% if option.is_selected %} is-selected{% endif %}"
-                         data-summary-month-year-option="{{ option.value }}"
-                         href="{{ option.url }}"
-                         data-summary-target-mode="calendar"
-                         data-summary-target-month="{{ option.target_month }}"{% if option.is_selected %} aria-current="true"{% endif %}>
-                        {{ option.label }}
-                      </a>
+                      <form method="post" class="summary-nav-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="pref_action" value="{{ option.action }}">
+                        <input type="hidden" name="value" value="{{ option.month_key }}">
+                        <button type="submit"
+                                class="menu-link{% if option.is_selected %} is-selected{% endif %}"
+                                data-summary-month-year-option="{{ option.value }}"{% if option.is_selected %} aria-current="true"{% endif %}>
+                          {{ option.label }}
+                        </button>
+                      </form>
                     </li>
                   {% endfor %}
                 </ul>
@@ -191,39 +213,44 @@
                 <ul class="menu summary-week-picker-menu" role="list" tabindex="-1">
                   {% for option in sidebar_summary.calendar_month_options %}
                     <li class="menu-item">
-                      <a class="menu-link{% if option.is_selected %} is-selected{% endif %}"
-                         data-summary-month-option="{{ option.value }}"
-                         href="{{ option.url }}"
-                         data-summary-target-mode="calendar"
-                         data-summary-target-month="{{ option.target_month }}"{% if option.is_selected %} aria-current="true"{% endif %}>
-                        {{ option.label }}
-                      </a>
+                      <form method="post" class="summary-nav-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="pref_action" value="{{ option.action }}">
+                        <input type="hidden" name="value" value="{{ option.month_key }}">
+                        <button type="submit"
+                                class="menu-link{% if option.is_selected %} is-selected{% endif %}"
+                                data-summary-month-option="{{ option.value }}"{% if option.is_selected %} aria-current="true"{% endif %}>
+                          {{ option.label }}
+                        </button>
+                      </form>
                     </li>
                   {% endfor %}
                 </ul>
               </ld-dropdown>
             </div>
 
-            {% if sidebar_summary.next_month_url %}
-              <a class="summary-month-nav-link"
-                 data-summary-month-nav="next"
-                 href="{{ sidebar_summary.next_month_url }}"
-                 data-summary-target-mode="calendar"
-                 data-summary-target-month="{{ sidebar_summary.next_month_key }}"
-                 aria-label="{% translate 'Next month' %}">&gt;</a>
+            {% if sidebar_summary.next_month_key %}
+              <form method="post" class="summary-nav-form">
+                {% csrf_token %}
+                <input type="hidden" name="pref_action" value="nav_month">
+                <input type="hidden" name="value" value="{{ sidebar_summary.next_month_key }}">
+                <button type="submit" class="summary-month-nav-link"
+                        aria-label="{% translate 'Next month' %}">&gt;</button>
+              </form>
             {% else %}
               <span class="summary-month-nav-link is-disabled" aria-hidden="true">&gt;</span>
             {% endif %}
           </div>
         {% else %}
           <div class="summary-month-controls summary-week-controls">
-            {% if sidebar_summary.previous_week_url %}
-              <a class="summary-month-nav-link"
-                 data-summary-week-nav="previous"
-                 href="{{ sidebar_summary.previous_week_url }}"
-                 data-summary-target-mode="heatmap"
-                 data-summary-target-week="{{ sidebar_summary.previous_week_key }}"
-                 aria-label="{% translate 'Previous week' %}">&lt;</a>
+            {% if sidebar_summary.previous_week_key %}
+              <form method="post" class="summary-nav-form">
+                {% csrf_token %}
+                <input type="hidden" name="pref_action" value="nav_week">
+                <input type="hidden" name="value" value="{{ sidebar_summary.previous_week_key }}">
+                <button type="submit" class="summary-month-nav-link"
+                        aria-label="{% translate 'Previous week' %}">&lt;</button>
+              </form>
             {% else %}
               <span class="summary-month-nav-link is-disabled" aria-hidden="true">&lt;</span>
             {% endif %}
@@ -238,13 +265,16 @@
                 <ul class="menu summary-week-picker-menu" role="list" tabindex="-1">
                   {% for option in sidebar_summary.heatmap_year_options %}
                     <li class="menu-item">
-                      <a class="menu-link{% if option.is_selected %} is-selected{% endif %}"
-                         data-summary-week-year-option="{{ option.value }}"
-                         href="{{ option.url }}"
-                         data-summary-target-mode="heatmap"
-                         data-summary-target-week="{{ option.target_week }}"{% if option.is_selected %} aria-current="true"{% endif %}>
-                        {{ option.label }}
-                      </a>
+                      <form method="post" class="summary-nav-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="pref_action" value="{{ option.action }}">
+                        <input type="hidden" name="value" value="{{ option.week_key }}">
+                        <button type="submit"
+                                class="menu-link{% if option.is_selected %} is-selected{% endif %}"
+                                data-summary-week-year-option="{{ option.value }}"{% if option.is_selected %} aria-current="true"{% endif %}>
+                          {{ option.label }}
+                        </button>
+                      </form>
                     </li>
                   {% endfor %}
                 </ul>
@@ -261,56 +291,62 @@
                 <ul class="menu summary-week-picker-menu" role="list" tabindex="-1">
                   {% for option in sidebar_summary.heatmap_week_options %}
                     <li class="menu-item">
-                      <a class="menu-link{% if option.is_selected %} is-selected{% endif %}"
-                         data-summary-week-option="{{ option.value }}"
-                         href="{{ option.url }}"
-                         data-summary-target-mode="heatmap"
-                         data-summary-target-week="{{ option.target_week }}"{% if option.is_selected %} aria-current="true"{% endif %}>
-                        {{ option.label }}
-                      </a>
+                      <form method="post" class="summary-nav-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="pref_action" value="{{ option.action }}">
+                        <input type="hidden" name="value" value="{{ option.week_key }}">
+                        <button type="submit"
+                                class="menu-link{% if option.is_selected %} is-selected{% endif %}"
+                                data-summary-week-option="{{ option.value }}"{% if option.is_selected %} aria-current="true"{% endif %}>
+                          {{ option.label }}
+                        </button>
+                      </form>
                     </li>
                   {% endfor %}
                 </ul>
               </ld-dropdown>
             </div>
 
-            {% if sidebar_summary.next_week_url %}
-              <a class="summary-month-nav-link"
-                 data-summary-week-nav="next"
-                 href="{{ sidebar_summary.next_week_url }}"
-                 data-summary-target-mode="heatmap"
-                 data-summary-target-week="{{ sidebar_summary.next_week_key }}"
-                 aria-label="{% translate 'Next week' %}">&gt;</a>
+            {% if sidebar_summary.next_week_key %}
+              <form method="post" class="summary-nav-form">
+                {% csrf_token %}
+                <input type="hidden" name="pref_action" value="nav_week">
+                <input type="hidden" name="value" value="{{ sidebar_summary.next_week_key }}">
+                <button type="submit" class="summary-month-nav-link"
+                        aria-label="{% translate 'Next week' %}">&gt;</button>
+              </form>
             {% else %}
               <span class="summary-month-nav-link is-disabled" aria-hidden="true">&gt;</span>
             {% endif %}
           </div>
         {% endif %}
 
-        <a class="summary-mode-switch"
-           data-summary-mode-toggle="{{ sidebar_summary.mode_switch.key }}"
-           href="{{ sidebar_summary.mode_switch.url }}"
-           data-summary-target-mode="{{ sidebar_summary.mode_switch.target_mode }}"
-           {% if sidebar_summary.mode_switch.target_month %}data-summary-target-month="{{ sidebar_summary.mode_switch.target_month }}"{% endif %}
-           {% if sidebar_summary.mode_switch.target_week %}data-summary-target-week="{{ sidebar_summary.mode_switch.target_week }}"{% endif %}
-           aria-label="{{ sidebar_summary.mode_switch.title }}"
-           title="{{ sidebar_summary.mode_switch.title }}">
-          {% if sidebar_summary.mode == 'calendar' %}
-            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-              <rect x="2" y="2" width="4" height="4" rx="1" fill="currentColor" stroke="none"></rect>
-              <rect x="10" y="2" width="4" height="4" rx="1" fill="currentColor" stroke="none"></rect>
-              <rect x="2" y="10" width="4" height="4" rx="1" fill="currentColor" stroke="none"></rect>
-              <rect x="10" y="10" width="4" height="4" rx="1" fill="currentColor" stroke="none"></rect>
-            </svg>
-          {% else %}
-            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-              <rect x="2" y="3" width="12" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
-              <path d="M2 6.5h12" stroke="currentColor" stroke-width="1.5"></path>
-              <path d="M5 1.75v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
-              <path d="M11 1.75v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
-            </svg>
-          {% endif %}
-        </a>
+        <form method="post" class="summary-mode-switch-form">
+          {% csrf_token %}
+          <input type="hidden" name="pref_action" value="{{ sidebar_summary.mode_switch.action }}">
+          <input type="hidden" name="value" value="{{ sidebar_summary.mode_switch.value }}">
+          <button type="submit"
+                  class="summary-mode-switch"
+                  data-summary-mode-toggle="{{ sidebar_summary.mode_switch.key }}"
+                  aria-label="{{ sidebar_summary.mode_switch.title }}"
+                  title="{{ sidebar_summary.mode_switch.title }}">
+            {% if sidebar_summary.mode == 'calendar' %}
+              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <rect x="2" y="2" width="4" height="4" rx="1" fill="currentColor" stroke="none"></rect>
+                <rect x="10" y="2" width="4" height="4" rx="1" fill="currentColor" stroke="none"></rect>
+                <rect x="2" y="10" width="4" height="4" rx="1" fill="currentColor" stroke="none"></rect>
+                <rect x="10" y="10" width="4" height="4" rx="1" fill="currentColor" stroke="none"></rect>
+              </svg>
+            {% else %}
+              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <rect x="2" y="3" width="12" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+                <path d="M2 6.5h12" stroke="currentColor" stroke-width="1.5"></path>
+                <path d="M5 1.75v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+                <path d="M11 1.75v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+              </svg>
+            {% endif %}
+          </button>
+        </form>
       </div>
 
       {% if sidebar_summary.mode == 'calendar' %}
@@ -322,8 +358,6 @@
                 {% if day.url %}
                     <a class="summary-day{% if not day.is_current_month %} is-outside-month{% endif %}{% if day.is_today %} is-today{% endif %}{% if day.is_selected %} is-selected{% endif %}{% if day.is_in_range %} is-in-range{% endif %}{% if day.is_range_start %} is-range-start{% endif %}{% if day.is_range_end %} is-range-end{% endif %}{% if day.is_current_month and not day.has_bookmarks %} is-empty-day{% endif %}"
                        href="{{ day.url }}"
-                       data-summary-target-mode="calendar"
-                       data-summary-target-month="{{ sidebar_summary.visible_month_key }}"
                      data-summary-day="{{ day.iso_value }}"
                      data-summary-calendar-day="{{ day.iso_value }}"
                      data-summary-activity-level="{{ day.level }}"
@@ -367,8 +401,6 @@
                   {% if day.url %}
                     <a class="summary-heatmap-cell level-{{ day.level }}{% if not day.is_current_month %} is-outside-month{% endif %}{% if day.is_selected %} is-selected{% endif %}{% if day.is_in_range %} is-in-range{% endif %}{% if day.is_range_start %} is-range-start{% endif %}{% if day.is_range_end %} is-range-end{% endif %}{% if day.is_today %} is-today{% endif %}"
                        href="{{ day.url }}"
-                       data-summary-target-mode="heatmap"
-                       data-summary-target-week="{{ day.target_week }}"
                        data-summary-heatmap-day="{{ day.iso_value }}"
                        data-summary-activity-level="{{ day.level }}"
                        title="{{ day.title }}"></a>

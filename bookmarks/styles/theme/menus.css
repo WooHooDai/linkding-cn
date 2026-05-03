@@ -33,6 +33,10 @@
     position: relative;
     text-decoration: none;
 
+    & > form {
+      display: contents;
+    }
+
     &:first-of-type {
       padding-top: var(--unit-2);
     }
@@ -43,6 +47,7 @@
 
     & > a,
     & > button.btn-link.menu-link,
+    & > form > button.menu-link,
     .btn.btn-link {
       border-radius: var(--menu-border-radius);
       color: var(--menu-item-color);
@@ -53,6 +58,9 @@
       text-decoration: none;
       width: 100%;
       text-align: left;
+      border: none;
+      cursor: pointer;
+      font: inherit;
 
       &:focus,
       &:hover,
