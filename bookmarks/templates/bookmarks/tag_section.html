@@ -1,5 +1,5 @@
 {% load i18n %}
-<section aria-labelledby="tags-heading" ld-collapse-button="" data-toggle-storage-key="tagSectionState" data-toggle-target-selector=".section-content">
+<section id="tag-section-container" aria-labelledby="tags-heading" ld-collapse-button="" data-toggle-storage-key="tagSectionState" data-toggle-target-selector=".section-content">
   <div class="section-header no-wrap">
     <div class="section-title">
       <h2 id="tags-heading">{% translate "Tags" %}</h2>
@@ -18,6 +18,14 @@
           <ul class="menu" role="list" tabindex="-1">
             <li class="menu-item">
               <a href="{% url 'linkding:tags.index' %}" class="menu-link">{% translate "Manage tags" %}</a>
+            </li>
+            <li class="menu-item">
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="pref_action" value="toggle_tag_grouping">
+                <input type="hidden" name="value" value="{{ tag_cloud.toggle_tag_grouping_value }}">
+                <button type="submit" class="menu-link">{{ tag_cloud.toggle_tag_grouping_label }}</button>
+              </form>
             </li>
           </ul>
         </ld-dropdown>

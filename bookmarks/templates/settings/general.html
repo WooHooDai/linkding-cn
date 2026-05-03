@@ -291,7 +291,7 @@
           <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card settings-card-stack" data-settings-save-mode="instant" data-sidebar-modules-form>
             {% csrf_token %}
             <input type="hidden" name="form_id" value="profile_quick">
-            <input type="hidden" name="form_fields" value="show_sidebar,sticky_side_panel,sidebar_modules,tag_grouping">
+            <input type="hidden" name="form_fields" value="show_sidebar,sticky_side_panel,sidebar_modules">
             {{ profile_quick_form.sidebar_modules.as_hidden }}
             <div class="settings-row">
               <div class="settings-copy">
@@ -372,29 +372,6 @@
               </div>
             </div>
 
-            <div class="settings-row{% if request.user_profile.collapse_side_panel %} is-hidden{% endif %}" data-setting-row="tag_grouping"{% if request.user_profile.collapse_side_panel %} hidden aria-hidden="true"{% endif %}>
-              <div class="settings-copy">
-                <label id="settings-tag-aggregation-mode-label" class="settings-label">{% translate "Tag aggregation mode" %}</label>
-                <div class="form-input-hint">
-                  {% translate "In alphabetical mode, tags are grouped by the first letter." %}
-                  {% translate "If disabled, tags are shown without grouping." %}
-                  {% translate "This setting applies to the Tags module in the sidebar." %}
-                </div>
-              </div>
-              <div class="settings-control">
-                <div class="settings-segmented" role="radiogroup" aria-labelledby="settings-tag-aggregation-mode-label">
-                  {% for value, label in profile_quick_form.tag_grouping.field.choices %}
-                    <label class="settings-segmented-option">
-                      <input type="radio"
-                             name="{{ profile_quick_form.tag_grouping.html_name }}"
-                             value="{{ value }}"
-                             {% if profile_quick_form.tag_grouping.value == value %}checked{% endif %}>
-                      <span>{{ label }}</span>
-                    </label>
-                  {% endfor %}
-                </div>
-              </div>
-            </div>
           </form>
         </section>
 

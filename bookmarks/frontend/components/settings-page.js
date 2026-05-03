@@ -844,17 +844,6 @@ class SettingsPageBehavior extends Behavior {
         ? showSidebarInput.checked
         : true;
     const visible = showSidebar;
-    const tagsModuleToggle = sidebarForm.querySelector(
-      '[data-module-key="tags"] [data-module-enabled]',
-    );
-    const tagsModuleEnabled =
-      tagsModuleToggle instanceof HTMLInputElement
-        ? tagsModuleToggle.checked
-        : true;
-    const tagGroupingRow = sidebarForm.querySelector(
-      '[data-setting-row="tag_grouping"]',
-    );
-
     this.setRowVisibility(row, visible);
     this.setRowVisibility(modulesRow, true);
     // Keep the stored "Sidebar follows" value unchanged when the sidebar is hidden.
@@ -872,7 +861,6 @@ class SettingsPageBehavior extends Behavior {
         });
     }
 
-    this.setRowVisibility(tagGroupingRow, visible && tagsModuleEnabled);
   }
 
   // 语言设置：主选项与“其他语言”下拉的联动提交。

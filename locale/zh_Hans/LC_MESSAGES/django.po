@@ -1395,6 +1395,14 @@ msgstr "关闭后，标签将不进行分组显示。"
 msgid "This setting applies to the Tags module in the sidebar."
 msgstr "此设置仅作用于侧边栏中的标签模块。"
 
+#: bookmarks/views/contexts.py
+msgid "Disable grouping"
+msgstr "关闭聚合"
+
+#: bookmarks/views/contexts.py
+msgid "Group alphabetically"
+msgstr "按首字母聚合"
+
 #: bookmarks/templates/settings/general.html:413
 msgid "Open mode"
 msgstr "打开方式"

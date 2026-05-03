@@ -1409,7 +1409,18 @@ class TagGroup:
         if len(tags) == 0:
             return []
 
-        sorted_tags = sorted(tags, key=lambda x: str.lower(x.name))
+        def _sort_key(tag):
+            name = tag.name
+            if CJK_RE.match(name[0]):
+                py = pinyin(name, style=Style.FIRST_LETTER)
+                pinyin_key = "".join(
+                    item[0].lower() if item and item[0] else char
+                    for item, char in zip(py, name, strict=False)
+                )
+                return (1, pinyin_key)
+            return (0, name.lower())
+
+        sorted_tags = sorted(tags, key=_sort_key)
         group = TagGroup(context, "Ungrouped")
         for tag in sorted_tags:
             group.add_tag(tag)
@@ -1449,6 +1460,13 @@ class TagCloudContext:
         self.selected_tags = selected_tag_items
         self.has_selected_tags = has_selected_tags
         self.tag_grouping = user_profile.tag_grouping
+
+        if user_profile.tag_grouping == UserProfile.TAG_GROUPING_ALPHABETICAL:
+            self.toggle_tag_grouping_value = UserProfile.TAG_GROUPING_DISABLED
+            self.toggle_tag_grouping_label = _("Disable grouping")
+        else:
+            self.toggle_tag_grouping_value = UserProfile.TAG_GROUPING_ALPHABETICAL
+            self.toggle_tag_grouping_label = _("Group alphabetically")
 
     def get_selected_tags(self):
         raise NotImplementedError("Must be implemented by subclass")

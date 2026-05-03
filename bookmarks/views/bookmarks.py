@@ -89,6 +89,7 @@ def _build_sidebar_modules(request: HttpRequest, context: dict) -> list[dict]:
 
 SUMMARY_ACTIONS = {"toggle_mode", "toggle_show_weekdays", "toggle_show_details", "nav_month", "nav_week"}
 DOMAIN_ACTIONS = {"toggle_domain_view_mode", "toggle_domain_compact_mode"}
+TAG_ACTIONS = {"toggle_tag_grouping"}
 
 
 def _handle_preference_toggle(request: HttpRequest):
@@ -109,6 +110,9 @@ def _handle_preference_toggle(request: HttpRequest):
         profile.save()
     elif action == "toggle_domain_compact_mode":
         profile.domain_compact_mode = request.POST["value"] == "1"
+        profile.save()
+    elif action == "toggle_tag_grouping":
+        profile.tag_grouping = request.POST["value"]
         profile.save()
 
     # For nav_month/nav_week, inject the target value into GET so the context picks it up
@@ -139,6 +143,15 @@ def _handle_preference_toggle(request: HttpRequest):
             "domain-section-container",
             "bookmarks/domain_section.html",
             {"domains": domains},
+        )
+
+    if action in TAG_ACTIONS:
+        tag_cloud = contexts.ActiveTagCloudContext(request, search)
+        return turbo.update(
+            request,
+            "tag-section-container",
+            "bookmarks/tag_section.html",
+            {"tag_cloud": tag_cloud},
         )
 
     return HttpResponseRedirect(reverse("linkding:bookmarks.index"))

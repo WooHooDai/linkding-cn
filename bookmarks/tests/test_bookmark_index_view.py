@@ -2437,3 +2437,25 @@ class BookmarkIndexViewTestCase(
         self.post_domain_pref("toggle_domain_compact_mode", "0")
         profile.refresh_from_db()
         self.assertFalse(profile.domain_compact_mode)
+
+    def test_tag_grouping_toggle(self):
+        user = self.get_or_create_test_user()
+        profile = user.profile
+
+        self.assertEqual(profile.tag_grouping, UserProfile.TAG_GROUPING_ALPHABETICAL)
+
+        response = self.client.post(
+            reverse("linkding:bookmarks.index"),
+            {"pref_action": "toggle_tag_grouping", "value": UserProfile.TAG_GROUPING_DISABLED},
+        )
+        profile.refresh_from_db()
+        self.assertEqual(profile.tag_grouping, UserProfile.TAG_GROUPING_DISABLED)
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(
+            reverse("linkding:bookmarks.index"),
+            {"pref_action": "toggle_tag_grouping", "value": UserProfile.TAG_GROUPING_ALPHABETICAL},
+        )
+        profile.refresh_from_db()
+        self.assertEqual(profile.tag_grouping, UserProfile.TAG_GROUPING_ALPHABETICAL)
+        self.assertEqual(response.status_code, 200)

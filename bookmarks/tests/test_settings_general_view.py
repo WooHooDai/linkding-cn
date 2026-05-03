@@ -237,10 +237,9 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         self.assertIsNotNone(sidebar_section)
         self.assertIsNotNone(
             sidebar_section.select_one(
-                "input[name='form_fields'][value='show_sidebar,sticky_side_panel,sidebar_modules,tag_grouping']"
+                "input[name='form_fields'][value='show_sidebar,sticky_side_panel,sidebar_modules']"
             )
         )
-        self.assertIn("Tag aggregation mode", sidebar_section.get_text())
 
         bookmarks_section = soup.select_one("section#settings-bookmarks")
         self.assertIsNotNone(bookmarks_section)
