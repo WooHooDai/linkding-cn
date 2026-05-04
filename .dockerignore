@@ -3,6 +3,7 @@
 
 # Include files required for build or at runtime
 !/bookmarks
+!/locale
 
 !/bootstrap.sh
 !/LICENSE.txt
