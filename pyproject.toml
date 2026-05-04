@@ -5,34 +5,43 @@ description = "Self-hosted bookmark manager - Chinese enhanced fork of linkding"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "beautifulsoup4>=4.12.3",
-    "bleach>=6.1.0",
+    "beautifulsoup4>=4.14.3",
+    "bleach>=6.3.0",
     "bleach-allowlist>=1.0.3",
-    "django>=5.2.3",
-    "django-widget-tweaks>=1.5.0",
-    "djangorestframework>=3.15.2",
-    "drissionpage>=4.1.0.18",
-    "huey>=2.5.1",
-    "markdown>=3.7",
-    "mozilla-django-oidc>=4.0.1",
-    "psycopg[binary]>=3.2.9",
+    "django>=6.0",
+    "djangorestframework>=3.17.1",
+    "drissionpage>=4.1.1.2",
+    "huey>=3.0.0",
+    "markdown>=3.10.2",
+    "mozilla-django-oidc>=5.0.2",
     "python-dateutil>=2.9.0.post0",
-    "pypinyin>=0.54.0",
-    "requests>=2.32.4",
-    "supervisor>=4.2.5",
-    "uwsgi>=2.0.28",
+    "pypinyin>=0.55.0",
+    "requests>=2.33.1",
+    "supervisor>=4.3.0",
+    "uwsgi>=2.0.31",
     "waybackpy>=3.0.6",
 ]
 
 [dependency-groups]
 dev = [
-    "coverage>=7.10.4",
-    "django-debug-toolbar>=6.0.0",
-    "playwright>=1.54.0",
-    "pytest>=8.4.1",
-    "pytest-django>=4.11.1",
+    "coverage>=7.13.5",
+    "django-debug-toolbar>=6.3.0",
+    "playwright>=1.59.0",
+    "psycopg[binary]>=3.3.4",
+    "pytest>=9.0.3",
+    "pytest-django>=4.12.0",
     "pytest-xdist>=3.8.0",
-    "ruff>=0.14.10",
+    "ruff>=0.15.12",
+]
+# For PostgreSQL support, use the binary release for development so that not
+# everyone needs to build from source. For production, use a separate dependency
+# group that builds the driver from source. uv also needs to build it from
+# source to update the lockfile, which requires libpq. On macOS:
+# - brew install libpq
+# - export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
+# - uv add --group postgres psycopg[c]
+postgres = [
+    "psycopg[c]>=3.3.4",
 ]
 
 [tool.uv]

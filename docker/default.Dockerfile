@@ -1,4 +1,4 @@
-FROM node:18-alpine AS node-build
+FROM node:22-alpine AS node-build
 WORKDIR /etc/linkding
 # install build dependencies
 COPY rollup.config.mjs postcss.config.js package.json package-lock.json ./
@@ -86,7 +86,7 @@ CMD curl -f http://localhost:${LD_SERVER_PORT:-9090}/${LD_CONTEXT_PATH}health ||
 CMD ["./bootstrap.sh"]
 
 
-FROM node:18-alpine AS ublock-build
+FROM node:22-alpine AS ublock-build
 WORKDIR /etc/linkding
 # Install necessary tools
 # Download and unzip the latest uBlock Origin Lite release
