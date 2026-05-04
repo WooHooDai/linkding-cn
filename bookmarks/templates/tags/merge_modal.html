@@ -1,4 +1,4 @@
-{% load i18n widget_tweaks %}
+{% load i18n %}
 <turbo-frame id="tag-modal">
   <form method="post" action="{% url 'linkding:tags.merge' %}" data-turbo-frame="_top" novalidate>
     {% csrf_token %}

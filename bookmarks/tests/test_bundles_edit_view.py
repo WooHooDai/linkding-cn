@@ -57,7 +57,7 @@ class BundleEditViewTestCase(TestCase, BookmarkFactoryMixin):
         self.assertInHTML(
             f'<input type="text" name="name" value="{bundle.name}" '
             'autocomplete="off" placeholder=" " class="form-input" '
-            'maxlength="256" required id="id_name">',
+            'maxlength="256" required id="id_name" aria-invalid="false">',
             html,
         )
 

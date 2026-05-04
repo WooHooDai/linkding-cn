@@ -1,4 +1,4 @@
-{% load i18n widget_tweaks %}
+{% load i18n shared %}
 
 <div class="search-container">
   <form id="search" action="" method="get" role="search">
@@ -41,7 +41,7 @@
           <div class="form-group">
             <label for="{{ preferences_form.sort.id_for_label }}"
                    class="form-label{% if 'sort' in search.modified_params %} text-bold{% endif %}">{% translate "Sort by" %}</label>
-            {{ preferences_form.sort|add_class:"form-select select-sm" }}
+            {% formfield preferences_form.sort class="form-select select-sm" %}
           </div>
         {% endif %}
         {% if 'shared' in preferences_form.editable_fields %}
@@ -115,13 +115,13 @@
             <div class="form-group">
               <div class="form-row-inline">
                 <label for="{{ preferences_form.date_filter_start.id_for_label }}" class="form-label-inline">{% translate "Start date" %}</label>
-                {{ preferences_form.date_filter_start|add_class:"form-input input-sm" }}
+                {% formfield preferences_form.date_filter_start class="form-input input-sm" %}
               </div>
             </div>
             <div class="form-group">
               <div class="form-row-inline">
                 <label for="{{ preferences_form.date_filter_end.id_for_label }}" class="form-label-inline">{% translate "End date" %}</label>
-                {{ preferences_form.date_filter_end|add_class:"form-input input-sm" }}
+                {% formfield preferences_form.date_filter_end class="form-input input-sm" %}
               </div>
             </div>
           </div>

@@ -1,11 +1,10 @@
 {% load i18n %}
-{% load widget_tweaks %}
 {% load static %}
 {% load shared %}
 
 <div class="bookmarks-form">
   {% csrf_token %}
-  {{ form.auto_close|attr:"type:hidden" }}
+  {{ form.auto_close }}
   {{ form.favicon_file }}
   <!-- 标题 -->
   <div class="form-group">
@@ -18,7 +17,7 @@
         </ld-clear-button>
       </div>
     </div>
-    {{ form.title|add_class:"form-input"|attr:"autocomplete:off" }}
+    {% formfield form.title class="form-input" autocomplete="off" %}
     {{ form.title.errors }}
   </div>
 
@@ -43,7 +42,7 @@
   <div class="form-group {% if form.url.errors %}has-error{% endif %}">
     <label for="{{ form.url.id_for_label }}" class="form-label">URL</label>
     <div class="has-icon-right">
-      {{ form.url|form_field:"validation"|add_class:"form-input" }}
+      {% formfield form.url class="form-input" %}
       <i class="form-icon loading"></i>
     </div>
     {% if form.url.errors %}
@@ -69,7 +68,7 @@
           <button class="btn btn-link suffix-button" type="button">{% translate "Clear" %}</button>
         </ld-clear-button>
       </summary>
-      {{ form.description|add_class:"form-input"|attr:"rows:3" }}
+      {% formfield form.description class="form-input" rows="3" %}
       {{ form.description.errors }}
     </details>
   </div>
@@ -79,7 +78,7 @@
         <span class="form-label d-inline-block">{% translate "Notes" %}</span>
       </summary>
       <label for="{{ form.notes.id_for_label }}" class="text-assistive">{% translate "Notes" %}</label>
-      {{ form.notes|form_field:"help"|add_class:"form-input"|attr:"rows:8" }}
+      {% formfield form.notes has_help=True class="form-input" rows="8" %}
       <div id="{{ form.notes.auto_id }}_help" class="form-input-hint">
         {% translate "Additional notes. Markdown is supported." %}
       </div>
@@ -113,7 +112,7 @@
   {% endif %}
   <div class="form-group">
     <div class="form-checkbox">
-      {{ form.unread|form_field:"help" }}
+      {% formfield form.unread has_help=True %}
       <i class="form-icon"></i>
       <label for="{{ form.unread.id_for_label }}">{% translate "Mark as unread" %}</label>
     </div>
@@ -124,7 +123,7 @@
   {% if request.user_profile.enable_sharing %}
     <div class="form-group">
       <div class="form-checkbox">
-        {{ form.shared|form_field:"help" }}
+        {% formfield form.shared has_help=True %}
         <i class="form-icon"></i>
         <label for="{{ form.shared.id_for_label }}">{% translate "Share" %}</label>
       </div>

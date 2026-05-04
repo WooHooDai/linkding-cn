@@ -1,8 +1,8 @@
-{% load i18n widget_tweaks %}
+{% load i18n shared %}
 
 <div class="form-group {% if form.name.errors %}has-error{% endif %}">
   <label class="form-label" for="{{ form.name.id_for_label }}">{% translate "Name" %}</label>
-  {{ form.name|add_class:"form-input"|attr:"autocomplete:off"|attr:"placeholder: "|attr:"autofocus" }}
+  {% formfield form.name class="form-input" autocomplete="off" placeholder=" " autofocus=True %}
   <div class="form-input-hint">{% translate "Tag names are case-sensitive and cannot contain spaces. Spaces are replaced with hyphens (`-`)." %}</div>
   {% if form.name.errors %}
     <div class="form-input-hint">

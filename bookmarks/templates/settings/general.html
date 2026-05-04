@@ -1,5 +1,5 @@
 {% extends "bookmarks/layout.html" %}
-{% load i18n widget_tweaks %}
+{% load i18n shared %}
 
 {% block head %}
   {% translate "General - Linkding" as page_title %}
@@ -147,7 +147,7 @@
                 </div>
               </div>
               <div id="settings-custom-css-panel" data-settings-panel-body hidden>
-                {{ custom_css_form.custom_css|add_class:"form-input settings-textarea monospace"|attr:"rows:8"|attr:"data-settings-draft-input:" }}
+                {% formfield custom_css_form.custom_css class="form-input settings-textarea monospace" rows="8" data_settings_draft_input="" %}
                 <div class="settings-field-errors" data-field-error-for="custom_css"></div>
                 <div class="settings-panel-footer">
                   <button type="button"
@@ -183,7 +183,7 @@
                 </div>
               </div>
               <div class="settings-control">
-                {{ profile_quick_form.items_per_page|add_class:"form-input settings-number-input settings-number-input-compact"|attr:"min:10" }}
+                {% formfield profile_quick_form.items_per_page class="form-input settings-number-input settings-number-input-compact" min="10" %}
                 <div class="settings-field-errors" data-field-error-for="items_per_page"></div>
               </div>
             </div>
@@ -453,7 +453,7 @@ reddit.com/r/Music music reddit</pre>
                 </div>
               </div>
               <div id="settings-auto-tagging-panel" data-settings-panel-body hidden>
-                {{ auto_tagging_rules_form.auto_tagging_rules|add_class:"form-input settings-textarea monospace"|attr:"rows:8"|attr:"data-settings-draft-input:" }}
+                {% formfield auto_tagging_rules_form.auto_tagging_rules class="form-input settings-textarea monospace" rows="8" data_settings_draft_input="" %}
                 <div class="settings-field-errors" data-field-error-for="auto_tagging_rules"></div>
                 <div class="settings-panel-footer">
                   <button type="button"
@@ -508,7 +508,7 @@ reddit.com/r/Music music reddit</pre>
                 </div>
               </div>
               <div id="settings-custom-domain-panel" data-settings-panel-body hidden>
-                {{ custom_domain_root_form.custom_domain_root|add_class:"form-input settings-textarea monospace"|attr:"rows:8"|attr:"data-settings-draft-input:" }}
+                {% formfield custom_domain_root_form.custom_domain_root class="form-input settings-textarea monospace" rows="8" data_settings_draft_input="" %}
                 <div class="settings-field-errors" data-field-error-for="custom_domain_root"></div>
                 <div class="settings-panel-footer">
                   <button type="button"
@@ -601,7 +601,7 @@ reddit.com/r/Music music reddit</pre>
                 </div>
               </div>
               <div class="settings-control">
-                {{ profile_quick_form.bookmark_description_max_lines|add_class:"form-input settings-number-input"|attr:"min:1" }}
+                {% formfield profile_quick_form.bookmark_description_max_lines class="form-input settings-number-input" min="1" %}
                 <div class="settings-field-errors" data-field-error-for="bookmark_description_max_lines"></div>
               </div>
             </div>
@@ -863,7 +863,7 @@ reddit.com/r/Music music reddit</pre>
                     </div>
                   </div>
                   <div class="settings-control">
-                    {{ global_settings_form.guest_profile_user|add_class:"form-select settings-select-input" }}
+                    {% formfield global_settings_form.guest_profile_user class="form-select settings-select-input" %}
                   </div>
                 </div>
               </div>

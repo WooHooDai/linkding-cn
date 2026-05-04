@@ -33,7 +33,7 @@ class BookmarkForm(forms.ModelForm):
     unread = forms.BooleanField(required=False)
     shared = forms.BooleanField(required=False)
     # Hidden field that determines whether to close window/tab after saving the bookmark
-    auto_close = forms.CharField(required=False)
+    auto_close = forms.CharField(required=False, widget=forms.HiddenInput())
     favicon_file = forms.CharField(required=False, widget=forms.HiddenInput())
 
     class Meta:

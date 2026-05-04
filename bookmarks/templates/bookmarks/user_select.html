@@ -1,4 +1,4 @@
-{% load i18n widget_tweaks %}
+{% load i18n shared %}
 
 <ld-form data-submit-on-change>
   <form id="user-select" action="" method="get">
@@ -7,7 +7,7 @@
     {% endfor %}
     <div class="form-group">
       <div class="d-flex">
-        {% render_field form.user class+="form-select" data-submit-on-change="" %}
+        {% formfield form.user class="form-select" data_submit_on_change="" %}
         <noscript>
           <button type="submit" class="btn btn-link ml-2">{% translate "Apply" %}</button>
         </noscript>
