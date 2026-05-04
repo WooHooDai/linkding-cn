@@ -108,13 +108,12 @@ RUN apk add --no-cache curl jq unzip && \
 
 FROM linkding AS linkding-plus
 # install node, chromium
-# Update package lists (this layer will be cached unless package lists change)
-RUN apk update
-# Install dependencies (this layer will be cached unless we change the packages)
-RUN apk add nodejs npm chromium && \
-    apk cache clean
+RUN --mount=type=cache,target=/var/cache/apk,sharing=locked \
+    apk update && \
+    apk add nodejs npm chromium
 # install single-file from fork for now, which contains several hotfixes
-RUN npm install -g https://github.com/sissbruecker/single-file-cli/tarball/4c54b3bc704cfb3e96cec2d24854caca3df0b3b6
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    npm install -g https://github.com/sissbruecker/single-file-cli/tarball/4c54b3bc704cfb3e96cec2d24854caca3df0b3b6
 # copy uBlock
 COPY --from=ublock-build /etc/linkding/uBOLite.chromium.mv3 uBOLite.chromium.mv3/
 # create chromium profile folder for user running background tasks and set permissions
