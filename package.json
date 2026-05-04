@@ -1,7 +1,7 @@
 {
-  "name": "linkding",
-  "version": "1.41.0",
-  "description": "",
+  "name": "linkding-cn",
+  "version": "1.0.4",
+  "description": "Self-hosted bookmark manager - Chinese enhanced fork of linkding",
   "main": "index.js",
   "scripts": {
     "build": "npm run build-js && npm run build-theme-light && npm run build-theme-dark",
@@ -12,15 +12,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sissbruecker/linkding.git"
+    "url": "git+https://github.com/WooHooDai/linkding-cn.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "WooHooDai",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/sissbruecker/linkding/issues"
+    "url": "https://github.com/WooHooDai/linkding-cn/issues"
   },
-  "homepage": "https://github.com/sissbruecker/linkding#readme",
+  "homepage": "https://github.com/WooHooDai/linkding-cn#readme",
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",
     "@hotwired/turbo": "^8.0.6",
