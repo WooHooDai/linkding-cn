@@ -791,7 +791,7 @@ class UserProfile(models.Model):
     legacy_search = models.BooleanField(default=False, null=False)
     enable_sharing = models.BooleanField(default=False, null=False)
     enable_public_sharing = models.BooleanField(default=False, null=False)
-    enable_favicons = models.BooleanField(default=False, null=False)
+    enable_favicons = models.BooleanField(default=True, null=False)
     enable_preview_images = models.BooleanField(default=False, null=False)
     display_url = models.BooleanField(default=False, null=False)
     display_view_bookmark_action = models.BooleanField(default=True, null=False)
@@ -807,14 +807,14 @@ class UserProfile(models.Model):
     trash_search_preferences = models.JSONField(default=dict, null=False)
     sidebar_modules = models.JSONField(default=list, blank=True, null=False)
     enable_automatic_html_snapshots = models.BooleanField(default=True, null=False)
-    default_mark_unread = models.BooleanField(default=False, null=False)
+    default_mark_unread = models.BooleanField(default=True, null=False)
     default_mark_shared = models.BooleanField(default=False, null=False)
     items_per_page = models.IntegerField(
         null=False, default=30, validators=[MinValueValidator(10)]
     )
-    sticky_header_controls = models.BooleanField(default=False, null=False)
-    sticky_pagination = models.BooleanField(default=False, null=False)
-    sticky_side_panel = models.BooleanField(default=False, null=False)
+    sticky_header_controls = models.BooleanField(default=True, null=False)
+    sticky_pagination = models.BooleanField(default=True, null=False)
+    sticky_side_panel = models.BooleanField(default=True, null=False)
     collapse_side_panel = models.BooleanField(default=False, null=False)
     hide_bundles = models.BooleanField(default=False, null=False)
 
@@ -829,10 +829,10 @@ class UserProfile(models.Model):
         max_length=20,
         choices=SUM_MODE_CHOICES,
         blank=False,
-        default=SUM_MODE_CALENDAR,
+        default=SUM_MODE_HEATMAP,
     )
     sum_show_weekdays = models.BooleanField(default=False, null=False)
-    sum_show_details = models.BooleanField(default=False, null=False)
+    sum_show_details = models.BooleanField(default=True, null=False)
 
     # Domain display preferences
     DOMAIN_VIEW_FULL = "full"
