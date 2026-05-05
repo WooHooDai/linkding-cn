@@ -1,176 +1,112 @@
-<div align="center">
-    <br>
-    <a href="https://github.com/WooHooDai/linkding-cn">
-        <img src="assets/header.svg" height="50">
-    </a>
-    <br>
-</div>
-
-## 项目说明
-
-基于[linkding](https://github.com/sissbruecker/linkding)（forked from[linkding](https://github.com/sissbruecker/linkding)）修改和增强，感谢 sissbruecker 大佬做出这么棒的书签管理器！
-
-**具体修改和增强如下：**
-- 🌍 多语言：目前支持简体中文、English，详见[这里](./docs/i18n-maintenance.md)
-- 🇨🇳 中文用户增强：标签聚合支持中文；时区与日期处理；favicon服务默认使用favicon.im，无需🪜
-- 🔍 搜索增强：新增支持限定搜索范围（标题、描述、笔记、url）
-- 📅 筛选增强：新增日期筛选（支持绝对日期和相对日期）；新增标签状态筛选（有标签/无标签）
-- 🎲 排序增强：新增随机排序；支持按删除时间排序（回收站中）
-- 🤖 过滤器（Bundle）增强：新增支持二级过滤器；新增支持所有筛选项
-- 🐞 元数据获取增强：默认解析支持更多主流网站；新增支持自定义脚本
-- ⚡️ 快照增强：新增支持自定义脚本（引入drissionpage依赖）；新增支持重命名
-- 📖 阅读模式增强：支持无快照书签开启阅读模式
-- ♻️ 回收站：新增功能，书签删除时默认移动到回收站，可操作还原、永久删除，支持批量操作
-- 👀 界面增强
-    - 书签列表和过滤器显示书签数量
-    - 粘性工具：搜索栏、分页导航栏、侧边栏可固定在屏幕上，方便操作
-    - 快速筛选同域名标签：点击favicon快速筛选（支持自定义域名归一化规则）
-    - 独立滚动条：书签列表、侧边栏滚动条互不影响
-    - 位置记忆：编辑书签后书签列表浏览位置不变
-    - 折叠状态记忆：同一会话中、侧边栏的过滤器、标签、二级过滤器折叠状态将被保持
-    - 快速加载：预览图和favicon加载更快、更及时
-- 🔧 样式增强：各类影响操作或美观的样式问题
-
-**截屏：**
-![截屏](https://github.com/user-attachments/assets/a1e4bfc3-fdfd-4059-9ebc-b77dde109f93)
-
-## 开始使用
-
-本项目通过 Docker-compose 部署
-
-1. 环境配置文件请参考 [.env.sample](https://github.com/WooHooDai/linkding-cn/blob/main/.env.sample) (使用时注意文件名需修改为`.env`,其中`LD_SUPERUSER_NAME`和`LD_SUPERUSER_PASSWORD`务必填写用于登录)
-2. 容器配置文件请参考 [docker-compose.yml](https://github.com/WooHooDai/linkding-cn/blob/main/docker-compose.yml)
-3. 通过命令行启动容器： `docker compose up -d`
-
-## 文档
-
-本项目新增/增强的功能，请参阅[这里](https://github.com/WooHooDai/linkding-cn/wiki)，其他功能请参阅[原项目文档](https://linkding.link/installation/)
-
----
-> 以下为原项目的README信息，在此意译为中文，供参考
-
-##  简介
-
-linkding 是一个可自部署的书签管理器。
-它的设计目标是极简、快速、便于通过Docker部署。
-
-名字寓意：
-- *link* 是链接(url)和书签(bookmark)的近义词
-- *Ding* 在德语中是事物的意思
-- ...连在一起意思是管理你链接的工具
-
-**特色概览：**
-- 界面简洁，专为可读性优化
-- 标签管理系统
-- 批量编辑，Markdown 笔记，稍后读
-- 与其他用户或访客分享书签
-- 自动获取书签元数据（标题、描述、icons）
-- 自动保存网页快照，包括本地 HTML 文件和在线存档（Internet Archive）
-- 导入/导出书签，支持 Netscape HTML 格式
-- 可作为渐进式网页应用（PWA）安装
-- 浏览器插件：[Firefox](https://addons.mozilla.org/firefox/addon/linkding-extension/) / [Chrome](https://chrome.google.com/webstore/detail/linkding-extension/beakmhbijpdhipnjhnclmhgjlddhidpe) / bookmarklet
-- SSO: OIDC；身份验证代理
-- REST API：可供开发第三方应用
-- 管理员面板：可供管理用户服务、原始数据
 
 
-**在线体验:** https://demo.linkding.link/
+## linkding-cn
 
-**截图:**
+linkding-cn 是基于 [linkding](https://github.com/sissbruecker/linkding) 二次开发增强的自托管开源书签管理器。
 
-![截图](/docs/public/linkding-screenshot.png?raw=true "Screenshot")
+- 🌍 多语言：内置 **简体中文🇨🇳**、English
+- 🦄 新增功能：新增收藏数据看板（**热力图🔥**/日历图📅）、**回收站♻️**、自定义元数据&快照**爬取脚本🐞**等特有功能
+- ⚙️ 深度优化：对界面、搜索、筛选、排序、过滤器等进行了大量优化。
 
-## 开始使用
+完整增强列表，及与原项目对比见[_这里_](#增强功能)
 
-请阅读如下帮助链接：
-- [在自己的服务器上部署linkding](https://linkding.link/installation) 或 [检查托管选项](https://linkding.link/managed-hosting)
-- [安装浏览器插件](https://linkding.link/browser-extension)
-- [检阅社区项目](https://linkding.link/community)，可从中获取手机app、浏览器插件、库等
+## 截图
 
-## 文档
+![](https://github.com/user-attachments/assets/ee1e8ac1-cfff-405e-889a-db8fbde09385)
 
-完整文档请查阅 [linkding.link](https://linkding.link/)。
+<details style="align:center;">
+    <summary>点击查看完整截图</summary>
+    <img width="1000" height="920" alt="full" src="https://github.com/user-attachments/assets/3d9b644f-4c74-4bb3-8bb3-93881de8bb92" />
+</details>
 
-如果你想对文档作出贡献，你可以在 `docs` 文件夹中找到源文件。
 
-如果你想贡献社区项目，请放心[提交PR](https://github.com/sissbruecker/linkding/edit/master/docs/src/content/docs/community.md).
+## 完整功能
 
-## 贡献
+<details>
+<summary>点击查看功能列表</summary>
 
-诚挚期待您贡献小的程序优化、错误修复和文档优化。
+- 🌍 多语言：内置**简体中文/English**，支持[增加更多其他语言](./docs/i18n-maintenance.md)
+- 📦 永久存档：自动获取网站元数据、保存本地快照，支持[**自定义元数据/快照获取脚本🐞**](https://github.com/WooHooDai/linkding-cn/wiki/%E8%87%AA%E5%AE%9A%E4%B9%89%E8%84%9A%E6%9C%AC)
+- 🧠 超强管理：
+    - 收藏：[Firefox 扩展](https://addons.mozilla.org/firefox/addon/linkding-extension/)、[Chrome 扩展](https://chrome.google.com/webstore/detail/linkding-extension/beakmhbijpdhipnjhnclmhgjlddhidpe)、书签小程序、REST API
+    - 搜索：支持逻辑语法，可限定搜索范围
+    - 筛选：按搜索词/标签/域名/日期/书签状态等筛选，可保存为过滤器
+    - 排序：按日期/标题，或**随机排序🎲**保持新鲜感
+    - 回顾：**日历图/热力图🔥**，展示指定周期收藏情况
+    - 整理：可批量操作；可归档、**移至回收站♻️**或永久删除
+    - 数据库：提供原始数据管理面板
+- ⚙️ 高度可定制：
+    - 自定义 CSS
+    - 自定义 侧边栏功能、排序
+    - 自定义书签列表界面展示细节
+    - 自定义页面功能模块是否跟随
+- 🌊 开放：
+    - 多用户：支持账户密码/单点登录（SSO）
+    - 分享：支持与其他用户、陌生访客分享指定书签
+    - 导入&导出：Netscape HTML 格式的书签
+    - REST API
+- 🔧 维护简单：
+    - 部署：单个 Docker 容器 + SQLite 即可部署
+    - 迁移：自动化迁移，零破坏性变更
+</details>
 
-如果您想贡献较大的功能，可以考虑先开启一个issue供大家讨论。
+## 增强功能
 
-对于不符合项目目标、或我不想维护的功能PR，我可能选择忽略。
+| 功能 | linkding-cn  | linkding  |
+|:---:|:---:|:---:|
+|**语言**|_简体中文🇨🇳_ / English / [其他](./docs/i18n-maintenance.md)|English|
+|**数据看板**|_日历图📅 / 热力图🔥_|无|
+|**删除**|永久删除 / _回收站♻️_|永久删除|
+|**标签聚合**|英文 + _CJK（中日韩）_|英文|
+|**过滤器**|搜索词 + 标签 + _排序 + 书签状态_|搜索词 + 标签|
+|**域名筛选**|_侧边栏筛选 + 搜索限定 + 自定义归一化_|无|
+|**排序**|日期 / 标题 / _随机🎲_|日期 / 标题|
+|**搜索**|关键词 + 逻辑语法 + _限定范围↔️_|关键词 + 逻辑语法|
+|**元数据&快照**|内置 / [_自定义获取脚本🐞_](https://github.com/WooHooDai/linkding-cn/wiki/%E8%87%AA%E5%AE%9A%E4%B9%89%E8%84%9A%E6%9C%AC)|内置|
 
-## 开发
+### 🧙 界面增强
 
-应用使用 Django 框架构建。你可以从优秀的 [Django 文档](https://docs.djangoproject.com/en/4.1/)开始。`bookmarks`文件夹包含了实际的书签应用。其他部分的代码应该可以自解释，或者它们与 Django 相关。
+- 设置页：卡片式分区 + 导航栏跟随 + 一键生效
+- 书签列表：tooltip 展示完整描述；预览图、favicon 加载更快
+- 搜索栏：页面滚动跟随；随机排序按钮；更多筛选项
+- 侧边栏：页面滚动跟随；功能模块独立启停、排序、展开折叠
+- 过滤器：显示书签数量；支持二级层级
+- 其他样式增强：可查看[更新日志](./CHANGELOG.md)
 
-### 前置条件
-- Python 3.13
-- [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- Node.js
+## 快速开始
 
-### 启动
+使用 Docker Compose 部署：
 
-初始化开发环境:
+**1. 准备配置文件**
+
+- 新建容器目录`linkding-cn`
+- 下载 [.env.sample](./.env.sample) 到容器目录，并重命名为 `.env`，
+- 填写 `LD_SUPERUSER_NAME` 和 `LD_SUPERUSER_PASSWORD`（用于首次登录）。
+- 下载 [docker-compose.yml](./docker-compose.yml) 到容器目录
+
+**2. 启动服务**
+
+- 在容器目录下运行
+
+```bash
+docker compose up -d
 ```
-make init
-```
-该命令会用 uv 初始化虚拟环境、安装 NPM 依赖并执行数据库迁移。
+- 启动后访问 `http://localhost:9090` 即可使用。
 
-为前端创建一个用户:
-```
-uv run manage.py createsuperuser --username=joe --email=joe@example.com
-```
-启动 Node.js 开发服务器 (用于编译前端资源，例如标签自动补全):
-```
-make frontend
-```
-启动 Django 开发服务器:
-```
-make serve
-```
-现在可以通过 http://localhost:8000 打开前端
+**3. 更新**
 
-### 测试
+如需更新，在容器目录下运行
 
-使用 pytest 运行所有测试:
-```
-make test
+```bash
+docker compose pull && docker compose up -d
 ```
 
-### 代码检查
+## 相关链接
 
-使用 ruff 运行 Python 代码检查:
-```
-make lint
-```
+- [linkding-cn 文档](https://github.com/WooHooDai/linkding-cn/wiki) — 本项目新增功能说明文档
+- [linkding-cn 更新日志](./CHANGELOG.md)
+- [linkding 文档](https://linkding.link/) — 原项目官方文档
 
-### 格式化
+## 致谢
 
-使用 ruff 格式化 Python，使用 prettier 格式化 Javascrip:
-```
-make format
-```
-
-### DevContainers
-
-本仓库也支持 DevContainers: [![Open in Remote - Containers](https://img.shields.io/static/v1?label=Remote%20-%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/sissbruecker/linkding.git)
-
-一旦检出，只有如下命令是必要的:
-
-为前端创建一个用户:
-```
-uv run manage.py createsuperuser --username=joe --email=joe@example.com
-```
-启动 Node.js 开发服务器 (用于编译前端资源，例如标签自动补全):
-```
-make frontend
-```
-启动 Django 开发服务器:
-```
-make serve
-```
-现在可以通过 http://localhost:8000 打开前端
+❤️ 感谢 [sissbruecker](https://github.com/sissbruecker) 创建了 [linkding](https://github.com/sissbruecker/linkding)，真的是超级简洁优雅，一眼爱上。
