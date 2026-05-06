@@ -10,6 +10,8 @@ import { LitElement } from "lit";
 export class HeadlessElement extends HTMLElement {
   connectedCallback() {
     if (this.__initialized) {
+      // Re-initialize after being moved in the DOM (e.g. filter drawer teleport)
+      this.init();
       return;
     }
     this.__initialized = true;
