@@ -88,6 +88,14 @@ class Bookmark(models.Model):
         related_name="latest_snapshot",
     )
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "url_normalized"],
+                name="unique_bookmark_url_per_user",
+            ),
+        ]
+
     @property
     def resolved_title(self):
         if self.title:

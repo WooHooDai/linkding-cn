@@ -6,14 +6,10 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("bookmarks", "0064_deduplicate_bookmarks"),
+        ("bookmarks", "0066_deduplicate_bookmarks"),
     ]
 
     operations = [
-        migrations.RemoveConstraint(
-            model_name="bookmark",
-            name="unique_bookmark_url_per_user",
-        ),
         migrations.AddField(
             model_name="userprofile",
             name="domain_compact_mode",

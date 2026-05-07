@@ -21,7 +21,7 @@ def migrate_tokens_reverse(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("bookmarks", "0062_apitoken"),
+        ("bookmarks", "0064_apitoken"),
         ("authtoken", "0004_alter_tokenproxy_options"),
     ]
 
