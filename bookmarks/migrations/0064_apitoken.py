@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("bookmarks", "0050_new_search_toast"),
+        ("bookmarks", "0063_new_search_toast"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

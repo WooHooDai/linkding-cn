@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Bootstrap script that gets executed in new Docker containers
 
+set -e
+
 LD_SERVER_HOST="${LD_SERVER_HOST:-[::]}"
 LD_SERVER_PORT="${LD_SERVER_PORT:-9090}"
 
@@ -15,6 +17,8 @@ mkdir -p data/assets
 
 # Generate secret key file if it does not exist
 python manage.py generate_secret_key
+# Rename v1.0.4 migration entries to match renumbered files (no-op for fresh installs)
+python manage.py rename_v1_0_4_migrations
 # Run database migration
 python manage.py migrate
 # Enable WAL journal mode for SQLite databases
