@@ -92,7 +92,8 @@ WORKDIR /etc/linkding
 # Download and unzip the latest uBlock Origin Lite release
 # Patch manifest to enable annoyances by default
 RUN apk add --no-cache curl jq unzip && \
-    TAG=$(curl -sL https://api.github.com/repos/uBlockOrigin/uBOL-home/releases/latest | jq -r '.tag_name') && \
+    TAG=$(curl -sL https://api.github.com/repos/uBlockOrigin/uBOL-home/releases\?per_page\=20 | \
+    jq -r '.[] | select(.assets[].name | contains("chromium.zip")) | .tag_name' | head -n 1) && \
     DOWNLOAD_URL=https://github.com/uBlockOrigin/uBOL-home/releases/download/$TAG/uBOLite_$TAG.chromium.zip && \
     echo "Downloading $DOWNLOAD_URL" && \
     curl -L -o uBOLite.zip $DOWNLOAD_URL && \
