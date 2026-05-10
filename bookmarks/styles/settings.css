@@ -1209,3 +1209,14 @@
     }
   }
 }
+
+@media (max-width: 720px) {
+  .settings-page.settings-integrations-page {
+    & .settings-token-table .actions {
+      width: auto; 
+      & form {
+        min-width: 0; /* 取消最小宽度限制 */
+      }
+    }
+  }
+}
