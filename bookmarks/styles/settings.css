@@ -669,6 +669,7 @@
 
     &.is-dragging {
       opacity: 0.55;
+      z-index: 1000;
     }
   }
 
@@ -687,6 +688,10 @@
       width: 16px;
       height: 16px;
     }
+
+    touch-action: none; /* 禁止浏览器拦截触控用于滚动或缩放 */
+    -webkit-user-drag: none; /* 明确禁用 Webkit 原生拖拽快照生成 */
+    user-select: none; /* 防止长按选中文本 */
   }
 
   .settings-module-name {

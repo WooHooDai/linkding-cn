@@ -6,6 +6,7 @@ import "./components/asset-rename.js";
 import "./components/sidebar-user-summary.js";
 import "./components/date-filter-fields.js";
 import "./components/settings-page.js";
+import "./components/bundle-page.js";
 import "./components/clear-button.js";
 import "./components/confirm-dropdown.js";
 import "./components/confirm-inline.js";

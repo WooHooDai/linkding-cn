@@ -9,7 +9,8 @@
 {% endblock %}
 
 {% block content %}
-  <main class="bundles-page crud-page" aria-labelledby="main-heading">
+  <main class="bundles-page crud-page" aria-labelledby="main-heading" 
+  ld-bundles-page>
     <div class="crud-header">
       <h1 id="main-heading">{% translate "Filters" %}</h1>
       <a href="{% url 'linkding:bundles.new' %}" class="btn">{% translate "Add filter" %}</a>
@@ -31,9 +32,9 @@
           </thead>
           <tbody>
           {% for bundle in bundles %}
-            <tr class="list-item" data-bundle-id="{{ bundle.id }}" draggable="true" data-folder="{{ bundle.is_folder }}">
+            <tr class="list-item" data-bundle-id="{{ bundle.id }}" data-folder="{{ bundle.is_folder }}">
               <td class="list-item-content">
-                <div class="d-flex align-center">
+                <div class="d-flex align-center drag-handle">
                   <svg xmlns="http://www.w3.org/2000/svg" class="text-secondary mr-1" width="16" height="16" viewBox="0 0 24 24" fill="none"
                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -72,69 +73,4 @@
       </div>
     {% endif %}
   </main>
-
-  <script>
-    (function init() {
-      const tableBody = document.querySelector(".crud-table tbody");
-      if (!tableBody) return;
-
-      let draggedElement = null;
-
-      const rows = tableBody.querySelectorAll('tr');
-      rows.forEach((item) => {
-        item.addEventListener('dragstart', handleDragStart);
-        item.addEventListener('dragend', handleDragEnd);
-        item.addEventListener('dragover', handleDragOver);
-        item.addEventListener('dragenter', handleDragEnter);
-      });
-
-      function handleDragStart(e) {
-        draggedElement = this;
-
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.dropEffect = 'move';
-
-        this.classList.add('drag-start');
-        setTimeout(() => {
-          this.classList.remove('drag-start');
-          this.classList.add('dragging');
-        }, 0);
-      }
-
-      function handleDragEnd() {
-        this.classList.remove('dragging');
-
-        const moveBundleInput = document.querySelector('input[name="move_bundle"]');
-        const movePositionInput = document.querySelector('input[name="move_position"]');
-        moveBundleInput.value = draggedElement.getAttribute('data-bundle-id');
-        movePositionInput.value = Array.from(tableBody.children).indexOf(draggedElement);
-
-        const form = this.closest('form');
-        form.requestSubmit(moveBundleInput);
-
-        draggedElement = null;
-      }
-
-      function handleDragOver(e) {
-        if (e.preventDefault) {
-          e.preventDefault();
-        }
-        return false;
-      }
-
-      function handleDragEnter() {
-        if (this !== draggedElement) {
-          const listItems = Array.from(tableBody.children);
-          const draggedIndex = listItems.indexOf(draggedElement);
-          const currentIndex = listItems.indexOf(this);
-
-          if (draggedIndex < currentIndex) {
-            this.insertAdjacentElement('afterend', draggedElement);
-          } else {
-            this.insertAdjacentElement('beforebegin', draggedElement);
-          }
-        }
-      }
-    })();
-  </script>
 {% endblock %}

@@ -9,6 +9,7 @@ import {
   setStoredSettingsPanelExpanded,
   setStoredSettingsScrollPosition,
 } from "../state/settings-preferences";
+import Sortable from 'sortablejs';
 
 // 依赖行显隐规则表：集中定义触发条件和更新函数，避免条件分散造成耦合。
 const DEPENDENT_STATE_RULES = [
@@ -112,10 +113,6 @@ class SettingsPageBehavior extends Behavior {
     this.onRestoreDraftClick = this.onRestoreDraftClick.bind(this);
     this.onPageHide = this.onPageHide.bind(this);
     this.onScroll = this.onScroll.bind(this);
-    this.onModuleDragStart = this.onModuleDragStart.bind(this);
-    this.onModuleDragOver = this.onModuleDragOver.bind(this);
-    this.onModuleDrop = this.onModuleDrop.bind(this);
-    this.onModuleDragEnd = this.onModuleDragEnd.bind(this);
     this.onPanelToggleClick = this.onPanelToggleClick.bind(this);
     this.onManualScrollIntent = this.onManualScrollIntent.bind(this);
     this.onHelpButtonClick = this.onHelpButtonClick.bind(this);
@@ -148,16 +145,30 @@ class SettingsPageBehavior extends Behavior {
     window.addEventListener("pagehide", this.onPageHide);
     window.addEventListener("resize", this.onWindowResize);
 
+    // 侧边栏功能模块拖拽排序
+    this.sortableInstances = [];
     this.sidebarModuleForms.forEach((form) => {
       const list = form.querySelector("[data-sidebar-modules-list]");
-      if (!list) {
-        return;
-      }
-      list.addEventListener("dragstart", this.onModuleDragStart);
-      list.addEventListener("dragover", this.onModuleDragOver);
-      list.addEventListener("drop", this.onModuleDrop);
-      list.addEventListener("dragend", this.onModuleDragEnd);
-      this.syncSidebarModules(form);
+      if (!list) return;
+
+      const sortable = Sortable.create(list, {
+        handle: ".settings-module-handle", // 指定手柄触发，防止移动端滑动页面时误触
+        animation: 150,
+        ghostClass: "is-dragging",
+        // fallbackOnBody: true,             // 解决某些容器内拖拽受限问题
+        // forceFallback: true,
+        swapThreshold: 0.65,
+        
+        // 拖拽结束后的回调
+        onEnd: () => {
+          this.syncSidebarModules(form);
+          this.queueSubmit(form);
+        },
+      });
+
+      this.sortableInstances.push(sortable);
+    
+      this.syncSidebarModules(form);  // 初始同步
     });
 
     this.initializeHelpPopovers();
@@ -192,16 +203,14 @@ class SettingsPageBehavior extends Behavior {
     window.removeEventListener("pagehide", this.onPageHide);
     window.removeEventListener("resize", this.onWindowResize);
 
-    this.sidebarModuleForms.forEach((form) => {
-      const list = form.querySelector("[data-sidebar-modules-list]");
-      if (!list) {
-        return;
-      }
-      list.removeEventListener("dragstart", this.onModuleDragStart);
-      list.removeEventListener("dragover", this.onModuleDragOver);
-      list.removeEventListener("drop", this.onModuleDrop);
-      list.removeEventListener("dragend", this.onModuleDragEnd);
-    });
+    if (this.sortableInstances) {
+      this.sortableInstances.forEach(instance => {
+        if (typeof instance.destroy === 'function') {
+          instance.destroy();
+        }
+      });
+      this.sortableInstances = [];
+    }
 
     this.directoryLinks.forEach((link) => {
       const handler = this.directoryClickHandlers.get(link);
@@ -480,60 +489,6 @@ class SettingsPageBehavior extends Behavior {
     this.setStoredPanelExpanded(panelId, !expanded);
     this.stabilizePanelToggleScrollPosition(button, buttonTopBeforeToggle);
     this.queueAdaptiveControlLayoutsUpdate();
-  }
-
-  onModuleDragStart(event) {
-    const item = event.target.closest(".settings-module-item");
-    if (!item) {
-      return;
-    }
-
-    this.draggedModuleItem = item;
-    item.classList.add("is-dragging");
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("text/plain", item.dataset.moduleKey || "");
-    }
-  }
-
-  onModuleDragOver(event) {
-    const list = event.currentTarget;
-    if (!this.draggedModuleItem || !list.contains(this.draggedModuleItem)) {
-      return;
-    }
-
-    event.preventDefault();
-    const targetItem = event.target.closest(".settings-module-item");
-    if (!targetItem || targetItem === this.draggedModuleItem) {
-      return;
-    }
-
-    const rect = targetItem.getBoundingClientRect();
-    const insertAfter = event.clientY > rect.top + rect.height / 2;
-    list.insertBefore(
-      this.draggedModuleItem,
-      insertAfter ? targetItem.nextSibling : targetItem,
-    );
-  }
-
-  onModuleDrop(event) {
-    const list = event.currentTarget;
-    const form = list.closest("form");
-    if (!form) {
-      return;
-    }
-
-    event.preventDefault();
-    this.syncSidebarModules(form);
-    this.queueSubmit(form);
-  }
-
-  onModuleDragEnd(event) {
-    const item = event.target.closest(".settings-module-item");
-    if (item) {
-      item.classList.remove("is-dragging");
-    }
-    this.draggedModuleItem = null;
   }
 
   // 提交状态：通过 WeakMap 管理每个表单的请求队列，避免污染 DOM 节点。

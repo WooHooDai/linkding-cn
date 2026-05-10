@@ -1,15 +1,31 @@
 .bundles-page {
   .crud-table {
-    svg {
-      cursor: grab;
+    .drag-handle {
+      touch-action: none;
+      -webkit-user-drag: none;
+      display: flex;
+      align-items: center;
+      padding-right: var(--unit-2);
+      
+      svg {
+        cursor: grab;
+        color: var(--secondary-text-color);
+      }
     }
 
-    tr.drag-start {
-      --secondary-border-color: transparent;
+    .list-item {
+      /* 禁止选中文本 */
+      user-select: none;
+      -webkit-user-select: none; /* iOS Safari */
     }
 
-    tr.dragging > * {
-      opacity: 0;
+    tr.dragging,
+    .sortable-ghost {
+      opacity: 0.5;
+      background: var(--body-color);
+      box-shadow: var(--box-shadow);
+      position: relative;
+      z-index: 999;
     }
   }
 
