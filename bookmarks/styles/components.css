@@ -80,6 +80,10 @@
   .section-header:not(.no-wrap) {
     flex-wrap: wrap;
   }
+  .section-header .header-controls {
+    flex: 1 1 100%;
+    margin-top: var(--unit-2);
+  }
 }
 
 /* Confirm button component */
