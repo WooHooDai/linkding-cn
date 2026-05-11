@@ -9,13 +9,13 @@
 </turbo-stream>
 <turbo-stream action="update" target="tag-cloud-container">
   <template>
-    {% include 'bookmarks/tag_cloud.html' %}
+    {% include 'bookmarks/sidebar/modules/tags/cloud.html' %}
   </template>
 </turbo-stream>
 
 <turbo-stream action="replace" target="domain-section-container">
   <template>
-    {% include "bookmarks/domain_section.html" %}
+    {% include "bookmarks/sidebar/modules/domains/index.html" %}
   </template>
 </turbo-stream>
 
@@ -32,7 +32,7 @@
 {% if sidebar_summary %}
   <turbo-stream action="update" target="sidebar-user-summary-container">
     <template>
-      {% include "bookmarks/sidebar_user_summary.html" %}
+      {% include "bookmarks/sidebar/modules/summary/index.html" %}
     </template>
   </turbo-stream>
 {% endif %}

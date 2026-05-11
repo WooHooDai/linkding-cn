@@ -81,7 +81,7 @@
   {% if domain.has_children %}
     <ul class="domain-children{% if domains.is_icon_mode and domain.children_prefer_icon_layout %} domain-children-icon{% endif %}">
       {% for domain in domain.children %}
-        {% include "bookmarks/domain_tree_node.html" with domain=domain %}
+        {% include "bookmarks/sidebar/modules/domains/tree_node.html" with domain=domain %}
       {% endfor %}
     </ul>
   {% endif %}

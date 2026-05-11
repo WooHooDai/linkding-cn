@@ -3,7 +3,7 @@
   <div class="section-header no-wrap">
     <div class="section-title">
       <h2 id="bundles-heading">{% translate "Bundles" %}</h2>
-      {% include "bookmarks/collapsed_button.html" with toggle_class="section-toggle" %}
+      {% include "bookmarks/sidebar/components/collapsed_button.html" with toggle_class="section-toggle" %}
       <ld-dropdown class="dropdown dropdown-right ml-auto">
         <button class="btn btn-noborder dropdown-toggle" aria-label="{% translate 'Bundles menu' %}">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -41,7 +41,7 @@
           </div>
           <div class="bundle-action">
             {% if bundle.is_folder and bundle.has_child %}
-              {% include "bookmarks/collapsed_button.html" %}
+              {% include "bookmarks/sidebar/components/collapsed_button.html" %}
             {% else %}
               <span class="folder-toggle-placeholder"></span>
             {% endif %}

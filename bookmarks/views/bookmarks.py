@@ -53,10 +53,10 @@ from bookmarks.utils import get_safe_return_url
 from bookmarks.views import access, contexts, partials, turbo
 
 SIDEBAR_MODULE_TEMPLATES = {
-    UserProfile.SIDEBAR_MODULE_SUMMARY: "bookmarks/sidebar_user_summary.html",
-    UserProfile.SIDEBAR_MODULE_BUNDLES: "bookmarks/bundle_section.html",
-    UserProfile.SIDEBAR_MODULE_DOMAINS: "bookmarks/domain_section.html",
-    UserProfile.SIDEBAR_MODULE_TAGS: "bookmarks/tag_section.html",
+    UserProfile.SIDEBAR_MODULE_SUMMARY: "bookmarks/sidebar/modules/summary/index.html",
+    UserProfile.SIDEBAR_MODULE_BUNDLES: "bookmarks/sidebar/modules/bundles/index.html",
+    UserProfile.SIDEBAR_MODULE_DOMAINS: "bookmarks/sidebar/modules/domains/index.html",
+    UserProfile.SIDEBAR_MODULE_TAGS: "bookmarks/sidebar/modules/tags/index.html",
 }
 
 
@@ -132,7 +132,7 @@ def _handle_preference_toggle(request: HttpRequest):
         return turbo.update(
             request,
             "sidebar-user-summary-container",
-            "bookmarks/sidebar_user_summary.html",
+            "bookmarks/sidebar/modules/summary/index.html",
             {"sidebar_summary": sidebar_summary},
         )
 
@@ -141,7 +141,7 @@ def _handle_preference_toggle(request: HttpRequest):
         return turbo.update(
             request,
             "domain-section-container",
-            "bookmarks/domain_section.html",
+            "bookmarks/sidebar/modules/domains/index.html",
             {"domains": domains},
         )
 
@@ -150,7 +150,7 @@ def _handle_preference_toggle(request: HttpRequest):
         return turbo.update(
             request,
             "tag-section-container",
-            "bookmarks/tag_section.html",
+            "bookmarks/sidebar/modules/tags/index.html",
             {"tag_cloud": tag_cloud},
         )
 

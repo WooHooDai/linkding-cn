@@ -27,7 +27,7 @@ class TagCloudTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         )
         tag_cloud_context = context_type(request, search)
         context = RequestContext(request, {"tag_cloud": tag_cloud_context})
-        template_to_render = Template("{% include 'bookmarks/tag_cloud.html' %}")
+        template_to_render = Template("{% include 'bookmarks/sidebar/modules/tags/cloud.html' %}")
         return template_to_render.render(context)
 
     def assertTagGroups(self, rendered_template: str, groups: list[list[str]]):

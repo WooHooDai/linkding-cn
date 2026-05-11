@@ -33,7 +33,7 @@
 
     {# Filters #}
     <div class="scrollbar side-panel col-1 hide-md" data-sticky-on="{{ request.user_profile.sticky_side_panel|yesno:'true,false' }}" ld-side-panel>
-      {% include 'bookmarks/sidebar_modules.html' %}
+      {% include 'bookmarks/sidebar/index.html' %}
     </div>
   </div>
 {% endblock %} 

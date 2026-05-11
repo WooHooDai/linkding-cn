@@ -261,6 +261,6 @@ def extract_domain(value, user_profile=None):
     except Exception:
         return ""
 
-@register.inclusion_tag("bookmarks/sidebar_toggle.html", name="sidebar_toggle")
+@register.inclusion_tag("bookmarks/sidebar/components/toggle.html", name="sidebar_toggle")
 def sidebar_toggle():
     return {}

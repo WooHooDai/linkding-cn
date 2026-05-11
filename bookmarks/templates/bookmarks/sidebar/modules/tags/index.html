@@ -4,7 +4,7 @@
     <div class="section-title">
       <h2 id="tags-heading">{% translate "Tags" %}</h2>
       {% if user.is_authenticated %}
-        {% include "bookmarks/collapsed_button.html" with toggle_class="section-toggle" %}
+        {% include "bookmarks/sidebar/components/collapsed_button.html" with toggle_class="section-toggle" %}
         <ld-dropdown class="dropdown dropdown-right ml-auto">
           <button class="btn btn-noborder dropdown-toggle" aria-label="{% translate 'Tags menu' %}">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -33,6 +33,6 @@
     </div>
   </div>
   <div id="tag-cloud-container" class="section-content">
-    {% include 'bookmarks/tag_cloud.html' %}
+    {% include 'bookmarks/sidebar/modules/tags/cloud.html' %}
   </div>
 </section>
