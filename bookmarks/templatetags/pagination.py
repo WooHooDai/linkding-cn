@@ -4,7 +4,7 @@ from django import template
 from django.core.paginator import Page
 from django.http import QueryDict
 
-NUM_ADJACENT_PAGES = 2
+NUM_ADJACENT_PAGES = 50
 
 register = template.Library()
 
@@ -42,11 +42,15 @@ def pagination(context, page: Page):
             page_links.append(None)
         else:
             link = _generate_link(base_url, query_params, page_number)
+            distance = abs(page_number - page.number)
             page_links.append(
                 {
                     "active": page_number == page.number,
                     "number": page_number,
                     "link": link,
+                    "distance": distance,
+                    "is_first": page_number == 1,
+                    "is_last": page_number == page.paginator.num_pages,
                 }
             )
 

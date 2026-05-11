@@ -18,6 +18,7 @@ import "./components/modal.js";
 import "./components/search-autocomplete.js";
 import "./components/tag-autocomplete.js";
 import "./components/upload-button.js";
+import "./components/responsive-pagination.js";
 import "./shortcuts.js";
 
 export { api } from "./api";

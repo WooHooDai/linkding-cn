@@ -1,35 +1,37 @@
-{% load i18n shared %}
-
-<ul class="pagination">
+<ld-responsive-pagination class="pagination-container">
   {% if prev_link %}
-    <li class="page-item">
-      <a href="{{ prev_link }}" tabindex="-1" data-turbo-frame="{{ pagination_frame }}">{% translate "Previous" %}</a>
-    </li>
+    <a href="{{ prev_link }}" class="page-nav prev" tabindex="-1" data-turbo-frame="{{ pagination_frame }}">
+      <svg t="1778505601587" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4321" width="20" height="20"><path d="M256 512l512 320V192L256 512z" fill="var(--primary-text-color)" p-id="4322"></path></svg>
+    </a>
   {% else %}
-    <li class="page-item disabled">
-      <a href="#" tabindex="-1">{% translate "Previous" %}</a>
-    </li>
+    <a href="#" class="page-nav prev disabled" tabindex="-1">
+      <svg t="1778505601587" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4321" width="20" height="20"><path d="M256 512l512 320V192L256 512z" fill="var(--primary-text-color)" p-id="4322"></path></svg>
+    </a>
   {% endif %}
 
-  {% for page_link in page_links %}
-    {% if page_link %}
-      <li class="page-item {% if page_link.active %}active{% endif %}">
-        <a href="{{ page_link.link }}" data-turbo-frame="{{ pagination_frame }}">{{ page_link.number }}</a>
-      </li>
-    {% else %}
-      <li class="page-item">
-        <span>...</span>
-      </li>
-    {% endif %}
-  {% endfor %}
+  <div class="pagination-pages">
+    <ul class="pagination-list">
+      {% for page_link in page_links %}
+        {% if page_link %}
+          <li class="page-item {% if page_link.active %}active{% endif %} {% if page_link.is_first %}is-first{% endif %} {% if page_link.is_last %}is-last{% endif %}" data-distance="{{ page_link.distance }}" data-number="{{ page_link.number }}">
+            <a href="{{ page_link.link }}" data-turbo-frame="{{ pagination_frame }}">{{ page_link.number }}</a>
+          </li>
+        {% else %}
+          <li class="page-item gap">
+            <span>...</span>
+          </li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
 
   {% if next_link %}
-    <li class="page-item">
-      <a href="{{ next_link }}" tabindex="-1" data-turbo-frame="{{ pagination_frame }}">{% translate "Next" %}</a>
-    </li>
+    <a href="{{ next_link }}" class="page-nav next" tabindex="-1" data-turbo-frame="{{ pagination_frame }}">
+      <svg t="1778505511837" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="6226" width="20" height="20"><path d="M768 512L256 832V192l512 320z" fill="var(--primary-text-color)" p-id="6227"></path></svg>
+    </a>
   {% else %}
-    <li class="page-item disabled">
-      <a href="#" tabindex="-1">{% translate "Next" %}</a>
-    </li>
+    <a href="#" class="page-nav next disabled" tabindex="-1">
+      <svg t="1778505511837" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="6226" width="20" height="20"><path d="M768 512L256 832V192l512 320z" fill="var(--primary-text-color)" p-id="6227"></path></svg>
+    </a>
   {% endif %}
-</ul>
+</ld-responsive-pagination>

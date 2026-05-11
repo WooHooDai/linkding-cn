@@ -869,16 +869,6 @@ msgstr "导航菜单"
 msgid "Add bookmark - Linkding"
 msgstr "新增书签 - Linkding"
 
-#: bookmarks/templates/bookmarks/pagination.html:6
-#: bookmarks/templates/bookmarks/pagination.html:10
-msgid "Previous"
-msgstr "上一页"
-
-#: bookmarks/templates/bookmarks/pagination.html:28
-#: bookmarks/templates/bookmarks/pagination.html:32
-msgid "Next"
-msgstr "下一页"
-
 #: bookmarks/templates/bookmarks/random_sort.html:29
 msgid "Random sort"
 msgstr "随机排序"

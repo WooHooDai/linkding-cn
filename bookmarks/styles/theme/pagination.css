@@ -1,66 +1,84 @@
 /* Pagination */
-.pagination {
+ld-responsive-pagination.pagination-container {
   display: flex;
-  list-style: none;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
   margin: var(--unit-1) 0;
   padding: var(--unit-1) 0;
+}
 
-  & .page-item {
-    margin: var(--unit-1) var(--unit-o);
+.pagination-container {
+  & .page-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    padding: var(--unit-1) var(--unit-2);
+    margin: 0 var(--unit-o);
+    flex-shrink: 0;
 
-    & span {
-      display: inline-block;
-      padding: var(--unit-1) var(--unit-1);
-    }
-
-    & a {
-      border-radius: var(--border-radius);
-      display: inline-block;
-      padding: var(--unit-1) var(--unit-2);
-      text-decoration: none;
-
-      &:focus,
-      &:hover {
-        color: var(--primary-text-color);
-      }
+    &:focus,
+    &:hover {
+      color: var(--primary-text-color);
     }
 
     &.disabled {
-      & a {
-        cursor: default;
-        opacity: 0.5;
-        pointer-events: none;
-      }
-    }
-
-    &:first-child a {
-      /* Remove left padding from first pagination link */
-      padding-left: 0;
-    }
-
-    &.active {
-      & a {
-        background: var(--primary-color);
-        color: var(--contrast-text-color);
-      }
-    }
-
-    &.page-prev,
-    &.page-next {
-      flex: 1 0 50%;
-    }
-
-    &.page-next {
-      text-align: right;
-    }
-
-    & .page-item-title {
-      margin: 0;
-    }
-
-    & .page-item-subtitle {
-      margin: 0;
+      cursor: default;
       opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  & .pagination-pages {
+    display: flex;
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  & .pagination-list {
+    display: flex;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    & .page-item {
+      margin: 0 var(--unit-o);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+
+      & span {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--unit-1) var(--unit-1);
+      }
+
+      & a {
+        border-radius: var(--border-radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--unit-1) var(--unit-2);
+        text-decoration: none;
+
+        &:focus,
+        &:hover {
+          color: var(--primary-text-color);
+        }
+      }
+
+      &.active {
+        & a {
+          background: var(--primary-color);
+          color: var(--contrast-text-color);
+        }
+      }
     }
   }
 }
