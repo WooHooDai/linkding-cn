@@ -19,9 +19,7 @@
           </div>
           {% include 'bookmarks/bulk_edit/toggle.html' %}
           {% random_sort bookmark_list.search %}
-          <ld-filter-drawer-trigger>
-            <button class="btn ml-2">{% translate "Filters" %}</button>
-          </ld-filter-drawer-trigger>
+          {% sidebar_toggle %}
         </div>
       </div>
 

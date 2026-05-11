@@ -40,8 +40,8 @@ msgid "Are you sure?"
 msgstr "确认执行操作？"
 
 #: bookmarks/frontend/behaviors/filter-drawer.js:27
-msgid "Filter"
-msgstr "筛选"
+msgid "Sidebar"
+msgstr "侧边栏"
 
 #: bookmarks/frontend/behaviors/filter-drawer.js:28
 msgid "Close dialog"

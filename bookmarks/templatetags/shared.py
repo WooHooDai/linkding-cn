@@ -260,3 +260,7 @@ def extract_domain(value, user_profile=None):
         return utils.get_sidebar_domain_filter_value(value, custom_domain_root)
     except Exception:
         return ""
+
+@register.inclusion_tag("bookmarks/sidebar_toggle.html", name="sidebar_toggle")
+def sidebar_toggle():
+    return {}

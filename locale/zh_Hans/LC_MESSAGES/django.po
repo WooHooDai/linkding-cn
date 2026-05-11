@@ -1343,6 +1343,7 @@ msgstr "如果没有井号前缀，标签与普通关键词更难区分，因此
 
 #: bookmarks/templates/settings/general.html:288
 #: bookmarks/templates/settings/general.html:1005
+#: bookmarks/templates/bookmarks/sidebar_toggle.html
 msgid "Sidebar"
 msgstr "侧边栏"
 

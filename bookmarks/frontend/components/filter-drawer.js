@@ -34,7 +34,7 @@ class FilterDrawer extends Modal {
         <div class="modal-overlay" data-close-modal></div>
         <div class="modal-container" role="dialog" aria-modal="true">
           <div class="modal-header">
-            <h2>${gettext("Filter")}</h2>
+            <h2>${gettext("Sidebar")}</h2>
             <button
               class="btn btn-noborder close"
               aria-label=${gettext("Close dialog")}
