@@ -41,6 +41,7 @@ class BulkEdit extends Behavior {
     );
     this.tagAutoComplete = this.element.querySelector(".tag-autocomplete");
     this.executeButton = this.element.querySelector("button[name='bulk_execute']");
+    this.cancelButton = this.element.querySelector("button[name='bulk_cancel']");
     this.selectAcross = this.element.querySelector("label.select-across");
     this.allCheckbox = this.element.querySelector(
       ".bulk-edit-checkbox.all input",
@@ -65,6 +66,7 @@ class BulkEdit extends Behavior {
 
   addListeners() {
     this.activeToggle.addEventListener("click", this.onToggleActive);
+    this.cancelButton.addEventListener("click", this.onToggleActive);
     this.actionSelect.addEventListener("change", this.onActionSelected);
     this.allCheckbox.addEventListener("change", this.onToggleAll);
     this.bookmarkCheckboxes.forEach((checkbox) => {
@@ -74,6 +76,7 @@ class BulkEdit extends Behavior {
 
   removeListeners() {
     this.activeToggle.removeEventListener("click", this.onToggleActive);
+    this.cancelButton.removeEventListener("click", this.onToggleActive);
     this.actionSelect.removeEventListener("change", this.onActionSelected);
     this.allCheckbox.removeEventListener("change", this.onToggleAll);
     this.bookmarkCheckboxes.forEach((checkbox) => {
@@ -87,18 +90,13 @@ class BulkEdit extends Behavior {
   onToggleActive() {
     this.active = !this.active;
     if (this.active) {
-      this.element.classList.add("active", "activating");
-      setTimeout(() => {
-        this.element.classList.remove("activating");
-      }, 500);
-      this.searchContainer.style.opacity = 0;
+      this.element.classList.add("active");
       // 粘性吸附
       if(this.isStickyOn) {
         this.scroller.addEventListener('scroll', this.onScroll, { passive: true });
       }
     } else {
       this.element.classList.remove("active");
-      this.searchContainer.style.opacity = 1;
       if(this.isStickyOn) {
         this.scroller.removeEventListener('scroll', this.onScroll);
       }

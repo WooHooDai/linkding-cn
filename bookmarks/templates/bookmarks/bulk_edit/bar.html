@@ -12,52 +12,52 @@
           <option value="bulk_read">{% translate "Mark as read" %}</option>
         {% endif %}
         {% if not 'bulk_unread' in disable_actions %}
-          <option value="bulk_unread">{% translate "Mark as unread" %}</option>
+        <option value="bulk_unread">{% translate "Mark as unread" %}</option>
+      {% endif %}
+      {% if request.user_profile.enable_sharing %}
+        {% if not 'bulk_share' in disable_actions %}
+          <option value="bulk_share">{% translate "Share" %}</option>
         {% endif %}
-        {% if request.user_profile.enable_sharing %}
-          {% if not 'bulk_share' in disable_actions %}
-            <option value="bulk_share">{% translate "Share" %}</option>
-          {% endif %}
-          {% if not 'bulk_unshare' in disable_actions %}  
-            <option value="bulk_unshare">{% translate "Unshare" %}</option>
-          {% endif %}
+        {% if not 'bulk_unshare' in disable_actions %}  
+          <option value="bulk_unshare">{% translate "Unshare" %}</option>
         {% endif %}
+      {% endif %}
 
-        <hr>
-        {% if not 'bulk_tag' in disable_actions %}
-          <option value="bulk_tag">{% translate "Add tags" %}</option>
+      <hr>
+      {% if not 'bulk_tag' in disable_actions %}
+        <option value="bulk_tag">{% translate "Add tags" %}</option>
+      {% endif %}
+      {% if not 'bulk_untag' in disable_actions %}
+        <option value="bulk_untag">{% translate "Remove tags" %}</option>
+      {% endif %}
+      {% if not 'bulk_refresh' in disable_actions %}
+        <option value="bulk_refresh">{% translate "Refresh from website" %}</option>
+      {% endif %}
+      {% if bookmark_list.snapshot_feature_enabled %}
+        {% if not 'bulk_snapshot' in disable_actions %}
+          <option value="bulk_snapshot">{% translate "Create HTML snapshot" %}</option>
         {% endif %}
-        {% if not 'bulk_untag' in disable_actions %}
-          <option value="bulk_untag">{% translate "Remove tags" %}</option>
-        {% endif %}
-        {% if not 'bulk_refresh' in disable_actions %}
-          <option value="bulk_refresh">{% translate "Refresh from website" %}</option>
-        {% endif %}
-        {% if bookmark_list.snapshot_feature_enabled %}
-          {% if not 'bulk_snapshot' in disable_actions %}
-            <option value="bulk_snapshot">{% translate "Create HTML snapshot" %}</option>
-          {% endif %}
-        {% endif %}
-        {% if not 'bulk_remove_snapshot' in disable_actions %}
-          <option value="bulk_remove_snapshot">{% translate "Remove all snapshots" %}</option>
-        {% endif %}
+      {% endif %}
+      {% if not 'bulk_remove_snapshot' in disable_actions %}
+        <option value="bulk_remove_snapshot">{% translate "Remove all snapshots" %}</option>
+      {% endif %}
 
-        <hr>
-        {% if not 'bulk_archive' in disable_actions %}
-          <option value="bulk_archive">{% translate "Archive" %}</option>
-        {% endif %}
-        {% if not 'bulk_unarchive' in disable_actions %}
-          <option value="bulk_unarchive">{% translate "Unarchive" %}</option>
-        {% endif %}
-        {% if not 'bulk_restore' in disable_actions %}
-          <option value="bulk_restore"
-            {% if default_bulk_action == 'bulk_restore' %}selected{% endif %}>
-            {% translate "Restore bookmarks" %}
-          </option>
-        {% endif %}
-        {% if not 'bulk_trash' in disable_actions %}
-          <option value="bulk_trash">{% translate "Move to trash" %}</option>
-        {% endif %}
+      <hr>
+      {% if not 'bulk_archive' in disable_actions %}
+        <option value="bulk_archive">{% translate "Archive" %}</option>
+      {% endif %}
+      {% if not 'bulk_unarchive' in disable_actions %}
+        <option value="bulk_unarchive">{% translate "Unarchive" %}</option>
+      {% endif %}
+      {% if not 'bulk_restore' in disable_actions %}
+        <option value="bulk_restore"
+          {% if default_bulk_action == 'bulk_restore' %}selected{% endif %}>
+          {% translate "Restore bookmarks" %}
+        </option>
+      {% endif %}
+      {% if not 'bulk_trash' in disable_actions %}
+        <option value="bulk_trash">{% translate "Move to trash" %}</option>
+      {% endif %}
         {% if not 'bulk_delete' in disable_actions %}
           <option value="bulk_delete">{% translate "Delete permanently" %}</option>
         {% endif %}
@@ -73,6 +73,9 @@
         <span>{% translate "Execute" %}</span>
       </button>
 
+      <button type="button" name="bulk_cancel" class="btn btn-link btn-sm">
+        <span>{% translate "Cancel" %}</span>
+      </button>
       <label class="form-checkbox select-across d-none">
         <input type="checkbox" name="bulk_select_across">
         <i class="form-icon"></i>

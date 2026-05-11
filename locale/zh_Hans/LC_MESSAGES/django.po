@@ -770,6 +770,7 @@ msgstr "保存"
 #: bookmarks/templates/tags/merge_modal.html:68
 #: bookmarks/templates/tags/new.html:24
 #: bookmarks/templates/tags/new_modal.html:25
+#: bookmarks/templates/bookmarks/bulk_edit/bar.html
 msgid "Cancel"
 msgstr "取消"
 
