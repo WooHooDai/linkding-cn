@@ -172,7 +172,7 @@ class BookmarkAssetViewTestCase(TestCase, BookmarkFactoryMixin):
         asset.save()
         response = self.client.get(reverse("linkding:assets.view", args=[asset.id]))
 
-        self.assertEqual(response["Content-Type"], asset.content_type)
+        self.assertEqual(response["Content-Type"], "text/html; charset=utf-8")
         self.assertEqual(
             response["Content-Disposition"],
             f'inline; filename="{asset.display_name}.html"',

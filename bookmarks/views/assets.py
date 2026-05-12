@@ -31,7 +31,11 @@ def view(request, asset_id: int):
     asset = access.asset_read(request, asset_id)
     content = _get_asset_content(asset)
 
-    response = HttpResponse(content, content_type=asset.content_type)
+    content_type = asset.content_type
+    if "charset" not in content_type.lower() and content_type.startswith("text/"):
+        content_type = f"{content_type}; charset=utf-8"
+
+    response = HttpResponse(content, content_type=content_type)
     response["Content-Disposition"] = f'inline; filename="{asset.download_name}"'
     if asset.content_type and asset.content_type.startswith("video/"):
         response["Content-Security-Policy"] = "default-src 'none'; media-src 'self';"
