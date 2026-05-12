@@ -544,3 +544,128 @@ function restoreBookmarkListScrollPosition() {
 
 document.addEventListener('DOMContentLoaded', restoreBookmarkListScrollPosition);
 document.addEventListener('turbo:load', restoreBookmarkListScrollPosition);
+
+// ==========================================
+// 侧边栏滚动位置记忆
+// ==========================================
+
+// 显示侧边栏开启（sidebar）、关闭（drawer），滚动位置记忆各自独立
+
+function readScrollData(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key));
+  } catch {
+    return null;
+  }
+}
+
+function saveScrollPosition(key, selector) {
+  const el = document.querySelector(selector);
+  if (!el) return;
+
+  const scrollTop = el.scrollTop;
+  const scrollHeight = el.scrollHeight;
+  const prev = readScrollData(key);
+  const prevPeak = prev?.peak || prev || { s: scrollTop, h: scrollHeight };
+
+  // peak 只在内容更高时更新，保证长列表位置不被短列表覆盖
+  const peak = scrollHeight >= prevPeak.h
+    ? { s: scrollTop, h: scrollHeight }
+    : prevPeak;
+
+  localStorage.setItem(key, JSON.stringify({ s: scrollTop, h: scrollHeight, peak }));
+}
+
+function applyScrollPosition(key, selector) {
+  const el = document.querySelector(selector);
+  if (!el) return;
+
+  const data = readScrollData(key);
+  if (!data) return;
+
+  // 当前高度接近 peak 高度（≥80%）时恢复 peak 位置，否则用最近位置
+  const usePeak = data.peak && el.scrollHeight >= data.peak.h * 0.8;
+  const target = usePeak ? data.peak.s : data.s;
+
+  requestAnimationFrame(() => {
+    el.scrollTop = Math.min(target, el.scrollHeight - el.clientHeight);
+  });
+}
+
+function createScrollHandler(saveFn, delay) {
+  let timer;
+  return () => {
+    clearTimeout(timer);
+    timer = setTimeout(saveFn, delay);
+  };
+}
+
+// --- 显示侧边栏开启（sidebar） ---
+
+const SIDEBAR_KEY = 'sidebarScrollPosition';
+const SIDEBAR_SEL = '.sidebar';
+
+const saveSidebar = () => saveScrollPosition(SIDEBAR_KEY, SIDEBAR_SEL);
+const restoreSidebar = () => applyScrollPosition(SIDEBAR_KEY, SIDEBAR_SEL);
+const onSidebarScroll = createScrollHandler(saveSidebar, 300);
+
+function bindSidebarScrollListener() {
+  const el = document.querySelector(SIDEBAR_SEL);
+  if (el) el.addEventListener('scroll', onSidebarScroll, { passive: true });
+}
+
+function unbindSidebarScrollListener() {
+  const el = document.querySelector(SIDEBAR_SEL);
+  if (el) el.removeEventListener('scroll', onSidebarScroll);
+}
+
+// --- 显示侧边栏关闭（drawer） ---
+
+const DRAWER_KEY = 'drawerScrollPosition';
+const DRAWER_SEL = 'ld-filter-drawer .modal-body';
+
+const saveDrawer = () => saveScrollPosition(DRAWER_KEY, DRAWER_SEL);
+const restoreDrawer = () => applyScrollPosition(DRAWER_KEY, DRAWER_SEL);
+const onDrawerScroll = createScrollHandler(saveDrawer, 150);
+
+function setupDrawerObserver() {
+  const modals = document.querySelector('.modals');
+  if (!modals) return;
+
+  new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      for (const node of m.addedNodes) {
+        if (node.tagName === 'LD-FILTER-DRAWER') {
+          requestAnimationFrame(() => {
+            const body = node.querySelector('.modal-body');
+            if (body) {
+              body.addEventListener('scroll', onDrawerScroll, { passive: true });
+              restoreDrawer();
+            }
+          });
+        }
+      }
+    }
+  }).observe(modals, { childList: true });
+}
+
+// 抽屉关闭前保存（捕获阶段，先于 Modal 自身的 close handler）
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-close-modal]') && e.target.closest('ld-filter-drawer')) {
+    saveDrawer();
+  }
+}, true);
+
+// --- 生命周期 ---
+
+document.addEventListener('turbo:before-cache', () => {
+  saveSidebar();
+  unbindSidebarScrollListener();
+  saveDrawer();
+});
+document.addEventListener('turbo:load', restoreSidebar);
+document.addEventListener('turbo:load', bindSidebarScrollListener);
+document.addEventListener('turbo:load', setupDrawerObserver);
+document.addEventListener('DOMContentLoaded', restoreSidebar);
+document.addEventListener('DOMContentLoaded', bindSidebarScrollListener);
+document.addEventListener('DOMContentLoaded', setupDrawerObserver);
