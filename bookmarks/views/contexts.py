@@ -1526,6 +1526,7 @@ class DomainTreeNode:
         is_group_node: bool = False,
         node_id: str | None = None,
         is_under_group_node: bool = False,
+        filter_value_override: str | None = None,
     ) -> None:
         self.hostname = hostname
         self.level = level
@@ -1538,11 +1539,14 @@ class DomainTreeNode:
         self.children: dict[str, DomainTreeNode] = {}
         self._exact_favicon_file = ""
         self._fallback_favicon_file = ""
+        self._filter_value_override = filter_value_override
 
     @property
     def filter_value(self) -> str | None:
         if self.is_group_node:
             return None
+        if self._filter_value_override:
+            return self._filter_value_override
         return utils.build_domain_filter_value(
             self.hostname, include_subdomains=self.include_subdomains
         )
@@ -1621,7 +1625,7 @@ class DomainsContext:
 
     def __init__(self, request: HttpRequest, search: BookmarkSearch) -> None:
         request_context = self.request_context(request)
-        domain_roots = utils.parse_domain_roots(request.user_profile.custom_domain_root)
+        config = utils.parse_domain_roots(request.user_profile.custom_domain_root)
         self.view_mode = self._parse_view_mode(request)
         self.is_icon_mode = self.view_mode == "icon"
         self.is_compact_mode = self._parse_compact_mode(request)
@@ -1648,7 +1652,7 @@ class DomainsContext:
         )
         bookmarks.sort(key=lambda bookmark: bookmark["url"])
 
-        root_nodes = self._build_domain_tree(bookmarks, domain_roots)
+        root_nodes = self._build_domain_tree(bookmarks, config)
         if self.is_compact_mode:
             root_nodes = self._compact_root_nodes(root_nodes)
         self.roots = self._build_items(
@@ -1663,7 +1667,7 @@ class DomainsContext:
     @staticmethod
     def _build_domain_tree(
         bookmarks: list[dict],
-        domain_roots: list[str],
+        config: utils.DomainConfig,
     ) -> list[DomainTreeNode]:
         root_nodes: dict[str, DomainTreeNode] = {}
 
@@ -1672,19 +1676,34 @@ class DomainsContext:
             if not hostname:
                 continue
 
-            path = utils.get_matching_domain_roots(hostname, domain_roots)
+            path = utils.get_matching_domain_roots(hostname, config)
             if not path:
                 path = [hostname]
 
             current_nodes = root_nodes
             for level, node_host in enumerate(path):
-                include_subdomains = node_host in domain_roots
+                include_subdomains = node_host in config.roots
                 node = current_nodes.get(node_host)
                 if node is None:
+                    filter_override = None
+                    if node_host in config.roots:
+                        alias_domains = utils.get_alias_domains_for_root(
+                            node_host, config
+                        )
+                        if len(alias_domains) > 1:
+                            filter_override = (
+                                utils.build_domain_filter_value_with_aliases(
+                                    node_host,
+                                    include_subdomains=True,
+                                    config=config,
+                                )
+                            )
+
                     node = DomainTreeNode(
                         node_host,
                         level=level,
                         include_subdomains=include_subdomains,
+                        filter_value_override=filter_override,
                     )
                     current_nodes[node_host] = node
 

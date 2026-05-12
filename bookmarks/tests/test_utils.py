@@ -5,8 +5,12 @@ from django.test import TestCase
 from django.utils import timezone
 
 from bookmarks.utils import (
+    DomainConfig,
     build_domain_filter_value,
+    build_domain_filter_value_with_aliases,
     canonicalize_domain_filter_value,
+    get_alias_domains_for_root,
+    get_matching_domain_roots,
     get_registrable_domain,
     get_sidebar_domain_filter_value,
     humanize_absolute_date,
@@ -380,7 +384,39 @@ class UtilsTestCase(TestCase):
 
     def test_parse_domain_roots(self):
         result = parse_domain_roots("docs.FEISHU.cn\n\nfeishu.cn\ndocs.feishu.cn")
-        self.assertEqual(result, ["docs.feishu.cn", "feishu.cn"])
+        self.assertEqual(result.roots, ["docs.feishu.cn", "feishu.cn"])
+        self.assertEqual(result.aliases, {})
+
+    def test_parse_domain_roots_with_aliases(self):
+        result = parse_domain_roots("feishu.com -> xiao.com")
+        self.assertEqual(result.roots, ["xiao.com"])
+        self.assertEqual(result.aliases, {"feishu.com": "xiao.com"})
+
+    def test_parse_domain_roots_alias_and_root_coexist(self):
+        result = parse_domain_roots("feishu.com -> xiao.com\nfeishu.com")
+        self.assertIn("xiao.com", result.roots)
+        self.assertIn("feishu.com", result.roots)
+        self.assertEqual(result.aliases, {"feishu.com": "xiao.com"})
+
+    def test_parse_domain_roots_chain_mapping(self):
+        result = parse_domain_roots("a.com -> b.com\nb.com -> c.com")
+        self.assertEqual(result.roots, ["b.com", "c.com"])
+        self.assertEqual(result.aliases, {"a.com": "b.com", "b.com": "c.com"})
+
+    def test_parse_domain_roots_cycle_resolution(self):
+        result = parse_domain_roots(
+            "a.com -> b.com\nb.com -> c.com\nc.com -> a.com"
+        )
+        # a.com -> b.com is removed as the oldest rule in the cycle
+        self.assertEqual(result.aliases, {"b.com": "c.com", "c.com": "a.com"})
+
+    def test_parse_domain_roots_self_mapping_ignored(self):
+        result = parse_domain_roots("xiao.com -> xiao.com")
+        self.assertEqual(result.aliases, {})
+
+    def test_parse_domain_roots_duplicate_alias_key(self):
+        result = parse_domain_roots("a.com -> b.com\na.com -> c.com")
+        self.assertEqual(result.aliases, {"a.com": "c.com"})
 
     def test_build_domain_filter_value(self):
         self.assertEqual(build_domain_filter_value("example.com"), "example.com")
@@ -394,6 +430,27 @@ class UtilsTestCase(TestCase):
             canonicalize_domain_filter_value(".example.com | example.com"),
             "example.com | .example.com",
         )
+
+    def test_build_domain_filter_value_with_aliases(self):
+        config = DomainConfig(
+            roots=["xiao.com", "feishu.com"],
+            aliases={"feishu.com": "xiao.com"},
+        )
+        result = build_domain_filter_value_with_aliases(
+            "xiao.com", include_subdomains=True, config=config
+        )
+        self.assertIn("xiao.com", result)
+        self.assertIn(".xiao.com", result)
+        self.assertIn("feishu.com", result)
+        self.assertIn(".feishu.com", result)
+
+    def test_get_alias_domains_for_root(self):
+        config = DomainConfig(
+            roots=["xiao.com"],
+            aliases={"feishu.com": "xiao.com", "xhslink.com": "xiao.com"},
+        )
+        domains = get_alias_domains_for_root("xiao.com", config)
+        self.assertCountEqual(domains, ["xiao.com", "feishu.com", "xhslink.com"])
 
     def test_get_sidebar_domain_filter_value(self):
         self.assertEqual(
@@ -413,4 +470,69 @@ class UtilsTestCase(TestCase):
                 "docs.feishu.cn\nfeishu.cn",
             ),
             "feishu.cn | .feishu.cn",
+        )
+
+    def test_get_sidebar_domain_filter_value_with_alias(self):
+        # 别名域名的 favicon 链接应包含规范域名 + 别名的搜索值
+        result = get_sidebar_domain_filter_value(
+            "https://xhslink.com/path",
+            "xhslink.com -> xiaohongshu.com",
+        )
+        self.assertIn("xiaohongshu.com", result)
+        self.assertIn("xhslink.com", result)
+
+    def test_get_matching_domain_roots_alias_only(self):
+        config = DomainConfig(
+            roots=["xiao.com"], aliases={"feishu.com": "xiao.com"}
+        )
+        # feishu.com bookmarks placed directly under xiao.com
+        self.assertEqual(
+            get_matching_domain_roots("feishu.com", config), ["xiao.com"]
+        )
+        # subdomain of alias also goes under xiao.com
+        self.assertEqual(
+            get_matching_domain_roots("a.feishu.com", config), ["xiao.com"]
+        )
+
+    def test_get_matching_domain_roots_alias_with_root(self):
+        config = DomainConfig(
+            roots=["xiao.com", "feishu.com"],
+            aliases={"feishu.com": "xiao.com"},
+        )
+        # feishu.com IS a root → gets its own node under xiao.com
+        self.assertEqual(
+            get_matching_domain_roots("feishu.com", config),
+            ["xiao.com", "feishu.com"],
+        )
+
+    def test_get_matching_domain_roots_three_level(self):
+        config = DomainConfig(
+            roots=["xiao.com", "feishu.com", "a.feishu.com"],
+            aliases={"feishu.com": "xiao.com"},
+        )
+        self.assertEqual(
+            get_matching_domain_roots("a.feishu.com", config),
+            ["xiao.com", "feishu.com", "a.feishu.com"],
+        )
+
+    def test_get_matching_domain_roots_skip_intermediate(self):
+        config = DomainConfig(
+            roots=["xiao.com", "a.feishu.com"],
+            aliases={"feishu.com": "xiao.com"},
+        )
+        # a.feishu.com is root, feishu.com is NOT root,
+        # so a.feishu.com goes directly under xiao.com
+        self.assertEqual(
+            get_matching_domain_roots("a.feishu.com", config),
+            ["xiao.com", "a.feishu.com"],
+        )
+
+    def test_get_matching_domain_roots_backward_compat(self):
+        # 传统后缀归一不受影响
+        config = DomainConfig(
+            roots=["feishu.cn", "docs.feishu.cn"], aliases={}
+        )
+        self.assertEqual(
+            get_matching_domain_roots("a.docs.feishu.cn", config),
+            ["feishu.cn", "docs.feishu.cn"],
         )

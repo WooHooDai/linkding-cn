@@ -6,6 +6,7 @@ import os
 import re
 import unicodedata
 import urllib.parse
+from dataclasses import dataclass
 from pathlib import Path
 
 import tldextract
@@ -400,32 +401,112 @@ def extract_hostname(url: str) -> str:
     return parsed.hostname.rstrip(".").lower()
 
 
-def parse_domain_roots(custom_domain_root: str) -> list[str]:
+@dataclass
+class DomainConfig:
+    roots: list[str]  # 规范根域名列表（保持顺序，去重）
+    aliases: dict[str, str]  # 别名 → 规范域名
+
+
+def parse_domain_roots(custom_domain_root: str) -> DomainConfig:
     roots = []
+    aliases = {}
     if not custom_domain_root:
-        return roots
+        return DomainConfig(roots=roots, aliases=aliases)
 
     for line in custom_domain_root.splitlines():
         line = line.strip()
-        if "://" not in line:
-            line = f"https://{line}"
-        hostname = extract_hostname(line)
-        if hostname:
-            roots.append(hostname)
+        if not line:
+            continue
 
-    # Preserve user-defined order while removing duplicates case-insensitively.
-    return list(dict.fromkeys(roots))
+        if "->" in line:
+            parts = [p.strip() for p in line.split("->", 1)]
+            alias = extract_hostname("https://" + parts[0])
+            target = extract_hostname("https://" + parts[1])
+            if alias and target and alias != target:
+                aliases[alias] = target
+                _resolve_cycle(aliases, alias)
+                if target not in roots:
+                    roots.append(target)
+        else:
+            hostname = _extract_hostname_from_line(line)
+            if hostname and hostname not in roots:
+                roots.append(hostname)
+
+    return DomainConfig(roots=roots, aliases=aliases)
 
 
-def get_matching_domain_roots(hostname: str, domain_roots: list[str]) -> list[str]:
+def _extract_hostname_from_line(line: str) -> str:
+    if "://" not in line:
+        line = f"https://{line}"
+    return extract_hostname(line)
+
+
+def _resolve_cycle(aliases: dict[str, str], new_alias: str):
+    """检测并打破别名链中的环。后出现的规则优先，移除环中最旧的规则。"""
+    current = new_alias
+    seen = {new_alias: 0}
+    walk = [new_alias]
+
+    while current in aliases:
+        current = aliases[current]
+        if current in seen:
+            cycle_keys = set(walk[seen[current] :])
+            for key in aliases:
+                if key in cycle_keys and key != new_alias:
+                    del aliases[key]
+                    return
+        seen[current] = len(walk)
+        walk.append(current)
+
+
+def get_matching_domain_roots(hostname: str, config: DomainConfig) -> list[str]:
     hostname = hostname.lower()
-    matches = []
 
-    for root in domain_roots:
+    # Step 1: root 匹配（现有逻辑）
+    matches = []
+    for root in config.roots:
         if hostname == root or hostname.endswith(f".{root}"):
             matches.append(root)
 
-    return sorted(matches, key=lambda value: (value.count("."), value))
+    if matches:
+        matches.sort(key=lambda v: (v.count("."), v))
+
+        # Step 2: 别名父链 — 从最宽泛的 matched root 出发，
+        # 向上查找其自身或祖先域名是否在 aliases 中
+        most_general = matches[0]
+        parts = most_general.split(".")
+        for i in range(len(parts)):
+            candidate = ".".join(parts[i:])
+            if candidate in config.aliases:
+                parent = config.aliases[candidate]
+                if parent not in matches:
+                    matches.insert(0, parent)
+                    seen = {parent}
+                    while parent in config.aliases:
+                        parent = config.aliases[parent]
+                        if parent in seen or parent in matches:
+                            break
+                        seen.add(parent)
+                        matches.insert(0, parent)
+                break
+
+        return matches
+
+    # Step 3: 别名回退 — hostname 未匹配任何 root，
+    # 检查是否匹配 alias（精确或子域名）
+    for alias, target in config.aliases.items():
+        if hostname == alias or hostname.endswith(f".{alias}"):
+            matches = [target]
+            seen = {target}
+            while target in config.aliases:
+                target = config.aliases[target]
+                if target in seen or target in matches:
+                    break
+                seen.add(target)
+                matches.insert(0, target)
+            return matches
+
+    return []
 
 
 def build_domain_filter_value(hostname: str, include_subdomains: bool = False) -> str:
@@ -453,14 +534,44 @@ def canonicalize_domain_filter_value(value: str) -> str:
     return " | ".join(ordered_parts)
 
 
+def get_alias_domains_for_root(root: str, config: DomainConfig) -> list[str]:
+    """返回映射到指定 root 的所有别名域名（含 root 自身）。"""
+    domains = [root]
+    for alias, target in config.aliases.items():
+        if target == root:
+            domains.append(alias)
+    return domains
+
+
+def build_domain_filter_value_with_aliases(
+    hostname: str,
+    include_subdomains: bool,
+    config: DomainConfig,
+) -> str:
+    hostname = hostname.lower()
+    alias_domains = get_alias_domains_for_root(hostname, config)
+
+    parts = []
+    for domain in alias_domains:
+        parts.append(domain)
+        if include_subdomains:
+            parts.append(f".{domain}")
+
+    ordered = sorted(set(parts), key=lambda p: (p.startswith("."), p))
+    return " | ".join(ordered)
+
+
 def get_sidebar_domain_filter_value(url: str, custom_domain_root: str = "") -> str:
     hostname = extract_hostname(url)
     if not hostname:
         return ""
 
-    domain_roots = parse_domain_roots(custom_domain_root)
-    matching_roots = get_matching_domain_roots(hostname, domain_roots)
+    config = parse_domain_roots(custom_domain_root)
+    matching_roots = get_matching_domain_roots(hostname, config)
+
     if not matching_roots:
         return build_domain_filter_value(hostname)
 
-    return build_domain_filter_value(matching_roots[-1], include_subdomains=True)
+    return build_domain_filter_value_with_aliases(
+        matching_roots[-1], include_subdomains=True, config=config
+    )

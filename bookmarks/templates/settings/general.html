@@ -483,10 +483,18 @@ reddit.com/r/Music music reddit</pre>
                 <div>
                   <label for="{{ custom_domain_root_form.custom_domain_root.id_for_label }}" class="settings-label">{% translate "Custom domain normalization" %}</label>
                   <div class="form-input-hint">
-                    {% translate "Configure one root domain per line." %}
-                    {% translate "All matching subdomains are normalized to the configured root domain, which affects favicon-based domain filters." %}<br>
-                    {% translate "Example: setting example.com normalizes a.example.com and b.example.com to example.com." %}<br>
-                    {% translate "If you also set a.example.com explicitly, that subdomain remains separate while other subdomains still normalize to example.com." %}
+                    {% blocktranslate trimmed %}
+                      1. Rules affect domain filtering logic, reflected in the sidebar "Domains" module and favicon-based domain filtering.<br>
+                      2. Each line configures one rule. There are two types of rules:<br>
+                      (1) Subdomain normalization: e.g., <code>a.com</code> normalizes <code>1.a.com</code> and <code>2.a.com</code> under <code>a.com</code><br>
+                      (2) Cross-domain mapping: e.g., <code>b.com -> a.com</code> normalizes <code>1.b.com</code> and <code>2.b.com</code> under <code>a.com</code><br>
+                      3. After configuring a subdomain normalization rule like <code>a.com</code>, adding a subdomain like <code>3.a.com</code> keeps <code>3.a.com</code> unnormalized:<br>
+                      (1) In the sidebar "Domains" module, <code>a.com</code> expands to show <code>3.a.com</code> separately<br>
+                      (2) Clicking the favicon of <code>3.a.com</code> bookmarks will not force filtering by <code>a.com</code><br>
+                      4. After configuring a cross-domain mapping rule like <code>b.com -> a.com</code>, adding a rule like <code>b.com</code> keeps <code>b.com</code> unnormalized:<br>
+                      (1) In the sidebar "Domains" module, <code>a.com</code> expands to show <code>b.com</code> separately<br>
+                      (2) Clicking the favicon of <code>b.com</code> bookmarks will not force filtering by <code>a.com</code>
+                    {% endblocktranslate %}
                   </div>
                 </div>
                 <div class="settings-stack-actions">
