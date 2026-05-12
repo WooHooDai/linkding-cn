@@ -1,60 +1,39 @@
+{% extends "bookmarks/sidebar/components/module_base.html" %}
 {% load i18n %}
 
-<section class="sidebar-user-summary"
-         aria-labelledby="sidebar-user-summary-heading"
-         ld-sidebar-user-summary
-         ld-collapse-button
-         data-toggle-storage-key="userSummarySectionState"
-         data-toggle-target-selector=".section-content"
-         data-summary-mode="{{ sidebar_summary.mode }}"
-         data-summary-month="{{ sidebar_summary.visible_month_key }}"
-         data-summary-week="{{ sidebar_summary.visible_week_key }}"
-         data-summary-show-weekdays="{{ sidebar_summary.show_weekdays|yesno:'1,0' }}"
-         data-summary-show-details="{{ sidebar_summary.show_details|yesno:'1,0' }}"
-         data-summary-range-url="{{ sidebar_summary.absolute_range_url }}"
-         data-summary-selected-start="{{ sidebar_summary.selected_start_iso }}"
-         data-summary-selected-end="{{ sidebar_summary.selected_end_iso }}">
-  <div class="section-header no-wrap">
-    <div class="section-title">
-      <h2 id="sidebar-user-summary-heading">{{ sidebar_summary.username }}</h2>
-      {% include "bookmarks/sidebar/components/collapsed_button.html" with toggle_class="section-toggle" %}
-      <ld-dropdown class="dropdown dropdown-right ml-auto">
-        <button class="btn btn-noborder dropdown-toggle"
-                aria-label="{% translate 'User summary menu' %}">
-          <svg xmlns="http://www.w3.org/2000/svg"
-               width="20"
-               height="20"
-               viewBox="0 0 24 24"
-               fill="none"
-               stroke="currentColor"
-               stroke-width="2"
-               stroke-linecap="round"
-               stroke-linejoin="round">
-            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-            <path d="M4 6l16 0"/>
-            <path d="M4 12l16 0"/>
-            <path d="M4 18l16 0"/>
-          </svg>
-        </button>
-        <ul class="menu" role="list" tabindex="-1">
-          {% for option in sidebar_summary.settings_options %}
-            <li class="menu-item">
-              <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="pref_action" value="{{ option.action }}">
-                <input type="hidden" name="value" value="{{ option.value }}">
-                <button type="submit"
-                        class="menu-link"
-                        data-summary-setting="{{ option.key }}">{{ option.label }}</button>
-              </form>
-            </li>
-          {% endfor %}
-        </ul>
-      </ld-dropdown>
-    </div>
-  </div>
+{% block section_attrs %}
+  class="sidebar-user-summary"
+  aria-labelledby="sidebar-user-summary-heading"
+  ld-sidebar-user-summary
+  data-summary-mode="{{ sidebar_summary.mode }}"
+  data-summary-month="{{ sidebar_summary.visible_month_key }}"
+  data-summary-week="{{ sidebar_summary.visible_week_key }}"
+  data-summary-show-weekdays="{{ sidebar_summary.show_weekdays|yesno:'1,0' }}"
+  data-summary-show-details="{{ sidebar_summary.show_details|yesno:'1,0' }}"
+  data-summary-range-url="{{ sidebar_summary.absolute_range_url }}"
+  data-summary-selected-start="{{ sidebar_summary.selected_start_iso }}"
+  data-summary-selected-end="{{ sidebar_summary.selected_end_iso }}"
+{% endblock %}
 
-  <div class="section-content">
+{% block toggle_storage_key %}userSummarySectionState{% endblock %}
+{% block heading_id %}sidebar-user-summary-heading{% endblock %}
+{% block title %}{{ sidebar_summary.username }}{% endblock %}
+
+{% block dropdown_label %}{% translate "User summary menu" %}{% endblock %}
+{% block dropdown_items %}
+  {% for option in sidebar_summary.settings_options %}
+    <li class="menu-item">
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="pref_action" value="{{ option.action }}">
+        <input type="hidden" name="value" value="{{ option.value }}">
+        <button type="submit" class="menu-link" data-summary-setting="{{ option.key }}">{{ option.label }}</button>
+      </form>
+    </li>
+  {% endfor %}
+{% endblock %}
+
+{% block content %}
     <div class="summary-primary-stats-block">
       <div class="summary-collection-start-summary"
            data-summary-collection-start-summary
@@ -447,5 +426,4 @@
         </div>
       </div>
     </div>
-  </div>
-</section>
+{% endblock %}

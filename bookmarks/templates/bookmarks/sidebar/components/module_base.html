@@ -1,0 +1,36 @@
+{% comment %}
+Base template for sidebar modules.
+Use via `{% extends "bookmarks/sidebar/components/module_base.html" %}` and implement blocks.
+{% endcomment %}
+
+<section {% block section_attrs %}{% endblock %}
+         data-toggle-storage-key="{% block toggle_storage_key %}{% endblock %}"
+         data-toggle-target-selector="{% block toggle_target_selector %}.section-content{% endblock %}"
+         ld-collapse-button>
+  <div class="section-header no-wrap">
+    <div class="section-title">
+      <h2 id="{% block heading_id %}section-heading{% endblock %}">{% block title %}{% endblock %}</h2>
+      {% block collapse_button %}
+        {% include "bookmarks/sidebar/components/collapsed_button.html" with toggle_class="section-toggle" %}
+      {% endblock %}
+      {% block menu %}
+        <ld-dropdown class="dropdown dropdown-right ml-auto">
+          <button class="btn btn-noborder dropdown-toggle" 
+                  aria-label="{% block dropdown_label %}{% endblock %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+              <path d="M4 6l16 0"/><path d="M4 12l16 0"/><path d="M4 18l16 0"/>
+            </svg>
+          </button>
+          <ul class="menu" role="list" tabindex="-1">
+            {% block dropdown_items %}{% endblock %}
+          </ul>
+        </ld-dropdown>
+      {% endblock %}
+    </div>
+  </div>
+  <div {% block content_attrs %}{% endblock %} class="section-content">
+    {% block content %}{% endblock %}
+  </div>
+</section>

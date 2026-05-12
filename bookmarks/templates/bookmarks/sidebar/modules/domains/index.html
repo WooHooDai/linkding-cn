@@ -1,41 +1,32 @@
-{% load i18n static %}
-<section id="domain-section-container" aria-labelledby="domains-heading" ld-collapse-button data-toggle-storage-key="domainSectionState" data-toggle-target-selector=".section-content">
-  <div class="section-header no-wrap">
-    <div class="section-title">
-      <h2 id="domains-heading">{% translate "Domains" %}</h2>
-      {% include "bookmarks/sidebar/components/collapsed_button.html" with toggle_class="section-toggle" %}
-      <ld-dropdown class="dropdown dropdown-right ml-auto">
-        <button class="btn btn-noborder dropdown-toggle" aria-label="{% translate 'Domains menu' %}">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-            <path d="M4 6l16 0"/>
-            <path d="M4 12l16 0"/>
-            <path d="M4 18l16 0"/>
-          </svg>
-        </button>
-        <ul class="menu" role="list" tabindex="-1">
-          <li class="menu-item">
-            <form method="post">
-              {% csrf_token %}
-              <input type="hidden" name="pref_action" value="{{ domains.toggle_view_mode_action }}">
-              <input type="hidden" name="value" value="{{ domains.toggle_view_mode_value }}">
-              <button type="submit" class="menu-link">{{ domains.toggle_view_mode_label }}</button>
-            </form>
-          </li>
-          <li class="menu-item">
-            <form method="post">
-              {% csrf_token %}
-              <input type="hidden" name="pref_action" value="{{ domains.toggle_compact_mode_action }}">
-              <input type="hidden" name="value" value="{{ domains.toggle_compact_mode_value }}">
-              <button type="submit" class="menu-link">{{ domains.toggle_compact_mode_label }}</button>
-            </form>
-          </li>
-        </ul>
-      </ld-dropdown>
-    </div>
-  </div>
-  <div id="domain-tree-container" class="section-content">
-    {% include "bookmarks/sidebar/modules/domains/tree.html" %}
-  </div>
-</section>
+{% extends "bookmarks/sidebar/components/module_base.html" %}
+{% load i18n %}
+
+{% block section_attrs %}id="domain-section-container" aria-labelledby="domains-heading"{% endblock %}
+{% block toggle_storage_key %}domainSectionState{% endblock %}
+{% block heading_id %}domains-heading{% endblock %}
+{% block title %}{% translate "Domains" %}{% endblock %}
+
+{% block dropdown_label %}{% translate "Domains menu" %}{% endblock %}
+{% block dropdown_items %}
+  <li class="menu-item">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="pref_action" value="{{ domains.toggle_view_mode_action }}">
+      <input type="hidden" name="value" value="{{ domains.toggle_view_mode_value }}">
+      <button type="submit" class="menu-link">{{ domains.toggle_view_mode_label }}</button>
+    </form>
+  </li>
+  <li class="menu-item">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="pref_action" value="{{ domains.toggle_compact_mode_action }}">
+      <input type="hidden" name="value" value="{{ domains.toggle_compact_mode_value }}">
+      <button type="submit" class="menu-link">{{ domains.toggle_compact_mode_label }}</button>
+    </form>
+  </li>
+{% endblock %}
+
+{% block content_attrs %}id="domain-tree-container"{% endblock %}
+{% block content %}
+  {% include "bookmarks/sidebar/modules/domains/tree.html" %}
+{% endblock %}
