@@ -6,18 +6,13 @@
 {% block heading_id %}tags-heading{% endblock %}
 {% block title %}{% translate "Tags" %}{% endblock %}
 
-{# 处理下拉菜单显示逻辑 #}
-{% block menu %}
-  {% if user.is_authenticated %}
-    {{ block.super }}
-  {% endif %}
-{% endblock %}
-
 {% block dropdown_label %}{% translate "Tags menu" %}{% endblock %}
 {% block dropdown_items %}
+  {% if user.is_authenticated %}
   <li class="menu-item">
     <a href="{% url 'linkding:tags.index' %}" class="menu-link">{% translate "Manage tags" %}</a>
   </li>
+  {% endif %}
   <li class="menu-item">
     <form method="post">
       {% csrf_token %}

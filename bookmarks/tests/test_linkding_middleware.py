@@ -1,16 +1,19 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from bookmarks.middlewares import standard_profile
 from bookmarks.models import GlobalSettings, UserProfile
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 
 
 class LinkdingMiddlewareTestCase(TestCase, BookmarkFactoryMixin):
-    def test_unauthenticated_user_should_use_standard_profile_by_default(self):
+    def test_unauthenticated_user_should_use_default_profile(self):
         response = self.client.get(reverse("login"))
 
-        self.assertEqual(standard_profile, response.wsgi_request.user_profile)
+        profile = response.wsgi_request.user_profile
+        self.assertTrue(profile.enable_favicons)
+        self.assertEqual(profile.domain_view_mode, UserProfile.DOMAIN_VIEW_ICON)
+        self.assertTrue(profile.domain_compact_mode)
+        self.assertEqual(profile.tag_grouping, UserProfile.TAG_GROUPING_ALPHABETICAL)
 
     def test_unauthenticated_user_should_use_custom_configured_profile(self):
         guest_user = self.setup_user()

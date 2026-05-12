@@ -16,6 +16,11 @@ from django.utils.translation import gettext as _
 
 from bookmarks import queries, utils
 from bookmarks.forms import BookmarkForm
+from bookmarks.middlewares import (
+    PREF_COOKIE_DOMAIN_COMPACT_MODE,
+    PREF_COOKIE_DOMAIN_VIEW_MODE,
+    PREF_COOKIE_TAG_GROUPING,
+)
 from bookmarks.models import (
     Bookmark,
     BookmarkSearch,
@@ -91,28 +96,55 @@ SUMMARY_ACTIONS = {"toggle_mode", "toggle_show_weekdays", "toggle_show_details",
 DOMAIN_ACTIONS = {"toggle_domain_view_mode", "toggle_domain_compact_mode"}
 TAG_ACTIONS = {"toggle_tag_grouping"}
 
+# Maps preference actions to cookie names for anonymous users
+_ANONYMOUS_PREF_COOKIE_MAP = {
+    "toggle_domain_view_mode": PREF_COOKIE_DOMAIN_VIEW_MODE,
+    "toggle_domain_compact_mode": PREF_COOKIE_DOMAIN_COMPACT_MODE,
+    "toggle_tag_grouping": PREF_COOKIE_TAG_GROUPING,
+}
+_PREF_COOKIE_MAX_AGE = 365 * 24 * 60 * 60  # 1 year
+
+
+def _set_anonymous_pref_cookies(response, action: str, value: str):
+    """Set preference cookies on the response for anonymous users."""
+    cookie_name = _ANONYMOUS_PREF_COOKIE_MAP.get(action)
+    if cookie_name:
+        response.set_cookie(cookie_name, value, max_age=_PREF_COOKIE_MAX_AGE, httponly=True)
+
+
+def _get_domain_tag_contexts(request: HttpRequest):
+    """Return the appropriate (DomainsContext, TagCloudContext) classes for the current page."""
+    path = request.path
+    if "/shared" in path:
+        return contexts.SharedDomainsContext, contexts.SharedTagCloudContext
+    if "/archived" in path:
+        return contexts.ArchivedDomainsContext, contexts.ArchivedTagCloudContext
+    if "/trash" in path:
+        return contexts.TrashedDomainsContext, contexts.TrashedTagCloudContext
+    return contexts.ActiveDomainsContext, contexts.ActiveTagCloudContext
+
 
 def _handle_preference_toggle(request: HttpRequest):
     action = request.POST["pref_action"]
     profile = request.user_profile
+    is_anonymous = not request.user.is_authenticated
 
     if action == "toggle_mode":
         profile.sum_mode = request.POST["value"]
-        profile.save()
     elif action == "toggle_show_weekdays":
         profile.sum_show_weekdays = request.POST["value"] == "1"
-        profile.save()
     elif action == "toggle_show_details":
         profile.sum_show_details = request.POST["value"] == "1"
-        profile.save()
     elif action == "toggle_domain_view_mode":
         profile.domain_view_mode = request.POST["value"]
-        profile.save()
     elif action == "toggle_domain_compact_mode":
         profile.domain_compact_mode = request.POST["value"] == "1"
-        profile.save()
     elif action == "toggle_tag_grouping":
         profile.tag_grouping = request.POST["value"]
+
+    if is_anonymous:
+        request.user_profile = profile
+    else:
         profile.save()
 
     # For nav_month/nav_week, inject the target value into GET so the context picks it up
@@ -129,32 +161,37 @@ def _handle_preference_toggle(request: HttpRequest):
 
     if action in SUMMARY_ACTIONS:
         sidebar_summary = contexts.SidebarUserSummaryContext(request, search)
-        return turbo.update(
+        response = turbo.update(
             request,
             "sidebar-user-summary-container",
             "bookmarks/sidebar/modules/summary/index.html",
             {"sidebar_summary": sidebar_summary},
         )
-
-    if action in DOMAIN_ACTIONS:
-        domains = contexts.ActiveDomainsContext(request, search)
-        return turbo.update(
+    elif action in DOMAIN_ACTIONS:
+        DomainsCtx, _ = _get_domain_tag_contexts(request)
+        domains = DomainsCtx(request, search)
+        response = turbo.update(
             request,
             "domain-section-container",
             "bookmarks/sidebar/modules/domains/index.html",
             {"domains": domains},
         )
-
-    if action in TAG_ACTIONS:
-        tag_cloud = contexts.ActiveTagCloudContext(request, search)
-        return turbo.update(
+    elif action in TAG_ACTIONS:
+        _, TagCloudCtx = _get_domain_tag_contexts(request)
+        tag_cloud = TagCloudCtx(request, search)
+        response = turbo.update(
             request,
             "tag-section-container",
             "bookmarks/sidebar/modules/tags/index.html",
             {"tag_cloud": tag_cloud},
         )
+    else:
+        return HttpResponseRedirect(reverse("linkding:bookmarks.index"))
 
-    return HttpResponseRedirect(reverse("linkding:bookmarks.index"))
+    if is_anonymous:
+        _set_anonymous_pref_cookies(response, action, request.POST["value"])
+
+    return response
 
 
 @login_required

@@ -29,8 +29,33 @@ class UserLanguageMiddleware:
 
 default_global_settings = GlobalSettings()
 
-standard_profile = UserProfile()
-standard_profile.enable_favicons = True
+# Cookie names for anonymous user preferences (stored client-side)
+PREF_COOKIE_DOMAIN_VIEW_MODE = "ld_domain_view_mode"
+PREF_COOKIE_DOMAIN_COMPACT_MODE = "ld_domain_compact_mode"
+PREF_COOKIE_TAG_GROUPING = "ld_tag_grouping"
+
+
+def _build_anonymous_profile(request) -> UserProfile:
+    """Build a UserProfile for anonymous users, applying cookie-stored preferences."""
+    profile = UserProfile()
+    profile.enable_favicons = True
+
+    domain_view_mode = request.COOKIES.get(
+        PREF_COOKIE_DOMAIN_VIEW_MODE, UserProfile.DOMAIN_VIEW_ICON
+    )
+    if domain_view_mode in dict(UserProfile.DOMAIN_VIEW_CHOICES):
+        profile.domain_view_mode = domain_view_mode
+
+    compact_val = request.COOKIES.get(PREF_COOKIE_DOMAIN_COMPACT_MODE, "1")
+    profile.domain_compact_mode = compact_val == "1"
+
+    tag_grouping = request.COOKIES.get(
+        PREF_COOKIE_TAG_GROUPING, UserProfile.TAG_GROUPING_ALPHABETICAL
+    )
+    if tag_grouping in dict(UserProfile.TAG_GROUPING_CHOICES):
+        profile.tag_grouping = tag_grouping
+
+    return profile
 
 
 class LinkdingMiddleware:
@@ -49,11 +74,10 @@ class LinkdingMiddleware:
         if request.user.is_authenticated:
             request.user_profile = request.user.profile
         else:
-            # check if a custom profile for guests exists, otherwise use standard profile
             if global_settings.guest_profile_user:
                 request.user_profile = global_settings.guest_profile_user.profile
             else:
-                request.user_profile = standard_profile
+                request.user_profile = _build_anonymous_profile(request)
 
         response = self.get_response(request)
 
