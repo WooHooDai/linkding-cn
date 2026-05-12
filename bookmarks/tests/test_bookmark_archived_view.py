@@ -587,9 +587,9 @@ class BookmarkArchivedViewTestCase(
 
         module_keys = [
             element["data-sidebar-module"]
-            for element in soup.select(".side-panel [data-sidebar-module]")
+            for element in soup.select(".sidebar [data-sidebar-module]")
         ]
         self.assertEqual(module_keys, ["domains", "tags"])
         self.assertIsNone(
-            soup.select_one(".side-panel [data-sidebar-module='bundles']")
+            soup.select_one(".sidebar [data-sidebar-module='bundles']")
         )

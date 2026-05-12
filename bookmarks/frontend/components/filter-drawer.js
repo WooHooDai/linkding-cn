@@ -87,7 +87,7 @@ class FilterDrawer extends Modal {
 
   teleport() {
     const content = this.querySelector(".modal-body");
-    const sidePanel = document.querySelector(".side-panel");
+    const sidePanel = document.querySelector(".sidebar");
     if (!content || !sidePanel) {
       return;
     }
@@ -96,7 +96,7 @@ class FilterDrawer extends Modal {
   }
 
   teleportBack() {
-    const sidePanel = document.querySelector(".side-panel");
+    const sidePanel = document.querySelector(".sidebar");
     const content = this.querySelector(".modal-body");
     if (!content || !sidePanel) {
       return;

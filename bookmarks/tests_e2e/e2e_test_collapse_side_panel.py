@@ -9,13 +9,13 @@ class CollapseSidePanelE2ETestCase(LinkdingE2ETestCase):
         super().setUp()
 
     def assertSidePanelIsVisible(self):
-        expect(self.page.locator(".bookmarks-page .side-panel")).to_be_visible()
+        expect(self.page.locator(".bookmarks-page .sidebar")).to_be_visible()
         expect(
             self.page.locator(".bookmarks-page ld-filter-drawer-trigger")
         ).not_to_be_visible()
 
     def assertSidePanelIsHidden(self):
-        expect(self.page.locator(".bookmarks-page .side-panel")).not_to_be_visible()
+        expect(self.page.locator(".bookmarks-page .sidebar")).not_to_be_visible()
         expect(
             self.page.locator(".bookmarks-page ld-filter-drawer-trigger")
         ).to_be_visible()

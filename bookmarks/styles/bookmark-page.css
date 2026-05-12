@@ -34,7 +34,7 @@
   }
 
   @media (max-width: 840px) {
-    section.side-panel {
+    section.sidebar {
       display: none;
     }
 
@@ -43,12 +43,12 @@
     }
   }
 
-  &.collapse-side-panel {
+  &.collapse-sidebar {
     main {
       grid-column: span var(--grid-columns);
     }
 
-    .side-panel {
+    .sidebar {
       display: none;
     }
 
@@ -1540,7 +1540,7 @@ ul.bookmark-list {
 }
 
 
-.side-panel {
+.sidebar {
   max-height: 100vh;
   &.paginate-sticky {
     max-height: 85vh;

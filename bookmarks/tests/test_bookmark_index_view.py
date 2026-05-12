@@ -666,11 +666,11 @@ class BookmarkIndexViewTestCase(
 
         module_keys = [
             element["data-sidebar-module"]
-            for element in soup.select(".side-panel [data-sidebar-module]")
+            for element in soup.select(".sidebar [data-sidebar-module]")
         ]
         self.assertEqual(module_keys, ["tags", "summary", "domains"])
         self.assertIsNone(
-            soup.select_one(".side-panel [data-sidebar-module='bundles']")
+            soup.select_one(".sidebar [data-sidebar-module='bundles']")
         )
 
     def test_legacy_hide_bundles_still_applies_without_sidebar_configuration(self):
@@ -683,7 +683,7 @@ class BookmarkIndexViewTestCase(
         soup = self.make_soup(response.content.decode())
 
         self.assertIsNone(
-            soup.select_one(".side-panel [data-sidebar-module='bundles']")
+            soup.select_one(".sidebar [data-sidebar-module='bundles']")
         )
 
     @unittest.skip("Pre-existing: domain count format changed (no parentheses in icon mode)")

@@ -7,7 +7,7 @@
 
 {% block content %}
   <div ld-bulk-edit
-       class="bookmarks-page grid columns-md-1 {% if bookmark_list.collapse_side_panel %}collapse-side-panel{% endif %}">
+       class="bookmarks-page grid columns-md-1 {% if bookmark_list.collapse_side_panel %}collapse-sidebar{% endif %}">
 
     {# Bookmark list #}
     <main class="main col-2" aria-labelledby="main-heading">
@@ -36,7 +36,7 @@
     </main>
 
     {# Filters #}
-    <div class="scrollbar side-panel col-1 hide-md{% if request.user_profile.sticky_pagination %} paginate-sticky{% endif %}" data-sticky-on="{{ request.user_profile.sticky_side_panel|yesno:'true,false' }}" ld-sidebar-sticky>
+    <div class="scrollbar sidebar col-1 hide-md{% if request.user_profile.sticky_pagination %} paginate-sticky{% endif %}" data-sticky-on="{{ request.user_profile.sticky_side_panel|yesno:'true,false' }}" ld-sidebar-sticky>
       {% include 'bookmarks/sidebar/index.html' %}
     </div>
   </div>

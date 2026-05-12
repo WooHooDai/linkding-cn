@@ -257,15 +257,15 @@ class BookmarkSharedViewTestCase(
 
         module_keys = [
             element["data-sidebar-module"]
-            for element in soup.select(".side-panel [data-sidebar-module]")
+            for element in soup.select(".sidebar [data-sidebar-module]")
         ]
         self.assertEqual(module_keys, ["tags", "domains"])
         self.assertIsNotNone(soup.select_one("#user-heading"))
         self.assertIsNone(
-            soup.select_one(".side-panel [data-sidebar-module='summary']")
+            soup.select_one(".sidebar [data-sidebar-module='summary']")
         )
         self.assertIsNone(
-            soup.select_one(".side-panel [data-sidebar-module='bundles']")
+            soup.select_one(".sidebar [data-sidebar-module='bundles']")
         )
 
     def test_should_list_tags_for_bookmarks_matching_query(self):

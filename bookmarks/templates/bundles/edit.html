@@ -17,7 +17,7 @@
 
       {% include 'shared/messages.html' %}
 
-      <form id="bundle-form" class="side-panel" action="{% url 'linkding:bundles.edit' bundle.id %}" method="post" novalidate>
+      <form id="bundle-form" class="sidebar" action="{% url 'linkding:bundles.edit' bundle.id %}" method="post" novalidate>
         {% csrf_token %}
         {% include 'bundles/form.html' %}
       </form>

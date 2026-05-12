@@ -1344,7 +1344,7 @@ msgstr "显示侧边栏"
 
 #: bookmarks/templates/settings/general.html:300
 msgid ""
-"Turn this off to collapse the side panel by default and give the bookmark "
+"Turn this off to collapse the sidebar by default and give the bookmark "
 "list more room."
 msgstr "关闭后将默认折叠侧边栏，为书签列表腾出更多空间。"
 
@@ -2489,21 +2489,21 @@ msgstr[1] ""
 #~ msgid "Keep the pagination controls pinned to the bottom while you scroll."
 #~ msgstr "滚动时将分页控件固定在底部。"
 
-#~ msgid "Sticky side panel"
+#~ msgid "Sticky sidebar"
 #~ msgstr "侧边栏跟随"
 
-#~ msgid "Keep the side panel visible while scrolling on wider screens."
+#~ msgid "Keep the sidebar visible while scrolling on wider screens."
 #~ msgstr "在较宽屏幕上滚动时保持侧边栏可见。"
 
 #~ msgid ""
-#~ "This option is automatically disabled when the side panel is collapsed."
+#~ "This option is automatically disabled when the sidebar is collapsed."
 #~ msgstr "当侧边栏折叠时，此选项会自动禁用。"
 
-#~ msgid "Collapse side panel"
+#~ msgid "Collapse sidebar"
 #~ msgstr "折叠侧边栏"
 
 #~ msgid ""
-#~ "Collapse the side panel by default to give the bookmark list more room."
+#~ "Collapse the sidebar by default to give the bookmark list more room."
 #~ msgstr "默认折叠侧边栏，为书签列表留出更多空间。"
 
 #~ msgid "Hide bundles"
