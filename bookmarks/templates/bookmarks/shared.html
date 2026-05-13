@@ -9,9 +9,9 @@
 
     {# Bookmark list #}
     <main class="main col-2" aria-labelledby="main-heading">
-      <div class="section-header mb-0">
+      <div class="section-header mb-0" data-sticky-on="{{ request.user_profile.sticky_header_controls|yesno:'true,false' }}">
         <h1 id="main-heading">{% translate "Shared bookmarks" %}</h1>
-        <div class="header-controls" ld-header-controls-sticky data-sticky-on="{{ request.user_profile.sticky_header_controls|yesno:'true,false' }}">
+        <div class="header-controls">
           {% bookmark_search bookmark_list.search mode='shared' %}
           {% random_sort bookmark_list.search %}
           {% sidebar_toggle %}
@@ -29,7 +29,7 @@
     </main>
 
     {# Filters #}
-    <div class="scrollbar sidebar col-1 hide-md" data-sticky-on="{{ request.user_profile.sticky_side_panel|yesno:'true,false' }}" ld-sidebar-sticky>
+    <div class="scrollbar sidebar col-1 hide-md" data-sticky-on="{{ request.user_profile.sticky_side_panel|yesno:'true,false' }}">
       <section aria-labelledby="user-heading">
         <div class="section-header">
           <h2 id="user-heading">{% translate "User" %}</h2>

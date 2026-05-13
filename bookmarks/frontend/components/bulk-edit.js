@@ -12,15 +12,12 @@ class BulkEdit extends Behavior {
     this.onToggleBookmark = this.onToggleBookmark.bind(this);
     this.onActionSelected = this.onActionSelected.bind(this);
 
-    // 批量编辑工具栏粘性吸顶
-    this.headerControls = element.querySelector("div.header-controls");
-    const isStickyOn = this.headerControls.dataset.stickyOn === 'true'
-    if(isStickyOn) {
-      this.isStickyOn = isStickyOn
-      this.bulkEditBar = document.querySelector('.bulk-edit-bar');
-      this.searchContainer = document.querySelector('.search-container');
-      this.scroller = document.querySelector('.body-container') || window;
-      this.onScroll = this.onScroll.bind(this);
+    this.isStickyOn = element.querySelector(".section-header")?.dataset.stickyOn === 'true'
+    this.bulkEditBar = element.querySelector('.bulk-edit-bar');
+
+    // 初始状态：页面加载时如已激活，同步粘性类
+    if (this.isStickyOn) {
+      this.bulkEditBar.classList.add("sticky");
     }
 
     this.init();
@@ -82,23 +79,19 @@ class BulkEdit extends Behavior {
     this.bookmarkCheckboxes.forEach((checkbox) => {
       checkbox.removeEventListener("change", this.onToggleBookmark);
     });
-    if(this.isStickyOn) {
-      this.scroller.removeEventListener('scroll', this.onScroll);
-    }
   }
 
   onToggleActive() {
     this.active = !this.active;
     if (this.active) {
       this.element.classList.add("active");
-      // 粘性吸附
       if(this.isStickyOn) {
-        this.scroller.addEventListener('scroll', this.onScroll, { passive: true });
+        this.bulkEditBar.classList.add("sticky");
       }
     } else {
       this.element.classList.remove("active");
       if(this.isStickyOn) {
-        this.scroller.removeEventListener('scroll', this.onScroll);
+        this.bulkEditBar.classList.remove("sticky");
       }
     }
   }
@@ -159,13 +152,6 @@ class BulkEdit extends Behavior {
     this.executeButton.disabled = !hasSelection;
   }
 
-  onScroll() {
-    if(this.headerControls.classList.contains("sticky")){
-      this.bulkEditBar.classList.add("sticky")
-    } else {
-      this.bulkEditBar.classList.remove("sticky")
-    }
-  }
 }
 
 registerBehavior("ld-bulk-edit", BulkEdit);

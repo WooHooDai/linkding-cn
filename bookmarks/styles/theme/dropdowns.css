@@ -10,6 +10,7 @@
     display: none;
     left: 0;
     max-height: 65vh;
+    max-height: 65dvh;
     overflow-y: auto;
     position: absolute;
     top: 100%;

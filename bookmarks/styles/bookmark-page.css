@@ -16,7 +16,6 @@
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: 30px; 
 
   @media (pointer: coarse) {
     scrollbar-gutter: initial;
@@ -415,11 +414,10 @@ li[ld-bookmark-item] {
   margin-top: var(--unit-4);
   border-top: solid 1px var(--secondary-border-color);
 
-  &.sticky {
-    position: fixed;
+  &[data-sticky-on="true"] {
+    position: sticky;
     bottom: 0;
-    left: auto;
-    margin: 0;
+    margin-top: 0;
     z-index: 10;
     border-top: solid 1px var(--secondary-border-color);
     background: var(--body-color);
@@ -1542,15 +1540,19 @@ ul.bookmark-list {
 
 .sidebar {
   max-height: 100vh;
+  max-height: 100dvh;
   &.paginate-sticky {
     max-height: 85vh;
-    &.sticky {
+    max-height: 85dvh;
+    &[data-sticky-on="true"] {
       max-height: calc(100vh - var(--unit-4) - 41px);
+      max-height: calc(100dvh - var(--unit-4) - 41px);
     }
   }
-  &.sticky {
-    position: fixed;
+  &[data-sticky-on="true"] {
+    position: sticky;
     top: 0;
+    align-self: flex-start;
     z-index: 10;
     background: var(--body-color);
     padding-top: var(--unit-2);

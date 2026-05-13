@@ -4,6 +4,7 @@ body {
   margin: 0;
   padding: 0;
   height: 100vh;
+  height: 100dvh;
   @media (max-width: 975px) {
     margin-left: 10px;
     margin-right: 10px;
@@ -34,6 +35,7 @@ header {
 /* 编辑区独立滚动 */
 .scrollbar {
   max-height: calc(100vh - 140px);
+  max-height: calc(100dvh - 140px);
   overflow-y: auto;
   overflow-x: hidden; /* 防止横向滚动 */
   

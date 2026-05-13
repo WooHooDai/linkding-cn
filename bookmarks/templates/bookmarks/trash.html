@@ -9,9 +9,9 @@
 
     {# Bookmark list #}
     <main class="main col-2" aria-labelledby="main-heading">
-      <div class="section-header mb-0">
+      <div class="section-header mb-0" data-sticky-on="{{ request.user_profile.sticky_header_controls|yesno:'true,false' }}">
         <h1 id="main-heading">{% translate "Trash" %}<span id="bookmark-list-total">({{ bookmark_list.bookmarks_total }})</span></h1>
-        <div class="header-controls" ld-header-controls-sticky data-sticky-on="{{ request.user_profile.sticky_header_controls|yesno:'true,false' }}">
+        <div class="header-controls">
           {% bookmark_search bookmark_list.search mode='trash' %}
           {% include 'bookmarks/bulk_edit/toggle.html' %}
           {% random_sort bookmark_list.search %}
@@ -32,7 +32,7 @@
     </main>
 
     {# Filters #}
-    <div class="scrollbar sidebar col-1 hide-md" data-sticky-on="{{ request.user_profile.sticky_side_panel|yesno:'true,false' }}" ld-sidebar-sticky>
+    <div class="scrollbar sidebar col-1 hide-md" data-sticky-on="{{ request.user_profile.sticky_side_panel|yesno:'true,false' }}">
       {% include 'bookmarks/sidebar/index.html' %}
     </div>
   </div>
