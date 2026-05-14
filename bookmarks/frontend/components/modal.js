@@ -1,6 +1,9 @@
 import { FocusTrapController } from "../utils/focus.js";
 import { HeadlessElement } from "../utils/element.js";
 
+let bodyScrollLockDepth = 0;
+let bodyOriginalPaddingRight = "";
+
 export class Modal extends HeadlessElement {
   init() {
     this.onClose = this.onClose.bind(this);
@@ -27,17 +30,52 @@ export class Modal extends HeadlessElement {
   }
 
   setupInert() {
+    this.lockBodyScroll();
     document
       .querySelectorAll("body > *:not(.modals)")
       .forEach((element) => element.setAttribute("inert", ""));
-    document.body.classList.add("scroll-lock");
   }
 
   clearInert() {
     document
       .querySelectorAll("body > *")
       .forEach((element) => element.removeAttribute("inert"));
-    document.body.classList.remove("scroll-lock");
+    this.unlockBodyScroll();
+  }
+
+  // modal 弹出时，通过动态补偿滚动条轨道宽度，避免视觉闪动
+  lockBodyScroll() {
+    const body = document.body;
+
+    if (bodyScrollLockDepth === 0) {
+      bodyOriginalPaddingRight = body.style.paddingRight || "";
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+      if (scrollbarWidth > 0) {
+        const currentPadding = parseFloat(getComputedStyle(body).paddingRight) || 0;
+        body.style.paddingRight = `${currentPadding + scrollbarWidth}px`;
+      }
+
+      body.classList.add("scroll-lock");
+    }
+
+    bodyScrollLockDepth += 1;
+  }
+
+  unlockBodyScroll() {
+    const body = document.body;
+
+    if (bodyScrollLockDepth === 0) {
+      return;
+    }
+
+    bodyScrollLockDepth -= 1;
+
+    if (bodyScrollLockDepth === 0) {
+      body.classList.remove("scroll-lock");
+      body.style.paddingRight = bodyOriginalPaddingRight;
+      bodyOriginalPaddingRight = "";
+    }
   }
 
   onKeyDown(event) {
