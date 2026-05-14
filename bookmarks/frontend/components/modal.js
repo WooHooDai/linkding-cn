@@ -30,14 +30,14 @@ export class Modal extends HeadlessElement {
     document
       .querySelectorAll("body > *:not(.modals)")
       .forEach((element) => element.setAttribute("inert", ""));
-    document.querySelector(".body-container")?.classList.add("scroll-lock");
+    document.body.classList.add("scroll-lock");
   }
 
   clearInert() {
     document
       .querySelectorAll("body > *")
       .forEach((element) => element.removeAttribute("inert"));
-    document.querySelector(".body-container")?.classList.remove("scroll-lock");
+    document.body.classList.remove("scroll-lock");
   }
 
   onKeyDown(event) {

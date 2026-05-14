@@ -66,8 +66,7 @@
   </svg>
 </div>
 
-<div class="body-container">
-  <header class="container">
+<header class="container">
     {% if has_toasts %}
       <div class="message-list">
         <form action="{% url 'linkding:toasts.acknowledge' %}?return_url={{ request.path | urlencode }}" method="post">
@@ -104,7 +103,6 @@
     {% block content %}
     {% endblock %}
   </div>
-</div>
 <div class="modals">
   {% block overlays %}
   {% endblock %}

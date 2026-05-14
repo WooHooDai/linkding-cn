@@ -67,7 +67,7 @@ class SettingsPageBehavior extends Behavior {
         document.getElementById(link.dataset.settingsSectionTarget || ""),
       )
       .filter(Boolean);
-    this.scrollContainer = document.querySelector(".body-container") || window;
+    this.scrollContainer = window;
     this.sidebarModuleForms = Array.from(
       element.querySelectorAll("[data-sidebar-modules-form]"),
     );

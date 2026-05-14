@@ -13,7 +13,7 @@ class BookmarkItem extends Behavior {
     this.onEditClick = this.onEditClick.bind(this);
     this.onTitleClick = this.onTitleClick.bind(this);
     
-    this.scroller = document.querySelector('.body-container');
+    this.scroller = document.scrollingElement;
     
     // 初始化 Notes
     this.notesToggle = element.querySelector(".toggle-notes");
@@ -368,11 +368,11 @@ registerBehavior("ld-domain-tree", DomainTreeBehavior);
 // ==========================================
 
 function restoreBookmarkListScrollPosition() {
-  const scroller = document.querySelector('.body-container');
+  const scroller = document.scrollingElement;
   if (scroller && document.querySelector('.bookmark-list')) {
     const scroll = localStorage.getItem('bookmarkListScrollPosition');
     const returnUrl = localStorage.getItem('bookmarkListReturnUrl');
-    
+
     if (scroll !== null && returnUrl !== null) {
       if (window.location.pathname === returnUrl) {
         scroller.scrollTo(0, parseInt(scroll, 10));
