@@ -20,6 +20,9 @@ import "./components/tag-autocomplete.js";
 import "./components/upload-button.js";
 import "./components/responsive-pagination.js";
 import "./shortcuts.js";
+import { setupViewportHeightVar } from "./utils/viewport.js";
+
+setupViewportHeightVar();
 
 export { api } from "./api";
 export { cache } from "./utils/tag-cache.js";

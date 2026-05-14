@@ -130,6 +130,7 @@
   --size-2x: 1440px;
 
   --responsive-breakpoint: var(--size-xs);
+  --app-viewport-height: 100vh;
 
   /* Z-index */
   --zindex-0: 1;

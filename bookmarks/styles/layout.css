@@ -33,8 +33,7 @@ header {
 
 /* 编辑区独立滚动 */
 .scrollbar {
-  max-height: calc(100vh - 140px);
-  max-height: calc(100dvh - 140px);
+  max-height: calc(var(--app-viewport-height) - 140px);
   overflow-y: auto;
   overflow-x: hidden; /* 防止横向滚动 */
   

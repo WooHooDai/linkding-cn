@@ -126,8 +126,7 @@
     gap: var(--unit-1);
     align-content: start;
     padding: var(--unit-2) 0;
-    max-height: 100vh;
-    max-height: 100dvh;
+    max-height: var(--app-viewport-height);
     overflow-y: auto;
     scrollbar-width: none;
 

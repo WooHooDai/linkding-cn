@@ -1526,14 +1526,11 @@ ul.bookmark-list {
 
 
 .sidebar {
-  max-height: 100vh;
-  max-height: 100dvh;
+  max-height: var(--app-viewport-height);
   &.paginate-sticky {
-    max-height: 85vh;
-    max-height: 85dvh;
+    max-height: calc(var(--app-viewport-height) * 0.85);
     &[data-sticky-on="true"] {
-      max-height: calc(100vh - var(--unit-4) - 41px);
-      max-height: calc(100dvh - var(--unit-4) - 41px);
+      max-height: calc(var(--app-viewport-height) - var(--unit-4) - 41px);
     }
   }
   &[data-sticky-on="true"] {

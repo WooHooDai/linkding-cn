@@ -66,8 +66,8 @@ ld-confirm-dropdown {
   display: flex;
   flex-direction: column;
   gap: var(--unit-4);
-  max-height: 75vh;
-  max-height: 75dvh;
+  max-height: 480px;  /* 兜底 */
+  max-height: calc(var(--app-viewport-height) * 0.75);
   max-width: var(--control-width-md);
 
   & .modal-header {

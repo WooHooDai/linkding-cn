@@ -9,13 +9,12 @@
     animation: fade-in 0.15s ease 1;
     display: none;
     left: 0;
-    max-height: 65vh;
-    max-height: 65dvh;
+    max-height: 420px;  /* 兜底 */
+    max-height: min(420px, calc(var(--app-viewport-height) * 0.65));
     overflow-y: auto;
     position: absolute;
     top: 100%;
   }
-
   &.dropdown-right {
     .menu {
       left: auto;
