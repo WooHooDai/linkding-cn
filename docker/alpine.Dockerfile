@@ -53,7 +53,7 @@ RUN wget https://www.sqlite.org/${SQLITE_RELEASE_YEAR}/sqlite-amalgamation-${SQL
 FROM python:3.13.7-alpine3.21 AS linkding
 LABEL org.opencontainers.image.source="https://github.com/sissbruecker/linkding"
 # install runtime dependencies
-RUN apk update && apk add bash curl icu libpq mailcap libssl3
+RUN apk update && apk add bash curl icu libpq mailcap libssl3 gettext
 # create www-data user and group
 RUN set -x ; \
   addgroup -g 82 -S www-data ; \
@@ -72,6 +72,7 @@ ENV VIRTUAL_ENV=/etc/linkding/.venv
 ENV PATH="/etc/linkding/.venv/bin:$PATH"
 # Generate static files, remove source styles that are not needed
 RUN mkdir data && \
+    python manage.py compilemessages && \
     python manage.py collectstatic
 
 # Limit file descriptors used by uwsgi, see https://github.com/sissbruecker/linkding/issues/453
