@@ -407,14 +407,20 @@ function saveScrollPosition(key, selector) {
   const scrollTop = el.scrollTop;
   const scrollHeight = el.scrollHeight;
   const prev = readScrollData(key);
-  const prevPeak = prev?.peak || prev || { s: scrollTop, h: scrollHeight };
+  const slots = prev?.slots || {};
 
-  // peak 只在内容更高时更新，保证长列表位置不被短列表覆盖
-  const peak = scrollHeight >= prevPeak.h
-    ? { s: scrollTop, h: scrollHeight }
-    : prevPeak;
+  // 每个可滚动高度记录一个滚动位置
+  // 滚动高度变化时，直接匹配得到滚动位置，实现精准匹配
+  slots[scrollHeight] = scrollTop;
 
-  localStorage.setItem(key, JSON.stringify({ s: scrollTop, h: scrollHeight, peak }));
+  // 最多保留 50 条，淘汰最早插入的
+  const keys = Object.keys(slots);
+  while (keys.length > 50) {
+    delete slots[keys[0]];
+    keys.shift();
+  }
+
+  localStorage.setItem(key, JSON.stringify({ s: scrollTop, h: scrollHeight, slots }));
 }
 
 function applyScrollPosition(key, selector) {
@@ -424,9 +430,9 @@ function applyScrollPosition(key, selector) {
   const data = readScrollData(key);
   if (!data) return;
 
-  // 当前高度接近 peak 高度（≥80%）时恢复 peak 位置，否则用最近位置
-  const usePeak = data.peak && el.scrollHeight >= data.peak.h * 0.8;
-  const target = usePeak ? data.peak.s : data.s;
+  // 精确匹配当前 scrollHeight 的记忆位置
+  // 无匹配则用最近一次
+  const target = data.slots?.[el.scrollHeight] ?? data.s;
 
   requestAnimationFrame(() => {
     el.scrollTop = Math.min(target, el.scrollHeight - el.clientHeight);
