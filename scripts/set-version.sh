@@ -15,6 +15,10 @@ echo "$version" > version.txt
 # Update pyproject.toml
 sed -i '' "s/^version = \".*\"/version = \"$version\"/" pyproject.toml
 
+# Regenerate uv.lock so the project version tracked by uv stays in sync.
+# Without --upgrade, uv keeps the existing dependency resolution intact.
+uv lock
+
 # Update package.json
 sed -i '' "s/\"version\": \".*\"/\"version\": \"$version\"/" package.json
 
@@ -25,5 +29,6 @@ sed -i '' "/\"\": {/{n;s/\"version\": \".*\"/\"version\": \"$version\"/;}" packa
 echo "Version updated to $version in:"
 echo "  - version.txt"
 echo "  - pyproject.toml"
+echo "  - uv.lock"
 echo "  - package.json"
 echo "  - package-lock.json"
