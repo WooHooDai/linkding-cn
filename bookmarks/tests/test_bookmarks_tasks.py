@@ -467,6 +467,24 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
         self.mock_load_preview_image.assert_called_once()
         self.assertEqual(bookmark.preview_image_file, "preview_image_upd.png")
 
+    def test_load_preview_image_force_resets_retry_state(self):
+        bookmark = self.setup_bookmark()
+        bookmark.preview_image_retry_count = 3
+        bookmark.preview_image_next_retry_at = timezone.now() + timedelta(days=1)
+        bookmark.save(
+            update_fields=[
+                "preview_image_retry_count",
+                "preview_image_next_retry_at",
+            ]
+        )
+
+        tasks.load_preview_image(self.get_or_create_test_user(), bookmark, force=True)
+
+        bookmark.refresh_from_db()
+        self.mock_load_preview_image.assert_called_once()
+        self.assertEqual(bookmark.preview_image_retry_count, 0)
+        self.assertIsNone(bookmark.preview_image_next_retry_at)
+
     def test_load_preview_image_should_keep_existing_file_and_schedule_retry_when_none_is_returned(
         self,
     ):

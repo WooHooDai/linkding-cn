@@ -26,6 +26,7 @@ class DetailsModal extends Modal {
     };
     this._pendingMetadata = null;
     this._urlEditing = false;
+    this._refreshShouldRetryPreview = false;
 
     // 不自动聚焦
     requestAnimationFrame(() => {
@@ -382,7 +383,7 @@ class DetailsModal extends Modal {
     input._onBlur = onBlur;
   }
 
-  _saveUrl() {
+  async _saveUrl() {
     const wrapper = this.querySelector(".detail-url-wrapper");
     const input = wrapper?.querySelector(".detail-url-input");
     if (!wrapper || !input) return;
@@ -394,11 +395,28 @@ class DetailsModal extends Modal {
     input.removeEventListener("blur", input._onBlur);
 
     // 只有点击保存时才真正把刷新得到的元数据写入数据库
-    this._applyPendingMetadata();
+    const { previewChanged } = await this._applyPendingMetadata();
 
+    let urlChanged = false;
     if (newUrl && newUrl !== this._data.url) {
-      this._patchBookmark("url", newUrl);
+      urlChanged = true;
+      await this._patchBookmark("url", newUrl);
     }
+
+    // 若重新抓取后远程图未变化且本地文件仍缺失，PATCH 不会发出，
+    // 因此显式触发一次本地预览图重试。
+    const shouldRetryPreview = this._refreshShouldRetryPreview && !previewChanged;
+    if (shouldRetryPreview) {
+      await this._retryPreviewImage();
+    }
+
+    if (
+      (previewChanged || urlChanged || shouldRetryPreview) &&
+      !this._data.preview_image_url
+    ) {
+      await this._waitForPreviewImage();
+    }
+    this._refreshShouldRetryPreview = false;
   }
 
   _cancelEditUrl() {
@@ -414,23 +432,29 @@ class DetailsModal extends Modal {
     this._revertPendingMetadata();
   }
 
-  _applyPendingMetadata() {
-    if (!this._pendingMetadata) return;
+  async _applyPendingMetadata() {
+    if (!this._pendingMetadata) return { previewChanged: false };
     const pending = this._pendingMetadata;
     this._pendingMetadata = null;
 
+    const patches = [];
+    let previewChanged = false;
     const fields = ["title", "description", "preview_image_remote_url"];
     for (const field of fields) {
       if (
         Object.prototype.hasOwnProperty.call(pending, field) &&
         pending[field] !== this._data[field]
       ) {
-        this._patchBookmark(field, pending[field]);
+        if (field === "preview_image_remote_url") previewChanged = true;
+        patches.push(this._patchBookmark(field, pending[field]));
       }
     }
+    await Promise.all(patches);
+    return { previewChanged };
   }
 
   _revertPendingMetadata() {
+    this._refreshShouldRetryPreview = false;
     if (!this._pendingMetadata) return;
     this._pendingMetadata = null;
 
@@ -446,6 +470,68 @@ class DetailsModal extends Modal {
       this._autoResize(descEl);
     }
     this._setModalPreviewImage(this._data.preview_image_remote_url);
+  }
+
+  _syncPreviewImage(src) {
+    const listItem = document.querySelector(
+      `li[data-bookmark-id="${this.bookmarkId}"]`,
+    );
+    const listImg = listItem?.querySelector("img.preview-image");
+    if (listImg) {
+      listImg.onerror = null;
+      listImg.src = src;
+      listImg.style.display = "";
+    }
+
+    const modalImg = this.querySelector(".info-preview-image");
+    if (modalImg) {
+      modalImg.onerror = null;
+      modalImg.src = src;
+      modalImg.style.display = "";
+      const section = modalImg.closest("[data-preview-section]");
+      if (section) section.style.display = "";
+    }
+  }
+
+  async _retryPreviewImage() {
+    try {
+      const r = await fetch(
+        `${this.apiBase}bookmarks/${this.bookmarkId}/refresh-preview-image/`,
+        {
+          method: "POST",
+          headers: { "X-CSRFToken": getCSRFToken() },
+        },
+      );
+      if (!r.ok) return;
+      const data = await r.json();
+      this._data = { ...this._data, ...data };
+      if (data.preview_image_url) {
+        this._syncPreviewImage(data.preview_image_url);
+      }
+    } catch (err) {
+      console.error("Refresh preview image failed:", err);
+    }
+  }
+
+  async _waitForPreviewImage() {
+    // 下载在 Huey 后台执行，完成后通过查询接口切回本地预览图。
+    for (let attempt = 0; attempt < 30; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!this.isConnected) return;
+      try {
+        const r = await fetch(`${this.apiBase}bookmarks/${this.bookmarkId}/`);
+        if (!r.ok) continue;
+        const data = await r.json();
+        this._data = { ...this._data, ...data };
+        if (data.preview_image_url) {
+          this._syncPreviewImage(data.preview_image_url);
+          return;
+        }
+        if (!data.preview_image_remote_url) return;
+      } catch (err) {
+        // Keep polling; a transient failure should not stop the refresh.
+      }
+    }
   }
 
   _setModalPreviewImage(src) {
@@ -489,12 +575,20 @@ class DetailsModal extends Modal {
     const url = urlInput?.value?.trim() || this._data.url;
     if (!url) return;
 
+    this._refreshShouldRetryPreview = false;
     try {
       const apiUrl = `${this.apiBase}bookmarks/check?url=${encodeURIComponent(url)}&ignore_cache=true`;
       const r = await fetch(apiUrl);
       if (!r.ok) return;
       const data = await r.json();
       const metadata = data.metadata;
+      const existingBookmark = data.bookmark;
+
+      this._refreshShouldRetryPreview =
+        existingBookmark &&
+        String(existingBookmark.id) === String(this.bookmarkId) &&
+        !!existingBookmark.preview_image_remote_url &&
+        !existingBookmark.preview_image_url;
 
       // 只更新 UI 并暂存，真正写库要等点击“保存”
       const pending = {};
@@ -557,6 +651,9 @@ class DetailsModal extends Modal {
         const data = await r.json();
         this._data = { ...this._data, ...data };
         this._syncListItemField(field, newValue);
+        if (data.preview_image_url) {
+          this._syncPreviewImage(data.preview_image_url);
+        }
       }
     } catch (err) {
       console.error("Save failed:", err);

@@ -139,6 +139,13 @@ class BookmarkViewSet(
         bookmarks.unarchive_bookmark(bookmark)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @action(methods=["post"], detail=True, url_path="refresh-preview-image")
+    def refresh_preview_image(self, request: HttpRequest, pk):
+        bookmark = self.get_object()
+        tasks.load_preview_image(request.user, bookmark, force=True)
+        bookmark.refresh_from_db()
+        return Response(self.get_serializer(bookmark).data)
+
     @action(methods=["post"], detail=True)
     def trash(self, request, pk):
         bookmark = self.get_object()

@@ -1044,6 +1044,27 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
         bookmark = Bookmark.objects.get(id=bookmark.id)
         self.assertFalse(bookmark.is_archived)
 
+    def test_refresh_preview_image_forces_download(self):
+        self.authenticate()
+        bookmark = self.setup_bookmark(
+            url="https://example.com/article",
+        )
+        bookmark.preview_image_remote_url = "https://example.com/preview.png"
+        bookmark.save(update_fields=["preview_image_remote_url"])
+
+        url = reverse(
+            "linkding:bookmark-refresh-preview-image", args=[bookmark.id]
+        )
+        with patch.object(tasks, "load_preview_image") as mock_load_preview_image:
+            response = self.post(
+                url, expected_status_code=status.HTTP_200_OK
+            )
+
+        mock_load_preview_image.assert_called_once_with(
+            self.user, bookmark, force=True
+        )
+        self.assertIsNone(response.data["preview_image_url"])
+
     def test_check_returns_no_bookmark_if_url_is_not_bookmarked(self):
         self.authenticate()
 
