@@ -13,6 +13,10 @@ from bookmarks.utils import get_clean_url
 
 logger = logging.getLogger(__name__)
 
+_IMAGE_ACCEPT_HEADER = (
+    "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+)
+
 
 def _ensure_preview_folder():
     Path(settings.LD_PREVIEW_FOLDER).mkdir(parents=True, exist_ok=True)
@@ -44,10 +48,59 @@ def _url_to_filename(url: str) -> str:
     return hashlib.md5(url.encode()).hexdigest()
 
 
-def _download_and_save_image(image_url: str, referer_url: str = None) -> str | None:
-    headers = {"Referer": referer_url if referer_url else image_url}
+def _resolve_download_headers(
+    image_url: str, page_url: str = None, username: str = ""
+) -> dict:
+    """Resolve download headers from the page URL's site-adapter config."""
+    config_url = page_url or image_url
+    try:
+        config = website_loader.get_metadata_config(config_url, username=username)
+    except Exception:
+        logger.warning(
+            "Failed to resolve site-adapter config for preview image. url=%s",
+            image_url,
+            exc_info=True,
+        )
+        config = None
+
+    headers = website_loader.build_request_headers(config)
+    headers["Accept"] = _IMAGE_ACCEPT_HEADER
+    headers["Accept-Encoding"] = "identity"
+    if not headers.get("User-Agent"):
+        headers.pop("User-Agent", None)
+    return headers
+
+
+def _download_and_save_image(
+    image_url: str,
+    referer_url: str = None,
+    username: str = "",
+    retry_with_referer: bool = False,
+) -> str | None:
+    # Fetch like the site-adapter preview proxy: browsers and direct downloads
+    # generally work better without a cross-domain Referer.
+    headers = _resolve_download_headers(image_url, referer_url, username)
+    if retry_with_referer and referer_url:
+        headers["Referer"] = referer_url
     try:
         with requests.get(image_url, headers=headers, stream=True) as response:
+            # Some hotlink-protected CDNs only allow the page URL as Referer.
+            if (
+                response.status_code == 403
+                and referer_url
+                and not retry_with_referer
+            ):
+                logger.warning(
+                    "Preview image rejected without Referer, retrying with it: %s",
+                    image_url,
+                )
+                return _download_and_save_image(
+                    image_url,
+                    referer_url=referer_url,
+                    username=username,
+                    retry_with_referer=True,
+                )
+
             if response.status_code < 200 or response.status_code >= 300:
                 logger.debug(
                     f"Bad response status code for preview image: {image_url} status_code={response.status_code}"
@@ -123,7 +176,9 @@ def _download_and_save_image(image_url: str, referer_url: str = None) -> str | N
         return None
 
 
-def load_temporary_preview_image(image_url: str) -> str | None:
+def load_temporary_preview_image(
+    image_url: str, username: str = ""
+) -> str | None:
     _ensure_temp_preview_folder()
 
     image_file_name_without_ext = _url_to_filename(image_url)
@@ -141,7 +196,7 @@ def load_temporary_preview_image(image_url: str) -> str | None:
         return existing_file_path
 
     # 没有则重新下载
-    image_file_name = _download_and_save_image(image_url)
+    image_file_name = _download_and_save_image(image_url, username=username)
 
     if image_file_name:
         image_file_path = _get_temporary_image_path(image_file_name)
@@ -154,6 +209,7 @@ def load_preview_image(
     url: str, bookmark: Bookmark | None = None, force: bool = False
 ) -> str | None:
     _ensure_preview_folder()
+    username = bookmark.owner.username if bookmark and bookmark.owner else ""
 
     image_url = (
         bookmark.preview_image_remote_url
@@ -164,7 +220,6 @@ def load_preview_image(
     # 如无预览图链接，尝试获取
     if not image_url:
         logger.debug("No remote preview image URL, trying to load website metadata.")
-        username = bookmark.owner.username if bookmark else ''
         metadata = website_loader.load_website_metadata(url, username=username)
         if not metadata or not metadata.preview_image:
             logger.debug("Could not find preview image in metadata: %s", url)
@@ -186,7 +241,7 @@ def load_preview_image(
                     break
     if not temporary_file_path:
         temporary_file_name = _download_and_save_image(
-            image_url, referer_url=url
+            image_url, referer_url=url, username=username
         )  # 没有缓存或强制刷新时重新下载
         if temporary_file_name:
             temporary_file_path = _get_temporary_image_path(temporary_file_name)

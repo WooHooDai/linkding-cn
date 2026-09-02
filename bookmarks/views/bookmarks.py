@@ -824,7 +824,12 @@ def load_temporary_preview_image(request: HttpRequest):
     except Exception:
         pass
     try:
-        image_name = preview_image_loader.load_temporary_preview_image(image_url)
+        image_name = preview_image_loader.load_temporary_preview_image(
+            image_url,
+            username=request.user.username
+            if request.user.is_authenticated
+            else "",
+        )
         image_path = preview_image_loader._get_temporary_image_path(image_name)
         tasks.delete_preview_image_temp_file.schedule(args=(image_path,), delay=600)
 

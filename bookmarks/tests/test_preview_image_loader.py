@@ -52,10 +52,16 @@ class PreviewImageLoaderTestCase(TestCase):
         self.mock_load_website_metadata.return_value = mock.Mock(
             preview_image="https://example.com/image.png"
         )
+        self.mock_get_metadata_config_patcher = mock.patch(
+            "bookmarks.services.website_loader.get_metadata_config",
+            return_value=None,
+        )
+        self.mock_get_metadata_config = self.mock_get_metadata_config_patcher.start()
 
     def tearDown(self) -> None:
         self.temp_folder.cleanup()
         self.settings_override.disable()
+        self.mock_get_metadata_config_patcher.stop()
         self.mock_load_website_metadata_patcher.stop()
 
     def create_mock_response(
@@ -124,6 +130,75 @@ class PreviewImageLoaderTestCase(TestCase):
 
                 self.assertIsNone(file)
                 self.assertNoImageExists()
+
+    def test_load_preview_image_prefers_request_without_referer(self):
+        with mock.patch("requests.get") as mock_get:
+            mock_get.side_effect = [self.create_mock_response()]
+
+            file = preview_image_loader._download_and_save_image(
+                "https://example.com/image.png",
+                referer_url="https://example.com/page",
+            )
+
+            self.assertIsNotNone(file)
+            temp_image_path = Path(settings.LD_PREVIEW_FOLDER, "tmp", file)
+            self.assertTrue(temp_image_path.exists())
+            self.assertEqual(temp_image_path.read_bytes(), mock_image_data)
+            self.assertEqual(mock_get.call_count, 1)
+            headers = mock_get.call_args_list[0].kwargs["headers"]
+            self.assertNotIn("Referer", headers)
+
+    def test_load_preview_image_uses_site_adapter_user_agent(self):
+        config = {
+            "headers": {
+                "User-Agent": "Configured Browser UA",
+                "X-Site-Adapter": "enabled",
+            }
+        }
+        with mock.patch("requests.get") as mock_get, mock.patch(
+            "bookmarks.services.website_loader.get_metadata_config",
+            return_value=config,
+        ) as mock_get_config:
+            mock_get.return_value = self.create_mock_response()
+
+            file = preview_image_loader._download_and_save_image(
+                "https://example.com/image.png",
+                referer_url="https://example.com/page",
+                username="alice",
+            )
+
+            self.assertIsNotNone(file)
+            self.assertEqual(mock_get.call_count, 1)
+            headers = mock_get.call_args_list[0].kwargs["headers"]
+            self.assertEqual(headers["User-Agent"], "Configured Browser UA")
+            self.assertEqual(headers["X-Site-Adapter"], "enabled")
+            self.assertNotIn("Referer", headers)
+            mock_get_config.assert_called_once_with(
+                "https://example.com/page", username="alice"
+            )
+
+    def test_load_preview_image_retries_with_referer_on_403(self):
+        with mock.patch("requests.get") as mock_get:
+            mock_get.side_effect = [
+                self.create_mock_response(status_code=403),
+                self.create_mock_response(),
+            ]
+
+            file = preview_image_loader._download_and_save_image(
+                "https://example.com/image.png",
+                referer_url="https://example.com/page",
+            )
+
+            self.assertIsNotNone(file)
+            temp_image_path = Path(settings.LD_PREVIEW_FOLDER, "tmp", file)
+            self.assertTrue(temp_image_path.exists())
+            self.assertEqual(temp_image_path.read_bytes(), mock_image_data)
+            self.assertEqual(mock_get.call_count, 2)
+
+            first_headers = mock_get.call_args_list[0].kwargs["headers"]
+            second_headers = mock_get.call_args_list[1].kwargs["headers"]
+            self.assertNotIn("Referer", first_headers)
+            self.assertEqual(second_headers["Referer"], "https://example.com/page")
 
     def test_load_preview_image_returns_none_if_content_length_exceeds_limit(self):
         # exceeds max size
