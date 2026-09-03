@@ -580,6 +580,7 @@ def _load_website_metadata(url: str, config: dict = None, username: str = '', in
 
 
 _JSON_SELECTOR_RE = re.compile(r'^(.*?)(?:::json\((.*)\))$', re.DOTALL)
+_ATTR_SELECTOR_RE = re.compile(r'^(.*?)(?:::attr\(([^)]*)\))$', re.DOTALL)
 
 
 def _split_json_selector(selector: str) -> tuple[str | None, str | None]:
@@ -594,6 +595,40 @@ def _split_json_selector(selector: str) -> tuple[str | None, str | None]:
     css = m.group(1).strip()
     path = m.group(2).strip()
     return css, path
+
+
+def _split_attr_selector(selector: str) -> tuple[str | None, str | None]:
+    """Split a CSS selector with a trailing ``::attr(name)`` pseudo-element.
+
+    Returns ``(css_selector, attr_name)``. ``attr_name`` is ``None`` when the
+    selector does not contain the ``::attr()`` pseudo-element.
+    """
+    m = _ATTR_SELECTOR_RE.match(selector.strip())
+    if not m:
+        return None, None
+    css = m.group(1).strip()
+    attr_name = m.group(2).strip()
+    if not attr_name:
+        return None, None
+    return css, attr_name
+
+
+def _is_placeholder_image_src(value: str | None) -> bool:
+    """Return True for image URLs that should not be used as previews."""
+    if not value:
+        return True
+    trimmed = value.strip()
+    if not trimmed or trimmed == "data:,":
+        return True
+    return (
+        trimmed.startswith("blob:")
+        or trimmed.startswith("about:")
+        or trimmed == "#"
+        or (
+            trimmed.lower().startswith("data:image/")
+            and ";base64," in trimmed.lower()
+        )
+    )
 
 
 def _traverse_json_path(data, path: str):
@@ -961,7 +996,6 @@ def _extract_with_selector_source(soup, selectors, url: str = "", field: str = "
     for selector in selectors or []:
         if not selector or not selector.strip():
             continue
-        # Check for ::json(path) pseudo-element extension
         css_selector, json_path = _split_json_selector(selector)
         if json_path is not None:
             try:
@@ -972,13 +1006,25 @@ def _extract_with_selector_source(soup, selectors, url: str = "", field: str = "
                 continue
             value = _extract_json_value_from_script(el, json_path)
         else:
-            try:
-                el = soup.select_one(selector)
-            except Exception:
-                continue
-            if not el:
-                continue
-            value = _extract_element_value(el, field)
+            css_selector, attr_name = _split_attr_selector(selector)
+            if attr_name is not None:
+                try:
+                    el = soup.select_one(css_selector)
+                except Exception:
+                    continue
+                if not el:
+                    continue
+                value = el.get(attr_name)
+            else:
+                try:
+                    el = soup.select_one(selector)
+                except Exception:
+                    continue
+                if not el:
+                    continue
+                value = _extract_element_value(el, field)
+        if value and field == "image" and _is_placeholder_image_src(value):
+            value = None
         if value:
             value = urljoin(url, value.strip()) if field == "image" else value.strip()
             return value, selector

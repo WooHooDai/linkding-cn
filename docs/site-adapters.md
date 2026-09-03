@@ -321,7 +321,7 @@ data/site_adapters/
 
 未显式声明 `content_type` 时，系统根据配置选择器语法推断，再回退到响应的 `Content-Type`。
 
-- `html`：标准 CSS。图片字段按 `src` → `href` → `content` → `url` 顺序取值。额外支持 `::json(path)` 伪元素从 JSON-LD 提取，例如 `script[type="application/ld+json"]::json(description)`。
+- `html`：标准 CSS。图片字段按 `src` → `href` → `content` → `url` 顺序取值。额外支持 `::json(path)` 伪元素从 JSON-LD 提取，例如 `script[type="application/ld+json"]::json(description)`；也支持 `::attr(name)` 读取指定 HTML 属性，例如 `img::attr(data-src)`。`select_image` 数组按顺序尝试，图片字段的 `blob:`、空值、`about:`、`#` 或 base64 data URI 不会阻断后续选择器。
 - `xml`：标准 XPath。需要属性时直接写 `@attr`。Atom 自动提供 `atom` 前缀，RSS 1.0 自动提供 `rss` 前缀；文档任意层级声明的其他前缀也会自动注册。无前缀元素名自动绑定文档默认 namespace，例如 Atom 可写 `//feed/entry/title`。
 - `json`：标准 JSONPath，例如 `$.data.items[0].title`。
 
@@ -747,7 +747,7 @@ python manage.py site_adapter pipeline "<url>" --skip-snapshot
 
 - 确认选择器在当前页面真实存在，且页面不是纯 JS 渲染。
 - `meta` 标签需要选到 `content` 属性；HTML 图片字段会自动取 `src`/`href`/`content`/`url`。
-- 使用 `::json(path)` 从 JSON-LD 提取，或改用 `use_browser`。
+- 使用 `::json(path)` 从 JSON-LD 提取，或用 `::attr(name)` 读取 `data-src` 等属性，或改用 `use_browser`。
 
 **Q: 快照太慢或太乱？**
 

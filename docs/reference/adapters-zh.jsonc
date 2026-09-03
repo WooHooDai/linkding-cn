@@ -1,6 +1,6 @@
 // ==========================================================================
 //  Site Adapters — 完整字段参考
-//  由 fields.py 自动生成（单一信源）  |  2026-08-31 22:27:32
+//  由 fields.py 自动生成（单一信源）  |  2026-09-04 00:28:02
 //
 //  Re-generate: python scripts/generate-adapters-reference.py
 //  Guide:       docs/site-adapters.md
@@ -155,9 +155,9 @@
         "rewrite_url": ["^https://m\\.example\\.com/(.*)", "https://www.example.com/\\1"], // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。用于改写最终展示/保存的 URL。
         "content_type": "html",                            // 声明式提取的响应格式。"html" 使用 CSS 选择器和 JSON-LD 兜底；"xml" 使用标准 XPath；"json" 使用标准 JSONPath，例如 $.data.items[0].title。
         "xmlns": {"atom": "http://www.w3.org/2005/Atom"},  // 可选的 XML XPath namespace 前缀映射。Atom/RSS 自动提供 atom/rss 前缀；文档任意层级声明的前缀会自动注册；无前缀元素名自动绑定文档默认 namespace；此字段用于覆盖或补充自定义前缀。
-        "select_title": [],                                // 标题选择器，按顺序尝试，取第一个非空结果。HTML 使用标准 CSS，支持 ::json(path) 伪元素扩展以从 JSON-LD script 标签提取字段（如 'script[type="application/ld+json"]::json(description)'）；XML 使用标准 XPath；JSON 使用标准 JSONPath。
-        "select_description": [],                          // 描述选择器，按顺序尝试。HTML 使用标准 CSS，支持 ::json(path) 伪元素扩展以从 JSON-LD script 标签提取字段（如 'script[type="application/ld+json"]::json(description)'）；XML 使用标准 XPath；JSON 使用标准 JSONPath。
-        "select_image": [],                                // 预览图选择器，按顺序尝试。HTML 使用标准 CSS，支持 ::json(path) 伪元素扩展以从 JSON-LD script 标签提取字段（如 'script[type="application/ld+json"]::json(image.url)'）；XML 使用标准 XPath；JSON 使用标准 JSONPath。
+        "select_title": [],                                // 标题选择器，按顺序尝试，取第一个非空结果。HTML 使用标准 CSS，支持 ::json(path) 伪元素扩展以从 JSON-LD script 标签提取字段（如 'script[type="application/ld+json"]::json(description)'），也支持 ::attr(name) 伪元素扩展读取指定 HTML 属性（如 'img::attr(data-src)'）；XML 使用标准 XPath；JSON 使用标准 JSONPath。
+        "select_description": [],                          // 描述选择器，按顺序尝试。HTML 使用标准 CSS，支持 ::json(path) 伪元素扩展以从 JSON-LD script 标签提取字段（如 'script[type="application/ld+json"]::json(description)'），也支持 ::attr(name) 伪元素扩展读取指定 HTML 属性（如 'img::attr(data-src)'）；XML 使用标准 XPath；JSON 使用标准 JSONPath。
+        "select_image": [],                                // 预览图选择器，按顺序尝试。HTML 使用标准 CSS，支持 ::json(path) 伪元素扩展以从 JSON-LD script 标签提取字段（如 'script[type="application/ld+json"]::json(image.url)'），也支持 ::attr(name) 伪元素扩展读取指定 HTML 属性（如 'img::attr(data-src)'）；blob:/空值/about:/#/base64 data URI 会被跳过并继续尝试后续选择器。XML 使用标准 XPath；JSON 使用标准 JSONPath。
         "rewrite_title": ["\\s*- Example$", ""],           // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。应用于提取到的标题。
         "rewrite_description": ["\\[read more\\]", ""],    // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。应用于提取到的描述。
         "rewrite_image": ["^http://", "https://"],         // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。应用于提取到的预览图 URL。

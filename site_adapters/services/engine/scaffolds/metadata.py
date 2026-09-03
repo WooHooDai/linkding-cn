@@ -29,7 +29,7 @@ Config keys available in every hook
   Metadata-specific:
     select_title       list[str]      CSS selectors for title
     select_description list[str]      CSS selectors for description
-    select_image       list[str]      CSS selectors for preview image
+    select_image       list[str]      CSS selectors for preview image; supports ::attr(name)
     rewrite_title      list|None      [pattern, replacement] regex for title
     rewrite_description list|None
     rewrite_image      list|None
