@@ -100,10 +100,14 @@
           {% else %}
             <img id="preview-image-img"
                 class="preview-image"
-                src="{{ form.preview_image_remote_url.value }}"
-                referrerpolicy="strict-origin-when-cross-origin"
-                alt="{% translate 'Preview image' %}"
-                onerror="handlePreviewImageError(this)" />
+                {% if form.preview_image_remote_url.value %}
+                  src="{{ form.preview_image_remote_url.value }}"
+                  referrerpolicy="strict-origin-when-cross-origin"
+                  onerror="handlePreviewImageError(this)"
+                {% else %}
+                  hidden
+                {% endif %}
+                alt="{% translate 'Preview image' %}" />
           {% endif %}
         </div>
       </details>
@@ -148,6 +152,11 @@
     // 下载预览图用作临时展示：仅在遇到 CORS/CORP 错误时
     function handlePreviewImageError(img) {
       if (!img.src || img.src.startsWith('data:')) {
+        return;
+      }
+      // 空 src 被浏览器解析为当前页面 URL 时，不做无谓下载
+      if (img.src === window.location.href) {
+        img.style.display = 'none';
         return;
       }
       if (img.dataset.fallbackAttempted) {
@@ -249,7 +258,13 @@
         if (previewImageImg) {
           // Reset fallback attempt flag when src changes
           delete previewImageImg.dataset.fallbackAttempted;
-          previewImageImg.src = displaySrc;
+          if (displaySrc) {
+            previewImageImg.src = displaySrc;
+          } else {
+            // 空值时不设置 src，避免空 src 被浏览器解析为当前页面 URL，
+            // 触发 onerror 并对自身页面 URL 发起无谓的下载请求（返回 400）。
+            previewImageImg.removeAttribute('src');
+          }
           previewImageImg.style.display = displaySrc ? '' : 'none';
         }
         if (previewImageDetails) {
