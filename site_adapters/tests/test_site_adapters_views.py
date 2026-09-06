@@ -369,6 +369,26 @@ class SiteAdaptersViewsTestCase(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    def test_view_snapshot_allows_html_interactions_in_an_opaque_origin(self):
+        for extension, body, policy in (
+            ("html", "<button>展开章节</button>", "sandbox allow-scripts"),
+            ("json", '{"title":"文档"}', "sandbox"),
+            ("xml", "<title>文档</title>", "sandbox"),
+        ):
+            with self.subTest(extension=extension):
+                filename = f"snapshot_test.{extension}"
+                with open(os.path.join(self.base_dir, filename), "w", encoding="utf-8") as f:
+                    f.write(body)
+                with mock.patch("site_adapters.views.snapshot.TEST_ASSETS_DIR", self.base_dir):
+                    response = self.client.get(
+                        reverse("linkding:settings.site_adapters.view_snapshot"),
+                        {"file": filename},
+                    )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response["Content-Security-Policy"], policy)
+                self.assertEqual(response["X-Content-Type-Options"], "nosniff")
+                self.assertEqual(b"".join(response.streaming_content).decode(), body)
+
     def test_reader_test_includes_reader_view(self):
         def fake_create_snapshot(url, out_path, username=""):
             os.makedirs(os.path.dirname(out_path), exist_ok=True)

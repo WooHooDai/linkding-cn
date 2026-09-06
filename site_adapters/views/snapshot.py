@@ -49,7 +49,10 @@ def view_snapshot(request):
     except Exception:
         f.close()
         raise
-    response['Content-Security-Policy'] = 'sandbox'
+    # Match saved HTML assets: offline interactions may run in an opaque origin.
+    response['Content-Security-Policy'] = (
+        'sandbox allow-scripts' if full_path.endswith('.html') else 'sandbox'
+    )
     response['X-Content-Type-Options'] = 'nosniff'
     return response
 
