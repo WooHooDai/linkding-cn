@@ -41,6 +41,35 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
                 "This domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission."
             )
 
+    def test_prefilled_bookmarklet_metadata_is_rewritten_by_server(self):
+        rewriter_metadata = website_loader.WebsiteMetadata(
+            url="https://example.com",
+            title="Rewritten Title",
+            description="Rewritten description.",
+            preview_image=None,
+        )
+        with patch.object(
+            website_loader, "rewrite_website_metadata", return_value=rewriter_metadata
+        ) as mock_rewrite:
+            with sync_playwright() as p:
+                bookmarklet_url = (
+                    reverse("linkding:bookmarks.new")
+                    + "?url=https%3A%2F%2Fexample.com"
+                    + "&title=Client%20title"
+                    + "&description=Client%20description"
+                    + "&from_client=1"
+                )
+                page = self.open(bookmarklet_url, p)
+                title = page.get_by_label("Title")
+                description = page.locator("#id_description")
+
+                page.wait_for_timeout(timeout=1000)
+
+                # 浏览器 bookmarklet 预填的元数据应交给服务器重写后使用
+                expect(title).to_have_value("Rewritten Title")
+                expect(description).to_have_value("Rewritten description.")
+                mock_rewrite.assert_called()
+
     def test_enter_url_does_not_overwrite_modified_title_and_description(self):
         with sync_playwright() as p:
             page = self.open(reverse("linkding:bookmarks.new"), p)

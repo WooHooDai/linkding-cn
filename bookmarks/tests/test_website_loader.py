@@ -580,6 +580,29 @@ class WebsiteLoaderTestCase(TestCase):
         self.assertEqual(metadata.description, "CSS description")
         self.assertEqual(metadata.preview_image, "https://example.com/cover.jpg")
 
+    def test_rewrite_website_metadata_applies_rewrite_plugins_to_client_metadata(self):
+        config = {
+            "_rewrite_url": "https://final.example.com/item",
+            "rewrite_title": [["^Client title$", "Rewritten title"]],
+            "rewrite_description": [["^Client desc$", "Rewritten desc"]],
+        }
+
+        with mock.patch(
+            "bookmarks.services.website_loader.get_metadata_config",
+            return_value=config,
+        ):
+            metadata = website_loader.rewrite_website_metadata(
+                "https://client.example.com/item",
+                title="Client title",
+                description="Client desc",
+            )
+
+        self.assertEqual(metadata.url, "https://final.example.com/item")
+        self.assertEqual(metadata.title, "Rewritten title")
+        self.assertEqual(metadata.description, "Rewritten desc")
+        # 预览图始终由服务器抓取处理，不参与客户端 rewrite 链路
+        self.assertIsNone(metadata.preview_image)
+
     def test_configured_xml_metadata_uses_selectors(self):
         xml = """<?xml version="1.0" encoding="UTF-8"?>
         <feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">

@@ -162,27 +162,40 @@ class BookmarkViewSet(
     def check(self, request: HttpRequest):
         url = request.GET.get("url")
         ignore_cache = request.GET.get("ignore_cache", False) in ["true"]
+        # 客户端 bookmarklet 会把浏览器捕获的元数据随请求发出，由服务器应用
+        # rewrite_* 规则后返回（不重新抓取网页）。
+        from_client = request.GET.get("from_client", False) == "1"
+        client_title = request.GET.get("title")
+        client_description = request.GET.get("description")
 
         bookmark = Bookmark.query_existing(request.user, url).first()
 
         # URL 可能会被自定义脚本改变
         # 当被改变时，进行二次检查
         normalized_url = normalize_url(url)
-        try:
-            metadata = website_loader.load_website_metadata(
-                url, ignore_cache=ignore_cache, username=request.user.username
+        if from_client:
+            metadata = website_loader.rewrite_website_metadata(
+                url,
+                title=client_title,
+                description=client_description,
+                username=request.user.username,
             )
-        except website_loader.RetryableMetadataError as exc:
-            logger.warning(
-                f"Retryable metadata failure during bookmark check. url={url}",
-                exc_info=exc,
-            )
-            metadata = website_loader.WebsiteMetadata(
-                url=url,
-                title=None,
-                description=None,
-                preview_image=None,
-            )
+        else:
+            try:
+                metadata = website_loader.load_website_metadata(
+                    url, ignore_cache=ignore_cache, username=request.user.username
+                )
+            except website_loader.RetryableMetadataError as exc:
+                logger.warning(
+                    f"Retryable metadata failure during bookmark check. url={url}",
+                    exc_info=exc,
+                )
+                metadata = website_loader.WebsiteMetadata(
+                    url=url,
+                    title=None,
+                    description=None,
+                    preview_image=None,
+                )
         if (
             not bookmark
             and metadata.url

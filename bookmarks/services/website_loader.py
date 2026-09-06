@@ -387,6 +387,30 @@ def load_website_metadata(url: str, ignore_cache: bool = False, username: str = 
     return result
 
 
+def rewrite_website_metadata(
+    url: str,
+    title: str | None,
+    description: str | None,
+    username: str = '',
+) -> WebsiteMetadata:
+    """对客户端（浏览器）提供的元数据应用站点配置的 rewrite_* 规则。
+
+    仅应用 rewrite_title / rewrite_description / rewrite_image 与 rewrite_url，
+    不重新抓取网页。用于客户端 bookmarklet 流程：浏览器把捕获的元数据交给
+    服务器，由服务器上的站点规则重写后返回。
+
+    注意：预览图不参与客户端链路，始终由服务器重新抓取网页后按
+    select_image / rewrite_image 规则处理。
+    """
+    config = get_metadata_config(url, username=username) or {}
+    return WebsiteMetadata(
+        url=config.get("_rewrite_url") or url,
+        title=apply_rewrite(title, config.get("rewrite_title")),
+        description=apply_rewrite(description, config.get("rewrite_description")),
+        preview_image=None,
+    )
+
+
 def _config_cache_key(config: dict) -> str:
     return json.dumps(config, sort_keys=True, separators=(",", ":"), default=str)
 

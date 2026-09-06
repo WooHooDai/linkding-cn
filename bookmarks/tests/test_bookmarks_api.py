@@ -1104,6 +1104,40 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
             self.assertEqual(expected_metadata.description, metadata["description"])
             self.assertEqual(expected_metadata.preview_image, metadata["preview_image"])
 
+    def test_check_with_from_client_rewrites_browser_metadata(self):
+        self.authenticate()
+
+        with patch.object(
+            website_loader, "rewrite_website_metadata"
+        ) as mock_rewrite_metadata:
+            expected_metadata = WebsiteMetadata(
+                "https://example.com",
+                "Rewritten title",
+                "Rewritten description",
+                None,
+            )
+            mock_rewrite_metadata.return_value = expected_metadata
+
+            url = reverse("linkding:bookmark-check")
+            check_url = urllib.parse.quote_plus("https://example.com")
+            response = self.get(
+                f"{url}?url={check_url}&from_client=1"
+                "&title=Client%20title&description=Client%20description",
+                expected_status_code=status.HTTP_200_OK,
+            )
+            metadata = response.data["metadata"]
+
+            self.assertIsNotNone(metadata)
+            self.assertEqual(expected_metadata.url, metadata["url"])
+            self.assertEqual("Rewritten title", metadata["title"])
+            self.assertEqual("Rewritten description", metadata["description"])
+            mock_rewrite_metadata.assert_called_once_with(
+                "https://example.com",
+                title="Client title",
+                description="Client description",
+                username=self.user.username,
+            )
+
     def test_check_returns_bookmark_if_url_is_bookmarked(self):
         self.authenticate()
         from bookmarks.models import FaviconCache

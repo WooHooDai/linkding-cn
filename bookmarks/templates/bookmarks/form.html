@@ -215,8 +215,12 @@
       const bookmarkExistsHint = document.querySelector('.form-input-hint.bookmark-exists');
       const bookmarkExistsDeletedHint = document.querySelector('.form-input-hint.bookmark-exists-deleted');
       const editedBookmarkId = {{ form.instance.id|default:0 }};
-      let isTitleModified = !!titleInput.value;
-      let isDescriptionModified = !!descriptionInput.value;
+      // 客户端 bookmarklet 会带 from_client=1 并预填浏览器端元数据；此时应优先用
+      // 服务器 check 返回的（重写后的）元数据覆盖。未带该标记（server 版 / 手动
+      // 传参）时保持原有行为：预填值视为用户已修改，不覆盖。
+      const fromClientBookmarklet = new URLSearchParams(window.location.search).get('from_client') === '1';
+      let isTitleModified = fromClientBookmarklet ? false : !!titleInput.value;
+      let isDescriptionModified = fromClientBookmarklet ? false : !!descriptionInput.value;
 
       function toggleLoadingIcon(input, show) {
         const icon = input.parentNode.querySelector('i.form-icon');
@@ -256,7 +260,7 @@
       let checkUrlTimer = null;
       let checkUrlRequestId = 0;
 
-      function checkUrl() {
+      function checkUrl(sendClientMetadata) {
         if (!urlInput.value) {
           return;
         }
@@ -267,8 +271,16 @@
 
         toggleLoadingIcon(urlInput, true);
 
-        const websiteUrl = encodeURIComponent(currentUrl);
-        const requestUrl = `{% url 'linkding:api-root' %}bookmarks/check?url=${websiteUrl}`;
+        // 客户端 bookmarklet 场景：把浏览器捕获的元数据发给服务器，由服务器应用
+        // rewrite_* 规则后返回；未带 from_client（server 版 / 手动打开）时仍由
+        // 服务器抓取网页元数据。
+        const params = new URLSearchParams({ url: currentUrl });
+        if (sendClientMetadata) {
+          params.set('from_client', '1');
+          params.set('title', titleInput.value || '');
+          params.set('description', descriptionInput.value || '');
+        }
+        const requestUrl = `{% url 'linkding:api-root' %}bookmarks/check?${params.toString()}`;
         fetch(requestUrl)
           .then(response => response.json())
           .then(data => {
@@ -320,9 +332,15 @@
               // Update title and description with website metadata, unless they have been modified
               if (!isTitleModified) {
                 updateInput(titleInput, metadata.title);
+                if (fromClientBookmarklet) {
+                  titleInput.classList.add("modified");
+                }
               }
               if (!isDescriptionModified) {
                 updateInput(descriptionInput, metadata.description);
+                if (fromClientBookmarklet) {
+                  descriptionInput.classList.add("modified");
+                }
                 document.querySelector('details.description').open = !!metadata.description;
               }
               // 更新预览图：如果有预览图则设置，如果没有则清空
@@ -402,10 +420,10 @@
 
       // Fetch website metadata when page loads and when URL changes, unless we are editing an existing bookmark
       if (!editedBookmarkId) {
-        checkUrl();
+        checkUrl(fromClientBookmarklet);
         urlInput.addEventListener('input', function() {
           clearTimeout(checkUrlTimer);
-          checkUrlTimer = setTimeout(checkUrl, 300);
+          checkUrlTimer = setTimeout(() => checkUrl(false), 300);
         });
         titleInput.addEventListener('input', () => {
           isTitleModified = true;
