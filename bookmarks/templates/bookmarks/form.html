@@ -418,13 +418,16 @@
       }
     })();
 
-    // 输入框自动聚焦：新建书签页面聚焦URL输入框，编辑书签页面聚焦标签输入框
+    // 输入框自动聚焦：新建书签页面聚焦URL输入框，URL已预填（如 bookmarklet 打开）时聚焦标签输入框，编辑书签页面聚焦标签输入框
     function focusInput() {
       let input;
-      if (window.location.pathname === '/bookmarks/new') {
-        input = document.querySelector('input[name="url"]');
+      const isNewPage = window.location.pathname === '/bookmarks/new';
+      const urlInput = document.querySelector('input[name="url"]');
+      const tagInput = document.querySelector('input[name="tag_string"]');
+      if (isNewPage && urlInput && !urlInput.value) {
+        input = urlInput;
       } else {
-        input = document.querySelector('input[name="tag_string"]');
+        input = tagInput;
       }
       if (input) {
           setTimeout(function() {
