@@ -1318,6 +1318,17 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         actual_effective_titles = [b.resolved_title for b in query]
         self.assertEqual(expected_effective_titles, actual_effective_titles)
 
+    def test_title_sort_survives_values_projection(self):
+        search = BookmarkSearch(sort=BookmarkSearch.SORT_TITLE_ASC)
+        bookmarks = self.setup_title_sort_data()
+        expected = sorted(bookmarks, key=lambda bookmark: bookmark.resolved_title.lower())
+        query = queries.query_bookmarks(self.user, self.profile, search)
+
+        self.assertEqual(
+            list(query.values_list("url", flat=True)),
+            [bookmark.url for bookmark in expected],
+        )
+
     def test_query_bookmarks_filter_modified_since(self):
         # Create bookmarks with different modification dates
         older_bookmark = self.setup_bookmark(title="old bookmark")

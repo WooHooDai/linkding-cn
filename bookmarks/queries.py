@@ -17,8 +17,7 @@ from django.db.models import (
     QuerySet,
     When,
 )
-from django.db.models.expressions import RawSQL
-from django.db.models.functions import Lower
+from django.db.models.functions import Collate, Lower
 
 from bookmarks.models import (
     Annotation,
@@ -695,7 +694,7 @@ def _base_bookmarks_query(
             # loaded into the connection. This results in an improved sort order for
             # unicode characters (umlauts, etc.)
             if settings.USE_SQLITE and settings.USE_SQLITE_ICU_EXTENSION:
-                order_field = RawSQL("effective_title COLLATE ICU", ())
+                order_field = Collate("effective_title", "ICU")
             else:
                 order_field = "effective_title"
 
