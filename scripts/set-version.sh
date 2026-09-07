@@ -19,12 +19,11 @@ sed -i '' "s/^version = \".*\"/version = \"$version\"/" pyproject.toml
 # Without --upgrade, uv keeps the existing dependency resolution intact.
 uv lock
 
-# Update package.json
-sed -i '' "s/\"version\": \".*\"/\"version\": \"$version\"/" package.json
-
-# Update package-lock.json (root entry + top-level packages entry)
-sed -i '' "1,5s/\"version\": \".*\"/\"version\": \"$version\"/" package-lock.json
-sed -i '' "/\"\": {/{n;s/\"version\": \".*\"/\"version\": \"$version\"/;}" package-lock.json
+# Update package.json and project versions in package-lock.json.
+npm version "$version" \
+  --no-git-tag-version \
+  --allow-same-version \
+  --ignore-scripts
 
 echo "Version updated to $version in:"
 echo "  - version.txt"
