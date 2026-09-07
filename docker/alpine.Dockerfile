@@ -1,177 +1,101 @@
-# Run on the native build platform, the JS/CSS output is architecture-independent.
-FROM --platform=$BUILDPLATFORM node:22-alpine AS node-build
+ARG PYTHON_IMAGE=python:3.13.7-alpine3.21@sha256:0c3d4f28025c9adc2c03326aa160dde8f53faaa8684134a0e146e4edca28a946
+ARG NODE_IMAGE=node:24.20.0-alpine3.23@sha256:0388af2af070cd4736a1567cfed02469ba117848845b4165d87a333edb53d2ca
+
+# Only generated JS/CSS is copied from the native build platform.
+FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS node-build
 WORKDIR /etc/linkding
-# install build dependencies
 COPY rollup.config.mjs postcss.config.js esbuild.config.mjs package.json package-lock.json ./
-# Disable npm cache and install dependencies
-RUN npm ci --no-cache
-# copy files needed for JS build
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 COPY bookmarks/frontend ./bookmarks/frontend
 COPY bookmarks/styles ./bookmarks/styles
 COPY bookmarks/services/vendor/defuddle_entry.js ./bookmarks/services/vendor/defuddle_entry.js
 COPY site_adapters/frontend ./site_adapters/frontend
 COPY site_adapters/styles ./site_adapters/styles
-# Disable PostCSS cache and run build
-ENV POSTCSS_DISABLE_CACHE=true
-ENV NODE_ENV=production
-RUN npm run build
+RUN NODE_ENV=production POSTCSS_DISABLE_CACHE=true npm run build
 
+# Native binaries and runtime packages always use the target architecture.
+FROM ${NODE_IMAGE} AS node-runtime
+WORKDIR /opt/node-runtime
+COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev --no-audit --no-fund
 
-FROM python:3.13.7-alpine3.21 AS build-deps
-# Add required packages
-# alpine-sdk linux-headers pkgconfig: build Python packages from source
-# libpq-dev: build Postgres client from source
-# icu-dev sqlite-dev: build Sqlite ICU extension
-# libffi-dev openssl-dev rust cargo: build Python cryptography from source
-# Optional: replace Alpine apk mirror for faster downloads.
-# Domestic (China): --build-arg APK_MIRROR=mirrors.tuna.tsinghua.edu.cn
-# Overseas or unspecified: leave APK_MIRROR empty to use the official Alpine source.
+FROM ${PYTHON_IMAGE} AS build-deps
 ARG APK_MIRROR=""
+ARG TARGETARCH
 RUN if [ -n "$APK_MIRROR" ]; then \
         sed -i "s|dl-cdn.alpinelinux.org|$APK_MIRROR|g" /etc/apk/repositories; \
     fi
-RUN apk update && apk add alpine-sdk linux-headers libpq-dev pkgconfig icu-dev sqlite-dev libffi-dev openssl-dev rust cargo git
+RUN apk add --no-cache alpine-sdk linux-headers libpq-dev pkgconf icu-dev sqlite-dev \
+    libffi-dev openssl-dev rust cargo git gettext wget unzip
+COPY --from=ghcr.io/astral-sh/uv:0.8.13@sha256:4de5495181a281bc744845b9579acf7b221d6791f99bcc211b9ec13f417c2853 /uv /usr/local/bin/uv
 WORKDIR /etc/linkding
-# install uv, use installer script for now as distroless images are not availabe for armv7
-ADD https://astral.sh/uv/0.8.13/install.sh /uv-installer.sh
-RUN chmod +x /uv-installer.sh && /uv-installer.sh
-# install python dependencies
 COPY pyproject.toml uv.lock ./
-RUN /root/.local/bin/uv sync --no-dev
-
+RUN --mount=type=cache,id=uv-alpine-${TARGETARCH},target=/root/.cache/uv \
+    uv sync --locked --no-dev --group postgres
 
 FROM build-deps AS compile-icu
-# Defines SQLite version
-# Since this is only needed for downloading the header files this probably
-# doesn't need to be up-to-date, assuming the SQLite APIs used by the ICU
-# extension do not change
 ARG SQLITE_RELEASE_YEAR=2023
 ARG SQLITE_RELEASE=3430000
-
-# Compile the ICU extension needed for case-insensitive search and ordering
-# with SQLite. This does:
-# - Download SQLite amalgamation for header files
-# - Download ICU extension source file
-# - Compile ICU extension
-RUN wget https://www.sqlite.org/${SQLITE_RELEASE_YEAR}/sqlite-amalgamation-${SQLITE_RELEASE}.zip && \
-    unzip sqlite-amalgamation-${SQLITE_RELEASE}.zip && \
+RUN wget -q https://www.sqlite.org/${SQLITE_RELEASE_YEAR}/sqlite-amalgamation-${SQLITE_RELEASE}.zip && \
+    unzip -q sqlite-amalgamation-${SQLITE_RELEASE}.zip && \
     cp sqlite-amalgamation-${SQLITE_RELEASE}/sqlite3.h ./sqlite3.h && \
     cp sqlite-amalgamation-${SQLITE_RELEASE}/sqlite3ext.h ./sqlite3ext.h && \
-    wget https://www.sqlite.org/src/raw/ext/icu/icu.c?name=91c021c7e3e8bbba286960810fa303295c622e323567b2e6def4ce58e4466e60 -O icu.c && \
-    gcc -fPIC -shared icu.c `pkg-config --libs --cflags icu-uc icu-io` -o libicu.so
+    wget -q 'https://www.sqlite.org/src/raw/ext/icu/icu.c?name=91c021c7e3e8bbba286960810fa303295c622e323567b2e6def4ce58e4466e60' -O icu.c && \
+    gcc -fPIC -shared icu.c $(pkg-config --libs --cflags icu-uc icu-io) -o libicu.so
 
+FROM build-deps AS app-build
+ENV PATH="/etc/linkding/.venv/bin:$PATH"
+ENV PYTHONDONTWRITEBYTECODE=1
+COPY . .
+COPY --from=node-build /etc/linkding/bookmarks/static bookmarks/static/
+COPY --from=node-build /etc/linkding/site_adapters/static site_adapters/static/
+COPY --from=node-build /etc/linkding/bookmarks/services/vendor/defuddle.js bookmarks/services/vendor/defuddle.js
+# Third-party translations are already compiled in their wheels.
+RUN mkdir -p data && \
+    python manage.py compilemessages --ignore=.venv && \
+    python manage.py collectstatic --noinput && \
+    rm -rf bookmarks/frontend bookmarks/styles bookmarks/static \
+        site_adapters/frontend site_adapters/styles site_adapters/static
 
-FROM python:3.13.7-alpine3.21 AS linkding
-LABEL org.opencontainers.image.source="https://github.com/sissbruecker/linkding"
-# install runtime dependencies
-# Optional: replace Alpine apk mirror for faster downloads.
-# Domestic (China): --build-arg APK_MIRROR=mirrors.tuna.tsinghua.edu.cn
-# Overseas or unspecified: leave APK_MIRROR empty to use the official Alpine source.
+# Base includes Node/Defuddle for reading, but no browser or snapshot support.
+FROM ${PYTHON_IMAGE} AS linkding
+ARG PYTHON_IMAGE
 ARG APK_MIRROR=""
+ARG VERSION=dev
+ARG REVISION=unknown
+LABEL org.opencontainers.image.source="https://github.com/WooHooDai/linkding-cn" \
+      org.opencontainers.image.version="$VERSION" \
+      org.opencontainers.image.revision="$REVISION" \
+      org.opencontainers.image.base.name="$PYTHON_IMAGE" \
+      io.github.woohoodai.linkding.variant="base-alpine"
 RUN if [ -n "$APK_MIRROR" ]; then \
         sed -i "s|dl-cdn.alpinelinux.org|$APK_MIRROR|g" /etc/apk/repositories; \
     fi
-RUN apk update && apk add bash curl icu libpq mailcap libssl3 gettext
-# create www-data user and group
-RUN set -x ; \
-  addgroup -g 82 -S www-data ; \
-  adduser -u 82 -D -S -G www-data www-data && exit 0 ; exit 1
+RUN apk add --no-cache bash curl icu libpq mailcap libssl3 libstdc++ ca-certificates
+RUN adduser -u 82 -D -S -G www-data www-data
 WORKDIR /etc/linkding
-# copy python dependencies
-COPY --from=build-deps /etc/linkding/.venv /etc/linkding/.venv
-# copy compiled icu extension
-COPY --from=compile-icu /etc/linkding/libicu.so libicu.so
-# copy application code first
-COPY . .
-# then overwrite static assets with fresh build output
-COPY --from=node-build /etc/linkding/bookmarks/static bookmarks/static/
-# copy bundled defuddle for server-side reader processing
-COPY --from=node-build /etc/linkding/bookmarks/services/vendor/defuddle.js bookmarks/services/vendor/defuddle.js
-COPY --from=node-build /etc/linkding/node_modules/defuddle/README.md /tmp/defuddle-README.md
-# Activate virtual env
+COPY --from=build-deps /etc/linkding/.venv .venv/
+COPY --from=compile-icu /etc/linkding/libicu.so ./
+COPY --from=app-build /etc/linkding/bookmarks bookmarks/
+COPY --from=app-build /etc/linkding/site_adapters site_adapters/
+COPY --from=app-build /etc/linkding/locale locale/
+COPY --from=app-build /etc/linkding/static static/
+COPY bootstrap.sh LICENSE.txt manage.py supervisord.conf uwsgi.ini version.txt ./
+COPY --from=node-runtime /usr/local/bin/node /usr/local/bin/node
+# The Alpine Node image omits the upstream license file; use the same pinned release.
+COPY --from=node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e /usr/local/LICENSE /usr/share/doc/node/LICENSE
+COPY --from=node-runtime /opt/node-runtime/node_modules /opt/node-runtime/node_modules
 ENV VIRTUAL_ENV=/etc/linkding/.venv
-ENV PATH="/etc/linkding/.venv/bin:$PATH"
-# Generate static files, remove source styles that are not needed
-RUN \
-    mkdir -p data && \
-    python manage.py compilemessages && \
-    python manage.py collectstatic
-
-# Limit file descriptors used by uwsgi, see https://github.com/sissbruecker/linkding/issues/453
+ENV PATH="/etc/linkding/.venv/bin:/opt/node-runtime/node_modules/.bin:$PATH"
+ENV NODE_PATH=/opt/node-runtime/node_modules
+ENV PLAYWRIGHT_NODEJS_PATH=/usr/local/bin/node
+ENV LD_ENABLE_SNAPSHOTS=False
 ENV UWSGI_MAX_FD=4096
-# Expose uwsgi server at port 9090
+RUN mkdir -p data /usr/share/linkding && chmod g+w . && chmod +x bootstrap.sh && \
+    apk info -v > /usr/share/linkding/os-packages.tsv
 EXPOSE 9090
-# Allow running containers as an an arbitrary user in the root group, to support deployment scenarios like OpenShift, Podman
-RUN chmod g+w . && \
-    chmod +x ./bootstrap.sh
-
-HEALTHCHECK --interval=30s --retries=3 --timeout=1s \
-CMD curl -f http://localhost:${LD_SERVER_PORT:-9090}/${LD_CONTEXT_PATH}health || exit 1
-
+HEALTHCHECK --interval=30s --retries=3 --timeout=3s \
+    CMD curl -fsS http://localhost:${LD_SERVER_PORT:-9090}/${LD_CONTEXT_PATH}health || exit 1
 CMD ["./bootstrap.sh"]
 
-
-# Run on the native build platform, the downloaded extension is architecture-independent
-FROM --platform=$BUILDPLATFORM node:22-alpine AS ublock-build
-WORKDIR /etc/linkding
-COPY scripts/setup-ublock.sh .
-# Download and unzip uBlock Origin Lite, patch manifest to enable annoyances by default
-# Optional: replace Alpine apk mirror for faster downloads.
-# Domestic (China): --build-arg APK_MIRROR=mirrors.tuna.tsinghua.edu.cn
-# Overseas or unspecified: leave APK_MIRROR empty to use the official Alpine source.
-ARG APK_MIRROR=""
-RUN if [ -n "$APK_MIRROR" ]; then \
-        sed -i "s|dl-cdn.alpinelinux.org|$APK_MIRROR|g" /etc/apk/repositories; \
-    fi
-RUN apk add --no-cache curl jq unzip && \
-    sh setup-ublock.sh
-
-# Install runtime node_modules (playwright-core) in parallel with linkding-plus apk/npm steps
-FROM --platform=$BUILDPLATFORM node:22-alpine AS node-runtime
-WORKDIR /tmp/npm-runtime
-COPY package.json package-lock.json ./
-ARG TARGETARCH
-RUN --mount=type=cache,id=npm-${TARGETARCH},target=/root/.npm \
-    npm ci --omit=dev && mkdir -p /opt/node-runtime && mv node_modules /opt/node-runtime/
-
-# Install playwright Python package into venv in parallel with linkding-plus apk/npm steps
-FROM build-deps AS playwright-install
-ENV VIRTUAL_ENV=/etc/linkding/.venv
-ARG TARGETARCH
-RUN --mount=type=cache,id=uv-${TARGETARCH},target=/root/.cache/uv \
-    /root/.local/bin/uv pip install 'playwright>=1.59.0'
-
-
-FROM linkding AS linkding-plus
-# install node, chromium
-# Optional: replace Alpine apk mirror for faster downloads.
-# Domestic (China): --build-arg APK_MIRROR=mirrors.tuna.tsinghua.edu.cn
-# Overseas or unspecified: leave APK_MIRROR empty to use the official Alpine source.
-ARG APK_MIRROR=""
-RUN if [ -n "$APK_MIRROR" ]; then \
-        sed -i "s|dl-cdn.alpinelinux.org|$APK_MIRROR|g" /etc/apk/repositories; \
-    fi
-RUN --mount=type=cache,target=/var/cache/apk,sharing=locked \
-    apk update && \
-    apk add nodejs npm chromium
-# install single-file from upstream
-RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-    npm install -g single-file-cli@2.1.3
-# copy playwright Python package from parallel build stage
-COPY --from=playwright-install /etc/linkding/.venv /etc/linkding/.venv
-# copy runtime node_modules from parallel build stage
-COPY --from=node-runtime /opt/node-runtime /opt/node-runtime
-ENV NODE_PATH=/opt/node-runtime/node_modules
-# copy uBlock
-COPY --from=ublock-build /etc/linkding/uBOLite.chromium.mv3 uBOLite.chromium.mv3/
-# create chromium profile folder for user running background tasks and set permissions
-RUN mkdir -p chromium-profile &&  \
-    chown -R www-data:www-data chromium-profile &&  \
-    chown -R www-data:www-data uBOLite.chromium.mv3
-# enable snapshot support
-ENV LD_ENABLE_SNAPSHOTS=True
-ENV LD_BROWSER_ENGINE=chromium
-# 确保chromium可以运行
-# 参考[这个issue](https://github.com/hardkoded/puppeteer-sharp/issues/2633)
-ENV XDG_CONFIG_HOME=/tmp/.chromium
-ENV XDG_CACHE_HOME=/tmp/.chromium
+# Alpine Plus is not published: Python Playwright has no supported musl wheels.

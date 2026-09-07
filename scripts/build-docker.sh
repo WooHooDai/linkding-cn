@@ -1,33 +1,108 @@
 #!/usr/bin/env bash
 set -euo pipefail
+cd "$(dirname "$0")/.."
+
+usage() {
+    cat <<'EOF'
+Usage: scripts/build-docker.sh [options] [-- additional buildx options]
+  --base                 Build without Chromium (reading support is retained)
+  --alpine               Alpine base variant; requires --base
+  --platform PLATFORMS   Default: native for --load, amd64+arm64 for --push
+  --load                 Load locally (default; does not publish)
+  --push                 Publish after the release checks have passed
+  --repository NAME      Repository for generated tags; repeat for multiple registries
+  --tag IMAGE            Override generated tags; repeat for multiple tags
+  --print-tags           Print tags without building (used to publish tested artifacts)
+  --oci PATH             Also export compressed OCI layers for size checks
+  --no-mirror            Use the official Debian/Alpine package repositories
+EOF
+}
+base=false
+alpine=false
+mirror=true
+mode=load
+print_tags=false
+platforms=""
+oci=""
+repositories=()
+tags=()
+extra=()
+while (($#)); do
+    case "$1" in
+        --base) base=true; shift ;;
+        --alpine) alpine=true; shift ;;
+        --no-mirror) mirror=false; shift ;;
+        --load|--push) mode=${1#--}; shift ;;
+        --print-tags) print_tags=true; shift ;;
+        --platform) platforms=${2:?Missing platform}; shift 2 ;;
+        --repository) repositories+=("${2:?Missing repository}"); shift 2 ;;
+        --tag) tags+=("${2:?Missing image tag}"); shift 2 ;;
+        --oci) oci=${2:?Missing OCI path}; shift 2 ;;
+        --help|-h) usage; exit 0 ;;
+        --) shift; extra+=("$@"); break ;;
+        *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
+    esac
+done
+if $alpine && ! $base; then
+    echo "Alpine Plus is unsupported by Python Playwright. Use --base --alpine, or Debian Plus." >&2
+    exit 2
+fi
+if [[ -z "$platforms" ]]; then
+    if [[ "$mode" == push ]]; then
+        platforms=linux/amd64,linux/arm64
+    else
+        platforms=linux/$(docker version --format '{{.Server.Arch}}')
+    fi
+fi
+if [[ "$mode" == load && "$platforms" == *,* ]]; then
+    echo "--load requires one platform; use --push for a multi-platform release." >&2
+    exit 2
+fi
+IFS=, read -r -a platform_list <<< "$platforms"
+for platform in "${platform_list[@]}"; do
+    case "$platform" in
+        linux/amd64|linux/arm64) ;;
+        *) echo "Unsupported platform: $platform" >&2; exit 2 ;;
+    esac
+done
 
 version=$(<version.txt)
-
-# Default to TUNA mirror for faster downloads in China.
-# For overseas builds where TUNA is slower, use --no-mirror.
-# Usage:
-#   ./scripts/build-docker.sh              # default (Debian), TUNA mirror
-#   ./scripts/build-docker.sh --alpine     # Alpine variant, TUNA mirror
-#   ./scripts/build-docker.sh --no-mirror  # default (Debian), official source
-#   ./scripts/build-docker.sh --alpine --no-mirror  # Alpine, official source
-MIRROR_ARG="--build-arg APT_MIRROR=mirrors.tuna.tsinghua.edu.cn"
-DOCKERFILE="docker/default.Dockerfile"
-
-if [[ "${1:-}" == "--alpine" ]]; then
-    DOCKERFILE="docker/alpine.Dockerfile"
-    MIRROR_ARG="--build-arg APK_MIRROR=mirrors.tuna.tsinghua.edu.cn"
-    shift
+revision=$(git rev-parse HEAD)
+git diff --quiet HEAD -- || revision="$revision-dirty"
+file=docker/default.Dockerfile
+target=linkding-plus
+suffix=""
+aliases=(-plus)
+args=()
+# Refresh the extension release while retaining cached build tools and packages.
+if ! $base; then args+=(--no-cache-filter ublock-build); fi
+if $base; then
+    target=linkding
+    suffix=-base
+    aliases=()
 fi
-
-if [[ "${1:-}" == "--no-mirror" ]]; then
-    MIRROR_ARG=""
+if $alpine; then
+    file=docker/alpine.Dockerfile
+    suffix=-base-alpine
+    aliases=(-alpine)
+    $mirror && args+=(--build-arg APK_MIRROR=mirrors.tuna.tsinghua.edu.cn)
+else
+    $mirror && args+=(--build-arg APT_MIRROR=mirrors.tuna.tsinghua.edu.cn)
 fi
-
-# Plus image with support for single-file snapshots
-# Needs checking if this works with ARMv7, excluded for now
-docker buildx build --target linkding-plus --platform linux/amd64,linux/arm64 \
-  -f "$DOCKERFILE" \
-  -t woohoodai/linkding-cn:latest \
-  -t woohoodai/linkding-cn:v$version \
-  $MIRROR_ARG \
-  --push .
+if (("${#tags[@]}" == 0)); then
+    if (("${#repositories[@]}" == 0)); then repositories=(woohoodai/linkding-cn); fi
+    for repository in "${repositories[@]}"; do
+        tags+=("$repository:latest$suffix" "$repository:v$version$suffix")
+        for alias in ${aliases[@]+"${aliases[@]}"}; do
+            tags+=("$repository:latest$alias" "$repository:v$version$alias")
+        done
+    done
+fi
+if $print_tags; then printf '%s\n' "${tags[@]}"; exit 0; fi
+for tag in "${tags[@]}"; do args+=(-t "$tag"); done
+if [[ -n "$oci" ]]; then
+    args+=(--output "type=oci,dest=$oci,compression=gzip,compression-level=6")
+fi
+docker buildx build --target "$target" --platform "$platforms" -f "$file" \
+    --build-arg VERSION="$version" --build-arg REVISION="$revision" \
+    "${args[@]}" --"$mode" ${extra[@]+"${extra[@]}"} .

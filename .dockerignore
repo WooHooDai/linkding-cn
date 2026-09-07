@@ -22,5 +22,22 @@
 !/uwsgi.ini
 !/version.txt
 
- # Remove dev settings
+# Remove dev settings
 /bookmarks/settings/dev.py
+
+# Local caches, tests and generated files must not enter release layers.
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.mo
+**/.DS_Store
+/bookmarks/tests
+/bookmarks/tests_e2e
+/site_adapters/tests
+/bookmarks/static/bundle.js*
+/bookmarks/static/reader.js*
+/bookmarks/static/reader-pending.js*
+/bookmarks/static/reader-unavailable.js*
+/bookmarks/static/theme-*.css*
+/bookmarks/services/vendor/defuddle.js
+/site_adapters/static

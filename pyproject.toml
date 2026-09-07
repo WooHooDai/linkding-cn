@@ -29,6 +29,10 @@ dependencies = [
 ]
 
 [dependency-groups]
+browser = [
+    "playwright==1.62.0",
+]
+
 dev = [
     "coverage>=7.13.5",
     "django-debug-toolbar>=6.3.0",

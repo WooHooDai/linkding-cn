@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   unit_tests:
@@ -21,16 +21,23 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "24.20.0"
           cache: 'npm'
       - name: Install Node dependencies
         run: npm ci
       - name: Setup Python environment
         run: |
-          uv sync
-          mkdir data
+          uv sync --locked
+          mkdir -p data
+      - name: Validate build tooling
+        run: |
+          python3 -m unittest discover -s scripts/tests -v
+      - name: Compile translations
+        run: |
+          sudo apt-get update && sudo apt-get install -y gettext
+          uv run manage.py compilemessages --ignore=.venv --ignore=node_modules
       - name: Run tests
-        run: uv run pytest bookmarks/tests/ -n auto
+        run: uv run pytest bookmarks/tests/ site_adapters/tests/ -n auto
   e2e_tests:
     name: E2E Tests
     runs-on: ubuntu-latest
@@ -45,18 +52,22 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "24.20.0"
           cache: 'npm'
       - name: Install Node dependencies
         run: npm ci
       - name: Setup Python environment
         run: |
-          uv sync
+          uv sync --locked
           uv run playwright install chromium
-          mkdir data
+          mkdir -p data
       - name: Run build
         run: |
           npm run build
           uv run manage.py collectstatic
       - name: Run tests
         run: uv run manage.py test bookmarks.tests_e2e --pattern="e2e_test_*.py"
+
+  images:
+    name: Release image validation
+    uses: ./.github/workflows/image-validation.yaml

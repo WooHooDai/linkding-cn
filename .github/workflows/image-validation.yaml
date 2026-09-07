@@ -1,0 +1,81 @@
+name: Validate release images
+
+on:
+  workflow_call:
+    inputs:
+      upload_oci:
+        type: boolean
+        default: false
+      baseline:
+        type: string
+        default: woohoodai/linkding-cn:latest
+      baseline_base:
+        type: string
+        default: ""
+      baseline_alpine:
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: ${{ matrix.variant.name }} / ${{ matrix.arch }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+        variant:
+          - { name: plus, build_flags: "", smoke_flags: "" }
+          - { name: base, build_flags: "--base", smoke_flags: "--base" }
+          - { name: base-alpine, build_flags: "--base --alpine", smoke_flags: "--base" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the release image locally
+        env:
+          BUILD_FLAGS: ${{ matrix.variant.build_flags }}
+        run: |
+          read -r -a flags <<< "$BUILD_FLAGS"
+          scripts/build-docker.sh "${flags[@]}" --no-mirror --load \
+            --platform linux/${{ matrix.arch }} --tag linkding-ci:test \
+            --oci "$RUNNER_TEMP/linkding.oci.tar"
+      - name: Test the final image
+        run: |
+          python3 scripts/verify-docker-image.py test linkding-ci:test --platform linux/${{ matrix.arch }} \
+            ${{ matrix.variant.smoke_flags }} --strict --output-dir artifacts/smoke
+      - name: Test PostgreSQL migrations and runtime
+        if: matrix.variant.name == 'plus' && matrix.arch == 'arm64'
+        run: |
+          docker pull postgres:16-alpine
+          python3 scripts/verify-docker-image.py test linkding-ci:test --platform linux/arm64 --strict \
+            --postgres postgres:16-alpine --output-dir artifacts/postgres
+      - name: Check compressed image size
+        env:
+          BASELINE_PLUS: ${{ inputs.baseline }}
+          BASELINE_BASE: ${{ inputs.baseline_base }}
+          BASELINE_ALPINE: ${{ inputs.baseline_alpine }}
+        run: |
+          case "${{ matrix.variant.name }}" in
+            plus) baseline="$BASELINE_PLUS" ;;
+            base) baseline="$BASELINE_BASE" ;;
+            base-alpine) baseline="$BASELINE_ALPINE" ;;
+          esac
+          args=()
+          if [[ -n "$baseline" ]]; then args+=(--baseline "$baseline"); fi
+          python3 scripts/verify-docker-image.py size "$RUNNER_TEMP/linkding.oci.tar" \
+            --platform linux/${{ matrix.arch }} "${args[@]}" --output artifacts/size.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: image-report-${{ matrix.variant.name }}-${{ matrix.arch }}
+          path: artifacts/
+      - uses: actions/upload-artifact@v4
+        if: inputs.upload_oci
+        with:
+          name: image-oci-${{ matrix.variant.name }}-${{ matrix.arch }}
+          path: ${{ runner.temp }}/linkding.oci.tar
+          compression-level: 0
+          retention-days: 1

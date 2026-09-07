@@ -437,6 +437,9 @@ dependencies = [
 ]
 
 [package.dev-dependencies]
+browser = [
+    { name = "playwright" },
+]
 cloakbrowser = [
     { name = "cloakbrowser" },
     { name = "playwright" },
@@ -479,6 +482,7 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
+browser = [{ name = "playwright", specifier = "==1.62.0" }]
 cloakbrowser = [
     { name = "cloakbrowser", specifier = ">=0.5.3" },
     { name = "playwright", specifier = ">=1.59.0" },
