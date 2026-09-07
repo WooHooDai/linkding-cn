@@ -23,7 +23,9 @@ HUEY = {
     "immediate": True,
 }
 
-# Disable background tasks
+# Task unit tests opt in explicitly. CRUD tests must not run the production
+# snapshot retry loop synchronously or contact external sites.
+LD_ENABLE_SNAPSHOTS = False
 LD_DISABLE_BACKGROUND_TASKS = False
 
 # Suppress logging

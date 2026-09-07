@@ -246,6 +246,10 @@ class WebsiteLoaderTestCase(TestCase):
             ),
             mock.patch("os.path.exists", return_value=True),
             mock.patch(
+                "bookmarks.services.website_loader.load_page",
+                return_value="<html></html>",
+            ),
+            mock.patch(
                 "bookmarks.services.website_loader.run_script",
                 return_value=None,
             ),
