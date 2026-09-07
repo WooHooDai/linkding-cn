@@ -22,8 +22,12 @@ def populate_bookmark_actions(apps, schema_editor):
 def drop_show_bookmark_actions_if_exists(apps, schema_editor):
     """Drop the show_bookmark_actions column if it exists (may not exist on fresh installs)."""
     with schema_editor.connection.cursor() as cursor:
-        cursor.execute("PRAGMA table_info(bookmarks_userprofile)")
-        columns = [row[1] for row in cursor.fetchall()]
+        columns = [
+            column.name
+            for column in schema_editor.connection.introspection.get_table_description(
+                cursor, "bookmarks_userprofile"
+            )
+        ]
         if "show_bookmark_actions" in columns:
             cursor.execute("ALTER TABLE bookmarks_userprofile DROP COLUMN show_bookmark_actions")
 
