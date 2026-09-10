@@ -161,7 +161,7 @@ async function getLauncher() {
         const cookies = await context.cookies();
         const foundNames = new Set(cookies.map(c => c.name));
         const missing = [...targetSet].filter(n => !foundNames.has(n));
-        console.error(`Cookies not found within timeout: ${missing.join(", ")}`);
+        throw new Error(`Cookies not found within timeout: ${missing.join(", ")}`);
       }
     }
 
