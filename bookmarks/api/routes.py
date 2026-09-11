@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 from django.conf import settings
-from django.db import IntegrityError, OperationalError, transaction
+from django.db import IntegrityError, OperationalError, models, transaction
 from django.http import Http404, StreamingHttpResponse
 from django.utils.dateparse import parse_datetime
 from django.utils.translation import gettext as _
@@ -382,7 +382,16 @@ class TagViewSet(
 
     def get_queryset(self):
         user = self.request.user
-        return Tag.objects.all().filter(owner=user)
+        return (
+            Tag.objects.all()
+            .filter(owner=user)
+            .annotate(
+                bookmark_count=models.Count(
+                    "bookmark", filter=models.Q(bookmark__is_deleted=False)
+                )
+            )
+            .order_by("-bookmark_count", "name")
+        )
 
     def get_serializer_context(self):
         return {"user": self.request.user}

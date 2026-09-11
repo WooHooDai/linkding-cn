@@ -25,8 +25,12 @@ class Cache {
           offset: 0,
         })
         .then((tags) => {
-          // Sort: non-CJK tags first, then CJK tags; alphabetically within each group
+          // 候选列表完全按使用频次降序排列，不区分中英文；
+          // 频次相同时非 CJK 标签在前，CJK 标签在后，组内按名称排序
           tags.sort((left, right) => {
+            const leftCount = left.bookmark_count || 0;
+            const rightCount = right.bookmark_count || 0;
+            if (leftCount !== rightCount) return rightCount - leftCount;
             const leftCJK = hasCJK(left.name) ? 1 : 0;
             const rightCJK = hasCJK(right.name) ? 1 : 0;
             if (leftCJK !== rightCJK) return leftCJK - rightCJK;

@@ -260,13 +260,21 @@ def _pinyin_first(name):
 
 
 class TagSerializer(serializers.ModelSerializer):
+    bookmark_count = serializers.IntegerField(read_only=True, default=0)
     pinyin_full = serializers.SerializerMethodField()
     pinyin_first = serializers.SerializerMethodField()
 
     class Meta:
         model = Tag
-        fields = ["id", "name", "date_added", "pinyin_full", "pinyin_first"]
-        read_only_fields = ["date_added"]
+        fields = [
+            "id",
+            "name",
+            "date_added",
+            "bookmark_count",
+            "pinyin_full",
+            "pinyin_first",
+        ]
+        read_only_fields = ["date_added", "bookmark_count"]
 
     def get_pinyin_full(self, obj):
         return _pinyin_full(obj.name)
