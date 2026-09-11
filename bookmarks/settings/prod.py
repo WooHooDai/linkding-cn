@@ -29,6 +29,11 @@ if host_name:
 else:
     ALLOWED_HOSTS = ["*"]
 
+# uWSGI 请求行缓冲上限（字节），与 uwsgi.ini 的 buffer-size 保持一致。
+# bookmarklet 按该值动态计算放入 URL 的元数据预算，避免超长 URL 返回 502。
+# 仅生产环境（uWSGI）存在该限制，开发环境 runserver 不受 buffer-size 约束。
+LD_BUFFER_SIZE = int(os.getenv("LD_BUFFER_SIZE", 8192))
+
 # Logging
 LOGGING = {
     "version": 1,

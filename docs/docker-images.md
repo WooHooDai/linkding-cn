@@ -16,6 +16,12 @@ Compose 默认映射为 `${LD_HOST_PORT:-9090}:9090`：只修改宿主机端口�
 如果设置了不同的 `LD_SERVER_PORT`，还需同步修改映射右侧的容器端口。
 `docker run -P` 使用的是 `EXPOSE` 声明；自定义监听端口时应显式使用 `-p 宿主端口:容器端口`。
 
+客户端 bookmarklet 会把页面标题/描述放进 URL。uWSGI 默认的请求行缓冲上限为 8192 字节（`uwsgi.ini` 的 `buffer-size`），
+bookmarklet 会按该预算动态截断标题/描述，避免超长 URL 返回 502。由于 `buffer-size` 限制的是请求行+请求头的整体，
+bookmarklet 预算会额外预留 2048 字节头部空间。如需调整，设置 `LD_BUFFER_SIZE`（单位字节），Django 与 uWSGI 会使用同一值；
+该限制仅在生产容器（uWSGI）下生效，开发环境 `runserver` 不受限。若前端还有 nginx 反向代理，需同步调大
+`large_client_header_buffers`（默认单行 8KB），否则 URL 会在 nginx 层先被拒绝。
+
 **本地构建与验证**
 
 在仓库根目录执行：

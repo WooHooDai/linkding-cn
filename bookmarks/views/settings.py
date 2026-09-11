@@ -465,6 +465,11 @@ def get_ttl_hash(seconds=3600):
 @login_required
 def integrations(request):
     application_url = request.build_absolute_uri(reverse("linkding:bookmarks.new"))
+    # 仅生产环境（uWSGI）存在 buffer-size 限制；开发环境 runserver 不受限，
+    # 传 None 表示不截断元数据。
+    bookmarklet_max_url_length = getattr(
+        django_settings, "LD_BUFFER_SIZE", None
+    )
     api_tokens = ApiToken.objects.filter(user=request.user).order_by("-created")
     api_token_key = request.session.pop("api_token_key", None)
     api_token_name = request.session.pop("api_token_name", None)
@@ -481,6 +486,7 @@ def integrations(request):
         "settings/integrations.html",
         {
             "application_url": application_url,
+            "bookmarklet_max_url_length": bookmarklet_max_url_length,
             "api_tokens": api_tokens,
             "api_token_key": api_token_key,
             "api_token_name": api_token_name,

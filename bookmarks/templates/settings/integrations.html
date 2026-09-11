@@ -83,7 +83,7 @@
               <span>{% translate "Drag to bookmarks bar" %}</span>
             </a>
             <a id="bookmarklet-client"
-               href="javascript: {% include 'bookmarks/bookmarklet_clientside.js' %}"
+               href="javascript: {% include 'bookmarks/bookmarklet_clientside.js' with bookmarklet_budget=bookmarklet_max_url_length %}"
                data-turbo="false"
                class="settings-bookmarklet-chip"
                style="display: none;">
