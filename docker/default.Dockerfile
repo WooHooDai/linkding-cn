@@ -75,7 +75,7 @@ WORKDIR /etc/linkding
 
 FROM ublock-deps AS ublock-build
 COPY scripts/setup-ublock.sh ./
-RUN sh setup-ublock.sh
+RUN --mount=type=secret,id=github_token sh setup-ublock.sh
 
 # Base includes Node/Defuddle for reading, but no browser or snapshot support.
 FROM ${PYTHON_IMAGE} AS linkding

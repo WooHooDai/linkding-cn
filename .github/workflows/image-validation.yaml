@@ -37,6 +37,7 @@ jobs:
       - name: Build the release image locally
         env:
           BUILD_FLAGS: ${{ matrix.variant.build_flags }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           read -r -a flags <<< "$BUILD_FLAGS"
           scripts/build-docker.sh "${flags[@]}" --no-mirror --load \

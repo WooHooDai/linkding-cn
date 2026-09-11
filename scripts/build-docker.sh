@@ -103,6 +103,21 @@ for tag in "${tags[@]}"; do args+=(-t "$tag"); done
 if [[ -n "$oci" ]]; then
     args+=(--output "type=oci,dest=$oci,compression=gzip,compression-level=6")
 fi
+# Authenticate the GitHub API during the build (e.g. uBlock release lookup).
+# Use the caller's GitHub token when available; CI provides ${{ github.token }}.
+if [[ -z "${GITHUB_TOKEN:-}" && -n "${GH_TOKEN:-}" ]]; then
+    GITHUB_TOKEN="$GH_TOKEN"
+fi
+if [[ -z "${GITHUB_TOKEN:-}" ]] && command -v gh >/dev/null 2>&1; then
+    GITHUB_TOKEN=$(gh auth token 2>/dev/null || true)
+fi
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    secret_file=$(mktemp)
+    trap 'rm -f "$secret_file"' EXIT
+    printf '%s' "$GITHUB_TOKEN" > "$secret_file"
+    chmod 600 "$secret_file"
+    args+=(--secret "id=github_token,src=$secret_file")
+fi
 docker buildx build --target "$target" --platform "$platforms" -f "$file" \
     --build-arg VERSION="$version" --build-arg REVISION="$revision" \
     "${args[@]}" --"$mode" ${extra[@]+"${extra[@]}"} .

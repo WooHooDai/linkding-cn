@@ -66,6 +66,7 @@ jobs:
       - name: Publish the validated variants
         env:
           BUILD_FLAGS: ${{ matrix.variant.flags }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           read -r -a flags <<< "$BUILD_FLAGS"
           for repository in woohoodai/linkding-cn ghcr.io/woohoodai/linkding-cn; do

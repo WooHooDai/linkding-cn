@@ -30,6 +30,37 @@ bookmarklet 预算会额外预留 2048 字节头部空间。如需调整，设�
 # 默认只加载到本机；使用独立标签，避免覆盖正在使用的 latest。
 scripts/build-docker.sh --load --platform linux/arm64 \
   --tag linkding-cn:verify --oci /tmp/linkding-verify.oci.tar
+```
+
+构建 `plus` 变体时，脚本会通过 GitHub API 查询 uBlock Origin Lite 的最新版本。为避免
+匿名 API 额度（60 次/小时）耗尽导致构建失败，脚本会自动使用可用的 GitHub 令牌：
+
+- 本机构建：优先读取环境变量 `GITHUB_TOKEN`，其次 `GH_TOKEN`；都未设置时自动尝试
+  `gh auth token`（需要已通过 `gh auth login` 登录）。
+- CI 构建：workflow 已注入 `github.token`，无需额外配置。
+
+令牌仅通过 BuildKit secret 传给 `scripts/setup-ublock.sh`，不会写入镜像层，也不会上传到
+镜像仓库。该脚本不依赖网页兜底：若未提供令牌，则以匿名方式调用 API，匿名额度耗尽时构建
+会失败。构建时必须提供令牌，推荐使用 `scripts/build-docker.sh`，它会自动从 `gh` 取令牌；
+也可以直接运行 `docker buildx build` 并显式传入 secret，见下文。
+
+不经 `scripts/build-docker.sh` 直接构建时，需要把令牌通过 BuildKit secret 传给
+`ublock-build` 阶段，Dockerfile 已声明 `--mount=type=secret,id=github_token`，因此只需在
+构建命令中加 `--secret`：
+
+```sh
+GITHUB_TOKEN="$(gh auth token)" docker buildx build \
+  --target linkding-plus --platform linux/arm64 \
+  -f docker/default.Dockerfile -t woohoodai/linkding-cn:test \
+  --build-arg APT_MIRROR=mirrors.tuna.tsinghua.edu.cn \
+  --secret id=github_token,env=GITHUB_TOKEN \
+  --pull --load .
+```
+
+`env=GITHUB_TOKEN` 让 BuildKit 直接读取命令行的环境变量，无需临时文件，令牌不会写入磁盘
+或镜像层。
+
+```sh
 
 # 生产容器回归：临时内部网络、临时数据库、不挂载用户数据。
 python3 scripts/verify-docker-image.py test linkding-cn:verify --platform linux/arm64 --strict \
