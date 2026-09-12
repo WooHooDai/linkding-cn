@@ -1,3 +1,29 @@
+# v1.2.1 (2026/09/12)
+
+> [!IMPORTANT]
+> 使用浏览器端 Bookmarklet 的用户，升级后请从「设置 → 集成」重新添加书签小程序，以应用元数据重写与 URL 长度处理。
+
+- 新增：标签候选列表按使用频次降序排列
+- 新增：网站适配器支持读取 HTML 属性，`metadata.select_title`、`select_description`、`select_image` 支持 `::attr(name)`，例如 `img::attr(data-src)` 可直接读取懒加载图片地址。
+- 新增：浏览器端 Bookmarklet 支持网站适配器的 rewrite_* 字段配置
+
+- 优化：新建书签时若元数据已被预填，则自动聚焦标签输入框
+- 优化：书签元数据重新抓取后，预览图仅在远程地址变化时尝试重新下载到本地
+- 优化：浏览器端 Bookmarklet 根据 `LD_BUFFER_SIZE` 动态截断元数据标题、描述内容
+- 优化：网站适配器 `select_image` 跳过展位图片，即遇到空值、`blob:`、`about:`、`#` 或 base64 data URI 时，会继续尝试后续选择器
+- 优化：网站适配测试面板的 HTML 快照预览允许在隔离沙箱内运行脚本，支持离线页面交互
+- 优化：重构 [.env.sample](./.env.sample) ，补全环境变量、按功能分组、提供详细注释说明
+- 优化：补全[版本更新脚本](./scripts/set-version.sh)遗漏的 `uv.lock` 和 `package-lock.json` 根包版本更新，支持重复设置相同版本。
+- 优化：精简 docker 镜像运行依赖，大幅减少镜像体积；其他调整优化见[Docker 镜像说明](./docs/docker-images.md)
+
+- 修复：启用 SQLite ICU 排序时，书签列表按标题排序会导致侧边栏查询报错
+- 修复：预览图下载时无条件携带 Referer 导致下载失败
+- 修复：新增书签时预览图远程地址为空仍会触发下载请求，导致 400 报错
+- 修复：网站适配器等待目标 Cookie 超时仍报告成功
+- 修复：历史迁移使用 SQLite 专用语句检查字段，导致 PostgreSQL 数据库迁移失败
+
+---
+
 # v1.2.0 (2026/09/02)
 
 ## 更新概览
