@@ -72,19 +72,16 @@ git diff --quiet HEAD -- || revision="$revision-dirty"
 file=docker/default.Dockerfile
 target=linkding-plus
 suffix=""
-aliases=(-plus)
 args=()
 # Refresh the extension release while retaining cached build tools and packages.
 if ! $base; then args+=(--no-cache-filter ublock-build); fi
 if $base; then
     target=linkding
     suffix=-base
-    aliases=()
 fi
 if $alpine; then
     file=docker/alpine.Dockerfile
     suffix=-base-alpine
-    aliases=(-alpine)
     $mirror && args+=(--build-arg APK_MIRROR=mirrors.tuna.tsinghua.edu.cn)
 else
     $mirror && args+=(--build-arg APT_MIRROR=mirrors.tuna.tsinghua.edu.cn)
@@ -93,9 +90,6 @@ if (("${#tags[@]}" == 0)); then
     if (("${#repositories[@]}" == 0)); then repositories=(woohoodai/linkding-cn); fi
     for repository in "${repositories[@]}"; do
         tags+=("$repository:latest$suffix" "$repository:v$version$suffix")
-        for alias in ${aliases[@]+"${aliases[@]}"}; do
-            tags+=("$repository:latest$alias" "$repository:v$version$alias")
-        done
     done
 fi
 if $print_tags; then printf '%s\n' "${tags[@]}"; exit 0; fi
