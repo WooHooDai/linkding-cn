@@ -297,6 +297,10 @@ def _load_with_hooks(url: str, config: dict, scripts: list, username: str = '',
 
     # 3. Run after hooks
     if metadata is None:
+        # No replace hook produced a result (e.g. configured script missing)
+        # and there was no built-in engine path, so fall back to empty metadata
+        # instead of crashing with an UnboundLocalError.
+        logger.warning("Metadata pipeline produced no result. url=%s", url)
         metadata = _empty_metadata(url)
 
     result_dict = {

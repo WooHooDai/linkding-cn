@@ -140,11 +140,13 @@ def subscription_manage(request):
                         logger.warning('Failed to resolve _includes for new subscription: %s', e)
 
                 try:
-                    _write_adapter_file(file_path, base_url, auto_detect_data)
+                    write_result = _write_adapter_file(file_path, base_url, auto_detect_data)
+                    failed_scripts = write_result.get('failed', [])
                     update_fields = {
                         'last_fetch': time.time(),
                         'content_hash': _content_fingerprint(auto_detect_data),
-                        'fetch_status': 'ok',
+                        'fetch_status': 'partial' if failed_scripts else 'ok',
+                        'script_failures': failed_scripts,
                     }
                     if auto_detect_meta.get('etag'):
                         update_fields['etag'] = auto_detect_meta['etag']
@@ -263,7 +265,21 @@ def subscription_manage(request):
                     adapters[index]['name'] = data['_meta']['name']
                     _save_adapters_list(adapters)
                 _invalidate_site_adapters_cache()
-                return _adapters_response()
+                response = _adapters_response()
+                from site_adapters.services.subscriptions import (
+                    _get_meta_entry,
+                    _normalize_source_to_directory,
+                )
+                meta_entry = _get_meta_entry(_normalize_source_to_directory(source))
+                failed_scripts = meta_entry.get('script_failures') or []
+                if failed_scripts:
+                    payload = json.loads(response.content.decode('utf-8'))
+                    payload['warning'] = (
+                        'Some scripts failed to download and will be retried on the next update: '
+                        + ', '.join(failed_scripts[:5])
+                    )
+                    return JsonResponse(payload)
+                return response
             return JsonResponse({'error': 'update failed, check logs'}, status=500)
 
         else:

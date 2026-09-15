@@ -32,6 +32,10 @@ _OLD_SUB_FILE = 'subscription.jsonc'
 
 _last_fetch_cache: dict[tuple[str, str], tuple[float, float]] = {}
 
+_SCRIPT_DOWNLOAD_WORKERS = 8
+_HTTP_RETRY_ATTEMPTS = 3
+_HTTP_RETRY_BACKOFF = 0.5
+
 
 # ---------------------------------------------------------------------------
 # _meta.json — 订阅源运行时状态
@@ -259,6 +263,32 @@ def _adapter_dir(entry: dict) -> str:
 # 下载
 # ---------------------------------------------------------------------------
 
+def _http_get(url: str, timeout: int, headers: dict | None = None):
+    """带重试的 GET，仅对网络异常与 5xx/429 重试。
+
+    304 与 4xx 等确定性结果直接返回，重试不会改变结果。
+    重试耗尽后抛出最后一个异常，由调用方降级处理。
+    """
+    last_exc: Exception | None = None
+    for attempt in range(_HTTP_RETRY_ATTEMPTS):
+        try:
+            resp = requests.get(url, timeout=timeout, headers=headers)
+        except requests.RequestException as exc:
+            last_exc = exc
+        else:
+            if resp.status_code == 429 or resp.status_code >= 500:
+                last_exc = requests.HTTPError(
+                    f"HTTP {resp.status_code}: {url}", response=resp
+                )
+            else:
+                return resp
+        if attempt < _HTTP_RETRY_ATTEMPTS - 1:
+            time.sleep(_HTTP_RETRY_BACKOFF * (2 ** attempt))
+    if last_exc is not None:
+        raise last_exc
+    raise requests.RequestException(f"request failed: {url}")
+
+
 def _download_jsonc(url: str, etag: str = '', last_modified: str = '') -> tuple[dict | None, dict]:
     headers = {}
     if etag:
@@ -266,7 +296,7 @@ def _download_jsonc(url: str, etag: str = '', last_modified: str = '') -> tuple[
     if last_modified:
         headers['If-Modified-Since'] = last_modified
 
-    resp = requests.get(url, timeout=30, headers=headers)
+    resp = _http_get(url, timeout=30, headers=headers)
     if resp.status_code == 304:
         logger.info("Subscription not modified (304): %s", url)
         return None, {}
@@ -364,27 +394,59 @@ def _resolve_includes(url: str, data: dict, seen: set[str], _depth: int = 0) -> 
 # 脚本收集与缓存
 # ---------------------------------------------------------------------------
 
+def _iter_script_paths(node):
+    """递归收集任意层级 scripts 数组中的 path 字段。
+
+    运行时 _resolve_all_paths 会将任意层级（metadata / snapshot / reader /
+    defaults / routes）中的 scripts[].path 解析为适配器目录下的路径，
+    因此镜像时必须扫描同样的范围，否则部分脚本不会被缓存。
+    """
+    if isinstance(node, dict):
+        scripts = node.get('scripts')
+        if isinstance(scripts, list):
+            for entry in scripts:
+                if isinstance(entry, dict):
+                    path = entry.get('path', '')
+                    if isinstance(path, str) and path:
+                        yield path
+        for key, value in node.items():
+            if key == 'scripts':
+                continue
+            yield from _iter_script_paths(value)
+    elif isinstance(node, list):
+        for item in node:
+            yield from _iter_script_paths(item)
+
+
+def _unique(values) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
+
+
 def _collect_script_refs(data: dict) -> dict[str, list[str]]:
     """收集所有域的脚本引用，按域名分组。
 
     只扫描 scripts 数组中的 path 字段（不兼容旧的 script 标量）。
+    递归覆盖域名级 defaults / routes 等所有嵌套层级。
     """
     refs: dict[str, list[str]] = {}
-    domains = _domain_map(data)
-    for domain_key, domain_config in domains.items():
+    adapter_defaults = data.get('defaults')
+    if isinstance(adapter_defaults, dict):
+        default_refs = _unique(_iter_script_paths(adapter_defaults))
+        if default_refs:
+            refs['_defaults'] = default_refs
+    for domain_key, domain_config in _domain_map(data).items():
         if not isinstance(domain_config, dict):
             continue
-        for section in ('metadata', 'snapshot'):
-            section_data = domain_config.get(section)
-            if not isinstance(section_data, dict):
-                continue
-            scripts = section_data.get('scripts')
-            if isinstance(scripts, list):
-                for entry in scripts:
-                    if isinstance(entry, dict):
-                        path = entry.get('path', '')
-                        if isinstance(path, str) and path:
-                            refs.setdefault(domain_key, []).append(path)
+        paths = _unique(_iter_script_paths(domain_config))
+        if paths:
+            refs[domain_key] = paths
     return refs
 
 
@@ -398,11 +460,59 @@ def _content_fingerprint(data: dict) -> str:
     return hashlib.sha256(canonical.encode('utf-8')).hexdigest()
 
 
-def _write_adapter_file(file_path: str, url: str, data: dict):
+def _all_script_refs(data: dict) -> list[str]:
+    """展平所有脚本引用（保持首次出现的顺序）。"""
+    refs: list[str] = []
+    for domain_refs in _collect_script_refs(data).values():
+        refs.extend(domain_refs)
+    return refs
+
+
+def _local_script_keys(data: dict, base_url: str = '') -> list[str]:
+    """将脚本引用解析为本地存储键（去重、过滤不安全键）。"""
+    keys: list[str] = []
+    seen: set[str] = set()
+    for script_ref in _all_script_refs(data):
+        _download_url, local_key = _resolve_script_ref(
+            script_ref, base_url or 'https://invalid.local/'
+        )
+        if not local_key or not _is_safe_script_key(local_key) or local_key in seen:
+            continue
+        seen.add(local_key)
+        keys.append(local_key)
+    return keys
+
+
+def _missing_scripts(file_path: str, base_url: str = '') -> list[str]:
+    """检查本地缓存中缺失或为空的脚本文件（纯本地检查，不发起网络请求）。
+
+    是订阅缓存自愈的基础：即使 adapters.jsonc 未变化、服务端返回 304，
+    只要脚本缓存不完整，更新链路也会强制重新下载缺失的脚本。
+    """
+    data = _read_subscription_file(file_path)
+    if not data:
+        return []
+    scripts_dir = os.path.join(os.path.dirname(file_path), 'scripts')
+    missing = []
+    for local_key in _local_script_keys(data, base_url):
+        target_path = os.path.join(scripts_dir, local_key)
+        if not os.path.isfile(target_path) or os.path.getsize(target_path) == 0:
+            missing.append(local_key)
+    return missing
+
+
+def _write_adapter_file(file_path: str, url: str, data: dict,
+                        only_keys: set[str] | None = None) -> dict:
     """将订阅镜像到本地 adapters/<adapter>/。不做任何内容改写。
 
     adapters.jsonc 保持远端原样（不注入 _meta，不改写脚本路径）。
     scripts/ 目录镜像远端结构。
+
+    only_keys 非空时只下载这些本地键对应的脚本（用于修复不完整缓存），
+    且跳过“清理未引用脚本”，避免误删本次未参与修复的文件。
+
+    Returns:
+        {'referenced': set[str], 'failed': list[str]}，failed 为本轮下载失败的脚本键。
     """
     sub_dir = os.path.dirname(file_path)
     os.makedirs(sub_dir, exist_ok=True)
@@ -421,6 +531,8 @@ def _write_adapter_file(file_path: str, url: str, data: dict):
                 if not _is_safe_script_key(local_key):
                     logger.warning('Unsafe script key: %s', local_key)
                     continue
+                if only_keys is not None and local_key not in only_keys:
+                    continue
                 if local_key not in unique_scripts:
                     unique_scripts[local_key] = download_url
 
@@ -428,16 +540,28 @@ def _write_adapter_file(file_path: str, url: str, data: dict):
         def _download_one(l_key: str, dl_url: str) -> tuple[str, str | None]:
             try:
                 _validate_download_url(dl_url)
-                resp = requests.get(dl_url, timeout=15)
+                resp = _http_get(dl_url, timeout=30)
                 resp.raise_for_status()
-                return l_key, resp.text
+                content = resp.text
+                # 有 Content-Length 且未经压缩时，校验字节数，捕获静默截断
+                content_length = resp.headers.get('Content-Length')
+                if content_length and not resp.headers.get('Content-Encoding'):
+                    try:
+                        expected = int(content_length)
+                    except (TypeError, ValueError):
+                        expected = None
+                    if expected is not None and len(resp.content) != expected:
+                        raise ValueError(
+                            f'Script truncated: got {len(resp.content)} of {expected} bytes'
+                        )
+                return l_key, content
             except Exception as e:
                 logger.warning('Failed to download script %s: %s', dl_url, e)
                 return l_key, None
 
         downloaded: dict[str, str | None] = {}
         if unique_scripts:
-            with ThreadPoolExecutor(max_workers=8) as pool:
+            with ThreadPoolExecutor(max_workers=_SCRIPT_DOWNLOAD_WORKERS) as pool:
                 futures = {pool.submit(_download_one, k, v): k for k, v in unique_scripts.items()}
                 for fut in as_completed(futures):
                     l_key, content = fut.result()
@@ -445,8 +569,12 @@ def _write_adapter_file(file_path: str, url: str, data: dict):
 
         # 写入下载成功的脚本（哈希比对，仅在变化时写入）
         referenced_paths: set[str] = set()
+        failed_paths: list[str] = []
         for local_key, content in downloaded.items():
             if content is None:
+                # 下载失败：保留磁盘上已有的旧文件（若有），避免网络抖动误删可用脚本
+                failed_paths.append(local_key)
+                referenced_paths.add(local_key)
                 continue
             target_path = os.path.join(scripts_dir, local_key)
             os.makedirs(os.path.dirname(target_path), exist_ok=True)
@@ -463,8 +591,8 @@ def _write_adapter_file(file_path: str, url: str, data: dict):
                 logger.info('Script updated: %s', local_key)
             referenced_paths.add(local_key)
 
-        # 清理不再被引用的脚本
-        if os.path.isdir(scripts_dir):
+        # 清理不再被引用的脚本（仅完整镜像时执行）
+        if only_keys is None and os.path.isdir(scripts_dir):
             for root, dirs, files in os.walk(scripts_dir, topdown=False):
                 for name in files:
                     if name.startswith('.'):
@@ -484,11 +612,16 @@ def _write_adapter_file(file_path: str, url: str, data: dict):
                             os.rmdir(dir_path)
                     except OSError:
                         pass
+    else:
+        failed_paths = []
+        referenced_paths = set()
 
     # 原样写入 adapters.jsonc（不注入 _meta，不改写路径）
     # 使用与 _content_fingerprint 一致的规范化序列化，保证字节可比。
     content_str = json.dumps(data, sort_keys=True, ensure_ascii=False, indent=2)
     atomic_write(file_path, content_str)
+
+    return {'referenced': referenced_paths, 'failed': failed_paths}
 
 
 # ---------------------------------------------------------------------------
@@ -565,6 +698,27 @@ def _fetch_remote_version(check_update_url: str, adapter_id: str = '') -> str | 
     return str(payload['version'])
 
 
+def _repair_missing_scripts(file_path: str, base_url: str) -> list[str]:
+    """仅重新下载本地缓存中缺失的脚本，返回下载失败的脚本键。
+
+    用于“未变化”短路路径（版本未变 / 304 / 内容指纹未变）下的自愈：
+    此时 adapters.jsonc 无需更新，只需补齐缺失的 scripts/ 文件。
+    """
+    only_keys = set(_missing_scripts(file_path, base_url))
+    if not only_keys:
+        return []
+    data = _read_subscription_file(file_path)
+    if not data:
+        return []
+    result = _write_adapter_file(file_path, base_url, data, only_keys=only_keys)
+    failed = result.get('failed', [])
+    if failed:
+        logger.error('Script repair incomplete (%s): %s', base_url, ', '.join(failed))
+    else:
+        logger.info('Script repair completed (%s): %d script(s)', base_url, len(only_keys))
+    return failed
+
+
 def fetch_subscription(url: str, name: str = '', adapter_id: str = '', force: bool = False,
                        update_interval: int = 86400) -> str | None:
     """下载远程订阅源并镜像到本地。
@@ -610,7 +764,20 @@ def fetch_subscription(url: str, name: str = '', adapter_id: str = '', force: bo
     # 从 _meta.json 读取运行时状态
     meta_entry = _get_meta_entry(meta_key)
 
-    if not force:
+    # 本地完整性检查（无网络）：脚本缺失时跳过所有“未变化”短路，进入自愈流程
+    missing_scripts = _missing_scripts(file_path, base_url)
+    needs_repair = bool(missing_scripts)
+    # 缓存的 adapters.jsonc 本身丢失时，必须无条件重取（旧内容的 ETag/指纹都不可信）
+    cache_missing = not os.path.exists(file_path)
+    if needs_repair:
+        logger.warning(
+            "Subscription cache incomplete: %s missing %d script(s): %s",
+            meta_key, len(missing_scripts), ', '.join(missing_scripts[:10]),
+        )
+    if cache_missing:
+        logger.warning("Subscription cache file missing: %s", file_path)
+
+    if not force and not needs_repair and not cache_missing:
         last_fetch = meta_entry.get('last_fetch')
         if last_fetch and time.time() - last_fetch < update_interval:
             return file_path
@@ -625,8 +792,14 @@ def fetch_subscription(url: str, name: str = '', adapter_id: str = '', force: bo
         if check_update_url:
             remote_version = _fetch_remote_version(check_update_url, adapter_id=adapter_id)
             if remote_version is not None:
-                if stored_version is not None and remote_version == str(stored_version):
-                    _update_meta_entry(meta_key, last_fetch=time.time())
+                if (stored_version is not None and remote_version == str(stored_version)
+                        and not cache_missing):
+                    update_fields = {'last_fetch': time.time()}
+                    if needs_repair:
+                        failed = _repair_missing_scripts(file_path, meta_key)
+                        update_fields['script_failures'] = failed
+                        update_fields['fetch_status'] = 'partial' if failed else 'ok'
+                    _update_meta_entry(meta_key, **update_fields)
                     _last_fetch_cache[(meta_key, name)] = (time.time(), update_interval)
                     logger.info("Subscription version unchanged: %s (%s)", meta_key, remote_version)
                     return file_path
@@ -639,12 +812,29 @@ def fetch_subscription(url: str, name: str = '', adapter_id: str = '', force: bo
 
         data, response_meta = _download_jsonc(file_url, etag=etag, last_modified=last_modified)
 
+        if data is None and cache_missing:
+            # 缓存文件已丢失，但服务端依据旧验证器返回 304：无条件重取一次
+            logger.warning(
+                "Cache file missing but got 304, refetching unconditionally: %s", meta_key
+            )
+            data, response_meta = _download_jsonc(file_url)
+
         if data is None:
+            if cache_missing and not os.path.exists(file_path):
+                logger.error(
+                    "Cache missing and remote returned 304, cannot rebuild: %s", meta_key
+                )
+                return None
             update_fields = {'last_fetch': time.time()}
             if remote_version is not None:
                 # 版本预检发现了新版本，但正文 304：同步版本号，不重下脚本。
                 update_fields['version'] = remote_version
                 logger.warning("Subscription 304 but version changed: %s (%s)", meta_key, remote_version)
+            if needs_repair:
+                # 304 只代表 adapters.jsonc 未变，脚本缓存仍需补齐
+                failed = _repair_missing_scripts(file_path, meta_key)
+                update_fields['script_failures'] = failed
+                update_fields['fetch_status'] = 'partial' if failed else 'ok'
             _update_meta_entry(meta_key, **update_fields)
             _last_fetch_cache[(meta_key, name)] = (time.time(), update_interval)
             logger.info("Subscription unchanged: %s", meta_key)
@@ -676,11 +866,19 @@ def fetch_subscription(url: str, name: str = '', adapter_id: str = '', force: bo
                 # 发布者移除了版本接口时，清理旧的运行时值，避免继续请求过期 URL
                 update_fields['checkUpdateUrl'] = ''
 
-        if update_fields['content_hash'] != meta_entry.get('content_hash'):
-            _write_adapter_file(file_path, meta_key, data)
+        if update_fields['content_hash'] != meta_entry.get('content_hash') or cache_missing:
+            result = _write_adapter_file(file_path, meta_key, data)
+            failed = result.get('failed', [])
+            update_fields['script_failures'] = failed
+            update_fields['fetch_status'] = 'partial' if failed else 'ok'
             logger.info("Subscription updated: %s", meta_key)
         else:
             logger.info("Subscription content unchanged (hash): %s", meta_key)
+            if needs_repair:
+                # 内容未变时不会重写缓存，但缺失脚本必须补齐
+                failed = _repair_missing_scripts(file_path, meta_key)
+                update_fields['script_failures'] = failed
+                update_fields['fetch_status'] = 'partial' if failed else 'ok'
 
         _update_meta_entry(meta_key, **update_fields)
 
@@ -709,16 +907,20 @@ def _needs_fetch(sub: dict) -> bool:
         return False
     cache_key = (source, name)
 
+    adapter_id = sub.get('id', '')
+    sub_file = _get_adapter_cache_path(_sub_name(source, name), adapter_id or name)
+    if not os.path.exists(sub_file):
+        return True
+
+    # 本地完整性优先于时间闸门：脚本缺失时立即重试，直到补齐
+    if _missing_scripts(sub_file, _normalize_source_to_directory(source)):
+        return True
+
     cached = _last_fetch_cache.get(cache_key)
     if cached is not None:
         cached_fetch, cached_interval = cached
         if cached_interval == interval and now - cached_fetch < interval:
             return False
-
-    adapter_id = sub.get('id', '')
-    sub_file = _get_adapter_cache_path(_sub_name(source, name), adapter_id or name)
-    if not os.path.exists(sub_file):
-        return True
 
     # 从 _meta.json 获取 last_fetch（key 需规范化为目录 URL）
     meta_key = _normalize_source_to_directory(source)

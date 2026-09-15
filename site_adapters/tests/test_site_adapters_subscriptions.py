@@ -269,6 +269,127 @@ class SiteAdaptersSubscriptionsTestCase(TestCase):
         refs = _collect_script_refs(data)
         self.assertEqual(refs["example.com"], ["new_script.py"])
 
+    def test_collect_script_refs_descends_into_routes_and_defaults(self):
+        """routes 与 defaults 中的脚本也必须被收集，否则不会被缓存。"""
+        from site_adapters.services.subscriptions import _collect_script_refs
+        data = {
+            "defaults": {
+                "snapshot": {"scripts": [{"path": "shared.js", "hook": "after"}]}
+            },
+            "domains": {
+                "example.com": {
+                    "defaults": {
+                        "metadata": {"scripts": [{"path": "d.py", "hook": "before"}]}
+                    },
+                    "routes": {
+                        "/article/": {
+                            "metadata": {
+                                "scripts": [{"path": "route.py", "hook": "replace"}]
+                            },
+                            "snapshot": {
+                                "scripts": [{"path": "route_snap.js", "hook": "after"}]
+                            },
+                        }
+                    },
+                }
+            },
+        }
+        refs = _collect_script_refs(data)
+        self.assertEqual(refs["_defaults"], ["shared.js"])
+        self.assertEqual(
+            set(refs["example.com"]), {"d.py", "route.py", "route_snap.js"}
+        )
+
+    def test_fetch_downloads_route_scripts(self):
+        """路由级脚本应被下载到 scripts/ 目录。"""
+        payload = {
+            "domains": {
+                "example.com": {
+                    "routes": {
+                        "/article/": {
+                            "metadata": {
+                                "scripts": [{"path": "route.py", "hook": "replace"}]
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        def mock_get(url, *args, **kwargs):
+            if url.endswith("route.py"):
+                return self.script_response("# route")
+            return self.response(payload)
+
+        with mock.patch(
+            "site_adapters.services.subscriptions.requests.get",
+            side_effect=mock_get,
+        ):
+            path = fetch_subscription(
+                "https://example.test/bundle/", name="bundle", force=True
+            )
+
+        self.assertTrue(
+            os.path.exists(os.path.join(os.path.dirname(path), "scripts", "route.py"))
+        )
+
+    def test_fetch_recovers_when_cache_file_deleted(self):
+        """缓存文件丢失时，即使 _meta.json 中有旧指纹也应完整重下。"""
+        payload = self.script_payload()
+
+        def mock_get(url, *args, **kwargs):
+            if url.endswith("a.js"):
+                return self.script_response("// a")
+            return self.response(payload)
+
+        with mock.patch(
+            "site_adapters.services.subscriptions.requests.get",
+            side_effect=mock_get,
+        ):
+            path = fetch_subscription(
+                "https://example.test/bundle/", name="bundle", force=True
+            )
+            # 模拟缓存目录被清空（_meta.json 仍保留旧 content_hash）
+            shutil.rmtree(os.path.dirname(path))
+            path = fetch_subscription(
+                "https://example.test/bundle/", name="bundle", force=True
+            )
+
+        self.assertTrue(os.path.exists(path))
+        self.assertTrue(
+            os.path.exists(os.path.join(os.path.dirname(path), "scripts", "a.js"))
+        )
+
+    def test_fetch_recovers_when_cache_deleted_and_server_304(self):
+        """缓存丢失但服务端依据旧 ETag 返回 304 时，应无条件重取。"""
+        payload = self.script_payload()
+        state = {"body": 0}
+
+        def mock_get(url, *args, **kwargs):
+            if url.endswith("a.js"):
+                return self.script_response("// a")
+            state["body"] += 1
+            if state["body"] == 2:
+                return self.response_304()
+            return self.response(payload, headers={"ETag": '"v1"'})
+
+        with mock.patch(
+            "site_adapters.services.subscriptions.requests.get",
+            side_effect=mock_get,
+        ):
+            path = fetch_subscription(
+                "https://example.test/bundle/", name="bundle", force=True
+            )
+            shutil.rmtree(os.path.dirname(path))
+            path = fetch_subscription(
+                "https://example.test/bundle/", name="bundle", force=True
+            )
+
+        self.assertTrue(os.path.exists(path))
+        self.assertTrue(
+            os.path.exists(os.path.join(os.path.dirname(path), "scripts", "a.js"))
+        )
+
     def test_cleanup_removes_unreferenced_scripts(self):
         """下载后应清理不再被引用的脚本文件。"""
         from site_adapters.services.subscriptions import _write_adapter_file
@@ -504,3 +625,223 @@ class SiteAdaptersSubscriptionsTestCase(TestCase):
             # force 应重新拉取
             fetch_subscription("https://example.test/bundle/", name="bundle", force=True)
             self.assertEqual(calls, ["https://example.test/bundle/adapters.jsonc"])
+
+    # ------------------------------------------------------------------
+    # 缓存自愈：脚本未下载完整时，后续更新应自动补齐
+    # ------------------------------------------------------------------
+
+    def script_response(self, text, status=200):
+        resp = mock.Mock()
+        resp.status_code = status
+        resp.text = text
+        resp.headers = {}
+        resp.raise_for_status.return_value = None
+        return resp
+
+    def script_payload(self):
+        return {
+            "domains": {
+                "example.com": {
+                    "snapshot": {"scripts": [{"path": "a.js", "hook": "after"}]}
+                }
+            },
+        }
+
+    def test_repairs_missing_script_when_content_unchanged(self):
+        """脚本本地丢失时，即使内容指纹未变也应重新下载。"""
+        payload = self.script_payload()
+        script_hits = []
+
+        def mock_get(url, *args, **kwargs):
+            if url.endswith("a.js"):
+                script_hits.append(url)
+                return self.script_response("// a")
+            return self.response(payload)
+
+        with mock.patch(
+            "site_adapters.services.subscriptions.requests.get",
+            side_effect=mock_get,
+        ):
+            path = fetch_subscription(
+                "https://example.test/bundle/", name="bundle", force=True
+            )
+            script_path = os.path.join(os.path.dirname(path), "scripts", "a.js")
+            self.assertTrue(os.path.exists(script_path))
+            # 模拟下载中断导致脚本缓存不完整
+            os.remove(script_path)
+            script_hits.clear()
+            fetch_subscription("https://example.test/bundle/", name="bundle", force=True)
+
+        self.assertTrue(os.path.exists(script_path))
+        self.assertEqual(script_hits, ["https://example.test/bundle/scripts/a.js"])
+
+    def test_repairs_missing_script_on_304(self):
+        """服务端 304 时仍需补齐缺失脚本。"""
+        payload = {
+            "_meta": {"id": "bundle", "name": "bundle", "version": 1},
+            **self.script_payload(),
+        }
+        state = {"body": 0}
+
+        def mock_get(url, *args, **kwargs):
+            if url.endswith("a.js"):
+                return self.script_response("// a")
+            state["body"] += 1
+            if state["body"] == 1:
+                return self.response(payload)
+            return self.response_304()
+
+        with mock.patch(
+            "site_adapters.services.subscriptions.requests.get",
+            side_effect=mock_get,
+        ):
+            path = fetch_subscription(
+                "https://example.test/bundle/", name="bundle", force=True
+            )
+            script_path = os.path.join(os.path.dirname(path), "scripts", "a.js")
+            os.remove(script_path)
+            fetch_subscription("https://example.test/bundle/", name="bundle", force=True)
+
+        self.assertTrue(os.path.exists(script_path))
+
+    def test_repairs_missing_script_when_version_unchanged(self):
+        """版本预检判定未变时仍需补齐缺失脚本。"""
+        payload = {
+            "_meta": {
+                "id": "bundle",
+                "name": "bundle",
+                "version": 1,
+                "checkUpdateUrl": "https://example.test/bundle/check",
+            },
+            **self.script_payload(),
+        }
+
+        def mock_get(url, *args, **kwargs):
+            if url.endswith("/check"):
+                return self.response({"id": "bundle", "version": 1})
+            if url.endswith("a.js"):
+                return self.script_response("// a")
+            return self.response(payload)
+
+        with mock.patch(
+            "site_adapters.services.subscriptions.requests.get",
+            side_effect=mock_get,
+        ):
+            path = fetch_subscription(
+                "https://example.test/bundle/", name="bundle", force=True
+            )
+            script_path = os.path.join(os.path.dirname(path), "scripts", "a.js")
+            os.remove(script_path)
+            fetch_subscription("https://example.test/bundle/", name="bundle", force=True)
+
+        self.assertTrue(os.path.exists(script_path))
+
+    def test_needs_fetch_ignores_interval_when_scripts_missing(self):
+        """脚本缺失时，_needs_fetch 应忽略时间闸门触发补齐。"""
+        from site_adapters.services.subscriptions import (
+            _last_fetch_cache,
+            _needs_fetch,
+        )
+
+        payload = self.script_payload()
+
+        def mock_get(url, *args, **kwargs):
+            if url.endswith("a.js"):
+                return self.script_response("// a")
+            return self.response(payload)
+
+        with mock.patch(
+            "site_adapters.services.subscriptions.requests.get",
+            side_effect=mock_get,
+        ):
+            path = fetch_subscription(
+                "https://example.test/bundle/", name="bundle", force=True
+            )
+
+        sub = {"source": "https://example.test/bundle/", "name": "bundle"}
+        _last_fetch_cache.clear()
+        self.assertFalse(_needs_fetch(sub))
+        os.remove(os.path.join(os.path.dirname(path), "scripts", "a.js"))
+        self.assertTrue(_needs_fetch(sub))
+
+    def test_script_download_failure_marks_partial(self):
+        """某个脚本下载失败时，应记录 partial 状态与失败脚本。"""
+        from site_adapters.services.subscriptions import _get_meta_entry
+
+        payload = self.script_payload()
+
+        def mock_get(url, *args, **kwargs):
+            if url.endswith("a.js"):
+                resp = mock.Mock()
+                resp.status_code = 500
+                resp.headers = {}
+                return resp
+            return self.response(payload)
+
+        with mock.patch(
+            "site_adapters.services.subscriptions.requests.get",
+            side_effect=mock_get,
+        ), mock.patch("site_adapters.services.subscriptions.time.sleep"):
+            fetch_subscription("https://example.test/bundle/", name="bundle", force=True)
+
+        entry = _get_meta_entry("https://example.test/bundle/")
+        self.assertEqual(entry.get("fetch_status"), "partial")
+        self.assertEqual(entry.get("script_failures"), ["a.js"])
+
+    def test_script_download_retries_transient_failure(self):
+        """瞬时 5xx 应重试，重试成功后缓存完整。"""
+        payload = self.script_payload()
+        state = {"n": 0}
+
+        def mock_get(url, *args, **kwargs):
+            if url.endswith("a.js"):
+                state["n"] += 1
+                if state["n"] == 1:
+                    return self.script_response("", status=503)
+                return self.script_response("// a")
+            return self.response(payload)
+
+        with mock.patch(
+            "site_adapters.services.subscriptions.requests.get",
+            side_effect=mock_get,
+        ), mock.patch("site_adapters.services.subscriptions.time.sleep"):
+            path = fetch_subscription(
+                "https://example.test/bundle/", name="bundle", force=True
+            )
+
+        self.assertEqual(state["n"], 2)
+        script_path = os.path.join(os.path.dirname(path), "scripts", "a.js")
+        self.assertTrue(os.path.exists(script_path))
+
+    def test_failed_script_download_preserves_existing_file(self):
+        """脚本刷新失败时，不应删除磁盘上已有的旧脚本。"""
+        from site_adapters.services.subscriptions import _write_adapter_file
+
+        temp_dir = os.path.join(self.base_dir, "adapters", "x.y")
+        scripts_dir = os.path.join(temp_dir, "scripts")
+        os.makedirs(scripts_dir, exist_ok=True)
+        existing = os.path.join(scripts_dir, "a.js")
+        with open(existing, "w", encoding="utf-8") as f:
+            f.write("// old")
+
+        data = self.script_payload()
+
+        def mock_get(url, *args, **kwargs):
+            resp = mock.Mock()
+            resp.status_code = 500
+            resp.headers = {}
+            return resp
+
+        file_path = os.path.join(temp_dir, "adapters.jsonc")
+        with mock.patch(
+            "site_adapters.services.subscriptions.requests.get",
+            side_effect=mock_get,
+        ), mock.patch("site_adapters.services.subscriptions.time.sleep"):
+            result = _write_adapter_file(
+                file_path, "https://example.test/bundle/", data
+            )
+
+        self.assertTrue(os.path.exists(existing))
+        with open(existing, encoding="utf-8") as f:
+            self.assertEqual(f.read(), "// old")
+        self.assertEqual(result["failed"], ["a.js"])

@@ -510,7 +510,11 @@ var MODE = (function () { try { return localStorage.getItem(TAB_KEY) || "subscri
           btnEl.innerHTML = '<svg width="16" height="16" aria-hidden="true" class="wa-spin"><use href="#ld-icon-loader"></use></svg>';
           apiPost(urls.subscriptionManage, { action: 'update', index: idx, force: 1 }).then(function (r) {
             if (r.error) { toast(r.error, 'error'); }
-            else { subData = r.adapters || []; renderSubscriptions(); toast(gettext('Updated'), 'success'); }
+            else {
+              subData = r.adapters || []; renderSubscriptions();
+              if (r.warning) { toast(r.warning, 'warning'); }
+              else { toast(gettext('Updated'), 'success'); }
+            }
           }).catch(function () { toast(gettext('Update failed'), 'error'); })
           .finally(function () { btnEl.disabled = false; btnEl.innerHTML = origHTML; });
         });
