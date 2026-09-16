@@ -490,7 +490,7 @@ class WebsiteLoaderTestCase(TestCase):
             mock_response = mock.Mock()
             mock_response.iter_content.return_value = [b"<html></html>"]
             mock_response.status_code = 200
-            mock_get.return_value.__enter__.return_value = mock_response
+            mock_get.return_value = mock_response
             website_loader.load_page("https://example.com", load_full_page=True)
             mock_wait.assert_called_once_with("example.com")
 
@@ -500,8 +500,7 @@ class WebsiteLoaderTestCase(TestCase):
             mock_response = mock.Mock()
             mock_response.status_code = 200
             mock_response.iter_content = mock.Mock(return_value=iter([]))
-            mock_get.return_value.__enter__ = mock.Mock(return_value=mock_response)
-            mock_get.return_value.__exit__ = mock.Mock(return_value=False)
+            mock_get.return_value = mock_response
             result = website_loader.load_page("https://example.com")
             self.assertEqual("", result)
 
@@ -1544,8 +1543,7 @@ class UseBrowserTestCase(TestCase):
             ),
             mock.patch("bookmarks.services.website_loader.requests.get") as mock_get,
         ):
-            mock_get.return_value.__enter__ = mock.MagicMock(return_value=mock_response)
-            mock_get.return_value.__exit__ = mock.MagicMock(return_value=False)
+            mock_get.return_value = mock_response
             result = website_loader.load_page("https://example.com", config)
 
         self.assertIn("Requests", result)
@@ -1566,8 +1564,7 @@ class UseBrowserTestCase(TestCase):
             ) as mock_browser,
             mock.patch("bookmarks.services.website_loader.requests.get") as mock_get,
         ):
-            mock_get.return_value.__enter__ = mock.MagicMock(return_value=mock_response)
-            mock_get.return_value.__exit__ = mock.MagicMock(return_value=False)
+            mock_get.return_value = mock_response
             result = website_loader.load_page("https://example.com", config)
 
         mock_browser.assert_not_called()
@@ -1805,3 +1802,133 @@ class BrowserEventLoopLeakTestCase(TestCase):
             self.fail("Event loop leaked after browser load")
         except RuntimeError:
             pass  # expected: no running loop
+
+
+class HttpEngineTestCase(TestCase):
+    """HTTP engine selection: per-domain config http_engine > env var > default."""
+
+    def test_defaults_to_requests(self):
+        self.assertEqual(website_loader._http_engine(), "requests")
+        self.assertEqual(website_loader._http_engine({}), "requests")
+
+    def test_from_config(self):
+        self.assertEqual(
+            website_loader._http_engine({"http_engine": "curl_cffi"}), "curl_cffi"
+        )
+
+    def test_config_overrides_env(self):
+        with mock.patch.dict("os.environ", {"LD_HTTP_ENGINE": "requests"}, clear=False):
+            self.assertEqual(
+                website_loader._http_engine({"http_engine": "curl_cffi"}),
+                "curl_cffi",
+            )
+
+    def test_env_used_when_no_config(self):
+        with mock.patch.dict("os.environ", {"LD_HTTP_ENGINE": "curl_cffi"}, clear=False):
+            self.assertEqual(website_loader._http_engine(None), "curl_cffi")
+
+    def test_unknown_value_falls_back_to_requests(self):
+        with self.assertLogs(website_loader.logger, level="WARNING"):
+            self.assertEqual(
+                website_loader._http_engine({"http_engine": "tls_client"}), "requests"
+            )
+
+    def test_load_page_uses_requests_by_default(self):
+        with (
+            mock.patch("bookmarks.services.website_loader.requests.get") as mock_get,
+            mock.patch("curl_cffi.requests.get") as mock_cget,
+        ):
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.iter_content.return_value = [b"<html></html>"]
+            mock_get.return_value = mock_response
+            website_loader.load_page("https://example.com")
+            mock_get.assert_called_once()
+            mock_cget.assert_not_called()
+
+    def test_load_page_uses_curl_cffi_when_configured(self):
+        with (
+            mock.patch("bookmarks.services.website_loader.requests.get") as mock_get,
+            mock.patch("curl_cffi.requests.get") as mock_cget,
+        ):
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.iter_content.return_value = [b"<html></html>"]
+            mock_cget.return_value = mock_response
+            website_loader.load_page(
+                "https://example.com", {"http_engine": "curl_cffi"}
+            )
+            mock_cget.assert_called_once()
+            mock_get.assert_not_called()
+
+    def test_load_page_falls_back_to_requests_on_curl_cffi_error(self):
+        with (
+            mock.patch("bookmarks.services.website_loader.requests.get") as mock_get,
+            mock.patch(
+                "curl_cffi.requests.get", side_effect=ConnectionError("boom")
+            ) as mock_cget,
+        ):
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.iter_content.return_value = [b"<html></html>"]
+            mock_get.return_value = mock_response
+            result = website_loader.load_page(
+                "https://example.com", {"http_engine": "curl_cffi"}
+            )
+            mock_cget.assert_called_once()
+            mock_get.assert_called_once()
+            self.assertIn("html", result)
+
+    def test_use_browser_priority_then_curl_cffi_fallback(self):
+        """use_browser wins; on browser failure falls to the configured engine."""
+        with (
+            mock.patch.object(
+                website_loader, "_load_page_via_browser", return_value=None
+            ),
+            mock.patch("curl_cffi.requests.get") as mock_cget,
+        ):
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.iter_content.return_value = [
+                b"<html><title>HTTP</title></html>"
+            ]
+            mock_cget.return_value = mock_response
+            result = website_loader.load_page(
+                "https://example.com",
+                {"use_browser": {}, "http_engine": "curl_cffi"},
+            )
+            mock_cget.assert_called_once()
+            self.assertIn("HTTP", result)
+
+    def test_curl_cffi_drops_builtin_ua(self):
+        """内置默认 UA（Edge）不与 Chrome 指纹同发；未显式配置时交给 Chrome UA。"""
+        with mock.patch("curl_cffi.requests.get") as mock_cget:
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.iter_content.return_value = [b"<html></html>"]
+            mock_cget.return_value = mock_response
+            config = {
+                "http_engine": "curl_cffi",
+                "headers": {"User-Agent": "Mozilla/5.0 Edg/138.0.0.0"},
+            }
+            website_loader.load_page("https://example.com", config)
+            kwargs = mock_cget.call_args.kwargs
+            self.assertNotIn("User-Agent", kwargs.get("headers", {}))
+
+    def test_curl_cffi_keeps_explicit_ua(self):
+        """站点显式配置的 UA 保留（如 feishu 的 Googlebot）。"""
+        with mock.patch("curl_cffi.requests.get") as mock_cget:
+            mock_response = mock.Mock()
+            mock_response.status_code = 200
+            mock_response.iter_content.return_value = [b"<html></html>"]
+            mock_cget.return_value = mock_response
+            config = {
+                "http_engine": "curl_cffi",
+                "headers": {"User-Agent": "Googlebot/2.1"},
+                "_raw": {"metadata": {"http": {"User-Agent": "Googlebot/2.1"}}},
+            }
+            website_loader.load_page("https://example.com", config)
+            kwargs = mock_cget.call_args.kwargs
+            self.assertEqual(
+                kwargs.get("headers", {}).get("User-Agent"), "Googlebot/2.1"
+            )

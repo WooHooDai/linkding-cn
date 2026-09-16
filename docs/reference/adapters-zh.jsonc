@@ -40,6 +40,7 @@
 //       "rewrite_url": ["^https://m\\.example\\.com/(.*)", "https://www.example.com/\\1"], // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。用于改写最终展示/保存的 URL。
 //       "request_url": ["^https://www\\.example\\.com/article/", "https://api.example.com/item/"], // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。用于改写真正发起请求的 URL。
 //       "http": {},                                          // 自定义 HTTP 请求头。所有键值对都会作为 header 透传。
+//       "http_engine": "curl_cffi",                          // 页面加载使用的 HTTP 客户端引擎。"requests"（默认）使用 python-requests；"curl_cffi" 模拟 Chrome 的 TLS/HTTP2 指纹，可绕过反爬 403 挑战页（如知乎）。解析优先级：域配置 > LD_HTTP_ENGINE 环境变量 > 默认 "requests"。curl_cffi 遇到传输层错误时回退到 requests 并记录警告。
 //       "auth": null,                                        // 认证配置。
 //     },
 //     // metadata / snapshot / reader section 与下方域名配置结构相同
@@ -61,6 +62,7 @@
     "rewrite_url": ["^https://m\\.example\\.com/(.*)", "https://www.example.com/\\1"], // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。用于改写最终展示/保存的 URL。
     "request_url": ["^https://www\\.example\\.com/article/", "https://api.example.com/item/"], // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。用于改写真正发起请求的 URL。
     "http": {},                                            // 自定义 HTTP 请求头。所有键值对都会作为 header 透传。
+    "http_engine": "curl_cffi",                            // 页面加载使用的 HTTP 客户端引擎。"requests"（默认）使用 python-requests；"curl_cffi" 模拟 Chrome 的 TLS/HTTP2 指纹，可绕过反爬 403 挑战页（如知乎）。解析优先级：域配置 > LD_HTTP_ENGINE 环境变量 > 默认 "requests"。curl_cffi 遇到传输层错误时回退到 requests 并记录警告。
     "auth": null,                                          // 认证配置。
   },
 
@@ -144,6 +146,7 @@
         "rewrite_url": ["^https://m\\.example\\.com/(.*)", "https://www.example.com/\\1"], // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。用于改写最终展示/保存的 URL。
         "request_url": ["^https://www\\.example\\.com/article/", "https://api.example.com/item/"], // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。用于改写真正发起请求的 URL。
         "http": {},                                        // 自定义 HTTP 请求头。所有键值对都会作为 header 透传。
+        "http_engine": "curl_cffi",                        // 页面加载使用的 HTTP 客户端引擎。"requests"（默认）使用 python-requests；"curl_cffi" 模拟 Chrome 的 TLS/HTTP2 指纹，可绕过反爬 403 挑战页（如知乎）。解析优先级：域配置 > LD_HTTP_ENGINE 环境变量 > 默认 "requests"。curl_cffi 遇到传输层错误时回退到 requests 并记录警告。
         "auth": null,                                      // 认证配置。
       },
 
@@ -151,6 +154,7 @@
       "metadata": {
         "auth": null,                                      // 认证配置。
         "http": {},                                        // 自定义 HTTP 请求头。所有键值对都会作为 header 透传。
+        "http_engine": "curl_cffi",                        // 页面加载使用的 HTTP 客户端引擎。"requests"（默认）使用 python-requests；"curl_cffi" 模拟 Chrome 的 TLS/HTTP2 指纹，可绕过反爬 403 挑战页（如知乎）。解析优先级：域配置 > LD_HTTP_ENGINE 环境变量 > 默认 "requests"。curl_cffi 遇到传输层错误时回退到 requests 并记录警告。
         "request_url": ["^https://www\\.example\\.com/article/", "https://api.example.com/item/"], // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。用于改写真正发起请求的 URL。
         "rewrite_url": ["^https://m\\.example\\.com/(.*)", "https://www.example.com/\\1"], // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。用于改写最终展示/保存的 URL。
         "content_type": "html",                            // 声明式提取的响应格式。"html" 使用 CSS 选择器和 JSON-LD 兜底；"xml" 使用标准 XPath；"json" 使用标准 JSONPath，例如 $.data.items[0].title。
@@ -180,6 +184,7 @@
         "content_type": "html",                            // 快照格式。"html" 使用 SingleFile；"xml" 和 "json" 保存原始响应。
         "auth": null,                                      // 认证配置。
         "http": {},                                        // 自定义 HTTP 请求头。所有键值对都会作为 header 透传。
+        "http_engine": "curl_cffi",                        // 页面加载使用的 HTTP 客户端引擎。"requests"（默认）使用 python-requests；"curl_cffi" 模拟 Chrome 的 TLS/HTTP2 指纹，可绕过反爬 403 挑战页（如知乎）。解析优先级：域配置 > LD_HTTP_ENGINE 环境变量 > 默认 "requests"。curl_cffi 遇到传输层错误时回退到 requests 并记录警告。
         "request_url": ["^https://www\\.example\\.com/article/", "https://api.example.com/item/"], // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。用于改写真正发起请求的 URL。
         "keep_elements": [],                               // 快照中保留的元素。其余全部移除。
         "remove_elements": [],                             // 快照中移除的元素。

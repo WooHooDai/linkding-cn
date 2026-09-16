@@ -47,6 +47,12 @@ DEFAULT_FIELDS = {
         "zh": "自定义 HTTP 请求头。所有键值对都会作为 header 透传。",
         "example": {},
     },
+    "http_engine": {
+        "type": '"requests"|"curl_cffi"',
+        "en": 'HTTP client engine used for page loading. "requests" (default) uses python-requests; "curl_cffi" impersonates a Chrome TLS/HTTP2 fingerprint, which bypasses anti-bot 403 challenge pages (e.g. zhihu). Resolution order: domain config > LD_HTTP_ENGINE env var > "requests". On transport errors, curl_cffi falls back to requests with a warning.',
+        "zh": '页面加载使用的 HTTP 客户端引擎。"requests"（默认）使用 python-requests；"curl_cffi" 模拟 Chrome 的 TLS/HTTP2 指纹，可绕过反爬 403 挑战页（如知乎）。解析优先级：域配置 > LD_HTTP_ENGINE 环境变量 > 默认 "requests"。curl_cffi 遇到传输层错误时回退到 requests 并记录警告。',
+        "example": "curl_cffi",
+    },
     "auth": {
         "type": "auth",
         "en": "Authentication config.",
@@ -69,6 +75,12 @@ METADATA_FIELDS = {
         "en": "Custom HTTP request headers. Every key-value pair is passed as a header.",
         "zh": "自定义 HTTP 请求头。所有键值对都会作为 header 透传。",
         "example": {},
+    },
+    "http_engine": {
+        "type": '"requests"|"curl_cffi"',
+        "en": 'HTTP client engine used for page loading. "requests" (default) uses python-requests; "curl_cffi" impersonates a Chrome TLS/HTTP2 fingerprint, which bypasses anti-bot 403 challenge pages (e.g. zhihu). Resolution order: domain config > LD_HTTP_ENGINE env var > "requests". On transport errors, curl_cffi falls back to requests with a warning.',
+        "zh": '页面加载使用的 HTTP 客户端引擎。"requests"（默认）使用 python-requests；"curl_cffi" 模拟 Chrome 的 TLS/HTTP2 指纹，可绕过反爬 403 挑战页（如知乎）。解析优先级：域配置 > LD_HTTP_ENGINE 环境变量 > 默认 "requests"。curl_cffi 遇到传输层错误时回退到 requests 并记录警告。',
+        "example": "curl_cffi",
     },
     "request_url": {
         "type": "rewrite",
@@ -196,6 +208,12 @@ SNAPSHOT_FIELDS = {
         "en": "Custom HTTP request headers. Every key-value pair is passed as a header.",
         "zh": "自定义 HTTP 请求头。所有键值对都会作为 header 透传。",
         "example": {},
+    },
+    "http_engine": {
+        "type": '"requests"|"curl_cffi"',
+        "en": 'HTTP client engine used for page loading. "requests" (default) uses python-requests; "curl_cffi" impersonates a Chrome TLS/HTTP2 fingerprint, which bypasses anti-bot 403 challenge pages (e.g. zhihu). Resolution order: domain config > LD_HTTP_ENGINE env var > "requests". On transport errors, curl_cffi falls back to requests with a warning.',
+        "zh": '页面加载使用的 HTTP 客户端引擎。"requests"（默认）使用 python-requests；"curl_cffi" 模拟 Chrome 的 TLS/HTTP2 指纹，可绕过反爬 403 挑战页（如知乎）。解析优先级：域配置 > LD_HTTP_ENGINE 环境变量 > 默认 "requests"。curl_cffi 遇到传输层错误时回退到 requests 并记录警告。',
+        "example": "curl_cffi",
     },
     "request_url": {
         "type": "rewrite",

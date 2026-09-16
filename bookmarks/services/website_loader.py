@@ -36,6 +36,103 @@ from site_adapters.services.execution_log import log_execution
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# HTTP engine: curl_cffi (Chrome fingerprint) with requests fallback
+# ---------------------------------------------------------------------------
+# 引擎解析优先级：per-domain 配置 http_engine > 环境变量 LD_HTTP_ENGINE > 默认 "requests"。
+# "curl_cffi" 通过 impersonate="chrome" 模拟 Chrome 的 TLS/HTTP2 指纹，可绕过 zhihu 等
+# 站点对 python-requests 指纹的 403 挑战；默认关闭以保证所有站点行为不变，仅显式
+# 配置 http_engine 的域启用。
+def _http_engine(config=None) -> str:
+    engine = None
+    if config:
+        engine = config.get("http_engine")
+    if not engine:
+        engine = os.environ.get("LD_HTTP_ENGINE", "")
+    engine = (engine or "requests").strip().lower()
+    if engine not in ("requests", "curl_cffi"):
+        logger.warning("Unknown http_engine %r, falling back to requests", engine)
+        return "requests"
+    return engine
+
+
+def _is_transport_exception(exc) -> bool:
+    """True for transport-level errors from either the requests or curl_cffi engine."""
+    if isinstance(exc, requests.exceptions.RequestException):
+        return True
+    try:
+        from curl_cffi.requests.exceptions import RequestException as _CurlCffiRequestException
+    except ImportError:
+        return False
+    return isinstance(exc, _CurlCffiRequestException)
+
+
+def _has_explicit_user_agent(config) -> bool:
+    """True when the site adapter explicitly configures a User-Agent.
+
+    Only explicit configs (in the adapter's http/headers, visible in the raw
+    merged config) should override the impersonated Chrome UA; the _builtin
+    global default UA (Edge) would otherwise conflict with the Chrome TLS
+    fingerprint and get rejected by fingerprint-checking sites.
+    """
+    raw = (config or {}).get("_raw") or {}
+    for section in ("defaults", "metadata", "snapshot", "reader"):
+        sec = raw.get(section)
+        if isinstance(sec, dict):
+            h = sec.get("http") or sec.get("headers")
+            if isinstance(h, dict) and h.get("User-Agent"):
+                return True
+    h = raw.get("http") or raw.get("headers")
+    if isinstance(h, dict) and h.get("User-Agent"):
+        return True
+    return False
+
+
+def _open_http_stream(url: str, timeout, headers, cookies, proxies, config=None):
+    """Open a streaming GET for page loading.
+
+    Engine selection: per-domain config ``http_engine`` > ``LD_HTTP_ENGINE``
+    env var > default "requests". When curl_cffi is selected it impersonates a
+    Chrome TLS/HTTP2 fingerprint (required by anti-bot sites such as zhihu) and
+    falls back to the classic requests engine on transport failure.
+    """
+    if _http_engine(config) == "curl_cffi":
+        try:
+            from curl_cffi import requests as chttp
+
+            c_headers = dict(headers or {})
+            # UA 优先顺序：站点显式配置（适配器 http/headers）> Chrome impersonate UA > 空。
+            # 空 UA 或 _builtin 全局默认 UA（Edge）与 Chrome TLS 指纹不一致，
+            # 会让反爬站点拒绝请求，因此默认交给 impersonate 注入的 Chrome UA。
+            if not c_headers.get("User-Agent") or not _has_explicit_user_agent(config):
+                c_headers.pop("User-Agent", None)
+            resp = chttp.get(
+                url,
+                timeout=timeout,
+                headers=c_headers,
+                cookies=cookies,
+                proxies=proxies,
+                stream=True,
+                impersonate="chrome",
+            )
+            resp._http_engine = "curl_cffi"
+            return resp
+        except Exception as exc:
+            logger.warning(
+                "curl_cffi request failed, falling back to requests. url=%s: %s",
+                url, exc,
+            )
+    resp = requests.get(
+        url,
+        timeout=timeout,
+        headers=headers,
+        cookies=cookies,
+        proxies=proxies,
+        stream=True,
+    )
+    resp._http_engine = "requests"
+    return resp
+
 # Per-domain rate limiter for metadata requests
 _domain_last_request: dict[str, float] = {}
 
@@ -1397,14 +1494,8 @@ def load_page(url: str, config: dict = None, load_full_page: bool = False):
     content = None
     iteration = 0
     try:
-        with requests.get(
-            url,
-            timeout=timeout,
-            headers=headers,
-            cookies=cookies,
-            proxies=proxies,
-            stream=True,
-        ) as r:
+        r = _open_http_stream(url, timeout, headers, cookies, proxies, config)
+        try:
             status_code = r.status_code
             if status_code == 429 or status_code >= 500:
                 if domain:
@@ -1445,6 +1536,10 @@ def load_page(url: str, config: dict = None, load_full_page: bool = False):
                 if size > MAX_CONTENT_LIMIT:
                     logger.debug("Cancel reading document after %d bytes", size)
                     break
+        finally:
+            close = getattr(r, "close", None)
+            if callable(close):
+                close()
     except (RetryableMetadataError, NonRetryableMetadataError) as exc:
         duration_ms = int((time.monotonic() - _page_start) * 1000)
         log_execution(
@@ -1457,7 +1552,9 @@ def load_page(url: str, config: dict = None, load_full_page: bool = False):
             duration_ms=duration_ms,
         )
         raise
-    except requests.exceptions.RequestException as exc:
+    except Exception as exc:
+        if not _is_transport_exception(exc):
+            raise
         duration_ms = int((time.monotonic() - _page_start) * 1000)
         log_execution(url=url, domain_key="", step="metadata",
                       cmd=curl_cmd, returncode=1,

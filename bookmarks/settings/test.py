@@ -5,9 +5,15 @@ Optimized for speed: in-memory database, synchronous tasks, minimal logging.
 
 # ruff: noqa
 
+import os
+
 from .base import *
 
 DEBUG = False
+
+# 测试环境固定使用 requests 引擎：避免 curl_cffi 发起真实网络请求，
+# 破坏依赖 mock requests.get 的既有测试语义（防御性设置：默认引擎本就是 requests）
+os.environ["LD_HTTP_ENGINE"] = "requests"
 
 # In-memory database, eliminates file I/O
 DATABASES = {

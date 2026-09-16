@@ -1,6 +1,6 @@
 // ==========================================================================
 //  Site Adapters — Complete Field Reference
-//  Auto-generated from fields.py (single source of truth)  |  2026-09-04 00:28:02
+//  Auto-generated from fields.py (single source of truth)  |  2026-09-17 19:26:19
 //
 //  Re-generate: python scripts/generate-adapters-reference.py
 //  Guide:       docs/site-adapters.md
@@ -40,6 +40,7 @@
 //       "rewrite_url": ["^https://m\\.example\\.com/(.*)", "https://www.example.com/\\1"], // Regex rewrite. Accepts ["pattern", "replacement"] for one rule, or [["pattern", "replacement"], ...] for multiple rules applied in order. Changes the URL saved/displayed for the bookmark.
 //       "request_url": ["^https://www\\.example\\.com/article/", "https://api.example.com/item/"], // Regex rewrite. Accepts ["pattern", "replacement"] for one rule, or [["pattern", "replacement"], ...] for multiple rules applied in order. Changes the URL used for the actual request.
 //       "http": {},                                          // Custom HTTP request headers. Every key-value pair is passed as a header.
+//       "http_engine": "curl_cffi",                          // HTTP client engine used for page loading. "requests" (default) uses python-requests; "curl_cffi" impersonates a Chrome TLS/HTTP2 fingerprint, which bypasses anti-bot 403 challenge pages (e.g. zhihu). Resolution order: domain config > LD_HTTP_ENGINE env var > "requests". On transport errors, curl_cffi falls back to requests with a warning.
 //       "auth": null,                                        // Authentication config.
 //     },
 //     // metadata / snapshot / reader sections have the same structure as the domain config below
@@ -61,6 +62,7 @@
     "rewrite_url": ["^https://m\\.example\\.com/(.*)", "https://www.example.com/\\1"], // Regex rewrite. Accepts ["pattern", "replacement"] for one rule, or [["pattern", "replacement"], ...] for multiple rules applied in order. Changes the URL saved/displayed for the bookmark.
     "request_url": ["^https://www\\.example\\.com/article/", "https://api.example.com/item/"], // Regex rewrite. Accepts ["pattern", "replacement"] for one rule, or [["pattern", "replacement"], ...] for multiple rules applied in order. Changes the URL used for the actual request.
     "http": {},                                            // Custom HTTP request headers. Every key-value pair is passed as a header.
+    "http_engine": "curl_cffi",                            // HTTP client engine used for page loading. "requests" (default) uses python-requests; "curl_cffi" impersonates a Chrome TLS/HTTP2 fingerprint, which bypasses anti-bot 403 challenge pages (e.g. zhihu). Resolution order: domain config > LD_HTTP_ENGINE env var > "requests". On transport errors, curl_cffi falls back to requests with a warning.
     "auth": null,                                          // Authentication config.
   },
 
@@ -144,6 +146,7 @@
         "rewrite_url": ["^https://m\\.example\\.com/(.*)", "https://www.example.com/\\1"], // Regex rewrite. Accepts ["pattern", "replacement"] for one rule, or [["pattern", "replacement"], ...] for multiple rules applied in order. Changes the URL saved/displayed for the bookmark.
         "request_url": ["^https://www\\.example\\.com/article/", "https://api.example.com/item/"], // Regex rewrite. Accepts ["pattern", "replacement"] for one rule, or [["pattern", "replacement"], ...] for multiple rules applied in order. Changes the URL used for the actual request.
         "http": {},                                        // Custom HTTP request headers. Every key-value pair is passed as a header.
+        "http_engine": "curl_cffi",                        // HTTP client engine used for page loading. "requests" (default) uses python-requests; "curl_cffi" impersonates a Chrome TLS/HTTP2 fingerprint, which bypasses anti-bot 403 challenge pages (e.g. zhihu). Resolution order: domain config > LD_HTTP_ENGINE env var > "requests". On transport errors, curl_cffi falls back to requests with a warning.
         "auth": null,                                      // Authentication config.
       },
 
@@ -151,6 +154,7 @@
       "metadata": {
         "auth": null,                                      // Authentication config.
         "http": {},                                        // Custom HTTP request headers. Every key-value pair is passed as a header.
+        "http_engine": "curl_cffi",                        // HTTP client engine used for page loading. "requests" (default) uses python-requests; "curl_cffi" impersonates a Chrome TLS/HTTP2 fingerprint, which bypasses anti-bot 403 challenge pages (e.g. zhihu). Resolution order: domain config > LD_HTTP_ENGINE env var > "requests". On transport errors, curl_cffi falls back to requests with a warning.
         "request_url": ["^https://www\\.example\\.com/article/", "https://api.example.com/item/"], // Regex rewrite. Accepts ["pattern", "replacement"] for one rule, or [["pattern", "replacement"], ...] for multiple rules applied in order. Changes the URL used for the actual request.
         "rewrite_url": ["^https://m\\.example\\.com/(.*)", "https://www.example.com/\\1"], // Regex rewrite. Accepts ["pattern", "replacement"] for one rule, or [["pattern", "replacement"], ...] for multiple rules applied in order. Changes the URL saved/displayed for the bookmark.
         "content_type": "html",                            // Response format for declarative extraction. "html" uses CSS selectors and JSON-LD fallback; "xml" uses standard XPath; "json" uses standard JSONPath such as $.data.items[0].title.
@@ -180,6 +184,7 @@
         "content_type": "html",                            // Snapshot format. "html" uses SingleFile; "xml" and "json" save the raw response.
         "auth": null,                                      // Authentication config.
         "http": {},                                        // Custom HTTP request headers. Every key-value pair is passed as a header.
+        "http_engine": "curl_cffi",                        // HTTP client engine used for page loading. "requests" (default) uses python-requests; "curl_cffi" impersonates a Chrome TLS/HTTP2 fingerprint, which bypasses anti-bot 403 challenge pages (e.g. zhihu). Resolution order: domain config > LD_HTTP_ENGINE env var > "requests". On transport errors, curl_cffi falls back to requests with a warning.
         "request_url": ["^https://www\\.example\\.com/article/", "https://api.example.com/item/"], // Regex rewrite. Accepts ["pattern", "replacement"] for one rule, or [["pattern", "replacement"], ...] for multiple rules applied in order. Changes the URL used for the actual request.
         "keep_elements": [],                               // CSS selectors of elements to KEEP in the snapshot. Everything else is removed.
         "remove_elements": [],                             // CSS selectors of elements to REMOVE from the snapshot.

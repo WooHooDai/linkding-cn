@@ -18,6 +18,7 @@ dependencies = [
     "python-dateutil>=2.9.0.post0",
     "pypinyin>=0.55.0",
     "requests>=2.33.1",
+    "curl_cffi>=0.16.3",  # 默认 HTTP 引擎（Chrome 指纹），需 uv lock/sync 更新 lock 文件
     "supervisor>=4.3.0",
     "uwsgi>=2.0.31",
     "waybackpy>=3.0.6",

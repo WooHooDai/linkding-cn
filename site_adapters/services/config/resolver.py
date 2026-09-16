@@ -376,6 +376,7 @@ def _build_section_config(full_config: dict, section: str, base_dir: str, userna
         'headers': headers,
         'timeout': timeout,
         'proxy': proxy,
+        "http_engine": merged.get("http_engine"),
         'auth': merged_auth,
         'cookie': cookie_config,
         '_user_cookie': user_cookie_str,
