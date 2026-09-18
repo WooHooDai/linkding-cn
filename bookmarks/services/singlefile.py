@@ -262,15 +262,17 @@ def _build_site_adapter_options(url: str, config: dict) -> tuple[list[str], list
             options.append(f"--http-header={name}: {value}")
     if config.get("proxy"):
         options.append(f"--http-proxy-server={config['proxy']}")
-    user_cookie = config.get("_user_cookie")
+    user_cookie = config.get("_user_cookie") or config.get("user_cookie")
     cookie_file = None
     snapshot_scope = config.get("_effective_cookie_scope", "")
     if user_cookie:
-        cookie_file = generate_temp_cookies_file(domain_key=config.get("_domain_key", ""), cookie_str=user_cookie, scope=snapshot_scope)
+        cookie_file = generate_temp_cookies_file(
+            domain_key=config.get("_domain_key") or config.get("domain_key", ""),
+            cookie_str=user_cookie, scope=snapshot_scope)
         if cookie_file:
             temp_files.append(cookie_file)
-    if not cookie_file and config.get("_domain_key"):
-        domain_key = config["_domain_key"]
+    if not cookie_file and (config.get("_domain_key") or config.get("domain_key")):
+        domain_key = config.get("_domain_key") or config.get("domain_key")
         best, _ = get_shared_cookie(hostname=domain_key, scope=snapshot_scope)
         if best:
             cookie_file = generate_temp_cookies_file(domain_key=domain_key, cookie_str=best, scope=snapshot_scope)
