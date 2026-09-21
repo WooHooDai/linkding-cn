@@ -1540,15 +1540,29 @@ this.directoryLinks = Array.from(
     const configCard = form.querySelector("[data-toolbar-config-card]");
     if (!configCard) return;
 
-    // 按工具栏顺序重排配置面板
-    for (const mod of modules) {
-      const panel = configCard.querySelector(
-        `[data-toolbar-config-panel="${mod.key}"]`,
-      );
-      if (panel) {
-        panel.style.display = mod.enabled ? "" : "none";
-        configCard.appendChild(panel);
+    // 按工具栏顺序设置各配置面板的显示/隐藏。
+    // 仅当面板顺序与工具栏模块顺序不一致时才执行 appendChild 重排，
+    // 避免每次切换开关都无条件重排 DOM 导致视口跳动。
+    const orderedPanels = modules
+      .map((mod) =>
+        configCard.querySelector(`[data-toolbar-config-panel="${mod.key}"]`),
+      )
+      .filter(Boolean);
+
+    modules.forEach((mod, i) => {
+      if (orderedPanels[i]) {
+        orderedPanels[i].style.display = mod.enabled ? "" : "none";
       }
+    });
+
+    const currentPanels = Array.from(
+      configCard.querySelectorAll("[data-toolbar-config-panel]"),
+    );
+    const needReorder = orderedPanels.some(
+      (panel, i) => panel !== currentPanels[i],
+    );
+    if (needReorder) {
+      orderedPanels.forEach((panel) => configCard.appendChild(panel));
     }
 
     // 日期模块禁用时，同步设置 bookmark_date_display 为 hidden
