@@ -4,6 +4,7 @@ import { TurboLitElement } from "../utils/element.js";
 import { PositionController } from "../utils/position-controller.js";
 import { SearchHistory } from "../utils/search-history.js";
 import { cache } from "../utils/tag-cache.js";
+import { scoreTag } from "../utils/tag-match.js";
 import {
   clampText,
   debounce,
@@ -142,18 +143,16 @@ export class SearchAutocomplete extends TurboLitElement {
       const searchTag = currentWord.substring(1);
       const search = searchTag.toLowerCase();
       tagSuggestions = (tags || [])
-        .filter(
-          (tag) =>
-            tag.name.toLowerCase().indexOf(search) === 0 ||
-            (tag.pinyin_full && tag.pinyin_full.indexOf(search) === 0) ||
-            (tag.pinyin_first && tag.pinyin_first.indexOf(search) === 0),
-        )
+        .map((tag) => ({ tag, score: scoreTag(tag, search) }))
+        .filter((entry) => entry.score >= 0)
+        // 稳定排序：同一分值层内保持 tag-cache 的频次降序
+        .sort((a, b) => a.score - b.score)
         .slice(0, 5)
-        .map((tag) => ({
+        .map((entry) => ({
           type: "tag",
           index: nextIndex(),
-          label: `#${tag.name}`,
-          tagName: tag.name,
+          label: `#${entry.tag.name}`,
+          tagName: entry.tag.name,
         }));
     }
 

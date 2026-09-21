@@ -4,6 +4,11 @@ import { cache } from "../utils/tag-cache.js";
 import { TurboLitElement } from "../utils/element.js";
 import { PositionController } from "../utils/position-controller.js";
 import { getCurrentWord, getCurrentWordBounds } from "../utils/input.js";
+import { scoreTag } from "../utils/tag-match.js";
+
+// 候选列表上限：前缀命中（强信号）几乎总能被完整覆盖，
+  // 子串命中（弱信号）按频次取前 N 条补位，避免低相关候选撑爆下拉菜单
+const MAX_SUGGESTIONS = 100;
 
 export class TagAutocomplete extends TurboLitElement {
   static properties = {
@@ -71,11 +76,13 @@ export class TagAutocomplete extends TurboLitElement {
 
     const search = word.toLowerCase();
     this.suggestions = word
-      ? tags.filter((tag) =>
-          tag.name.toLowerCase().indexOf(search) === 0 ||
-          (tag.pinyin_full && tag.pinyin_full.indexOf(search) === 0) ||
-          (tag.pinyin_first && tag.pinyin_first.indexOf(search) === 0),
-        )
+      ? tags
+          .map((tag) => ({ tag, score: scoreTag(tag, search) }))
+          .filter((entry) => entry.score >= 0)
+          // 稳定排序：同一分值层内保持 tag-cache 的频次降序
+          .sort((a, b) => a.score - b.score)
+          .slice(0, MAX_SUGGESTIONS)
+          .map((entry) => entry.tag)
       : [];
 
     if (word && this.suggestions.length > 0) {

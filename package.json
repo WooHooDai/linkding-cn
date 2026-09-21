@@ -11,6 +11,7 @@
     "build-theme-dark": "POSTCSS_DISABLE_CACHE=true postcss -o bookmarks/static/theme-dark.css bookmarks/styles/theme-dark.css",
     "build-defuddle": "node esbuild.config.mjs",
     "dev": "rollup -c -w",
+    "test:js": "node --test bookmarks/frontend/utils/*.test.mjs",
     "build-site-adapters-css": "POSTCSS_DISABLE_CACHE=true postcss -o site_adapters/static/site-adapters.css site_adapters/styles/site-adapters.css",
     "dev-site-adapters-css": "POSTCSS_DISABLE_CACHE=true postcss -o site_adapters/static/site-adapters.css site_adapters/styles/site-adapters.css -w"
   },

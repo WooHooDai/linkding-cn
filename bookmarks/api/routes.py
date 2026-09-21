@@ -382,6 +382,10 @@ class TagViewSet(
 
     def get_queryset(self):
         user = self.request.user
+        # 注意：此顺序是 /api/tags/ 的默认顺序（API 消费者与 offset 分页的稳定性依赖）。
+        # 前端 tag-cache.js 的 sortTagsForAutocomplete 会在此基础上整体重排并追加
+        # CJK 优先规则，标签自动补全的最终展示顺序以 tag-cache.js 为准；
+        # 改动此处的 order_by 不会影响标签自动补全的候选顺序。
         return (
             Tag.objects.all()
             .filter(owner=user)
