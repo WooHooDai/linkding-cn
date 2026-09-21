@@ -322,13 +322,23 @@ msgstr "添加时间"
 msgid "Modified"
 msgstr "已修改"
 
-#: bookmarks/models.py:787
-msgid "Highlighted"
-msgstr "高亮日期"
+#: bookmarks/models.py:863
+msgctxt "date_filter"
+msgid "Added"
+msgstr "添加"
 
-#: bookmarks/models.py:788
+#: bookmarks/models.py:864
+msgctxt "date_filter"
+msgid "Modified"
+msgstr "修改"
+
+#: bookmarks/models.py:865
+msgid "Highlighted"
+msgstr "高亮"
+
+#: bookmarks/models.py:866
 msgid "Annotated"
-msgstr "批注日期"
+msgstr "批注"
 
 #: bookmarks/models.py:791 bookmarks/models.py:902
 msgid "Absolute"

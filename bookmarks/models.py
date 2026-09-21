@@ -851,17 +851,17 @@ class BookmarkSearchForm(forms.Form):
     FILTER_HIGHLIGHT_CHOICES = [
         (BookmarkSearch.FILTER_HIGHLIGHT_OFF, _("Off")),
         (BookmarkSearch.FILTER_HIGHLIGHT_YES, _("Has")),
-        (BookmarkSearch.FILTER_HIGHLIGHT_NO, _("Missing")),
+        (BookmarkSearch.FILTER_HIGHLIGHT_NO, _("None")),
     ]
     FILTER_ANNOTATION_CHOICES = [
         (BookmarkSearch.FILTER_ANNOTATION_OFF, _("Off")),
         (BookmarkSearch.FILTER_ANNOTATION_YES, _("Has")),
-        (BookmarkSearch.FILTER_ANNOTATION_NO, _("Missing")),
+        (BookmarkSearch.FILTER_ANNOTATION_NO, _("None")),
     ]
     FILTER_DATE_BY_CHOICES = [
         (BookmarkSearch.FILTER_DATE_OFF, _("Off")),
-        (BookmarkSearch.FILTER_DATE_BY_ADDED, _("Added")),
-        (BookmarkSearch.FILTER_DATE_BY_MODIFIED, _("Modified")),
+        (BookmarkSearch.FILTER_DATE_BY_ADDED, pgettext_lazy("date_filter", "Added")),
+        (BookmarkSearch.FILTER_DATE_BY_MODIFIED, pgettext_lazy("date_filter", "Modified")),
         (BookmarkSearch.FILTER_DATE_BY_HIGHLIGHT, _("Highlighted")),
         (BookmarkSearch.FILTER_DATE_BY_ANNOTATION, _("Annotated")),
         (BookmarkSearch.FILTER_DATE_BY_HEALTH, _("Health checked")),
