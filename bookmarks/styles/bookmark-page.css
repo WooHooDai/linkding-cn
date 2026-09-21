@@ -959,6 +959,10 @@ ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions
   .bundle-menu-item.selected a {
     background: var(--primary-color);
     color: var(--contrast-text-color);
+
+    .count {
+      color: rgba(255, 255, 255, 0.55);
+    }
   }
 
   .bundle-menu-item:not([data-folder="true"]) {
