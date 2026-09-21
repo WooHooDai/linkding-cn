@@ -448,23 +448,12 @@ li[ld-bookmark-item] {
     position: relative;
   }
 
-  /* 同行模式：点击描述文字展开，标签不动 */
-  & .description .description-container.expanded {
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
-  }
-
-  & .description .description-text.expanded {
-    cursor: pointer;
-  }
-
-  /* 分行模式：点击容器展开，限制最大高度 + 滚动条 */
+  /* 展开态描述容器公共样式：限制最大高度 + 滚动条（同行/分行一致） */
+  & .description .description-container.expanded,
   & .description.expanded .description-container {
-    white-space: normal;
-    -webkit-line-clamp: unset;
     max-height: calc(15 * 1.1rem);
     overflow-y: auto;
+    overflow-x: hidden;
     /* 滚动条样式 */
     scrollbar-width: thin;
     scrollbar-gutter: stable;
@@ -481,6 +470,42 @@ li[ld-bookmark-item] {
       background: var(--secondary-border-color);
     }
   }
+
+  /* 同行模式展开：容器 normal（模板空白折叠为空格，不产生额外换行），
+     隐藏分隔符 */
+  & .description .description-container.expanded {
+    white-space: normal;
+    text-overflow: clip;
+  }
+
+  & .description .description-container.expanded .description-separator {
+    display: none;
+  }
+
+  /* 可点击展开提示：由 JS 添加 is-expandable 类管理，替代内联 cursor */
+  & .description .description-text.is-expandable,
+  & .description .description-container.is-expandable {
+    cursor: pointer;
+  }
+
+  /* 展开态描述文本：保留原始换行；长无空格文本（URL）可任意断行 */
+  & .description .description-text.expanded,
+  & .description.expanded .description-text {
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+
+  /* 同行模式展开：描述另起一行显示 */
+  & .description .description-text.expanded {
+    display: block;
+  }
+
+  /* 分行模式展开：容器保持 normal，解除行数限制 */
+  & .description.expanded .description-container {
+    white-space: normal;
+    -webkit-line-clamp: unset;
+  }
+
 
   & .description.is-editing-description .description-container {
     display: block;

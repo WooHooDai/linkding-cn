@@ -1146,10 +1146,12 @@ class BookmarkItem extends Behavior {
         if (tagsElement) availableWidth -= tagsElement.offsetWidth;
         if (descriptionText.offsetWidth <= availableWidth) return;
 
-        descriptionText.style.cursor = "pointer";
+        descriptionText.classList.add("is-expandable");
         this._descriptionToggleTarget = descriptionText;
         this.onToggleDescription = (event) => {
           event.stopPropagation();
+          // 拖选描述文本松手会触发 click，此时不折叠
+          if (this._hasTextSelection()) return;
           const expanded = !descriptionText.classList.contains("expanded");
           descriptionText.classList.toggle("expanded", expanded);
           this.descriptionContainer.classList.toggle("expanded", expanded);
@@ -1163,9 +1165,11 @@ class BookmarkItem extends Behavior {
         )
           return;
 
-        this.descriptionContainer.style.cursor = "pointer";
+        this.descriptionContainer.classList.add("is-expandable");
         this.onToggleDescription = (event) => {
           event.stopPropagation();
+          // 拖选描述文本松手会触发 click，此时不折叠
+          if (this._hasTextSelection()) return;
           const expanding =
             !this.descriptionElement.classList.contains("expanded");
           if (!expanding) {
@@ -1187,6 +1191,21 @@ class BookmarkItem extends Behavior {
   }
 
   /**
+   * 判断用户是否正在选择描述区域内的文本。
+   * 展开态下鼠标拖选/触摸长按选择文本，松手时浏览器会合成 click，
+   * 此检查用于避免把“选择文本”误判为“点击折叠”。
+   */
+  _hasTextSelection() {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return false;
+    const isInside = (node) =>
+      !!node && this.descriptionContainer.contains(node);
+    return (
+      isInside(selection.anchorNode) || isInside(selection.focusNode)
+    );
+  }
+
+  /**
    * 清除旧的描述 toggle 监听，重新检测截断并绑定点击展开。
    * 供内联编辑保存后调用。
    */
@@ -1198,16 +1217,16 @@ class BookmarkItem extends Behavior {
       this.onToggleDescription = null;
       this._descriptionToggleTarget = null;
     }
-    // 重置展开态和 cursor
+    // 重置展开态和可点击提示类
     if (this.descriptionContainer) {
       this.descriptionContainer.classList.remove("expanded");
-      this.descriptionContainer.style.cursor = "";
+      this.descriptionContainer.classList.remove("is-expandable");
     }
     if (this.descriptionElement) {
       this.descriptionElement.classList.remove("expanded");
     }
     const dt = this.descriptionContainer?.querySelector(".description-text");
-    if (dt) dt.style.cursor = "";
+    if (dt) dt.classList.remove("is-expandable");
 
     this.initDescriptionToggle();
   }
