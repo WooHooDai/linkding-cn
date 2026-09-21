@@ -1005,7 +1005,15 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
         # Determine set of bookmarks
         if request.POST.get("bulk_select_across") == "on":
             # Query full list of bookmarks across all pages
-            bookmark_ids = query.only("id").values_list("id", flat=True)
+            bookmark_ids = list(query.only("id").values_list("id", flat=True))
+            # Exclude bookmarks that were explicitly unchecked while selecting all
+            exclude_ids = {
+                int(x)
+                for x in request.POST.getlist("bulk_exclude_id")
+                if x.lstrip("-").isdigit()
+            }
+            if exclude_ids:
+                bookmark_ids = [i for i in bookmark_ids if i not in exclude_ids]
         else:
             # Use only selected bookmarks
             bookmark_ids = request.POST.getlist("bookmark_id")

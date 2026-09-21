@@ -13,11 +13,13 @@ class BulkEdit extends Behavior {
     this.onToggleActive = this.onToggleActive.bind(this);
     this.onToggleAll = this.onToggleAll.bind(this);
     this.onToggleBookmark = this.onToggleBookmark.bind(this);
+    this.onToggleSelectAcross = this.onToggleSelectAcross.bind(this);
     this.onActionSelected = this.onActionSelected.bind(this);
     this.onSubmit = this.onSubmit.bind(this);
 
-    this.isStickyOn = element.querySelector(".section-header")?.dataset.stickyOn === 'true'
-    this.bulkEditBar = element.querySelector('.bulk-edit-bar');
+    this.isStickyOn =
+      element.querySelector(".section-header")?.dataset.stickyOn === "true";
+    this.bulkEditBar = element.querySelector(".bulk-edit-bar");
 
     // 初始状态：页面加载时如已激活，同步粘性类
     if (this.isStickyOn) {
@@ -41,8 +43,12 @@ class BulkEdit extends Behavior {
       "select[name='bulk_action']",
     );
     this.tagAutoComplete = this.element.querySelector(".tag-autocomplete");
-    this.executeButton = this.element.querySelector("button[name='bulk_execute']");
-    this.cancelButton = this.element.querySelector("button[name='bulk_cancel']");
+    this.executeButton = this.element.querySelector(
+      "button[name='bulk_execute']",
+    );
+    this.cancelButton = this.element.querySelector(
+      "button[name='bulk_cancel']",
+    );
     this.selectAcross = this.element.querySelector("label.select-across");
     this.selectAcrossInput = this.selectAcross.querySelector("input");
     this.allCheckbox = this.element.querySelector(
@@ -61,9 +67,9 @@ class BulkEdit extends Behavior {
 
     // Update total number of bookmarks
     const totalHolder = this.element.querySelector("[data-bookmarks-total]");
-    const total = totalHolder?.dataset.bookmarksTotal || 0;
+    this.total = totalHolder?.dataset.bookmarksTotal || 0;
     const totalSpan = this.selectAcross.querySelector("span.total");
-    totalSpan.textContent = total;
+    totalSpan.textContent = this.total;
 
     // Restore saved state from sessionStorage
     this.restoreState();
@@ -74,6 +80,10 @@ class BulkEdit extends Behavior {
     this.cancelButton.addEventListener("click", this.onToggleActive);
     this.actionSelect.addEventListener("change", this.onActionSelected);
     this.allCheckbox.addEventListener("change", this.onToggleAll);
+    this.selectAcrossInput.addEventListener(
+      "change",
+      this.onToggleSelectAcross,
+    );
     this.bookmarkCheckboxes.forEach((checkbox) => {
       checkbox.addEventListener("change", this.onToggleBookmark);
     });
@@ -87,6 +97,10 @@ class BulkEdit extends Behavior {
     this.cancelButton.removeEventListener("click", this.onToggleActive);
     this.actionSelect.removeEventListener("change", this.onActionSelected);
     this.allCheckbox.removeEventListener("change", this.onToggleAll);
+    this.selectAcrossInput.removeEventListener(
+      "change",
+      this.onToggleSelectAcross,
+    );
     this.bookmarkCheckboxes.forEach((checkbox) => {
       checkbox.removeEventListener("change", this.onToggleBookmark);
     });
@@ -99,12 +113,14 @@ class BulkEdit extends Behavior {
     this.active = !this.active;
     if (this.active) {
       this.element.classList.add("active");
-      if(this.isStickyOn) {
+      if (this.isStickyOn) {
         this.bulkEditBar.classList.add("sticky");
       }
+      // "All pages" option is always available while bulk editing
+      this.selectAcross.classList.remove("d-none");
     } else {
       this.element.classList.remove("active");
-      if(this.isStickyOn) {
+      if (this.isStickyOn) {
         this.bulkEditBar.classList.remove("sticky");
       }
       this.clearState();
@@ -112,47 +128,90 @@ class BulkEdit extends Behavior {
   }
 
   onSubmit() {
+    this._injectHiddenFields();
     this.clearState();
   }
 
   onToggleBookmark(event) {
     const checkbox = event.target;
-    const state = this._loadState();
+    const id = checkbox.value;
+    const state = this._loadState() || this._emptyState();
 
-    if (state && state.selectAll) {
-      // Transitioning out of selectAll: start tracking individual IDs
-      // All checkboxes on the page are checked (from selectAll restore).
-      // Collect the ones still checked (includes all except the one just unchecked).
-      const selectedIds = this.bookmarkCheckboxes
-        .filter((cb) => cb.checked)
-        .map((cb) => cb.value);
-      this._saveState({ selectAll: false, selectedIds });
-    } else if (checkbox.checked) {
-      this._addId(checkbox.value);
+    if (state.selectAll) {
+      // Select-all mode: an unchecked bookmark is recorded as an exclusion
+      const excludedIds = new Set(state.excludedIds);
+      if (checkbox.checked) {
+        excludedIds.delete(id);
+      } else if (!excludedIds.has(id)) {
+        excludedIds.add(id);
+      }
+      state.excludedIds = Array.from(excludedIds);
     } else {
-      this._removeId(checkbox.value);
+      const selectedIds = new Set(state.selectedIds);
+      if (checkbox.checked) {
+        selectedIds.add(id);
+      } else {
+        selectedIds.delete(id);
+      }
+      state.selectedIds = Array.from(selectedIds);
     }
+    this._saveState(state);
 
-    // Sync allCheckbox
-    const allChecked = this.bookmarkCheckboxes.every((cb) => cb.checked);
-    this.allCheckbox.checked = allChecked;
-    this._updateSelectAcross(allChecked);
+    this._syncHeaderCheckbox(state);
+    this._updateSelectAcrossInput(state);
     this._updateExecuteState();
   }
 
   onToggleAll() {
     const allChecked = this.allCheckbox.checked;
-    this.bookmarkCheckboxes.forEach((checkbox) => {
-      checkbox.checked = allChecked;
-    });
+    const state = this._loadState() || this._emptyState();
+    const pageIds = this.bookmarkCheckboxes.map((cb) => cb.value);
 
-    if (allChecked) {
-      this._saveState({ selectAll: true, selectedIds: [] });
+    if (state.selectAll) {
+      // Select-all mode: toggling the header excludes/re-includes the whole page
+      const excludedIds = new Set(state.excludedIds);
+      if (allChecked) {
+        // Re-include the whole page
+        pageIds.forEach((id) => excludedIds.delete(id));
+      } else {
+        // Exclude the whole page
+        pageIds.forEach((id) => excludedIds.add(id));
+      }
+      state.excludedIds = Array.from(excludedIds);
     } else {
-      this._saveState({ selectAll: false, selectedIds: [] });
+      // Individual mode: toggling the header selects/deselects the whole page
+      const selectedIds = new Set(state.selectedIds);
+      if (allChecked) {
+        pageIds.forEach((id) => selectedIds.add(id));
+      } else {
+        pageIds.forEach((id) => selectedIds.delete(id));
+      }
+      state.selectedIds = Array.from(selectedIds);
     }
+    this._saveState(state);
 
-    this._updateSelectAcross(allChecked);
+    this._syncPageCheckboxes(state);
+    // Header reflects the toggle the user just made
+    this.allCheckbox.checked = allChecked;
+    this._updateSelectAcrossInput(state);
+    this._updateExecuteState();
+  }
+
+  onToggleSelectAcross() {
+    // "All pages" checkbox:
+    // - checked   -> select every bookmark (when any bookmark is not selected yet)
+    // - unchecked -> deselect every bookmark (when all bookmarks are selected)
+    const selectAll = this.selectAcrossInput.checked;
+    const state = this._emptyState();
+
+    state.selectAll = selectAll;
+
+    this.bookmarkCheckboxes.forEach((checkbox) => {
+      checkbox.checked = selectAll;
+    });
+    this.allCheckbox.checked = selectAll;
+
+    this._saveState(state);
     this._updateExecuteState();
   }
 
@@ -166,21 +225,12 @@ class BulkEdit extends Behavior {
     }
   }
 
-  _updateSelectAcross(allChecked) {
-    if (allChecked) {
-      this.selectAcross.classList.remove("d-none");
-    } else {
-      this.selectAcross.classList.add("d-none");
-      this.selectAcrossInput.checked = false;
-    }
-  }
-
   reset() {
     this.allCheckbox.checked = false;
     this.bookmarkCheckboxes.forEach((checkbox) => {
       checkbox.checked = false;
     });
-    this._updateSelectAcross(false);
+    this.selectAcrossInput.checked = false;
     this._updateExecuteState();
   }
 
@@ -188,26 +238,18 @@ class BulkEdit extends Behavior {
     if (!this.executeButton) {
       return;
     }
-    const state = this._loadState();
-    const hasSelection =
-      (state && state.selectAll) ||
-      (state && state.selectedIds && state.selectedIds.length > 0) ||
-      this.bookmarkCheckboxes.some((checkbox) => checkbox.checked);
-    this.executeButton.disabled = !hasSelection;
-    this._updateCount();
+    const count = this._count();
+    this.executeButton.disabled = count <= 0;
+    this._updateCount(count);
   }
 
-  _updateCount() {
+  _updateCount(count) {
     if (!this.countElement) return;
-    const state = this._loadState();
-    let count = 0;
-    if (state && state.selectAll) {
-      count = parseInt(this.selectAcross.querySelector("span.total")?.textContent || "0", 10);
-    } else if (state && state.selectedIds) {
-      count = state.selectedIds.length;
-    }
     if (count > 0) {
-      this.countElement.textContent = interpolate(gettext("Selected(%(count)s)"), { count });
+      this.countElement.textContent = interpolate(
+        gettext("Selected(%(count)s)"),
+        { count },
+      );
       this.countElement.classList.remove("d-none");
     } else {
       this.countElement.classList.add("d-none");
@@ -216,10 +258,21 @@ class BulkEdit extends Behavior {
 
   // --- State persistence ---
 
+  _emptyState() {
+    return { selectAll: false, selectedIds: [], excludedIds: [] };
+  }
+
   _loadState() {
     try {
       const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          selectAll: !!parsed.selectAll,
+          selectedIds: parsed.selectedIds || [],
+          excludedIds: parsed.excludedIds || [],
+        };
+      }
     } catch (e) {
       // ignore
     }
@@ -234,22 +287,6 @@ class BulkEdit extends Behavior {
     }
   }
 
-  _addId(id) {
-    const state = this._loadState() || { selectAll: false, selectedIds: [] };
-    if (!state.selectedIds.includes(id)) {
-      state.selectedIds.push(id);
-    }
-    this._saveState(state);
-  }
-
-  _removeId(id) {
-    const state = this._loadState();
-    if (!state || !state.selectedIds) return;
-    state.selectedIds = state.selectedIds.filter((x) => x !== id);
-    state.selectAll = false;
-    this._saveState(state);
-  }
-
   clearState() {
     sessionStorage.removeItem(STORAGE_KEY);
   }
@@ -257,7 +294,12 @@ class BulkEdit extends Behavior {
   restoreState() {
     const state = this._loadState();
 
-    if (!state || (!state.selectAll && (!state.selectedIds || state.selectedIds.length === 0))) {
+    if (
+      !state ||
+      (!state.selectAll &&
+        state.selectedIds.length === 0 &&
+        state.excludedIds.length === 0)
+    ) {
       // No saved state, reset checkboxes
       this.reset();
       return;
@@ -269,29 +311,88 @@ class BulkEdit extends Behavior {
     if (this.isStickyOn) {
       this.bulkEditBar.classList.add("sticky");
     }
+    this.selectAcross.classList.remove("d-none");
+
+    this._syncPageCheckboxes(state);
+    this._syncHeaderCheckbox(state);
+    this._updateSelectAcrossInput(state);
+    this._updateExecuteState();
+  }
+
+  // --- Selection helpers ---
+
+  _count() {
+    const state = this._loadState();
+    if (!state) return 0;
+    if (state.selectAll) {
+      return Math.max(0, this.total - state.excludedIds.length);
+    }
+    return state.selectedIds.length;
+  }
+
+  _isChecked(cb, state) {
+    return state.selectAll
+      ? !state.excludedIds.includes(cb.value)
+      : state.selectedIds.includes(cb.value);
+  }
+
+  _syncPageCheckboxes(state) {
+    this.bookmarkCheckboxes.forEach((cb) => {
+      cb.checked = this._isChecked(cb, state);
+    });
+  }
+
+  _syncHeaderCheckbox(state) {
+    this.allCheckbox.checked =
+      this.bookmarkCheckboxes.length > 0 &&
+      this.bookmarkCheckboxes.every((cb) => this._isChecked(cb, state));
+  }
+
+  _updateSelectAcrossInput(state) {
+    // The "All pages" checkbox reflects whether every bookmark is selected.
+    this.selectAcrossInput.checked = !!state && !!state.selectAll;
+  }
+
+  // --- Form submission ---
+
+  _injectHiddenFields() {
+    if (!this.form) return;
+    // Drop previously injected fields
+    this.form
+      .querySelectorAll("input[data-bulk-sync]")
+      .forEach((el) => el.remove());
+
+    const state = this._loadState();
+    if (!state) return;
 
     if (state.selectAll) {
-      // Select all across pages: check all on current page and show indicator
-      this.bookmarkCheckboxes.forEach((checkbox) => {
-        checkbox.checked = true;
+      // Select-all mode: send the exclusion list alongside bulk_select_across
+      state.excludedIds.forEach((id) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "bulk_exclude_id";
+        input.value = id;
+        input.dataset.bulkSync = "1";
+        this.form.appendChild(input);
       });
-      this.allCheckbox.checked = true;
-      this.selectAcross.classList.remove("d-none");
-      this.selectAcrossInput.checked = true;
     } else {
-      // Restore individual selections
-      const selectedIds = new Set(state.selectedIds.map(String));
-      this.bookmarkCheckboxes.forEach((checkbox) => {
-        checkbox.checked = selectedIds.has(checkbox.value);
+      // Individual mode: send every selected bookmark id, including those on
+      // pages that are not currently rendered. Ids rendered as checkboxes on
+      // the current page are already submitted by those checkboxes, so skip
+      // them to avoid duplicates.
+      const renderedIds = new Set(this.bookmarkCheckboxes.map((cb) => cb.value));
+      state.selectedIds.forEach((id) => {
+        if (renderedIds.has(id)) {
+          return;
+        }
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "bookmark_id";
+        input.value = id;
+        input.dataset.bulkSync = "1";
+        this.form.appendChild(input);
       });
-      const allChecked =
-        this.bookmarkCheckboxes.length > 0 &&
-        this.bookmarkCheckboxes.every((checkbox) => checkbox.checked);
-      this.allCheckbox.checked = allChecked;
-      this._updateSelectAcross(allChecked);
     }
-
-    this._updateExecuteState();
   }
 }
 
