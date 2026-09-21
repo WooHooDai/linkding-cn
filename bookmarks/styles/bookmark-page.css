@@ -1507,7 +1507,8 @@ ul.bookmark-list {
 
   /* 批量编辑条激活状态 */
   /* 消除批量工具条和 h1 之间多余的 section-header 间距 */
-  &.active .section-header {
+  /* 仅作用于主内容区标题，避免误伤侧边栏模块标题的下边框 */
+  &.active > main > .section-header {
     border-bottom-color: transparent;
     padding-bottom: 0;
     margin-bottom: 0;
