@@ -1146,17 +1146,18 @@ def _parse_tokens(tokens):
     }
 
 
+# 旧引擎（legacy search）支持的字段前缀，与 _parse_tokens 的 field_terms 键保持一致
+_FIELD_PREFIXES = ("title:", "desc:", "notes:", "url:", "domain:")
+
+
 def _is_field_term(token):
     """判断是否为field_term(如: title:(content))."""
-    field_prefixes = ("title:", "desc:", "notes:", "url:", "domain:")
-    return any(token.startswith(prefix) for prefix in field_prefixes)
+    return any(token.startswith(prefix) for prefix in _FIELD_PREFIXES)
 
 
 def _extract_field_content(token):
     """提取字段名称和内容，支持 field:(content) 和 field:keyword / field:"phrase" 两种语法。"""
-    field_prefixes = ("title:", "desc:", "notes:", "url:", "domain:")
-
-    for prefix in field_prefixes:
+    for prefix in _FIELD_PREFIXES:
         if token.startswith(prefix):
             field_name = prefix[:-1]  # Remove trailing ':'
             content_part = token[len(prefix) :]
