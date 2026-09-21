@@ -368,6 +368,26 @@
   gap: var(--unit-2);
 }
 
+/* ---- Health check ---- */
+.detail-health-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--unit-3);
+  font-size: var(--font-size-sm);
+}
+
+/* 与书签列表工具栏一致的分隔符 */
+.detail-health-row .toolbar-sep {
+  display: inline-flex;
+  align-items: center;
+  color: var(--bookmark-actions-color, #999);
+}
+
+.detail-health-row [data-health-reason] {
+  max-width: 420px;
+}
+
 .detail-status-chip {
   appearance: none;
   display: inline-flex;

@@ -1,6 +1,6 @@
 // ==========================================================================
 //  Site Adapters — 完整字段参考
-//  由 fields.py 自动生成（单一信源）  |  2026-09-04 00:28:02
+//  由 fields.py 自动生成（单一信源）  |  2026-09-21 10:06:49
 //
 //  Re-generate: python scripts/generate-adapters-reference.py
 //  Guide:       docs/site-adapters.md
@@ -241,6 +241,32 @@
             "^/video/": {
                   "snapshot": { "keep_elements": [".video-player"] }
             }
+      },
+
+      // sec_health
+      "health": {
+        "enabled": true,                                   // 是否对该域名执行健康检查。默认 true。设为 false 时 L1 探测与 L2 内容检查均跳过（书签保持未检查）。纯减法控制，不能绕过用户级开关强制开启。
+        "http_head_probe": {
+          "enabled": true,                                 // 是否启用 L1 HTTP 探测（HEAD 优先、GET 兜底）。默认 true。关闭后跳过 HEAD，直接 GET 判定。
+          "timeout": 3,                                    // HEAD 探测超时（秒）。默认 5。与 content_check.timeout 相互独立。
+          "accept_status": [200, 206],                     // 视为可达（ok）的 HTTP 状态码。默认 [200]。
+          "blocked_status": [403, 429],                    // 判定为 blocked（反爬/需认证）而非 dead 的状态码。默认 [401, 403, 407, 429]。
+          "blocked_location_patterns": ["/login", "/signin", "/auth"], // 字符串正则数组，匹配 GET 探针之后的最终重定向 URL；任一匹配即判定为 blocked（如被重定向到登录页）。
+        },
+        "content_check": {
+          "enabled": true,                                 // 是否启用 L2 页面内容检查。默认 true。关闭后仅按 HTTP 状态码判定。
+          "timeout": 30,                                   // GET 探测超时（秒，完整抓取，最多读 max_content_limit 字节）。默认 30。与 http_head_probe.timeout 相互独立。
+          "check_selectors": ["title", "body"],            // 检查页面的哪些部分。默认 ["title", "body"]。
+          "valid_selectors": [".article-body", "main#content"], // CSS 选择器。任一元素存在即短路判定为 ok。
+          "valid_patterns": ["dashboard", "logged.?in"],   // 字符串正则数组。title/body 中任一匹配即短路判定为 ok。
+          "invalid_selectors": ["h1.error", ".not-found", "[class*=404]"], // CSS 选择器。任一元素存在即判定为 missing（软 404）。
+          "invalid_patterns": ["内容不存在", "该页面已被删除", "文章已下架"], // 字符串正则数组。title/body 中任一匹配即判定为 missing（软 404；普通关键词按子串匹配同样有效）。
+        },
+        "reason": {"default": "无法访问（HTTP {http_status}）", "blocked": {"default": "被站点拦截", "403": "被反爬拦截，请稍后重试"}, "dead": "页面已失效", "missing": "页面内容缺失（软 404）", "failed": "请求失败"}, // 自定义判定说明：书签非 ok 时显示该文案（替代引擎默认）。支持字符串（全局兜底）或对象（按状态、可按 HTTP 码分层）。状态 key：ok（不生效）、dead、blocked、missing、failed。示例：{ default, blocked: { default, 401, 403 }, dead: '...', missing: '...', failed: '...' }。命中优先级：reason.<状态>.<HTTP码> > reason.<状态>.default > reason.default > 引擎默认。支持 {http_status} 占位符。
+        "max_content_limit": 1048576,                      // L2 内容检查最大读取字节数。默认 1048576（1 MB）。仅当 HTTP 状态码命中 accept_status 时才读满；非 2xx 响应截断到 4 KB。
+        "proxy": null,                                     // HTTP 代理地址。
+        "http": {},                                        // 自定义 HTTP 请求头。所有键值对都会作为 header 透传。
+        "auth": null,                                      // 认证配置。
       },
 
     }

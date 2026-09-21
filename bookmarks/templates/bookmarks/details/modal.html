@@ -190,6 +190,38 @@
                 <span>{% if details.bookmark.shared %}{% translate "Shared" %}{% else %}{% translate "Not shared" %}{% endif %}</span>
               </button>
             {% endif %}
+            {# 健康状态 chip（dot + 状态 + 刷新；dot/状态悬浮显示详情弹层） #}
+            <span class="detail-status-chip detail-health-chip" data-health-chip>
+              <span class="detail-health-chip-status health-status" data-health-chip-status tabindex="0"
+                    role="button" aria-haspopup="true" aria-expanded="false">
+                <span class="health-dot health-dot--{{ details.health_display_status|default:'unknown' }}"
+                      data-health-dot></span>
+                <span class="health-text" data-health-text>{{ details.health_display_status_display|default:"Unknown" }}</span>
+                <span class="health-popover" role="tooltip">
+                  <span class="health-popover-status" data-popover-status>{{ details.health_display_status_display|default:"Unknown" }}</span>
+                  {% if details.health_http_status %}
+                    <span class="health-popover-row" data-popover-http>HTTP {{ details.health_http_status }}</span>
+                  {% endif %}
+                  {% if details.health_reason %}
+                    <span class="health-popover-row health-popover-reason" data-popover-reason>{{ details.health_reason }}</span>
+                  {% endif %}
+                  {% if details.health_checked_at_display %}
+                    <span class="health-popover-checked" data-popover-checked>
+                      {% if details.health_stale %}{% translate 'Checked at' %} {{ details.health_checked_at_display }}（{% translate 'expired' %}）{% else %}{% translate 'Checked at' %} {{ details.health_checked_at_display }}{% endif %}
+                    </span>
+                  {% endif %}
+                </span>
+              </span>
+              {% if not details.bookmark.is_deleted %}
+                <button type="button" class="detail-health-check" data-health-check
+                        data-check-url="{% url 'linkding:health.check' details.bookmark.id %}"
+                        data-label-recheck="{% translate 'Recheck' %}"
+                        data-label-check="{% translate 'Check now' %}"
+                        title="{% if details.health_checked_at %}{% translate 'Recheck' %}{% else %}{% translate 'Check now' %}{% endif %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"><use xlink:href="#ld-icon-refresh"></use></svg>
+                </button>
+              {% endif %}
+            </span>
           </div>
         {% endif %}
 

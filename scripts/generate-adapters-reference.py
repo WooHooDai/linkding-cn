@@ -34,6 +34,7 @@ from site_adapters.services.config.fields import (
     DEFAULT_FIELDS,
     DOMAIN_EXAMPLE_KEY,
     DEFUDDLE_ARG_FIELDS,
+    HEALTH_FIELDS,
     METADATA_FIELDS,
     PRIORITY_NOTES,
     ROUTES_FIELD,
@@ -360,6 +361,12 @@ def generate(lang="en"):
     out.append(f'{sec4*2}"^/video/": {{')
     out.append(f'{sec4*3}"snapshot": {{ "keep_elements": [".video-player"] }}')
     out.append(f'{sec4*2}}}')
+    out.append(f'{sec4}}},')
+    out.append("")
+
+    out.append(f'{sec4}// {t("sec_health")}')
+    out.append(f'{sec4}"health": {{')
+    out.extend(_render_nested(_unflatten(HEALTH_FIELDS), 8))
     out.append(f'{sec4}}},')
     out.append("")
 

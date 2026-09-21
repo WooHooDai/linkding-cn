@@ -722,42 +722,164 @@ button.btn-link.quick-tag-btn.active:focus {
    .toolbar-visible toggled by JS on tap. Targets ALL direct children
    of .actions so the feature works regardless of toolbar module order. */
 
-ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > *:not(.toolbar-date) {
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > *:not(.toolbar-date):not(.health-status) {
   max-height: 0;
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
+  /* 隐藏时塌缩宽度，使常显的日期与健康指示紧贴排列 */
+  flex: 0 0 0;
+  min-width: 0;
 }
 
 /* Hover mode: pin date to the left regardless of toolbar module order */
 ul.bookmark-list.toolbar-auto-hide .toolbar-date {
   order: -1;
 }
+/* 隐藏态去除列间隙（隐藏元素不占位），日期用 margin 保持与健康指示的间距 */
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions {
+  column-gap: 0;
+}
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .toolbar-date {
+  margin-right: var(--unit-2);
+}
+/* 隐藏态：健康状态只显示为一个带颜色的小圆点（无外圈、无文字、无波形图标） */
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status .health-text,
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status .health-ring,
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status .health-popover {
+  display: none;
+}
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status .health-dot,
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status.health-icon-mode .health-dot {
+  position: static;
+  /* 关键：清除 icon 模式 health.css 的 translate(-50%,-50%)——static 下
+     left/top 失效但 transform 仍生效，会把圆点平移出居中位置 */
+  transform: none;
+  width: 8px;
+  height: 8px;
+  border: none;
+  background: var(--health-color);
+  box-shadow: none;
+}
+/* 默认折叠态：仅 icon 模式下隐藏 Unknown 空心圆；文字模式保留空心圆+文字 */
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status.health-icon-mode .health-dot--unknown {
+  display: none;
+}
 /* Desktop: reveal on hover */
 @media (hover: hover) and (pointer: fine) {
-  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > *:not(.toolbar-date) {
+  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > *:not(.toolbar-date):not(.health-status) {
     max-height: none;
     overflow: visible;
     opacity: 1;
     pointer-events: auto;
+    flex: 0 1 auto;
+    min-width: 0;
   }
 
-  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .toolbar-date {
+  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions {
+    column-gap: var(--unit-2);
+  }
+
+  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .toolbar-date {
+    margin-right: 0;
     order: unset;
+  }
+
+  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status .health-text {
+    display: inline-flex;
+  }
+  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status .health-ring {
+    display: block;
+  }
+  /* 悬浮工具栏不自动打开健康 popover（仅显式点击/键盘打开） */
+  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status .health-popover {
+    display: none;
+  }
+  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status.health-popover-open .health-popover {
+    display: flex;
+  }
+  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status .health-dot,
+  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status.health-icon-mode .health-dot {
+    width: 8px;
+    height: 8px;
+    border: none;
+    background: var(--health-color);
+    box-shadow: none;
+  }
+  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status.health-icon-mode .health-dot {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 5px;
+    height: 5px;
+  }
+  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status:not(.health-icon-mode) .health-dot {
+    position: static;
+  }
+  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status .health-dot--unknown,
+  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status.health-icon-mode .health-dot--unknown {
+    background: transparent;
+    border: 1.5px solid var(--body-border-color, #8b93a1);
   }
 }
 
 /* Mobile + desktop: reveal when JS toggles .toolbar-visible */
-ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > *:not(.toolbar-date) {
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > *:not(.toolbar-date):not(.health-status) {
   max-height: none;
   overflow: visible;
   opacity: 1;
   pointer-events: auto;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
-ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .toolbar-date {
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions {
+  column-gap: var(--unit-2);
+}
+
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .toolbar-date {
+  margin-right: 0;
   order: unset;
+}
+
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status .health-text {
+  display: inline-flex;
+}
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status .health-ring {
+  display: block;
+}
+/* 工具栏展开不自动打开健康 popover（仅显式点击/键盘打开） */
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status .health-popover {
+  display: none;
+}
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status.health-popover-open .health-popover {
+  display: flex;
+}
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status .health-dot,
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status.health-icon-mode .health-dot {
+  width: 8px;
+  height: 8px;
+  border: none;
+  background: var(--health-color);
+  box-shadow: none;
+}
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status.health-icon-mode .health-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 5px;
+  height: 5px;
+}
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status:not(.health-icon-mode) .health-dot {
+  position: static;
+}
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status .health-dot--unknown,
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status.health-icon-mode .health-dot--unknown {
+  background: transparent;
+  border: 1.5px solid var(--body-border-color, #8b93a1);
 }
 
 .bookmark-pagination {

@@ -404,6 +404,16 @@ LD_METADATA_DOMAIN_COOLDOWN_SEC = int(
     os.getenv("LD_METADATA_DOMAIN_COOLDOWN_SEC", 0)
 )
 
+# Bookmark health check
+# 健康检查线程池大小（I/O 密集，线程即可）
+LD_HEALTH_CHECK_WORKERS = int(os.getenv("LD_HEALTH_CHECK_WORKERS", 8))
+# worker 心跳间隔（秒）
+LD_HEALTH_CHECK_HEARTBEAT_SEC = int(os.getenv("LD_HEALTH_CHECK_HEARTBEAT_SEC", 5))
+# 心跳超时阈值（秒），超过视为 worker 进程已退出，可安全续跑
+LD_HEALTH_CHECK_HEARTBEAT_TIMEOUT_SEC = int(
+    os.getenv("LD_HEALTH_CHECK_HEARTBEAT_TIMEOUT_SEC", 60)
+)
+
 # Site adapters base directory
 LD_SITE_ADAPTERS_DIR = os.getenv(
     "LD_SITE_ADAPTERS_DIR", os.path.join(BASE_DIR, "data", "site_adapters")
@@ -431,3 +441,7 @@ LD_SNAPSHOT_RETRY_DELAYS = [
 # it turns out to be useful in the future.
 LD_MONOLITH_PATH = os.getenv("LD_MONOLITH_PATH", "monolith")
 LD_MONOLITH_OPTIONS = os.getenv("LD_MONOLITH_OPTIONS", "-a -v -s")
+
+# 书签健康状态有效期（天）：超过该窗口的检查结果视为过期（stale），
+# 列表/详情按未检查弱化显示；用户可在 UserProfile.health_max_age_days 按用户覆盖。
+LINK_HEALTH_MAX_AGE_DAYS = int(os.getenv("LINK_HEALTH_MAX_AGE_DAYS", "15"))

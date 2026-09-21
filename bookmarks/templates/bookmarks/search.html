@@ -119,6 +119,21 @@
             {% endfor %}
           </div>
         {% endif %}
+        {% if 'health_status' in preferences_form.editable_fields %}
+          <div class="form-group" role="group" aria-labelledby="search-health-status-label" ld-health-filter>
+            <label id="search-health-status-label"
+                   class="form-label{% if 'health_status' in search.modified_params %} text-bold{% endif %}">
+              {% translate "Health status" %}
+            </label>
+            {% for checkbox in preferences_form.health_status %}
+              <label for="{{ checkbox.id_for_label }}" class="form-checkbox form-inline">
+                {{ checkbox.tag }}
+                <i class="form-icon"></i>
+                {{ checkbox.choice_label }}
+              </label>
+            {% endfor %}
+          </div>
+        {% endif %}
         {% if 'date_filter_by' in preferences_form.editable_fields %}
           <!-- 日期筛选相关表单项 -->
           <div id="date-filter-by-group" class="form-group radio-group" role="radiogroup" aria-labelledby="date-filter-by-label">

@@ -1,4 +1,5 @@
 import datetime
+
 import re
 
 from django.test import TestCase, override_settings
@@ -394,3 +395,160 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
         # No textareas for description/notes (readonly divs instead)
         textarea = soup.find("textarea", {"data-field": "description"})
         self.assertIsNone(textarea)
+
+    # ---- Health check 区块 ----
+
+    def test_health_chip_in_status_row(self):
+        from bookmarks.models import HEALTH_STATUS_DEAD
+
+        bookmark = self.setup_bookmark()
+        bookmark.health_status = HEALTH_STATUS_DEAD
+        bookmark.health_details = {
+            "checked_at": "2026-09-15T16:18:00",
+            "http_status": 404,
+            "reason": "HTTP 404",
+        }
+        bookmark.save()
+
+        soup = self.get_index_details_modal(bookmark)
+        chips = soup.select_one("div.detail-status-chips")
+        self.assertIsNotNone(chips)
+        chip = chips.select_one("span.detail-health-chip")
+        self.assertIsNotNone(chip)
+        # 健康 chip 位于最后（分享 chip 之后）
+        all_chips = list(chips.select("span.detail-health-chip, button[data-chip-field]"))
+        self.assertEqual(all_chips[-1], chip)
+
+    def test_health_checked_state(self):
+        from bookmarks.models import HEALTH_STATUS_BLOCKED
+
+        bookmark = self.setup_bookmark()
+        bookmark.health_status = HEALTH_STATUS_BLOCKED
+        bookmark.health_details = {
+            "checked_at": "2026-09-15T16:18:00",
+            "http_status": 403,
+            "reason": "HTTP 403",
+        }
+        bookmark.save()
+
+        soup = self.get_index_details_modal(bookmark)
+        chip = soup.select_one("span.detail-health-chip")
+        # 低调指示：小圆点 + 文字
+        self.assertIsNotNone(chip.select_one("span.health-dot--blocked"))
+        self.assertEqual(chip.select_one("span.health-text").text.strip(), "Blocked")
+        # 详情弹层：状态 / HTTP 码（reason 与 HTTP 码重复时不显示）/ 检查时间
+        popover = chip.select_one("span.health-popover")
+        self.assertIsNotNone(popover)
+        self.assertIn("Blocked", popover.get_text())
+        self.assertIn("HTTP 403", popover.get_text())
+        # reason "HTTP 403" 与 HTTP 码重复 → 去重，不重复出现
+        self.assertEqual(popover.get_text().count("HTTP 403"), 1)
+        self.assertIsNone(popover.select_one("[data-popover-reason]"))
+        checked = popover.select_one("[data-popover-checked]")
+        self.assertIsNotNone(checked)
+        # 检查时间：本地时区格式 检查于 2026/09/15 ...
+        self.assertIn("Checked at", checked.get_text())
+        self.assertRegex(checked.get_text(), r"\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}")
+        # 刷新按钮（图标按钮，title 为"重新检查"）
+        btn = chip.select_one("button[data-health-check]")
+        self.assertIsNotNone(btn)
+        self.assertEqual(btn.get("title"), "Recheck")
+        self.assertEqual(btn.get_text(strip=True), "")
+
+    def test_health_stale_chip_shows_unknown(self):
+        """过期结果：chip 状态显示 unknown，弹层下方保留上次检查信息并标注已过期。"""
+        from datetime import timedelta
+
+        from django.utils import formats, timezone
+
+        bookmark = self.setup_bookmark()
+        bookmark.health_status = "blocked"
+        bookmark.health_details = {
+            "checked_at": (timezone.now() - timedelta(days=30)).isoformat(),
+            "http_status": 403,
+            "reason": "requires login",
+        }
+        bookmark.save()
+
+        soup = self.get_index_details_modal(bookmark)
+        chip = soup.select_one("span.detail-health-chip")
+        self.assertIsNotNone(chip.select_one("span.health-dot--unknown"))
+        self.assertEqual(
+            chip.select_one("span.health-text").text.strip(), "Unknown"
+        )
+        popover = chip.select_one("span.health-popover")
+        self.assertEqual(
+            popover.select_one("[data-popover-status]").text.strip(), "Unknown"
+        )
+        # 上次检查信息保留在弹层下方
+        self.assertEqual(
+            popover.select_one("[data-popover-http]").text.strip(), "HTTP 403"
+        )
+        self.assertEqual(
+            popover.select_one("[data-popover-reason]").text.strip(),
+            "requires login",
+        )
+        checked = popover.select_one("[data-popover-checked]")
+        self.assertIn("expired", checked.get_text())
+
+    def test_health_reason_displayed_when_not_duplicate(self):
+        bookmark = self.setup_bookmark()
+        bookmark.health_status = "blocked"
+        bookmark.health_details = {
+            "checked_at": "2026-09-15T16:18:00",
+            "http_status": 200,
+            "reason": "redirected to blocked location: login",
+        }
+        bookmark.save()
+
+        soup = self.get_index_details_modal(bookmark)
+        chip = soup.select_one("span.detail-health-chip")
+        popover = chip.select_one("span.health-popover")
+        reason = popover.select_one("[data-popover-reason]")
+        self.assertIsNotNone(reason)
+        self.assertEqual(reason.text.strip(), "redirected to blocked location: login")
+        self.assertIn("HTTP 200", popover.get_text())
+
+    def test_health_unchecked_state(self):
+        bookmark = self.setup_bookmark()
+        soup = self.get_index_details_modal(bookmark)
+        chip = soup.select_one("span.detail-health-chip")
+        self.assertIsNotNone(chip)
+        # 未检查：派生为 unknown 状态显示（不持久化）
+        self.assertIsNotNone(chip.select_one("span.health-dot--unknown"))
+        self.assertEqual(
+            chip.select_one("span.health-text").text.strip(), "Unknown"
+        )
+        # 无检查时间
+        popover = chip.select_one("span.health-popover")
+        self.assertIsNone(popover.select_one("[data-popover-checked]"))
+        # 刷新按钮 title 为"立即检查"
+        btn = chip.select_one("button[data-health-check]")
+        self.assertIsNotNone(btn)
+        self.assertEqual(btn.get("title"), "Check now")
+
+    def test_trash_modal_shows_status_without_check_button(self):
+        from bookmarks.models import HEALTH_STATUS_DEAD
+
+        bookmark = self.setup_bookmark()
+        bookmark.is_deleted = True
+        bookmark.date_deleted = timezone.now()
+        bookmark.health_status = HEALTH_STATUS_DEAD
+        bookmark.health_details = {
+            "checked_at": "2026-09-15T16:18:00",
+            "http_status": 404,
+        }
+        bookmark.save()
+
+        url = reverse("linkding:bookmarks.trashed") + f"?details={bookmark.id}"
+        response = self.client.get(url)
+        soup = self.make_soup(response.content.decode())
+        modal = soup.select_one("ld-details-modal")
+        self.assertIsNotNone(modal)
+        chip = modal.select_one("span.detail-health-chip")
+        # 软删除书签仍呈现历史检查状态
+        self.assertIsNotNone(chip)
+        self.assertIsNotNone(chip.select_one("span.health-dot--dead"))
+        self.assertIn("Checked at", chip.get_text())
+        # 但不提供检查按钮（软删除书签不检查）
+        self.assertIsNone(chip.select_one("button[data-health-check]"))

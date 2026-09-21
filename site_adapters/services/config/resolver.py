@@ -7,7 +7,8 @@ Config structure:
     "defaults": { ... },  # shared settings
     "metadata": { ... },   # metadata extraction
     "snapshot": { ... },   # HTML snapshot or raw XML/JSON capture
-    "reader": { ... }      # reader mode
+    "reader": { ... },     # reader mode
+    "health": { ... }      # bookmark health check
   }
 
 Merge rule: defaults + section -> section overrides same-name fields.
@@ -440,6 +441,9 @@ def _build_section_config(full_config: dict, section: str, base_dir: str, userna
     elif section == 'reader':
         result['defuddle_args'] = section_data.get('defuddle_args', {})
 
+    elif section == 'health':
+        result['health_enabled'] = section_data['enabled']
+
     # URL processing
     url = full_config.get('_url', '')
     if url:
@@ -501,3 +505,12 @@ def get_reader_config(url: str, username: str = '') -> dict | None:
         return None
     config['_url'] = url
     return _build_section_config(config, 'reader', base_dir, username)
+
+
+def get_health_config(url: str, username: str = '') -> dict | None:
+    """Resolve merged health-check config (builtin + domain) for a URL."""
+    base_dir = _get_base_dir()
+    config = _load_config(url, base_dir, username)
+    if not config:
+        return None
+    return _build_section_config(config, 'health', base_dir, username)

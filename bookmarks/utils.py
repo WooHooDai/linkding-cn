@@ -182,8 +182,18 @@ def get_clean_url(url: str) -> str:
 def clean_query_params(params) -> str:
     """移除空值参数后编码，避免 URL 中出现 ?q= 这样的残留。
     接受 QueryDict 或普通 dict，返回编码后的 query string。
+    QueryDict 的多值参数（如多个 health_status / tags）会全部保留，
+    而不是只取最后一个值。
     """
     from django.http import QueryDict
+
+    if isinstance(params, QueryDict):
+        cleaned = QueryDict("", mutable=True)
+        for key in params.keys():
+            values = [v for v in params.getlist(key) if v not in (None, "")]
+            if values:
+                cleaned.setlist(key, values)
+        return cleaned.urlencode()
 
     cleaned = QueryDict("", mutable=True)
     for key in params:

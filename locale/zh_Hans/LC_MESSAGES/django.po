@@ -311,7 +311,7 @@ msgstr "有"
 #: bookmarks/models.py:771 bookmarks/models.py:776 bookmarks/models.py:781
 #: bookmarks/views/highlights.py:42
 msgid "Missing"
-msgstr "无"
+msgstr "内容丢失"
 
 #: bookmarks/models.py:785 bookmarks/templates/bookmarks/details/modal.html:87
 msgid "Added"
@@ -919,6 +919,89 @@ msgstr "执行"
 msgid "Cancel"
 msgstr "取消"
 
+#: bookmarks/templates/bookmarks/health_job_capsule.html:7
+msgid "Health Check completed"
+msgstr "健康检查完成"
+
+#: bookmarks/templates/bookmarks/health_job_capsule.html:8
+msgid "Health Check failed"
+msgstr "健康检查失败"
+
+#: bookmarks/templates/bookmarks/health_job_capsule.html:9
+msgid "Health Check cancelled"
+msgstr "健康检查已取消"
+
+#: bookmarks/templates/bookmarks/health_job_capsule.html:10
+#: bookmarks/templates/bookmarks/health_job_capsule.html:17
+msgid "Pause"
+msgstr "暂停"
+
+#: bookmarks/templates/bookmarks/health_job_capsule.html:11
+msgid "Resume"
+msgstr "继续"
+
+#: bookmarks/templates/bookmarks/health_job_capsule.html:12
+#: bookmarks/templates/bookmarks/health_job_capsule.html:40
+msgid "Minimize"
+msgstr "最小化"
+
+#: bookmarks/templates/bookmarks/health_job_capsule.html:22
+msgid "Health Check progress"
+msgstr "健康检查进度"
+
+#: bookmarks/templates/bookmarks/health_job_capsule.html:35
+msgid "Cancel health check?"
+msgstr "取消健康检查？"
+
+#: bookmarks/templates/bookmarks/bookmark_list.html
+msgid "Click to view health status"
+msgstr "点击查看健康状态"
+
+#: bookmarks/templates/bookmarks/bookmark_list.html
+msgid "Last check result (expired)"
+msgstr "上次检查结果（已过期）"
+
+#: bookmarks/models.py:42
+#: bookmarks/templates/bookmarks/highlights/index.html:96
+msgid "All"
+msgstr "全部"
+
+#: bookmarks/models.py:43
+msgid "Ok"
+msgstr "正常"
+
+#: bookmarks/models.py:44
+msgid "Dead"
+msgstr "死链"
+
+#: bookmarks/models.py:45
+msgid "Failed"
+msgstr "检查失败"
+
+#: bookmarks/models.py:46
+msgid "Blocked"
+msgstr "被拦截"
+
+#: bookmarks/models.py:48
+msgid "Unknown"
+msgstr "未检查"
+
+#: bookmarks/models.py:867
+msgid "Health checked"
+msgstr "健康检查"
+
+#: bookmarks/templates/settings/general.html
+msgid """How long a health check result stays valid before it is considered expired. Set to 0 to never expire. Leave empty to use the global default (%(default)s days)."""
+msgstr """健康检查结果的有效期（天）。设为 0 表示永不过期。留空则使用全局默认值（%(default)s 天）。"""
+
+#: bookmarks/templates/settings/general.html
+msgid """Number of parallel health check workers. Leave empty to use the global default (%(default)s)."""
+msgstr """并行健康检查 worker 数。留空则使用全局默认值（%(default)s）。"""
+
+#: bookmarks/templates/settings/general.html
+msgid """Minimum interval between requests to the same domain. Leave empty to use the global default (%(default)s s; 0 means no rate limiting)."""
+msgstr """同一域名请求的最小间隔（秒）。留空则使用全局默认值（%(default)s 秒；0 表示不限速）。"""
+
 #: bookmarks/templates/bookmarks/bulk_edit/bar.html:92
 #: bookmarks/templates/bookmarks/highlights/index.html:255
 msgid "All pages"
@@ -1243,9 +1326,6 @@ msgstr "聚合依据"
 msgid "Color filter"
 msgstr "颜色筛选"
 
-#: bookmarks/templates/bookmarks/highlights/index.html:96
-msgid "All"
-msgstr "全部"
 
 #: bookmarks/templates/bookmarks/highlights/index.html:133
 #: bookmarks/templates/bookmarks/search.html:196
@@ -3775,3 +3855,94 @@ msgstr "图片尺寸无效"
 #~ msgctxt "nav"
 #~ msgid "Bookmarks"
 #~ msgstr "书签"
+
+#: bookmarks/models.py:849
+msgid "Health Checked"
+msgstr "健康检查"
+
+#: bookmarks/models.py:1095
+msgctxt "bookmark_status"
+msgid "Health status"
+msgstr "健康状态"
+
+#: bookmarks/models.py:1222 bookmarks/templates/settings/general.html:1260
+msgid "Result validity (days)"
+msgstr "结果有效期（天）"
+
+#: bookmarks/models.py:1232 bookmarks/templates/settings/general.html:1276
+msgid "Check concurrency"
+msgstr "检查并发"
+
+#: bookmarks/models.py:1241 bookmarks/templates/settings/general.html:1292
+msgid "Per-domain interval (seconds)"
+msgstr "每域名间隔（秒）"
+
+#: bookmarks/templates/bookmarks/bookmark_list.html:326
+#: bookmarks/templates/bookmarks/bookmark_list.html:327
+#: bookmarks/templates/bookmarks/details/modal.html:218
+#: bookmarks/templates/bookmarks/details/modal.html:220
+msgid "Recheck"
+msgstr "重新检查"
+
+#: bookmarks/templates/bookmarks/bookmark_list.html:339
+#: bookmarks/templates/bookmarks/details/modal.html:210
+#: bookmarks/views/checks.py:140
+msgid "Checked at"
+msgstr "检查于"
+
+#: bookmarks/templates/bookmarks/bulk_edit/bar.html:28
+#: bookmarks/templates/bundles/index.html:58
+msgid "Check health"
+msgstr "检查健康"
+
+#: bookmarks/templates/bookmarks/details/modal.html:219
+#: bookmarks/templates/bookmarks/details/modal.html:220
+msgid "Check now"
+msgstr "立即检查"
+
+#: bookmarks/templates/settings/general.html:1251
+#: bookmarks/templates/settings/general.html:1808
+msgid "Health Check"
+msgstr "健康检查"
+
+#: bookmarks/views/bookmarks.py:1062
+#, python-format
+msgid "Health check started for %(count)s bookmarks."
+msgstr "已为 %(count)s 个书签启动健康检查。"
+
+#: bookmarks/views/bundles.py:51 bookmarks/views/checks.py:62
+msgid "A health check job is already running."
+msgstr "已有健康检查任务正在运行。"
+
+#: bookmarks/views/bundles.py:69
+#, python-format
+msgid "Health check started for filter '%(name)s'."
+msgstr "已为筛选器“%(name)s”启动健康检查。"
+
+#: bookmarks/views/bundles.py:72 bookmarks/views/checks.py:78
+msgid "Failed to start health check job."
+msgstr "健康检查任务启动失败。"
+
+#: bookmarks/templates/bookmarks/search.html:126
+msgid "Health status"
+msgstr "健康状态"
+
+#: bookmarks/views/health_check.py:85
+msgid "Invalid bookmark ids."
+msgstr "书签 ID 无效。"
+
+#: bookmarks/views/health_check.py:87
+msgid "Please select bookmarks to check."
+msgstr "请选择要检查的书签。"
+
+#: bookmarks/views/health_check.py:153
+msgid "Job is not running."
+msgstr "任务未在运行。"
+
+#: bookmarks/views/health_check.py:161
+msgid "Job is not paused."
+msgstr "任务未处于暂停状态。"
+
+#: bookmarks/views/health_check.py:190
+msgid "Unknown action."
+msgstr "未知操作。"

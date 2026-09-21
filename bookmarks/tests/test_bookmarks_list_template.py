@@ -1239,3 +1239,58 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
 
         # But date should still be rendered
         self.assertWebArchiveLink(html, "1 week ago", bookmark.web_archive_snapshot_url)
+
+
+    # ---- Health check 区块 ----
+
+    def test_health_indicator_rendered_with_status(self):
+        profile = self.get_or_create_test_user().profile
+        profile.bookmark_status_display_mode = UserProfile.ACTION_DISPLAY_MODE_TEXT
+        profile.save()
+
+        bookmark = self.setup_bookmark()
+        bookmark.health_status = "dead"
+        bookmark.health_details = {
+            "checked_at": "2026-09-15T16:18:00",
+            "http_status": 404,
+            "reason": "HTTP 404",
+        }
+        bookmark.save()
+
+        html = self.render_template()
+        soup = self.make_soup(html)
+        indicator = soup.select_one("ld-health-indicator")
+        self.assertIsNotNone(indicator)
+        # dot 状态色 + 状态文字
+        self.assertIsNotNone(indicator.select_one(".health-dot--dead"))
+        self.assertEqual(indicator.select_one(".health-text").get_text(strip=True), "Dead")
+        # popover 详情：状态、HTTP 码、刷新按钮
+        self.assertEqual(
+            indicator.select_one(".health-popover-status").get_text(strip=True), "Dead"
+        )
+        self.assertEqual(
+            indicator.select_one(".health-popover-row-http").get_text(strip=True),
+            "HTTP 404",
+        )
+        self.assertIsNotNone(indicator.select_one("[data-health-check]"))
+
+    def test_health_indicator_hidden_when_unchecked(self):
+        bookmark = self.setup_bookmark()  # 从未检查 → health_status 为 NULL
+        html = self.render_template()
+        soup = self.make_soup(html)
+        self.assertIsNone(soup.select_one("ld-health-indicator"))
+
+    def test_health_indicator_icon_mode_uses_dot(self):
+        # 默认 status_display_mode = icon：只有带颜色 dot（无文字）
+        bookmark = self.setup_bookmark()
+        bookmark.health_status = "blocked"
+        bookmark.health_details = {"checked_at": "2026-09-15T16:18:00", "http_status": 403}
+        bookmark.save()
+
+        html = self.render_template()
+        soup = self.make_soup(html)
+        indicator = soup.select_one("ld-health-indicator")
+        self.assertIsNotNone(indicator)
+        self.assertIn("health-icon-mode", indicator.get("class", []))
+        self.assertIsNotNone(indicator.select_one(".health-dot--blocked"))
+        self.assertIsNone(indicator.select_one(".health-text"))

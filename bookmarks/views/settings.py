@@ -34,6 +34,7 @@ from bookmarks.models import (
     UserProfileAutoTaggingRulesForm,
     UserProfileCustomCssForm,
     UserProfileCustomDomainRootForm,
+    UserProfileHealthForm,
     UserProfileHighlightCopyFormatForm,
     UserProfileQuickSettingsForm,
 )
@@ -136,6 +137,23 @@ def general(request: HttpRequest, status=200, context_overrides=None):
         if icon_data_map else None
     )
     custom_css_form = UserProfileCustomCssForm(instance=request.user_profile)
+    # 全局默认值（环境变量），供设置页帮助文案动态展示
+    health_defaults = {
+        "max_age_days": django_settings.LINK_HEALTH_MAX_AGE_DAYS,
+        "workers": django_settings.LD_HEALTH_CHECK_WORKERS,
+        "domain_interval": django_settings.LD_METADATA_DOMAIN_COOLDOWN_SEC,
+    }
+    # 输入框始终显示当前生效值：未显式设置（None）时填入全局默认值
+    _health_initial = {}
+    if request.user_profile.health_max_age_days is None:
+        _health_initial["health_max_age_days"] = health_defaults["max_age_days"]
+    if request.user_profile.health_check_workers is None:
+        _health_initial["health_check_workers"] = health_defaults["workers"]
+    if request.user_profile.health_domain_interval is None:
+        _health_initial["health_domain_interval"] = health_defaults["domain_interval"]
+    health_form = UserProfileHealthForm(
+        instance=request.user_profile, initial=_health_initial
+    )
     auto_tagging_rules_form = UserProfileAutoTaggingRulesForm(
         instance=request.user_profile
     )
@@ -175,6 +193,8 @@ def general(request: HttpRequest, status=200, context_overrides=None):
         {
             "profile_quick_form": profile_quick_form,
             "custom_css_form": custom_css_form,
+            "health_form": health_form,
+            "health_defaults": health_defaults,
             "auto_tagging_rules_form": auto_tagging_rules_form,
             "custom_domain_root_form": custom_domain_root_form,
             "highlight_copy_format_form": highlight_copy_format_form,
@@ -383,6 +403,8 @@ def save(request: HttpRequest):
         )
     elif form_id == "profile_custom_css":
         form = UserProfileCustomCssForm(request.POST, instance=profile)
+    elif form_id == "profile_health":
+        form = UserProfileHealthForm(request.POST, instance=profile)
     elif form_id == "profile_auto_tagging_rules":
         form = UserProfileAutoTaggingRulesForm(request.POST, instance=profile)
     elif form_id == "profile_custom_domain_root":

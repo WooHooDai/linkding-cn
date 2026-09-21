@@ -46,6 +46,8 @@ class BundleIndexViewTestCase(TestCase, BookmarkFactoryMixin):
               </td>
               <td class="actions">
                 <div>
+                  <button type="submit" name="check_bundle" value="{bundle.id}"
+                          class="btn btn-link">Check health</button>
                   <a class="btn btn-link" href="{reverse("linkding:bundles.edit", args=[bundle.id])}">Edit</a>
                   <button ld-confirm-button type="submit" name="remove_bundle" value="{bundle.id}"
                           class="btn btn-link">Delete

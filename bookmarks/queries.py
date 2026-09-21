@@ -2,6 +2,7 @@ import contextlib
 import datetime
 import random
 import time
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -18,6 +19,7 @@ from django.db.models import (
     When,
 )
 from django.db.models.functions import Collate, Lower
+from django.utils import timezone
 
 from bookmarks.models import (
     Annotation,
@@ -592,6 +594,37 @@ def _apply_filters(
                 end = end + datetime.timedelta(days=1)
             annotation_qs = annotation_qs.filter(date_created__lt=end)
         query_set = query_set.filter(Exists(annotation_qs))
+
+    # 按健康检查日期筛选（checked_at 存储在 health_details JSON 中）
+    if search.date_filter_by == "health":
+        start = _parse_date(search.date_filter_start)
+        end = _parse_date(search.date_filter_end)
+        if start:
+            query_set = query_set.filter(
+                health_details__checked_at__gte=start.isoformat()
+            )
+        if end:
+            if isinstance(end, datetime.date) and not isinstance(
+                end, datetime.datetime
+            ):
+                end = end + datetime.timedelta(days=1)
+            query_set = query_set.filter(
+                health_details__checked_at__lt=end.isoformat()
+            )
+
+    # 健康状态多选（勾选多个 = OR；unknown 派生自 health_status IS NULL）
+    if search.health_status:
+        status_q = Q()
+        for status in search.health_status:
+            if status == "all":
+                # "all" 是筛选面板的全选控件，不作为过滤条件
+                continue
+            if status == "unknown":
+                status_q |= Q(health_status__isnull=True)
+            else:
+                status_q |= Q(health_status=status)
+        if status_q:
+            query_set = query_set.filter(status_q)
 
     return query_set
 

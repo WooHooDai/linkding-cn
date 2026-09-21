@@ -3,14 +3,16 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import gettext as _
 
 from bookmarks.forms import BookmarkBundleForm
-from bookmarks.models import BookmarkBundle, BookmarkSearch
+from bookmarks.models import BookmarkBundle, BookmarkSearch, CheckJob
 from bookmarks.queries import parse_query_string
 from bookmarks.services import bundles
 from bookmarks.utils import parse_relative_date_string
 from bookmarks.views import access
+from bookmarks.views import health_check as health_check_views
 from bookmarks.views.contexts import ActiveBookmarkListContext
 
 
@@ -18,6 +20,7 @@ from bookmarks.views.contexts import ActiveBookmarkListContext
 def index(request: HttpRequest):
     bundles = BookmarkBundle.objects.filter(owner=request.user).order_by("order")
     context = {"bundles": bundles}
+    context["active_check_job"] = health_check_views.get_active_check_job(request.user)    # 活跃健康检查任务（供进度胶囊轮询；与书签列表页一致）
     return render(request, "bundles/index.html", context)
 
 
@@ -39,6 +42,37 @@ def action(request: HttpRequest):
         bundle_to_move = access.bundle_write(request, bundle_id)
         move_position = int(request.POST.get("move_position"))
         bundles.move_bundle(bundle_to_move, move_position)
+
+    elif "check_bundle" in request.POST:
+
+        bundle = access.bundle_write(request, request.POST.get("check_bundle"))
+        if CheckJob.objects.filter(
+            owner=request.user, state__in=("pending", "running", "interrupted")
+        ).exists():
+            messages.error(request, _("A health check job is already running."))
+        else:
+            job = CheckJob.objects.create(
+                owner=request.user,
+                scope={"mode": "bundle", "bundle_id": bundle.pk},
+            )
+            try:
+                from bookmarks.services.health_checker import resolve_job_bookmarks
+
+                total = resolve_job_bookmarks(job).count()
+                CheckJob.objects.filter(pk=job.pk).update(total=total)
+                health_check_views._spawn_check_job(job)
+                messages.success(
+                    request,
+                    _("Health check started for filter '%(name)s'.")
+                    % {"name": bundle.name},
+                )
+            except RuntimeError as exc:
+                CheckJob.objects.filter(pk=job.pk).update(
+                    state=CheckJob.STATE_FAILED,
+                    error=str(exc)[:2000],
+                    finished_at=timezone.now(),
+                )
+                messages.error(request, _("Failed to start health check job."))
 
     return HttpResponseRedirect(reverse("linkding:bundles.index"))
 

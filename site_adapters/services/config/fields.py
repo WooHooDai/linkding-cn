@@ -335,6 +335,134 @@ READER_FIELDS = {
     },
 }
 
+# ── health section (bookmark health check) ───────────────────────────────
+#
+# 结构借鉴 auth.cookie.verify 的 L1/L2 分层（http_head_probe + content_check），
+# 但判定模型为三段式（ok / blocked / dead）+ 内容级 missing，与 cookie.verify 的
+# 二元"有效/失效"不同。
+
+HEALTH_FIELDS = {
+    # ── 总开关 ─────────────────────────────────────────────────────────
+    "enabled": {
+        "type": "bool",
+        "en": "Whether health check runs for this domain. Defaults to true. When false, both L1 probe and L2 content check are skipped (bookmark stays unchecked). Subtractive: can only disable, never force-enable against a user-level toggle.",
+        "zh": "是否对该域名执行健康检查。默认 true。设为 false 时 L1 探测与 L2 内容检查均跳过（书签保持未检查）。纯减法控制，不能绕过用户级开关强制开启。",
+        "example": True,
+    },
+    # ── L1 HTTP 探测（HEAD 优先、GET 兜底）────────────────────────────
+    "http_head_probe.enabled": {
+        "type": "bool",
+        "en": "Enable L1 HTTP probe. Defaults to true. When false, skips HEAD and goes straight to GET for status judgment.",
+        "zh": "是否启用 L1 HTTP 探测（HEAD 优先、GET 兜底）。默认 true。关闭后跳过 HEAD，直接 GET 判定。",
+        "example": True,
+    },
+    "http_head_probe.timeout": {
+        "type": "int",
+        "en": "HEAD probe timeout in seconds. Defaults to 5. Independent of content_check.timeout.",
+        "zh": "HEAD 探测超时（秒）。默认 5。与 content_check.timeout 相互独立。",
+        "example": 3,
+    },
+    "http_head_probe.accept_status": {
+        "type": "array<int>",
+        "en": "HTTP status codes treated as reachable (ok). Defaults to [200].",
+        "zh": "视为可达（ok）的 HTTP 状态码。默认 [200]。",
+        "example": [200, 206],
+    },
+    "http_head_probe.blocked_status": {
+        "type": "array<int>",
+        "en": "HTTP status codes classified as 'blocked' (anti-bot / auth required) instead of dead. Defaults to [401, 403, 407, 429].",
+        "zh": "判定为 blocked（反爬/需认证）而非 dead 的状态码。默认 [401, 403, 407, 429]。",
+        "example": [403, 429],
+    },
+    "http_head_probe.blocked_location_patterns": {
+        "type": "array<str>",
+        "en": "Flat array of regex strings matched against the final redirect URL after the GET probe. Any match means blocked (e.g. redirected to a login page).",
+        "zh": "字符串正则数组，匹配 GET 探针之后的最终重定向 URL；任一匹配即判定为 blocked（如被重定向到登录页）。",
+        "example": ["/login", "/signin", "/auth"],
+    },
+    # ── L2 页面内容检查 ────────────────────────────────────────────────
+    "content_check.enabled": {
+        "type": "bool",
+        "en": "Enable L2 page content check. Defaults to true. When false, verdict is based on HTTP status code only.",
+        "zh": "是否启用 L2 页面内容检查。默认 true。关闭后仅按 HTTP 状态码判定。",
+        "example": True,
+    },
+    "content_check.timeout": {
+        "type": "int",
+        "en": "GET probe timeout in seconds (full fetch, reads up to max_content_limit bytes). Defaults to 30. Independent of http_head_probe.timeout.",
+        "zh": "GET 探测超时（秒，完整抓取，最多读 max_content_limit 字节）。默认 30。与 http_head_probe.timeout 相互独立。",
+        "example": 30,
+    },
+    "content_check.check_selectors": {
+        "type": 'array<"title" | "body">',
+        "en": 'Which page parts to scan. Defaults to ["title", "body"].',
+        "zh": '检查页面的哪些部分。默认 ["title", "body"]。',
+        "example": ["title", "body"],
+    },
+    "content_check.valid_selectors": {
+        "type": "array<str>",
+        "en": "CSS selectors. Any element existing short-circuits to ok.",
+        "zh": "CSS 选择器。任一元素存在即短路判定为 ok。",
+        "example": [".article-body", "main#content"],
+    },
+    "content_check.valid_patterns": {
+        "type": "array<str>",
+        "en": "Flat array of regex strings. Any match against title/body short-circuits to ok.",
+        "zh": "字符串正则数组。title/body 中任一匹配即短路判定为 ok。",
+        "example": ["dashboard", "logged.?in"],
+    },
+    "content_check.invalid_selectors": {
+        "type": "array<str>",
+        "en": "CSS selectors. Any element existing means missing (soft 404).",
+        "zh": "CSS 选择器。任一元素存在即判定为 missing（软 404）。",
+        "example": ["h1.error", ".not-found", "[class*=404]"],
+    },
+    "content_check.invalid_patterns": {
+        "type": "array<str>",
+        "en": "Flat array of regex strings. Any match against title/body means missing (soft 404). Plain keywords also work as substring match.",
+        "zh": "字符串正则数组。title/body 中任一匹配即判定为 missing（软 404；普通关键词按子串匹配同样有效）。",
+        "example": ["内容不存在", "该页面已被删除", "文章已下架"],
+    },
+    # ── health 特有 ───────────────────────────────────────────────────
+    "reason": {
+        "type": "str|obj",
+        "en": "Custom verdict reason shown when a bookmark is not ok. Either a string (global fallback) or an object keyed by status, optionally nested by HTTP code. Status keys: ok (no effect), dead, blocked, missing, failed. Example: { default, blocked: { default, 401, 403 }, dead: '...', missing: '...', failed: '...' }. Precedence: reason.<status>.<http_code> > reason.<status>.default > reason.default > engine default. Supports {http_status} placeholder.",
+        "zh": "自定义判定说明：书签非 ok 时显示该文案（替代引擎默认）。支持字符串（全局兜底）或对象（按状态、可按 HTTP 码分层）。状态 key：ok（不生效）、dead、blocked、missing、failed。示例：{ default, blocked: { default, 401, 403 }, dead: '...', missing: '...', failed: '...' }。命中优先级：reason.<状态>.<HTTP码> > reason.<状态>.default > reason.default > 引擎默认。支持 {http_status} 占位符。",
+        "example": {
+            "default": "无法访问（HTTP {http_status}）",
+            "blocked": {"default": "被站点拦截", "403": "被反爬拦截，请稍后重试"},
+            "dead": "页面已失效",
+            "missing": "页面内容缺失（软 404）",
+            "failed": "请求失败",
+        },
+    },
+    "max_content_limit": {
+        "type": "int",
+        "en": "Max bytes to read for L2 content checks. Default 1048576 (1 MB). Only applies when HTTP status is in accept_status; non-2xx responses are truncated to 4 KB.",
+        "zh": "L2 内容检查最大读取字节数。默认 1048576（1 MB）。仅当 HTTP 状态码命中 accept_status 时才读满；非 2xx 响应截断到 4 KB。",
+        "example": 1048576,
+    },
+    # ── 通用（与 defaults 语义相同） ────────────────────────────────────
+    "proxy": {
+        "type": "str|null",
+        "en": "HTTP proxy URL.",
+        "zh": "HTTP 代理地址。",
+        "example": None,
+    },
+    "http": {
+        "type": "object<string, string>",
+        "en": "Custom HTTP request headers. Every key-value pair is passed as a header.",
+        "zh": "自定义 HTTP 请求头。所有键值对都会作为 header 透传。",
+        "example": {},
+    },
+    "auth": {
+        "type": "auth",
+        "en": "Authentication config.",
+        "zh": "认证配置。",
+        "example": None,
+    },
+}
+
 # ── All sections (used by validator & generator) ─────────────────────────
 
 ALL_SECTIONS = {
@@ -342,6 +470,7 @@ ALL_SECTIONS = {
     "metadata": METADATA_FIELDS,
     "snapshot": SNAPSHOT_FIELDS,
     "reader":   READER_FIELDS,
+    "health":   HEALTH_FIELDS,
 }
 
 # ── routes (domain-level path routing) ───────────────────────────────────

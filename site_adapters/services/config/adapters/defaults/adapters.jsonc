@@ -56,6 +56,23 @@
       "defuddle_args": {
         "useAsync": false
       }
+    },
+    "health": {
+      "enabled": true,
+      "http_head_probe": {
+        "enabled": true,
+        "timeout": 3,
+        "accept_status": [200],
+        "blocked_status": [401, 403, 407, 429],
+        "blocked_location_patterns": ["/login", "/signin", "/auth", "/passport", "/accounts"]
+      },
+      "content_check": {
+        "enabled": true,
+        "timeout": 30,
+        "check_selectors": ["title", "body"],
+        "invalid_patterns": ["404 not found", "page not found", "not found", "页面不存在", "页面已不存在", "内容不存在", "文章不存在", "该页面已被删除", "此页面已删除", "内容已删除", "文章已删除", "已被删除或不存在", "您访问的页面不存在", "你所访问的页面不存在", "页面不存在或已删除"]
+      },
+      "max_content_limit": 1048576 // 1MB
     }
   },
   "_builtin_overrides": {},

@@ -1,5 +1,5 @@
 # ruff: noqa: F401,F403
-from . import bundles, highlights, reader, tags
+from . import bundles, health_check, highlights, reader, tags
 from .assets import *
 from .auth import *
 from .bookmarks import *

@@ -4,6 +4,7 @@ import json
 import re
 import urllib.parse
 from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.core.paginator import Paginator
@@ -21,6 +22,8 @@ from pypinyin import Style, pinyin
 from bookmarks import queries, utils
 from bookmarks.services.icon_loader import load_quick_tags_icon
 from bookmarks.models import (
+    HEALTH_STATUS_CHOICES,
+    HEALTH_STATUS_UNKNOWN,
     Annotation,
     Bookmark,
     BookmarkAsset,
@@ -38,6 +41,56 @@ from bookmarks.services.search_query_parser import (
     strip_tag_from_query,
 )
 from bookmarks.services.wayback import generate_fallback_webarchive_url
+
+
+def format_health_checked_at(checked_at: str) -> str:
+    """将健康检查时间（ISO 字符串）转换为本地时区的展示格式。
+
+    时区取环境变量 TZ（settings.TIME_ZONE），默认 Asia/Shanghai。
+    返回形如 ``2026/09/05 22:33:05`` 的字符串；解析失败返回空串。
+    """
+    if not checked_at:
+        return ""
+    try:
+        dt = datetime.fromisoformat(checked_at)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.UTC)
+        local = dt.astimezone(ZoneInfo(settings.TIME_ZONE))
+        return local.strftime("%Y/%m/%d %H:%M:%S")
+    except (ValueError, TypeError, OverflowError):
+        return ""
+
+
+def _health_reason_display(reason: str, http_status) -> str:
+    """reason 与 HTTP 码重复时置空，避免界面重复显示。"""
+    if reason and http_status and reason == f"HTTP {http_status}":
+        return ""
+    return reason
+
+
+def _is_health_stale(checked_at: str, max_age_days: int) -> bool:
+    """检查结果是否超过有效期（过期 = stale，界面按未检查弱化显示）。"""
+    if not checked_at or max_age_days <= 0:
+        return False
+    try:
+        dt = datetime.fromisoformat(checked_at)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.UTC)
+        now = timezone.now()
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=now.tzinfo)
+        return (now - dt) > timedelta(days=max_age_days)
+    except (ValueError, TypeError, OverflowError):
+        return False
+
+
+def _health_status_display(health_status) -> str:
+    """NULL（未检查）派生为 unknown，其余映射 CHOICES 显示名。"""
+    if health_status is None:
+        return dict(HEALTH_STATUS_CHOICES).get(
+            HEALTH_STATUS_UNKNOWN, "Unknown"
+        )
+    return dict(HEALTH_STATUS_CHOICES).get(health_status, health_status)
 from bookmarks.type_defs import HttpRequest
 from bookmarks.views import access
 
@@ -70,6 +123,7 @@ class FaviconLookup:
         """将 hostname 解析为规范域名（用于 /favicon/{domain} URL）。"""
         if self._domain_config:
             from bookmarks.utils import resolve_favicon_domain
+
             return resolve_favicon_domain(hostname, config=self._domain_config)
         return hostname
 
@@ -84,7 +138,9 @@ class RequestContext:
         self.action_url = reverse(self.action_view)
         self.query_params = request.GET.copy()
         self.query_params.pop("details", None)
-        domain_config = utils.parse_domain_roots(request.user_profile.custom_domain_root)
+        domain_config = utils.parse_domain_roots(
+            request.user_profile.custom_domain_root
+        )
         self._favicon_lookup = FaviconLookup(domain_config)
 
         self.query_is_valid = True
@@ -224,8 +280,24 @@ class BookmarkItem:
         self.unread = bookmark.unread
         self.shared = bookmark.shared
         self.owner = bookmark.owner
+        self.health_status = bookmark.health_status
+        _health_details = bookmark.health_details or {}
+        self.health_reason = _health_reason_display(
+            _health_details.get("reason", ""), _health_details.get("http_status")
+        )
+        self.health_checked_at = _health_details.get("checked_at", "")
+        self.health_http_status = _health_details.get("http_status")
+        self.health_checked_at_display = format_health_checked_at(self.health_checked_at)
+        self.health_status_display = _health_status_display(self.health_status)
+        self.health_stale = _is_health_stale(
+            self.health_checked_at, profile.health_max_age
+        )
+        self.health_display_status = (
+            HEALTH_STATUS_UNKNOWN if self.health_stale else self.health_status
+        )
+        self.health_display_status_display = _health_status_display(self.health_display_status)
         self.details_url = context.details(bookmark.id)
-        self.has_highlights = getattr(bookmark, 'annotation_count', 0) > 0
+        self.has_highlights = getattr(bookmark, "annotation_count", 0) > 0
 
         css_classes = []
         if bookmark.unread:
@@ -262,7 +334,6 @@ class BookmarkItem:
                 self.display_date = utils.humanize_absolute_date_short(
                     bookmark.date_deleted
                 )
-
 
 
 class SidebarSummaryStat:
@@ -1210,9 +1281,7 @@ class SidebarUserSummaryContext:
             annotation="yes",
             **date_range,
         )
-        copy_text = _(
-            "{bookmarks}, {days}, {streak}. {highlights}, {notes}."
-        ).format(
+        copy_text = _("{bookmarks}, {days}, {streak}. {highlights}, {notes}.").format(
             bookmarks=bookmark_fragment["text"],
             days=active_days_fragment["text"],
             streak=longest_streak_fragment["text"],
@@ -1238,9 +1307,7 @@ class SidebarUserSummaryContext:
                 highlights=self._build_activity_count_html(
                     highlights_fragment, url=highlights_url
                 ),
-                notes=self._build_activity_count_html(
-                    notes_fragment, url=notes_url
-                ),
+                notes=self._build_activity_count_html(notes_fragment, url=notes_url),
             ),
             "text": text,
         }
@@ -1294,13 +1361,18 @@ class BookmarkListContext:
         models.prefetch_related_objects(bookmarks_page.object_list, "owner", "tags")
 
         # 仅当日期路由为高亮时，才计算当前页面书签的高亮计数
-        if user_profile.bookmark_date_route == UserProfile.BOOKMARK_DATE_ROUTE_HIGHLIGHTS and bookmarks_page.object_list:
+        if (
+            user_profile.bookmark_date_route
+            == UserProfile.BOOKMARK_DATE_ROUTE_HIGHLIGHTS
+            and bookmarks_page.object_list
+        ):
             from django.db.models import Count
+
             bookmark_ids = [b.id for b in bookmarks_page.object_list]
             annotation_counts = dict(
                 Bookmark.objects.filter(id__in=bookmark_ids)
-                .annotate(cnt=Count('annotations', distinct=True))
-                .values_list('id', 'cnt')
+                .annotate(cnt=Count("annotations", distinct=True))
+                .values_list("id", "cnt")
             )
             for bookmark in bookmarks_page.object_list:
                 bookmark.annotation_count = annotation_counts.get(bookmark.id, 0)
@@ -1351,7 +1423,9 @@ class BookmarkListContext:
             }
             for item in user_profile.get_bookmark_quick_edits()
         ]
-        self.has_visible_quick_edits = any(item["enabled"] for item in self.quick_edit_list)
+        self.has_visible_quick_edits = any(
+            item["enabled"] for item in self.quick_edit_list
+        )
         quick_tags = user_profile.get_bookmark_quick_tags()
         self.quick_tags_direct = [
             {**qt, "index": i}
@@ -1380,22 +1454,27 @@ class BookmarkListContext:
             for qt in self.quick_tags_submenu:
                 icon_name = qt["icon_name"] or "tabler:hash"
                 icon_data = load_quick_tags_icon(icon_name)
-                submenu_data.append({
-                    "tagName": " ".join(qt["tag_names"]),
-                    "tagNames": qt["tag_names"],
-                    "label": qt["label"] or "Unnamed",
-                    "shortLabel": qt["short_label"],
-                    "iconName": icon_name,
-                    "iconData": icon_data,
-                    "displayMode": qt["display_mode"],
-                })
+                submenu_data.append(
+                    {
+                        "tagName": " ".join(qt["tag_names"]),
+                        "tagNames": qt["tag_names"],
+                        "label": qt["label"] or "Unnamed",
+                        "shortLabel": qt["short_label"],
+                        "iconName": icon_name,
+                        "iconData": icon_data,
+                        "displayMode": qt["display_mode"],
+                    }
+                )
                 if icon_data:
                     icon_data_map[icon_name] = icon_data
             self.quick_tags_submenu_json = json.dumps(submenu_data, ensure_ascii=False)
         else:
             self.quick_tags_submenu_json = None
         # 工具栏模块顺序（用户可拖拽自定义），含各模块是否有可见内容的标记
-        self.has_date_display = user_profile.bookmark_date_display != UserProfile.BOOKMARK_DATE_DISPLAY_HIDDEN
+        self.has_date_display = (
+            user_profile.bookmark_date_display
+            != UserProfile.BOOKMARK_DATE_DISPLAY_HIDDEN
+        )
         self.toolbar_items = [
             {
                 "key": module["key"],
@@ -1410,10 +1489,14 @@ class BookmarkListContext:
             for module in user_profile.get_bookmark_toolbar_modules()
             if module["enabled"]
         ]
-        self.sharing_enabled = user_profile.enable_sharing or user_profile.enable_public_sharing
+        self.sharing_enabled = (
+            user_profile.enable_sharing or user_profile.enable_public_sharing
+        )
         self.show_favicons = user_profile.enable_favicons
         self.show_preview_images = user_profile.enable_preview_images
-        self.show_preview_image_placeholders = user_profile.enable_preview_image_placeholders
+        self.show_preview_image_placeholders = (
+            user_profile.enable_preview_image_placeholders
+        )
         self.show_notes = user_profile.permanent_notes
         self.show_sidebar = user_profile.show_sidebar
         self.toolbar_auto_hide = user_profile.bookmark_toolbar_auto_hide
@@ -1442,7 +1525,6 @@ class BookmarkListContext:
             if query_string == ""
             else base_action_url + "?" + query_string
         )
-
 
 
 class ActiveBookmarkListContext(BookmarkListContext):
@@ -1714,8 +1796,7 @@ def _build_path_query_string(context, tag_names):
     profile = context.request.user_profile
 
     already_selected = {
-        name.lower()
-        for name in extract_tag_names_from_query(existing_query, profile)
+        name.lower() for name in extract_tag_names_from_query(existing_query, profile)
     }
 
     parts = existing_query.strip() if existing_query else ""
@@ -1741,7 +1822,9 @@ class TagTreeNode:
     - child nodes: co_count = co-occurrence count with parent
     """
 
-    def __init__(self, tag_item, count, co_count=0, children=None, path_query_string=""):
+    def __init__(
+        self, tag_item, count, co_count=0, children=None, path_query_string=""
+    ):
         self.tag = tag_item  # AddTagItem
         self.name = tag_item.name
         self.count = count  # Total bookmark count for this tag
@@ -1944,12 +2027,22 @@ class TagCloudContext:
             (UserProfile.TAG_GROUPING_ALPHABETICAL, _("Flat mode"), not is_tree),
             (UserProfile.TAG_GROUPING_SMART_TREE, _("Tree mode"), is_tree),
         ]
-        self.grouping_options = [
-            (UserProfile.TAG_GROUPING_ALPHABETICAL, _("Alphabetical grouping"),
-             self.tag_grouping == UserProfile.TAG_GROUPING_ALPHABETICAL),
-            (UserProfile.TAG_GROUPING_DISABLED, _("Disable grouping"),
-             self.tag_grouping == UserProfile.TAG_GROUPING_DISABLED),
-        ] if not is_tree else []
+        self.grouping_options = (
+            [
+                (
+                    UserProfile.TAG_GROUPING_ALPHABETICAL,
+                    _("Alphabetical grouping"),
+                    self.tag_grouping == UserProfile.TAG_GROUPING_ALPHABETICAL,
+                ),
+                (
+                    UserProfile.TAG_GROUPING_DISABLED,
+                    _("Disable grouping"),
+                    self.tag_grouping == UserProfile.TAG_GROUPING_DISABLED,
+                ),
+            ]
+            if not is_tree
+            else []
+        )
 
     def get_selected_tags(self):
         raise NotImplementedError("Must be implemented by subclass")
@@ -2090,8 +2183,12 @@ class DomainsContext:
     request_context = RequestContext
     TOP_ROOT_LIMIT = 10
 
-    def _init_toggle_state(self, request, view_mode_action="toggle_domain_view_mode",
-                           compact_mode_action="toggle_domain_compact_mode"):
+    def _init_toggle_state(
+        self,
+        request,
+        view_mode_action="toggle_domain_view_mode",
+        compact_mode_action="toggle_domain_compact_mode",
+    ):
         """Initialize view mode / compact mode state and toggle labels."""
         self.view_mode = self._parse_view_mode(request)
         self.is_icon_mode = self.view_mode == "icon"
@@ -2110,7 +2207,9 @@ class DomainsContext:
         # Fingerprint of domain normalization config, used by client-side
         # sessionStorage cache key; changes when custom domain roots change.
         raw = request.user_profile.custom_domain_root or ""
-        self.config_fingerprint = hashlib.md5(raw.encode()).hexdigest()[:12] if raw else "default"
+        self.config_fingerprint = (
+            hashlib.md5(raw.encode()).hexdigest()[:12] if raw else "default"
+        )
 
     def __init__(self, request: HttpRequest, search: BookmarkSearch) -> None:
         request_context = self.request_context(request)
@@ -2124,9 +2223,7 @@ class DomainsContext:
             if value
         ]
 
-        bookmarks = list(
-            request_context.get_bookmark_query_set(search).values("url")
-        )
+        bookmarks = list(request_context.get_bookmark_query_set(search).values("url"))
         bookmarks.sort(key=lambda bookmark: bookmark["url"])
 
         root_nodes = self._build_domain_tree(bookmarks, config)
@@ -2356,6 +2453,23 @@ class BookmarkDetailsContext:
         self.assets = [
             BookmarkAssetItem(asset) for asset in bookmark.bookmarkasset_set.all()
         ]
+        # 健康状态（预处理：reason 与 HTTP 码重复时去重，避免弹窗重复显示）
+        _hd = bookmark.health_details or {}
+        self.health_status = bookmark.health_status
+        self.health_checked_at = _hd.get("checked_at", "")
+        self.health_http_status = _hd.get("http_status")
+        self.health_reason = _health_reason_display(
+            _hd.get("reason", ""), _hd.get("http_status")
+        )
+        self.health_checked_at_display = format_health_checked_at(self.health_checked_at)
+        self.health_status_display = _health_status_display(self.health_status)
+        self.health_stale = _is_health_stale(
+            self.health_checked_at, user_profile.health_max_age
+        )
+        self.health_display_status = (
+            HEALTH_STATUS_UNKNOWN if self.health_stale else self.health_status
+        )
+        self.health_display_status_display = _health_status_display(self.health_display_status)
         self.has_pending_assets = any(
             asset.status == BookmarkAsset.STATUS_PENDING for asset in self.assets
         )
@@ -2373,7 +2487,9 @@ class BookmarkDetailsContext:
 
         # 高亮和批注数量（单次查询）
         from django.db.models import Count, Q
+
         from bookmarks.models import Annotation
+
         agg = Annotation.objects.filter(bookmark=bookmark).aggregate(
             total=Count("id"),
             with_note=Count("id", filter=Q(note_content__gt="")),
@@ -2546,9 +2662,7 @@ def _replace_node_counts_with_highlights(nodes, hostname_hl_counts):
     """Recursively replace DomainTreeNode.total with highlight counts."""
     for node in nodes:
         node.total = hostname_hl_counts.get(node.hostname, 0)
-        _replace_node_counts_with_highlights(
-            node.children.values(), hostname_hl_counts
-        )
+        _replace_node_counts_with_highlights(node.children.values(), hostname_hl_counts)
 
 
 class HighlightDomainsContext(DomainsContext):
@@ -2572,23 +2686,19 @@ class HighlightDomainsContext(DomainsContext):
 
         # Query filtered annotations to get bookmarks and highlight counts
         qs = _get_filtered_annotation_qs(request, search, with_related=False)
-        bm_hl_counts = (
-            qs.values("bookmark__url")
-            .annotate(hl_count=Count("id"))
-        )
+        bm_hl_counts = qs.values("bookmark__url").annotate(hl_count=Count("id"))
 
         # Build hostname → highlight count mapping
         hostname_hl_counts = {}
         for row in bm_hl_counts:
             hostname = utils.extract_hostname(row["bookmark__url"])
             if hostname:
-                hostname_hl_counts[hostname] = hostname_hl_counts.get(hostname, 0) + row["hl_count"]
+                hostname_hl_counts[hostname] = (
+                    hostname_hl_counts.get(hostname, 0) + row["hl_count"]
+                )
 
         # Build domain tree from filtered bookmarks
-        bookmarks = [
-            {"url": row["bookmark__url"]}
-            for row in bm_hl_counts
-        ]
+        bookmarks = [{"url": row["bookmark__url"]} for row in bm_hl_counts]
         bookmarks.sort(key=lambda b: b["url"])
 
         request_context = HighlightRequestContext(request)
@@ -2608,7 +2718,9 @@ class HighlightDomainsContext(DomainsContext):
             if value
         ]
 
-        self.roots = self._build_items(root_nodes, request_context, search.q or "", selected_domain_terms)
+        self.roots = self._build_items(
+            root_nodes, request_context, search.q or "", selected_domain_terms
+        )
         self.items = self._flatten_items(self.roots)
         self.is_empty = len(self.items) == 0
 
@@ -2630,11 +2742,18 @@ class HighlightTagCloudContext:
             .annotate(hl_count=Count("id"))
             .order_by()
         )
-        tag_count_map = {row["bookmark__tags__name"].lower(): row["hl_count"] for row in tag_hl_counts}
+        tag_count_map = {
+            row["bookmark__tags__name"].lower(): row["hl_count"]
+            for row in tag_hl_counts
+        }
 
         # Build tag objects from the tag names
         tag_names = list(tag_count_map.keys())
-        tags = list(Tag.objects.filter(name__in=tag_names, bookmark__owner=request.user).distinct())
+        tags = list(
+            Tag.objects.filter(
+                name__in=tag_names, bookmark__owner=request.user
+            ).distinct()
+        )
         unique_tags = utils.unique(tags, key=lambda x: str.lower(x.name))
 
         request_context = HighlightRequestContext(request)
@@ -2643,10 +2762,16 @@ class HighlightTagCloudContext:
         selected_tag_names = extract_tag_names_from_query(search.q or "", user_profile)
         selected_tag_names_lower = [name.lower() for name in selected_tag_names]
         all_tags_for_selected = list(
-            Tag.objects.filter(name__in=selected_tag_names_lower, bookmark__owner=request.user).distinct()
+            Tag.objects.filter(
+                name__in=selected_tag_names_lower, bookmark__owner=request.user
+            ).distinct()
         )
-        unique_selected_tags = utils.unique(all_tags_for_selected, key=lambda x: str.lower(x.name))
-        self.selected_tags = [RemoveTagItem(request_context, tag) for tag in unique_selected_tags]
+        unique_selected_tags = utils.unique(
+            all_tags_for_selected, key=lambda x: str.lower(x.name)
+        )
+        self.selected_tags = [
+            RemoveTagItem(request_context, tag) for tag in unique_selected_tags
+        ]
         self.has_selected_tags = len(self.selected_tags) > 0
 
         if self.tag_grouping == UserProfile.TAG_GROUPING_SMART_TREE:
@@ -2659,8 +2784,12 @@ class HighlightTagCloudContext:
         else:
             self.tag_tree = []
             # Build groups from UNSELECTED tags only
-            unselected_tags = set(unique_tags).symmetric_difference(unique_selected_tags)
-            groups = TagGroup.create_tag_groups(request_context, self.tag_grouping, unselected_tags)
+            unselected_tags = set(unique_tags).symmetric_difference(
+                unique_selected_tags
+            )
+            groups = TagGroup.create_tag_groups(
+                request_context, self.tag_grouping, unselected_tags
+            )
 
             # Post-process: set highlight counts on tag items
             for group in groups:
@@ -2675,12 +2804,22 @@ class HighlightTagCloudContext:
             (UserProfile.TAG_GROUPING_ALPHABETICAL, _("Flat mode"), not is_tree),
             (UserProfile.TAG_GROUPING_SMART_TREE, _("Tree mode"), is_tree),
         ]
-        self.grouping_options = [
-            (UserProfile.TAG_GROUPING_ALPHABETICAL, _("Alphabetical grouping"),
-             self.tag_grouping == UserProfile.TAG_GROUPING_ALPHABETICAL),
-            (UserProfile.TAG_GROUPING_DISABLED, _("Disable grouping"),
-             self.tag_grouping == UserProfile.TAG_GROUPING_DISABLED),
-        ] if not is_tree else []
+        self.grouping_options = (
+            [
+                (
+                    UserProfile.TAG_GROUPING_ALPHABETICAL,
+                    _("Alphabetical grouping"),
+                    self.tag_grouping == UserProfile.TAG_GROUPING_ALPHABETICAL,
+                ),
+                (
+                    UserProfile.TAG_GROUPING_DISABLED,
+                    _("Disable grouping"),
+                    self.tag_grouping == UserProfile.TAG_GROUPING_DISABLED,
+                ),
+            ]
+            if not is_tree
+            else []
+        )
 
     def get_selected_tags(self):
         return []

@@ -22,6 +22,7 @@ def bookmark_search(context, search: BookmarkSearch, mode: str = ""):
             search,
             editable_fields=[
                 "sort",
+                "health_status",
                 "date_filter_by",
                 "date_filter_type",
                 "date_filter_start",
@@ -37,6 +38,7 @@ def bookmark_search(context, search: BookmarkSearch, mode: str = ""):
                 "shared",
                 "unread",
                 "tagged",
+                "health_status",
                 "date_filter_by",
                 "date_filter_type",
                 "date_filter_start",
@@ -69,6 +71,7 @@ def bookmark_search(context, search: BookmarkSearch, mode: str = ""):
                 "tagged",
                 "highlight",
                 "annotation",
+                "health_status",
                 "date_filter_by",
                 "date_filter_type",
                 "date_filter_start",

@@ -15,8 +15,6 @@
         <h1 id="main-heading">{% translate "Edit filter" %}</h1>
       </div>
 
-      {% include 'shared/messages.html' %}
-
       <form id="bundle-form" class="scrollbar" action="{% url 'linkding:bundles.edit' bundle.id %}" method="post" novalidate>
         {% csrf_token %}
         {% include 'bundles/form.html' %}

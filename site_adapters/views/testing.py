@@ -22,6 +22,7 @@ from site_adapters.services.auth.cookies import (
 from site_adapters.services.auth.credentials import save_shared_cookie
 from site_adapters.services.config.loader import _cache, match_domain, show_config
 from site_adapters.services.config.resolver import (
+    get_health_config,
     get_metadata_config,
     get_reader_config,
     get_snapshot_config,
@@ -105,6 +106,7 @@ def _handle_test(request) -> JsonResponse:
         'snapshot': _test_snapshot,
         'reader': _test_reader,
         'credential': _test_credential,
+        'health': _test_health,
         'pipeline': _test_pipeline,
     }
     handler = handlers.get(test_type)
@@ -324,6 +326,75 @@ def _extract_match_info(config):
         'adapter': config.get('_adapter'),
         'route_key': config.get('_route_key'),
     }
+
+
+def _test_health(url, base_dir, username, entries):
+    """Health check 测试：展示该 URL 命中的 health 适配配置 + 实际判定结果。
+
+    调用引擎的 check_url（不写库），返回状态/HTTP 码/判定说明/耗时等，
+    与书签列表中的结论一致；同时给出归一化后的 health 配置（L1/L2 开关、
+    超时、重定向上限、UA、cookie/headers 生效情况）供排查。
+    """
+    from bookmarks.services.health_checker import check_url
+    from bookmarks.services.website_loader import build_request_cookies
+
+    hostname = urlparse(url).hostname or ''
+    config = get_health_config(url, username=username)
+    show_cfg = show_config(url, base_dir)
+    match_info = _extract_match_info(config)
+
+    # 归一化配置中是否会带用户/shared cookie
+    cookie_sources = {}
+    if config:
+        try:
+            cookie_val = build_request_cookies(config)
+            cookie_sources['carrying_cookie'] = bool(cookie_val)
+        except Exception:
+            cookie_sources['carrying_cookie'] = False
+
+    try:
+        result = check_url(url, username=username)
+        check_error = None
+    except Exception as exc:
+        result = {}
+        check_error = str(exc)[:500]
+
+    HEALTH_STATUS_CHOICES_MAP = {
+        'ok': 'Ok', 'dead': 'Dead', 'failed': 'Failed',
+        'blocked': 'Blocked', 'missing': 'Missing',
+    }
+    status = result.get('status')
+    return _test_response({
+        'type': 'health',
+        'matched': match_info['matched'],
+        'domain_key': match_info['domain_key'],
+        'adapter': match_info['adapter'],
+        'route_key': match_info['route_key'],
+        'original_url': url,
+        'request_url': (config or {}).get('_request_url', url) if config else url,
+        'config': config,
+        # 对齐 metadata：有域名匹配时展示合并配置；无匹配（builtin 兜底）时
+        # 展示引擎实际生效的归一化配置，便于排查判定依据
+        'merged_config': show_cfg.get('merged') if show_cfg.get('matched') else config,
+        'cookie': cookie_sources,
+        'result': {
+            'status': status,
+            'status_display': HEALTH_STATUS_CHOICES_MAP.get(status, 'Unknown') if status else None,
+            'http_status': result.get('http_status'),
+            'reason': result.get('reason'),
+            'redirect_url': result.get('redirect_url'),
+            'duration_ms': result.get('duration_ms'),
+            'skipped': result.get('skipped'),
+            'probes': result.get('probes'),
+            'content_signals': result.get('content_signals'),
+            'error': check_error,
+        },
+        'raw_config': show_cfg.get('raw_config'),
+        'help': {
+            'hostname': hostname,
+            'username': username or '(none, shared credentials only)',
+        },
+    }, entries=entries)
 
 
 def _test_metadata(url, base_dir, username, entries):

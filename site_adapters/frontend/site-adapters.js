@@ -1038,6 +1038,7 @@ var MODE = (function () { try { return localStorage.getItem(TAB_KEY) || "subscri
 
     var handlers = {
       'config': renderConfigResult,
+      'health': renderHealthResult,
       'metadata': renderMetadataResult,
       'snapshot': renderSnapshotResult,
       'reader': renderReaderResult,
@@ -1190,6 +1191,83 @@ var MODE = (function () { try { return localStorage.getItem(TAB_KEY) || "subscri
     h += '<span class="wa-issue-value wa-issue-message">' + esc(i.message || '') + '</span>';
     h += '</div>';
     h += '</div>';
+    h += '</div>';
+    return h;
+  }
+
+  function renderHealthResult(r) {
+    var result = r.result || {};
+    var status = result.status;
+    var statusMap = {
+      ok: gettext('Ok'), dead: gettext('Dead'), failed: gettext('Failed'),
+      blocked: gettext('Blocked'), missing: gettext('Missing')
+    };
+    var h = '<div class="wa-result-section">';
+
+    // ── Summary：original_url / request_url（如有）/ matched config ──
+    h += '<div class="wa-result-block">';
+    h += '<h3 class="wa-result-heading">' + gettext('Summary') + '</h3>';
+    var urlRows = [{label: 'original_url', value: r.original_url, link: true}];
+    if (r.request_url && r.request_url !== r.original_url) {
+      urlRows.push({label: 'request_url', value: r.request_url, link: true});
+    }
+    h += renderSummaryRows(urlRows);
+    h += renderMatchedConfig(r);
+    h += '</div>';
+
+    // ── Result：health_status + 探针分段键值行（字段名与 metadata 一致）──
+    h += '<div class="wa-result-block">';
+    h += '<h3 class="wa-result-heading">' + gettext('Result') + '</h3>';
+    if (result.error) {
+      h += '<div class="wa-result-error">' + esc(result.error) + '</div>';
+    } else if (result.skipped) {
+      h += '<div class="wa-result-empty">' + gettext('Health check is disabled for this domain (L1 probe and L2 content check are both off).') + '</div>';
+    } else {
+      // 字段名与 metadata 一致（下划线风格）
+      var probeMap = {
+        head: 'head_probe',
+        get: 'get_probe'
+      };
+      var redirectLabel = gettext('Redirect URL');
+      var rows = {};
+      rows.health_status = statusMap[status] || 'Unknown';
+      var probes = result.probes || {};
+      Object.keys(probes).forEach(function (key) {
+        var probe = probes[key];
+        if (!probe) return;
+        var label = probeMap[key] || key;
+        rows[label] =
+          'HTTP ' + probe.status +
+          (probe.duration_ms != null ? ' \u00b7 ' + probe.duration_ms + ' ms' : '');
+      });
+      if (result.reason) {
+        rows[gettext('Reason')] = result.reason;
+      }
+      if (result.redirect_url) {
+        rows[redirectLabel] = result.redirect_url;
+      }
+      // 健康状态着色：Ok 绿底，其余红底（复用 wa-status-tag）
+      var statusCls = status === 'ok' ? 'wa-status-tag-ok' : 'wa-status-tag-error';
+      var handlers = {};
+      handlers.health_status = function (v) {
+        return '<span class="wa-status-tag ' + statusCls + '">' + esc(v) + '</span>';
+      };
+      handlers[redirectLabel] = function (v) { return urlLink(v); };
+      h += renderResultRows(rows, handlers);
+      if (result.content_signals && result.content_signals.length) {
+        h += renderCollapsible(
+          gettext('Content signals') + ' (' + result.content_signals.length + ')',
+          renderResultRows({ signals: JSON.stringify(result.content_signals) }),
+          false
+        );
+      }
+    }
+    h += '</div>';
+
+    // ── Merged Config（原始 JSON 按钮可看 raw，不再单独展示 Raw config）──
+    if (r.merged_config && Object.keys(r.merged_config).length) {
+      h += renderCollapsible(gettext('Merged Config'), renderConfigJSON(r.merged_config), false);
+    }
     h += '</div>';
     return h;
   }

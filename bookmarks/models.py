@@ -24,6 +24,40 @@ from bookmarks.validators import BookmarkURLValidator
 
 logger = logging.getLogger(__name__)
 
+# ── Bookmark health check ────────────────────────────────────────────────
+# health_status 取值（NULL = 未检查，显示/过滤层派生出 unknown）。
+# 取值命名对齐业界通行术语（MDN / RFC 9110 / Google·Bing soft 404 定义）：
+#   - error    = 请求错误（No response / Unverified）：网络层失败（DNS/超时/TLS），服务器不可达
+#   - missing  = 内容缺失（Soft 404）：返回 200 但内容已不存在（Google/Bing 官方术语）
+#   - unknown  = 未检查：不持久化（DB 恒为 NULL），由显示/过滤层派生
+HEALTH_STATUS_OK = "ok"
+HEALTH_STATUS_DEAD = "dead"
+HEALTH_STATUS_FAILED = "failed"
+HEALTH_STATUS_BLOCKED = "blocked"
+HEALTH_STATUS_MISSING = "missing"
+HEALTH_STATUS_UNKNOWN = "unknown"
+
+HEALTH_STATUS_CHOICES = [
+    # "all" 仅作为筛选面板的批量勾选控件，不参与过滤（from_request 忽略）
+    ("all", _("All")),
+    (HEALTH_STATUS_OK, _("Ok")),
+    (HEALTH_STATUS_DEAD, _("Dead")),
+    (HEALTH_STATUS_FAILED, _("Failed")),
+    (HEALTH_STATUS_BLOCKED, _("Blocked")),
+    (HEALTH_STATUS_MISSING, _("Missing")),
+    (HEALTH_STATUS_UNKNOWN, _("Unknown")),
+]
+
+# 列表页需要展示角标的非 ok 状态（unknown 不展示——未检查不显示标记）
+HEALTH_STATUS_BADGE_STATES = frozenset(
+    {
+        HEALTH_STATUS_DEAD,
+        HEALTH_STATUS_FAILED,
+        HEALTH_STATUS_BLOCKED,
+        HEALTH_STATUS_MISSING,
+    }
+)
+
 
 class Tag(models.Model):
     name = models.CharField(max_length=64)
@@ -96,6 +130,16 @@ class Bookmark(models.Model):
         blank=True,
         related_name="latest_article",
     )
+    # Bookmark health check（NULL = 未检查）
+    health_status = models.CharField(
+        max_length=32,
+        blank=True,
+        null=True,
+        db_index=True,
+        choices=HEALTH_STATUS_CHOICES,
+    )
+    # 检查证据：http_status / checked_at / reason / redirect_url / adapter / content_signals / job_id
+    health_details = models.JSONField(default=dict, blank=True)
 
     class Meta:
         constraints = [
@@ -424,6 +468,7 @@ class BookmarkSearch:
     FILTER_DATE_BY_DELETED = "deleted"
     FILTER_DATE_BY_HIGHLIGHT = "highlight"
     FILTER_DATE_BY_ANNOTATION = "annotation"
+    FILTER_DATE_BY_HEALTH = "health"
 
     FILTER_DATE_TYPE_ABSOLUTE = "absolute"
     FILTER_DATE_TYPE_RELATIVE = "relative"
@@ -449,6 +494,7 @@ class BookmarkSearch:
         "favicon",
         "highlight",
         "annotation",
+        "health_status",
     ]
     preferences = [
         "sort",
@@ -480,6 +526,7 @@ class BookmarkSearch:
         "favicon": FILTER_ASSET_OFF,
         "highlight": FILTER_HIGHLIGHT_OFF,
         "annotation": FILTER_ANNOTATION_OFF,
+        "health_status": [],
     }
 
     @staticmethod
@@ -551,6 +598,7 @@ class BookmarkSearch:
         favicon: str = None,
         highlight: str = None,
         annotation: str = None,
+        health_status=None,
         preferences: dict = None,
         request: any = None,
     ):
@@ -581,6 +629,7 @@ class BookmarkSearch:
             "favicon": favicon,
             "highlight": highlight,
             "annotation": annotation,
+            "health_status": health_status,
         }
         bundle_params = {}
         if bundle:
@@ -690,7 +739,10 @@ class BookmarkSearch:
                 if (
                     value is not None and value != "" and value != bundle_value
                 ):  # 用户参数与Bundle参数不同时url包含该参数
-                    if isinstance(value, models.Model):
+                    if param == "health_status" and isinstance(value, list):
+                        # 多选状态序列化为单参数逗号分隔：?health_status=ok,dead
+                        query_params[param] = ",".join(value)
+                    elif isinstance(value, models.Model):
                         query_params[param] = value.id
                     else:
                         query_params[param] = value
@@ -698,7 +750,10 @@ class BookmarkSearch:
             # 没有Bundle时，使用原逻辑（只包含modified_params）
             for param in self.modified_params:
                 value = self.__dict__[param]
-                if isinstance(value, models.Model):
+                if param == "health_status" and isinstance(value, list):
+                    # 多选状态序列化为单参数逗号分隔：?health_status=ok,dead
+                    query_params[param] = ",".join(value)
+                elif isinstance(value, models.Model):
                     query_params[param] = value.id
                 else:
                     query_params[param] = value
@@ -725,7 +780,30 @@ class BookmarkSearch:
         for param in BookmarkSearch.params:
             if param == "bundle":
                 continue
-            value = query_dict.get(param)
+            if param == "health_status":
+                # 单参数逗号分隔：?health_status=ok,dead,blocked
+                # 兼容旧多值形式 ?health_status=a&health_status=b（POST 表单提交）
+                if hasattr(query_dict, "getlist"):
+                    values = query_dict.getlist(param)
+                else:
+                    values = query_dict.get(param)
+                if isinstance(values, str):
+                    values = [values]
+                if not isinstance(values, list):
+                    values = []
+                # 每个值都按逗号拆分（QueryDict.getlist 返回的单个元素可能含逗号）
+                # "all" 是筛选面板的全选控件，不作为过滤条件
+                value = []
+                for v in values:
+                    value.extend(
+                        x.strip()
+                        for x in str(v).split(",")
+                        if x.strip() and x.strip() != "all"
+                    )
+                if not value:
+                    value = None
+            else:
+                value = query_dict.get(param)
             if value:
                 initial_values[param] = value
 
@@ -786,6 +864,7 @@ class BookmarkSearchForm(forms.Form):
         (BookmarkSearch.FILTER_DATE_BY_MODIFIED, _("Modified")),
         (BookmarkSearch.FILTER_DATE_BY_HIGHLIGHT, _("Highlighted")),
         (BookmarkSearch.FILTER_DATE_BY_ANNOTATION, _("Annotated")),
+        (BookmarkSearch.FILTER_DATE_BY_HEALTH, _("Health checked")),
     ]
     FILTER_DATE_TYPE_CHOICES = [
         (BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE, _("Absolute")),
@@ -815,6 +894,11 @@ class BookmarkSearchForm(forms.Form):
         required=False, widget=forms.DateInput(attrs={"type": "date"})
     )
     date_filter_relative_string = forms.CharField(required=False)
+    health_status = forms.MultipleChoiceField(
+        required=False,
+        choices=HEALTH_STATUS_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+    )
     html_snapshot = forms.ChoiceField(
         choices=FILTER_ASSET_CHOICES,
         widget=forms.RadioSelect,
@@ -984,7 +1068,14 @@ class UserProfile(models.Model):
     ACTION_EDIT = "edit"
     ACTION_ARCHIVE = "archive"
     ACTION_REMOVE = "remove"
-    ACTION_KEYS = [ACTION_READ, ACTION_VIEW, ACTION_HIGHLIGHT, ACTION_EDIT, ACTION_ARCHIVE, ACTION_REMOVE]
+    ACTION_KEYS = [
+        ACTION_READ,
+        ACTION_VIEW,
+        ACTION_HIGHLIGHT,
+        ACTION_EDIT,
+        ACTION_ARCHIVE,
+        ACTION_REMOVE,
+    ]
     ACTION_LABELS = {
         ACTION_READ: pgettext_lazy("bookmark_action", "Read"),
         ACTION_VIEW: _("View"),
@@ -1012,16 +1103,20 @@ class UserProfile(models.Model):
     STATUS_NOTES = "notes"
     STATUS_SHARE = "share"
     STATUS_UNREAD = "unread"
-    STATUS_KEYS = [STATUS_NOTES, STATUS_SHARE, STATUS_UNREAD]
+    STATUS_HEALTH = "health"
+    # 顺序即设置页与工具栏的默认顺序：健康状态默认在最后
+    STATUS_KEYS = [STATUS_NOTES, STATUS_SHARE, STATUS_UNREAD, STATUS_HEALTH]
     STATUS_LABELS = {
         STATUS_NOTES: pgettext_lazy("bookmark_status", "Notes"),
         STATUS_SHARE: pgettext_lazy("bookmark_status", "Share"),
         STATUS_UNREAD: pgettext_lazy("bookmark_status", "Unread"),
+        STATUS_HEALTH: pgettext_lazy("bookmark_status", "Health status"),
     }
     STATUS_ICONS = {
         STATUS_NOTES: "ld-icon-note",
         STATUS_SHARE: "ld-icon-share",
         STATUS_UNREAD: "ld-icon-unread",
+        STATUS_HEALTH: "",
     }
 
     # 快捷编辑按钮
@@ -1029,7 +1124,12 @@ class UserProfile(models.Model):
     QUICK_EDIT_DESCRIPTION = "description"
     QUICK_EDIT_NOTES = "notes"
     QUICK_EDIT_TAGS = "tags"
-    QUICK_EDIT_KEYS = [QUICK_EDIT_TITLE, QUICK_EDIT_DESCRIPTION, QUICK_EDIT_NOTES, QUICK_EDIT_TAGS]
+    QUICK_EDIT_KEYS = [
+        QUICK_EDIT_TITLE,
+        QUICK_EDIT_DESCRIPTION,
+        QUICK_EDIT_NOTES,
+        QUICK_EDIT_TAGS,
+    ]
     QUICK_EDIT_LABELS = {
         QUICK_EDIT_TITLE: _("Title"),
         QUICK_EDIT_DESCRIPTION: _("Description"),
@@ -1134,6 +1234,34 @@ class UserProfile(models.Model):
         default=ACTION_DISPLAY_MODE_ICON,
     )
     permanent_notes = models.BooleanField(default=False, null=False)
+    # 健康状态过期窗口（天）：None 表示用全局默认 settings.LINK_HEALTH_MAX_AGE_DAYS；
+    health_max_age_days = models.IntegerField(
+        blank=True, null=True, default=None,
+        verbose_name=_("Result validity (days)"),
+        help_text=_(
+            "How many days a health check result stays valid before it is "
+            "considered expired. Leave empty to use the global default "
+            "(LINK_HEALTH_MAX_AGE_DAYS, default 15)."
+        ),
+    )
+    # 健康检查并发 workers：None 表示用全局默认 settings.LD_HEALTH_CHECK_WORKERS
+    health_check_workers = models.IntegerField(
+        blank=True, null=True, default=None,
+        verbose_name=_("Check concurrency"),
+        help_text=_(
+            "Number of parallel health check workers. Leave empty to use the "
+            "global default (LD_HEALTH_CHECK_WORKERS, default 8)."
+        ),
+    )
+    # 每域名限流间隔（秒）：None 表示用全局默认 LD_METADATA_DOMAIN_COOLDOWN_SEC
+    health_domain_interval = models.FloatField(
+        blank=True, null=True, default=None,
+        verbose_name=_("Per-domain interval (seconds)"),
+        help_text=_(
+            "Minimum interval between requests to the same domain. Leave "
+            "empty to use the global default (LD_METADATA_DOMAIN_COOLDOWN_SEC)."
+        ),
+    )
     custom_css = models.TextField(blank=True, null=False)
     custom_css_hash = models.CharField(blank=True, null=False, max_length=32)
     custom_domain_root = models.TextField(blank=True, null=False, default="")
@@ -1294,7 +1422,9 @@ class UserProfile(models.Model):
     def normalize_bookmark_quick_tags(cls, quick_tags: list | None) -> list[dict]:
         if not isinstance(quick_tags, list):
             return []
-        return [cls.normalize_quick_tag(qt) for qt in quick_tags if isinstance(qt, dict)]
+        return [
+            cls.normalize_quick_tag(qt) for qt in quick_tags if isinstance(qt, dict)
+        ]
 
     def get_bookmark_quick_tags(self) -> list[dict]:
         return self.normalize_bookmark_quick_tags(self.bookmark_quick_tags)
@@ -1376,7 +1506,9 @@ class UserProfile(models.Model):
         ]
 
     @staticmethod
-    def _normalize_module_list(raw: list | None, defaults: dict[str, bool]) -> list[dict]:
+    def _normalize_module_list(
+        raw: list | None, defaults: dict[str, bool]
+    ) -> list[dict]:
         """Normalize a module list: validate keys, fill missing defaults, deduplicate."""
         if not isinstance(raw, list) or len(raw) == 0:
             return [{"key": k, "enabled": v} for k, v in defaults.items()]
@@ -1389,7 +1521,9 @@ class UserProfile(models.Model):
             key = item.get("key")
             if key not in defaults or key in seen:
                 continue
-            normalized.append({"key": key, "enabled": bool(item.get("enabled", defaults[key]))})
+            normalized.append(
+                {"key": key, "enabled": bool(item.get("enabled", defaults[key]))}
+            )
             seen.add(key)
 
         for key, enabled in defaults.items():
@@ -1516,6 +1650,13 @@ class UserProfile(models.Model):
             for item in self.get_bookmark_actions()
         ]
 
+    @property
+    def health_max_age(self) -> int:
+        """健康状态有效期（天）：优先用户自定义，缺省用全局默认。"""
+        if self.health_max_age_days is not None:
+            return self.health_max_age_days
+        return getattr(settings, "LINK_HEALTH_MAX_AGE_DAYS", 15)
+
     @classmethod
     def default_bookmark_statuses(cls) -> list[dict]:
         return [{"key": key, "enabled": True} for key in cls.STATUS_KEYS]
@@ -1566,7 +1707,9 @@ class UserProfile(models.Model):
         return [{"key": key, "enabled": True} for key in cls.QUICK_EDIT_KEYS]
 
     @classmethod
-    def normalize_bookmark_quick_edits(cls, bookmark_quick_edits: list | None) -> list[dict]:
+    def normalize_bookmark_quick_edits(
+        cls, bookmark_quick_edits: list | None
+    ) -> list[dict]:
         if not isinstance(bookmark_quick_edits, list) or len(bookmark_quick_edits) == 0:
             return cls.default_bookmark_quick_edits()
 
@@ -1605,7 +1748,6 @@ class UserProfile(models.Model):
             }
             for item in self.get_bookmark_quick_edits()
         ]
-
 
 
 class UserProfileForm(forms.ModelForm):
@@ -1726,7 +1868,9 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
             self.fields["show_sidebar"].initial = self.instance.show_sidebar
-            self.fields["show_highlights_sidebar"].initial = self.instance.show_highlights_sidebar
+            self.fields[
+                "show_highlights_sidebar"
+            ].initial = self.instance.show_highlights_sidebar
             self.fields["enable_web_archive"].initial = (
                 self.instance.web_archive_integration
                 == self.instance.WEB_ARCHIVE_INTEGRATION_ENABLED
@@ -1789,7 +1933,10 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
                 parsed = json.loads(modules) if modules else []
             except (TypeError, ValueError):
                 parsed = []
-            defaults = {item["key"]: item["enabled"] for item in UserProfile.default_highlights_sidebar_modules()}
+            defaults = {
+                item["key"]: item["enabled"]
+                for item in UserProfile.default_highlights_sidebar_modules()
+            }
             return [
                 {**item, "label": UserProfile.SIDEBAR_MODULE_LABELS[item["key"]]}
                 for item in UserProfile._normalize_module_list(parsed, defaults)
@@ -1815,7 +1962,10 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
             parsed_value = json.loads(raw_value)
         except (TypeError, ValueError):
             raise forms.ValidationError(_("Invalid sidebar configuration.")) from None
-        defaults = {item["key"]: item["enabled"] for item in UserProfile.default_highlights_sidebar_modules()}
+        defaults = {
+            item["key"]: item["enabled"]
+            for item in UserProfile.default_highlights_sidebar_modules()
+        }
         return UserProfile._normalize_module_list(parsed_value, defaults)
 
     @property
@@ -1870,7 +2020,9 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
         try:
             parsed_value = json.loads(raw_value)
         except (TypeError, ValueError):
-            raise forms.ValidationError(_("Invalid bookmark actions configuration.")) from None
+            raise forms.ValidationError(
+                _("Invalid bookmark actions configuration.")
+            ) from None
 
         return UserProfile.normalize_bookmark_actions(parsed_value)
 
@@ -1898,7 +2050,9 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
         try:
             parsed_value = json.loads(raw_value)
         except (TypeError, ValueError):
-            raise forms.ValidationError(_("Invalid bookmark status configuration.")) from None
+            raise forms.ValidationError(
+                _("Invalid bookmark status configuration.")
+            ) from None
 
         return UserProfile.normalize_bookmark_statuses(parsed_value)
 
@@ -1926,7 +2080,9 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
         try:
             parsed_value = json.loads(raw_value)
         except (TypeError, ValueError):
-            raise forms.ValidationError(_("Invalid bookmark quick edit configuration.")) from None
+            raise forms.ValidationError(
+                _("Invalid bookmark quick edit configuration.")
+            ) from None
 
         return UserProfile.normalize_bookmark_quick_edits(parsed_value)
 
@@ -1941,6 +2097,7 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
             items = self.instance.get_bookmark_quick_tags()
         # 为每个快捷标签加载图标 SVG 数据
         from bookmarks.services.icon_loader import load_quick_tags_icon
+
         for item in items:
             icon_name = item.get("icon_name")
             if icon_name:
@@ -1956,14 +2113,18 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
         try:
             parsed_value = json.loads(raw_value)
         except (TypeError, ValueError):
-            raise forms.ValidationError(_("Invalid bookmark quick tags configuration.")) from None
+            raise forms.ValidationError(
+                _("Invalid bookmark quick tags configuration.")
+            ) from None
 
         return UserProfile.normalize_bookmark_quick_tags(parsed_value)
 
     def save(self, commit=True):
         profile = super().save(commit=False)
         profile.show_sidebar = self.cleaned_data["show_sidebar"]
-        profile.show_highlights_sidebar = self.cleaned_data.get("show_highlights_sidebar", True)
+        profile.show_highlights_sidebar = self.cleaned_data.get(
+            "show_highlights_sidebar", True
+        )
 
         profile.web_archive_integration = (
             self.instance.WEB_ARCHIVE_INTEGRATION_ENABLED
@@ -1978,7 +2139,9 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
             profile.default_mark_shared = False
 
         profile.sidebar_modules = self.cleaned_data["sidebar_modules"]
-        profile.highlights_sidebar_modules = self.cleaned_data.get("highlights_sidebar_modules", [])
+        profile.highlights_sidebar_modules = self.cleaned_data.get(
+            "highlights_sidebar_modules", []
+        )
         profile.bookmark_toolbar_modules = self.cleaned_data["bookmark_toolbar_modules"]
 
         # Sync bookmark actions to JSON field and legacy boolean fields
@@ -1997,6 +2160,34 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
             profile.save()
 
         return profile
+
+
+class UserProfileHealthForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = [
+            "health_max_age_days",
+            "health_check_workers",
+            "health_domain_interval",
+        ]
+
+    def clean_health_max_age_days(self):
+        value = self.cleaned_data.get("health_max_age_days")
+        if value is not None and value < 0:
+            raise forms.ValidationError(_("Must be at least 0 days (0 = never expires)."))
+        return value
+
+    def clean_health_check_workers(self):
+        value = self.cleaned_data.get("health_check_workers")
+        if value is not None and value < 1:
+            raise forms.ValidationError(_("Must be at least 1."))
+        return value
+
+    def clean_health_domain_interval(self):
+        value = self.cleaned_data.get("health_domain_interval")
+        if value is not None and value < 0:
+            raise forms.ValidationError(_("Must not be negative."))
+        return value
 
 
 class UserProfileCustomCssForm(forms.ModelForm):
@@ -2040,8 +2231,14 @@ class UserProfileHighlightCopyFormatForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        fmt = self.instance.highlight_copy_format if self.instance and self.instance.pk else {}
-        self.fields["item_format"].initial = fmt.get("item_format", self.DEFAULT_ITEM_FORMAT)
+        fmt = (
+            self.instance.highlight_copy_format
+            if self.instance and self.instance.pk
+            else {}
+        )
+        self.fields["item_format"].initial = fmt.get(
+            "item_format", self.DEFAULT_ITEM_FORMAT
+        )
         self.fields["separator"].initial = fmt.get("separator", self.DEFAULT_SEPARATOR)
 
     def save(self, commit=True):
@@ -2173,3 +2370,56 @@ class GlobalSettingsForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["guest_profile_user"].empty_label = _("Standard profile")
+
+
+class CheckJob(models.Model):
+    """书签健康检查任务（纯手动触发，支持中断与续跑）。
+
+    状态机：pending → running → completed / failed
+            running → interrupted（用户暂停或心跳超时）→ running（继续）/ cancelled（放弃）
+    """
+
+    STATE_PENDING = "pending"
+    STATE_RUNNING = "running"
+    STATE_INTERRUPTED = "interrupted"
+    STATE_CANCELLED = "cancelled"
+    STATE_COMPLETED = "completed"
+    STATE_FAILED = "failed"
+
+    STATE_CHOICES = [
+        (STATE_PENDING, "Pending"),
+        (STATE_RUNNING, "Running"),
+        (STATE_INTERRUPTED, "Interrupted"),
+        (STATE_CANCELLED, "Cancelled"),
+        (STATE_COMPLETED, "Completed"),
+        (STATE_FAILED, "Failed"),
+    ]
+
+    # scope: {"mode": "all" | "query" | "ids", "query": str, "ids": [int]}
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    scope = models.JSONField(default=dict, blank=True)
+    state = models.CharField(
+        max_length=32, default=STATE_PENDING, choices=STATE_CHOICES
+    )
+    total = models.IntegerField(default=0)
+    done = models.IntegerField(default=0)
+    heartbeat = models.DateTimeField(null=True, blank=True)
+    stop_requested = models.BooleanField(default=False)
+    # 暂停计时：paused_sec 为累计暂停秒数（resume 时累加）；paused_at 为
+    # 当前暂停起点（暂停中非空）。任务进行时长 = now - started_at - paused_sec。
+    paused_sec = models.IntegerField(default=0)
+    paused_at = models.DateTimeField(null=True, blank=True)
+    error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    @property
+    def is_active(self) -> bool:
+        return self.state in (self.STATE_PENDING, self.STATE_RUNNING)
+
+    def __str__(self):
+        return f"CheckJob #{self.pk} ({self.state}, {self.done}/{self.total})"

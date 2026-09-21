@@ -15,6 +15,8 @@ import "./components/clear-button.js";
 import "./components/confirm-dropdown.js";
 import "./components/confirm-inline.js";
 import "./components/details-modal.js";
+import "./components/health.js";
+import "./components/health-job-progress.js";
 import "./components/dropdown.js";
 
 import "./components/form.js";

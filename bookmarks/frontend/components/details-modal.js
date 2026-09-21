@@ -2,6 +2,7 @@ import { setAfterPageLoadFocusTarget } from "../utils/focus.js";
 import { handleBookmarkAction } from "../utils/bookmark-action.js";
 import { getCSRFToken } from "../utils/csrf.js";
 import { Modal } from "./modal.js";
+import { attachHealthPopover } from "./health.js";
 
 function gettext(s) {
   return window.gettext ? window.gettext(s) : s;
@@ -121,6 +122,17 @@ class DetailsModal extends Modal {
     this.querySelector("#refresh-metadata-btn")?.addEventListener("click", () =>
       this._refreshMetadata(),
     );
+
+    // ---- 健康检查（单条） ----
+    const healthBtn = this.querySelector("[data-health-check]");
+    if (healthBtn) {
+      healthBtn.addEventListener("click", () => this._runHealthCheck(healthBtn));
+    }
+    // 状态 chip 的 dot+状态 区域：悬浮/点击显示健康详情弹层
+    const healthChipStatus = this.querySelector("[data-health-chip-status]");
+    if (healthChipStatus) {
+      this._healthPopoverCleanup = attachHealthPopover(healthChipStatus);
+    }
 
     // ---- 文件操作 ----
     this.addEventListener("click", (e) => {
@@ -570,6 +582,59 @@ class DetailsModal extends Modal {
 
   // ---- 重新抓取元数据（条件性更新，与编辑页面逻辑一致） ----
 
+  async _runHealthCheck(btn) {
+    const url = btn.dataset.checkUrl;
+    if (!url) return;
+    const recheckLabel = btn.dataset.labelRecheck || "Recheck";
+    const checkLabel = btn.dataset.labelCheck || "Check now";
+    btn.disabled = true;
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "X-CSRFToken": getCSRFToken() },
+      });
+      const data = await r.json();
+      if (!r.ok || !data.ok) {
+        console.error("Health check failed:", data?.error || r.status);
+        return;
+      }
+      const status = data.status || "unknown";
+      const statusDisplay = data.status_display || status;
+      // 状态指示（小圆点 + 文字）
+      const dot = this.querySelector("[data-health-dot]");
+      const text = this.querySelector("[data-health-text]");
+      if (dot) dot.className = `health-dot health-dot--${status}`;
+      if (text) text.textContent = statusDisplay;
+      // 详情弹层内容
+      const popoverStatus = this.querySelector("[data-popover-status]");
+      const popoverHttp = this.querySelector("[data-popover-http]");
+      const popoverReason = this.querySelector("[data-popover-reason]");
+      const popoverChecked = this.querySelector("[data-popover-checked]");
+      if (popoverStatus) popoverStatus.textContent = statusDisplay;
+      if (popoverHttp) {
+        popoverHttp.style.display = data.http_status ? "" : "none";
+        popoverHttp.textContent = `HTTP ${data.http_status}`;
+      }
+      if (popoverReason) {
+        popoverReason.style.display = data.reason ? "" : "none";
+        popoverReason.textContent = data.reason;
+      }
+      if (popoverChecked) {
+        popoverChecked.style.display = data.checked_at_display ? "" : "none";
+        popoverChecked.textContent = data.checked_at_display
+          ? `${gettext("Checked at")} ${data.checked_at_display}`
+          : "";
+      }
+      // 按钮：仅图标，更新 title
+      btn.title = data.checked_at ? recheckLabel : checkLabel;
+    } catch (err) {
+      console.error("Health check failed:", err);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+
   async _refreshMetadata() {
     const urlInput = this.querySelector(".detail-url-input");
     const url = urlInput?.value?.trim() || this._data.url;
@@ -789,6 +854,10 @@ class DetailsModal extends Modal {
     if (this._onMorph) {
       document.removeEventListener("turbo:before-morph-element", this._onMorph);
       this._onMorph = null;
+    }
+    if (this._healthPopoverCleanup) {
+      this._healthPopoverCleanup.destroy();
+      this._healthPopoverCleanup = null;
     }
   }
 

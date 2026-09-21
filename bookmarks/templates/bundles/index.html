@@ -16,8 +16,6 @@
       <a href="{% url 'linkding:bundles.new' %}" class="btn">{% translate "Add filter" %}</a>
     </div>
 
-    {% include 'shared/messages.html' %}
-
     {% if bundles %}
       <form action="{% url 'linkding:bundles.action' %}" method="post">
         {% csrf_token %}
@@ -54,6 +52,8 @@
               </td>
               <td class="actions">
                 <div>
+                  <button type="submit" name="check_bundle" value="{{ bundle.id }}"
+                          class="btn btn-link">{% translate "Check health" %}</button>
                   <a class="btn btn-link" href="{% url 'linkding:bundles.edit' bundle.id %}">{% translate "Edit" %}</a>
                   <button ld-confirm-button type="submit" name="remove_bundle" value="{{ bundle.id }}"
                           class="btn btn-link">{% translate "Delete" %}
@@ -74,5 +74,7 @@
         <p class="empty-subtitle">{% translate "Try creating a filter" %}</p>
       </div>
     {% endif %}
+
+    {% include 'bookmarks/health_job_capsule.html' %}
   </main>
 {% endblock %}

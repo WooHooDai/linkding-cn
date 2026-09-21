@@ -24,6 +24,10 @@
       {% endif %}
 
       <hr>
+      {% if not 'bulk_check_health' in disable_actions %}
+        <option value="bulk_check_health">{% translate "Check health" %}</option>
+
+      {% endif %}
       {% if not 'bulk_tag' in disable_actions %}
         <option value="bulk_tag">{% translate "Add tags" %}</option>
       {% endif %}

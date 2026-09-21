@@ -1126,6 +1126,11 @@ reddit.com/r/Music music reddit</pre>
                             <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-share"></use></svg>
                           {% elif item.key == "unread" %}
                             <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-read-check"></use></svg>
+                          {% elif item.key == "health" %}
+                            <span class="health-status-preview settings-action-preview" aria-hidden="true">
+                              <span class="health-status-preview-ring"></span>
+                              <span class="health-status-preview-dot"></span>
+                            </span>
                           {% endif %}
                           {{ item.label }}
                         </div>
@@ -1241,6 +1246,65 @@ reddit.com/r/Music music reddit</pre>
     <script>
       window.__ldPresetIconNames = {{ preset_icon_names_json|safe }};
     </script>
+
+        <section id="settings-health" class="settings-section" aria-labelledby="settings-health-heading">
+          <div class="settings-section-heading">
+            <h2 id="settings-health-heading">{% translate "Health Check" %}</h2>
+          </div>
+          <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card settings-card-stack"
+                data-settings-save-mode="instant">
+            {% csrf_token %}
+            <input type="hidden" name="form_id" value="profile_health">
+            <div class="settings-row">
+              <div class="settings-copy">
+                <label for="{{ health_form.health_max_age_days.id_for_label }}" class="settings-label">
+                  {% translate "Result validity (days)" %}
+                </label>
+                <div class="form-input-hint">
+                  {% blocktranslate trimmed with default=health_defaults.max_age_days %}
+                    How long a health check result stays valid before it is considered expired. Set to 0 to never expire. Leave empty to use the global default ({{ default }} days).
+                  {% endblocktranslate %}
+                </div>
+              </div>
+              <div class="settings-control">
+                {% formfield health_form.health_max_age_days class="form-input settings-number-input" min="0" placeholder=health_defaults.max_age_days %}
+                <div class="settings-field-errors" data-field-error-for="health_max_age_days"></div>
+              </div>
+            </div>
+            <div class="settings-row">
+              <div class="settings-copy">
+                <label for="{{ health_form.health_check_workers.id_for_label }}" class="settings-label">
+                  {% translate "Check concurrency" %}
+                </label>
+                <div class="form-input-hint">
+                  {% blocktranslate trimmed with default=health_defaults.workers %}
+                    Number of parallel health check workers. Leave empty to use the global default ({{ default }}).
+                  {% endblocktranslate %}
+                </div>
+              </div>
+              <div class="settings-control">
+                {% formfield health_form.health_check_workers class="form-input settings-number-input" min="1" placeholder=health_defaults.workers %}
+                <div class="settings-field-errors" data-field-error-for="health_check_workers"></div>
+              </div>
+            </div>
+            <div class="settings-row">
+              <div class="settings-copy">
+                <label for="{{ health_form.health_domain_interval.id_for_label }}" class="settings-label">
+                  {% translate "Per-domain interval (seconds)" %}
+                </label>
+                <div class="form-input-hint">
+                  {% blocktranslate trimmed with default=health_defaults.domain_interval %}
+                    Minimum interval between requests to the same domain. Leave empty to use the global default ({{ default }}s; 0 means no rate limiting).
+                  {% endblocktranslate %}
+                </div>
+              </div>
+              <div class="settings-control">
+                {% formfield health_form.health_domain_interval class="form-input settings-number-input" min="0" step="0.5" placeholder=health_defaults.domain_interval %}
+                <div class="settings-field-errors" data-field-error-for="health_domain_interval"></div>
+              </div>
+            </div>
+          </form>
+        </section>
 
         <section id="settings-sharing" class="settings-section" aria-labelledby="settings-sharing-heading">
           <div class="settings-section-heading">
@@ -1742,6 +1806,7 @@ reddit.com/r/Music music reddit</pre>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-search" aria-controls="settings-search">{% translate "Search" %}</button>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-bookmarks" aria-controls="settings-bookmarks">{% translate "Bookmarks" %}</button>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-bookmark-toolbar" aria-controls="settings-bookmark-toolbar">{% translate "Bookmark toolbar" %}</button>
+        <button type="button" class="settings-directory-link" data-settings-section-target="settings-health" aria-controls="settings-health">{% translate "Health Check" %}</button>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-sharing" aria-controls="settings-sharing">{% translate "Sharing" %}</button>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-highlights" aria-controls="settings-highlights">{% translate "Highlights" %}</button>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-user" aria-controls="settings-user">{% translate "User & Visitors" %}</button>

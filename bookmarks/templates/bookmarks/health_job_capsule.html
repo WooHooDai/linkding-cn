@@ -1,0 +1,45 @@
+{% load i18n %}
+{% if active_check_job %}
+<div class="health-job-capsule{% if active_check_job.state == 'interrupted' %} is-paused{% endif %}"
+     data-health-job-progress
+     data-health-status-url="{% url 'linkding:health.status' active_check_job.pk %}"
+     data-health-control-url="{% url 'linkding:health.job_control' active_check_job.pk %}"
+     data-msg-completed="{% translate 'Health Check completed' %}"
+     data-msg-failed="{% translate 'Health Check failed' %}"
+     data-msg-cancelled="{% translate 'Health Check cancelled' %}"
+     data-label-pause="{% translate 'Pause' %}"
+     data-label-resume="{% translate 'Resume' %}"
+     data-label-minimize="{% translate 'Minimize' %}"
+     data-label-expand="{% translate 'Expand' %}"
+     role="status" aria-live="polite">
+  {# 左置：暂停/继续按钮（替换原旋转 icon）——两种模式都常显 #}
+  <button type="button" class="health-job-capsule-pause" data-health-job-pause
+          aria-label="{% translate 'Pause' %}" title="{% translate 'Pause' %}">
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+  </button>
+  {# 主区：完整模式 = 运行时间 · 进度百分比 (已完成/总数)；迷你模式 = 进度百分比 #}
+  <button type="button" class="health-job-capsule-main" data-health-job-toggle
+          aria-label="{% translate 'Health Check progress' %}">
+    <span class="health-job-capsule-expanded">
+      <span class="health-job-capsule-elapsed" data-health-job-elapsed>00:00</span>
+      <span class="health-job-capsule-sep" aria-hidden="true">·</span>
+      <span class="health-job-capsule-percent" data-health-job-percent>0.0%</span>
+      <span class="health-job-capsule-count" data-health-job-count>({{ active_check_job.done }}/{{ active_check_job.total }})</span>
+      <span class="health-job-capsule-state" data-health-job-state aria-hidden="true"></span>
+    </span>
+    <span class="health-job-capsule-mini" data-health-job-mini-percent>0.0%</span>
+  </button>
+  <span class="health-job-capsule-actions">
+    <button type="button" class="health-job-capsule-btn" data-health-job-cancel
+            ld-confirm-button ld-confirm-danger
+            ld-confirm-question="{% translate 'Cancel health check?' %}"
+            aria-label="{% translate 'Cancel' %}" title="{% translate 'Cancel' %}">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <button type="button" class="health-job-capsule-btn" data-health-job-mini
+            aria-label="{% translate 'Minimize' %}" title="{% translate 'Minimize' %}">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+    </button>
+  </span>
+</div>
+{% endif %}

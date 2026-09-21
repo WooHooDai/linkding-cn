@@ -381,6 +381,81 @@ reader 使用 defuddle 引擎，**不支持自定义脚本**。常用参数：
 
 > 完整字段请以自动生成的 [reference/adapters-zh.jsonc](reference/adapters-zh.jsonc) 或 [reference/adapters.jsonc](reference/adapters.jsonc) 为准，它们是 `fields.py` 的单一信源，始终与引擎一致。
 
+### health：书签可用性检查
+
+health 段用于按域名定制「书签健康检查」（书签列表批量 / 单条检查）的行为。通用引擎在没有适配器时也能工作（HEAD 优先、GET 兜底、内置软 404 关键词），health 段只做**覆盖**。结构借鉴了 `auth.cookie.verify` 的 L1/L2 分层（`http_head_probe` + `content_check`），但判定模型为三段式（`ok` / `blocked` / `dead`）+ 内容级 `missing`，与 cookie.verify 的二元"有效/失效"不同。
+
+**Cookie / 凭据**：健康检查自动复用站点认证体系——检查请求会携带该域名已保存的 cookie 与 headers（settings/adapters 中用户保存的用户级 cookie，以及共享凭据；批量任务与单条检查均按书签属主解析用户名）。需要登录后才能访问的页面据此可正常判定，而非误报为 blocked。
+
+**三层开关语义**：
+- `health.enabled=false` → 整个域名不查（书签保持未检查，显示 `unknown`）；
+- `http_head_probe.enabled=false` → 跳过 HEAD 快探，直接 GET 判定（仍出结果）；
+- `content_check.enabled=false` → 不读正文，仅按 HTTP 状态码判定。
+
+#### L1 · `http_head_probe`：探测
+
+| 参数 | 说明 |
+|------|------|
+| `enabled` | 是否启用 L1 探测（HEAD 优先、GET 兜底），默认 `true`；关闭后跳过 HEAD，直接 GET 判定 |
+| `timeout` | HEAD 探测超时（秒），默认 `3`。与 L2 的 `content_check.timeout` 相互独立 |
+| `accept_status` | 视为 `ok` 的状态码，默认 `[200]` |
+| `blocked_status` | 判定为 `blocked`（反爬/需登录）而非 `dead` 的状态码，默认 `[401, 403, 407, 429]`；其余 4xx/5xx 归入 `dead` |
+| `blocked_location_patterns` | 正则数组，匹配 GET 完成后的最终重定向 URL；任一命中即判定 `blocked`（如被重定向到登录页） |
+
+#### L2 · `content_check`：内容检查
+
+| 参数 | 说明 |
+|------|------|
+| `enabled` | 是否启用 L2 内容检查，默认 `true`；关闭后仅按状态码判定，不读正文 |
+| `timeout` | GET 探测超时（秒，完整抓取，最多读 `max_content_limit` 字节），默认 `30`。与 L1 的 `http_head_probe.timeout` 相互独立 |
+| `check_selectors` | 扫描页面的哪些部分，默认 `["title", "body"]` |
+| `valid_selectors` | CSS 选择器；任一元素存在即判定 `ok`（**正向短路**） |
+| `valid_patterns` | 正则数组；title/body 任一命中即判定 `ok`（正向短路） |
+| `invalid_selectors` | CSS 选择器；任一元素存在即判定 `missing`（软 404） |
+| `invalid_patterns` | 正则数组；title/body 任一命中即判定 `missing`（软 404；普通关键词按子串匹配同样有效） |
+
+> **valid 与 invalid 共存**：正向信号（valid\_\*）优先——先短路判定 `ok`，未命中才看反向信号（invalid\_\* → `missing`），两者都未命中则为 `ok`。
+
+#### health 特有 / 通用
+
+| 参数 | 说明 |
+|------|------|
+| `enabled` | 顶层总开关。默认 `true`；设为 `false` 时该域名跳过全部检查（书签保持 `unknown`）。纯减法控制 |
+| `reason` | 自定义判定说明：书签**非 ok** 时在界面显示该文案（替代引擎默认 reason），支持 `{http_status}` 占位符。两种形态：**字符串**（全局兜底）或**对象**（按状态、可按 HTTP 码分层，见下方示例）；命中优先级 `reason.<状态>.<HTTP码>` > `reason.<状态>.default` > `reason.default` > 引擎默认；状态键封闭枚举为 `ok / dead / blocked / missing / failed`（`ok` 不生效）；skipped 不生效 |
+| `max_content_limit` | L2 内容信号扫描的最大读取字节数，默认 1MB（1048576 字节） |
+| `proxy` / `http` / `auth` | 请求参数，与 metadata 共用语义 |
+| `request_url`（通用） | 改写实际探测/检查的 URL（正则规则），与 metadata.request_url 语义一致；解析结果即请求目标 |
+
+```jsonc
+"health": {
+  "enabled": true,
+  "http_head_probe": {
+    "blocked_status": [401, 403, 407, 429, 451],
+    "blocked_location_patterns": ["/login", "/signin"]
+  },
+  "content_check": {
+    "timeout": 30,
+    "valid_selectors": [".article-body"],
+    "invalid_selectors": [".error-page", "[class*=404]"],
+    "invalid_patterns": ["内容不存在", "文章已下架"]
+  },
+  "reason": {
+    "default": "无法访问（HTTP {http_status}）",
+    "blocked": {
+      "default": "被站点拦截",
+      "401": "需要登录",
+      "403": "被反爬拦截，请稍后重试",
+      "429": "访问过于频繁"
+    },
+    "dead": "页面已失效",
+    "missing": "文章已下架",
+    "failed": "网络请求失败"
+  }
+}
+```
+
+> 结论分 6 类：`ok` / `dead` / `failed` / `blocked` / `missing` / `unknown`（由 NULL 派生，不持久化）；HTTP 状态码与判定依据（reason、redirect、signals、job_id、checked_at）写入书签的 `health_details` JSON。
+
 ---
 
 ## 认证体系

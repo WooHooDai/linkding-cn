@@ -67,6 +67,24 @@ def _check_type(value, type_str: str) -> bool:
         return isinstance(value, str)
     if type_str == 'str|null':
         return value is None or isinstance(value, str)
+    if type_str == 'str|obj':
+        # 字符串 = 全局兜底；对象 = 按状态/HTTP 码分层（值必须是字符串或对象）
+        if isinstance(value, str):
+            return True
+        if not isinstance(value, dict):
+            return False
+
+        def _valid_text(v):
+            return isinstance(v, str) and bool(v)
+
+        def _valid_level(v):
+            if _valid_text(v):
+                return True
+            if isinstance(v, dict):
+                return all(_valid_text(k) and _valid_text(x) for k, x in v.items())
+            return False
+
+        return all(_valid_level(k) and _valid_level(v) for k, v in value.items()) if isinstance(value, dict) else False
     if type_str == 'str|array<str>':
         if isinstance(value, str):
             return True
@@ -141,6 +159,7 @@ from site_adapters.services.config.fields import (
     METADATA_FIELDS,
     SNAPSHOT_FIELDS,
     READER_FIELDS,
+    HEALTH_FIELDS,
     ALL_SECTIONS,
     SINGLEFILE_ARG_NAMES,
 )
@@ -172,6 +191,7 @@ _SECTION_FIELDS = {
     'metadata': set(METADATA_FIELDS.keys()),
     'snapshot': set(SNAPSHOT_FIELDS.keys()),
     'reader': set(READER_FIELDS.keys()),
+    'health': set(HEALTH_FIELDS.keys()),
 }
 
 def classify_field(section: str, key: str) -> str:
@@ -466,7 +486,7 @@ def _validate_domain_config(issues: list[dict], label: str, data: dict, file_dir
             _validate_routes(issues, label, routes, file_dir, file=file, adapter=adapter)
 
     # Validate sections
-    for section in ('metadata', 'snapshot', 'reader'):
+    for section in ('metadata', 'snapshot', 'reader', 'health'):
         sec = data.get(section, {})
         if not sec:
             continue

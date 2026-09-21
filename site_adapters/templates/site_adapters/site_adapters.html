@@ -56,6 +56,7 @@
             <div class="wa-test-actions">
               <select name="test_type" class="form-select">
                 <option value="config">{% translate "Show Config" %}</option>
+                <option value="health">{% translate "Health Check" %}</option>
                 <option value="metadata">{% translate "Metadata" %}</option>
                 <option value="snapshot">{% translate "Snapshot" %}</option>
                 <option value="reader">{% translate "Reader" %}</option>
@@ -204,8 +205,6 @@
       <div id="view-credentials" class="settings-section wa-editor-section" hidden>
         {% include "settings/credentials_manage.html" %}
       </div>
-
-
 
       <!-- Confirm modal for empty search -->
      <div id="domain-confirm-overlay" class="wa-modal-overlay" hidden>

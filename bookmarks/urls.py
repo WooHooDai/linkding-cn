@@ -84,6 +84,22 @@ urlpatterns = [
         views.highlights.index,
         name="bookmarks.highlights",
     ),
+    # Bookmark health check（任务进度与单条检查 API；页面/入口已并入书签列表与 bundle 列表）
+    path(
+        "bookmarks/health/<int:job_id>/status",
+        views.health_check.job_status,
+        name="health.status",
+    ),
+    path(
+        "bookmarks/health/<int:job_id>/control",
+        views.health_check.job_control,
+        name="health.job_control",
+    ),
+    path(
+        "bookmarks/health/<int:bookmark_id>/check",
+        views.health_check.check_single,
+        name="health.check",
+    ),
     path("tags/new", views.tags.tag_new, name="tags.new"),
     path("tags/<int:tag_id>/edit", views.tags.tag_edit, name="tags.edit"),
     path("tags/merge", views.tags.tag_merge, name="tags.merge"),

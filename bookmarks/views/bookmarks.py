@@ -6,6 +6,7 @@ import urllib.parse
 from pathlib import Path
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import QuerySet
 from django.http import (
@@ -17,7 +18,7 @@ from django.http import (
     HttpResponseRedirect,
     JsonResponse,
 )
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -66,6 +67,10 @@ from bookmarks.services.bookmarks import (
 from bookmarks.type_defs import HttpRequest
 from bookmarks.utils import get_safe_return_url
 from bookmarks.views import access, contexts, partials, turbo
+from bookmarks.views.health_check import (
+    get_active_check_job,
+    start_ids_job,
+)
 
 SIDEBAR_MODULE_TEMPLATES = {
     UserProfile.SIDEBAR_MODULE_SUMMARY: "bookmarks/sidebar/modules/summary/index.html",
@@ -428,6 +433,13 @@ def render_bookmarks_view(request: HttpRequest, template_name, context):
     context["domain_config_fingerprint"] = hashlib.md5(raw.encode()).hexdigest()[:12] if raw else "default"
     
     context["sidebar_modules"] = _build_sidebar_modules(request, context)
+
+    # 活跃健康检查任务（供前端轮询、完成时 toast 通知）
+
+    context["active_check_job"] = None
+    if request.user.is_authenticated:
+        context["active_check_job"] = get_active_check_job(request.user)
+
     profile = request.user_profile
     context.setdefault("show_sidebar", profile.show_sidebar)
     context.setdefault("sticky_side_panel", profile.sticky_side_panel)
@@ -518,7 +530,7 @@ def _get_create_bundle_query_string(search: BookmarkSearch) -> str:
         if "date_filter_end" not in params and search.date_filter_end:
             params["date_filter_end"] = search.date_filter_end.isoformat()
 
-    return urllib.parse.urlencode(params)
+    return urllib.parse.urlencode(params, doseq=True)
 
 
 def search_action(request: HttpRequest):
@@ -590,7 +602,7 @@ def search_action(request: HttpRequest):
     )
     base_url = request.path
     query_params = search.query_params
-    query_string = urllib.parse.urlencode(query_params)
+    query_string = urllib.parse.urlencode(query_params, doseq=True)
     url = base_url if not query_string else base_url + "?" + query_string
     return HttpResponseRedirect(url)
 
@@ -998,6 +1010,12 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
             # Use only selected bookmarks
             bookmark_ids = request.POST.getlist("bookmark_id")
 
+        # Guard against duplicate ids: the bulk edit form submits checkboxes
+        # together with injected hidden fields for selections on other pages,
+        # so the same id can arrive twice. Deduplicate to keep toast counts
+        # and job totals accurate.
+        bookmark_ids = list(dict.fromkeys(bookmark_ids))
+
         if bulk_action == "bulk_archive":
             return archive_bookmarks(bookmark_ids, request.user)
         if bulk_action == "bulk_unarchive":
@@ -1026,6 +1044,21 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
             return trash_bookmarks(bookmark_ids, request.user)
         if bulk_action == "bulk_restore":
             return restore_bookmarks(bookmark_ids, request.user)
+        if bulk_action == "bulk_check_health":
+
+            job, error = start_ids_job(request.user, list(bookmark_ids))
+            if error:
+                messages.error(request, error)
+            else:
+                messages.success(
+                    request,
+                    _("Health check started for %(count)s bookmarks.")
+                    % {"count": len(list(bookmark_ids))},
+                )
+            return redirect(
+                request.META.get("HTTP_REFERER")
+                or reverse("linkding:bookmarks.index")
+            )
         if bulk_action == "bulk_snapshot":
             return create_html_snapshots(bookmark_ids, request.user)
         if bulk_action == "bulk_remove_snapshot":
