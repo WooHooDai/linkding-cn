@@ -546,6 +546,12 @@ class DetailsModal extends Modal {
     }
   }
 
+  // 当前弹窗预览图是否加载失败（文件缺失/404）。complete=true 且 naturalWidth=0 表示加载出错。
+  _isModalPreviewBroken() {
+    const img = this.querySelector(".info-preview-image");
+    return !!img && !!img.getAttribute("src") && img.complete && img.naturalWidth === 0;
+  }
+
   _setModalPreviewImage(src) {
     let img = this.querySelector(".info-preview-image");
     if (!img) {
@@ -673,12 +679,16 @@ class DetailsModal extends Modal {
       }
 
       // (3) 预览图：获取到的预览图非空，且与现有 remote_url 不同 → 替换
-      if (
-        metadata.preview_image &&
-        metadata.preview_image !== (this._data.preview_image_remote_url || "")
-      ) {
-        pending.preview_image_remote_url = metadata.preview_image;
-        this._setModalPreviewImage(metadata.preview_image);
+      if (metadata.preview_image) {
+        const currentRemote = this._data.preview_image_remote_url || "";
+        if (metadata.preview_image !== currentRemote) {
+          pending.preview_image_remote_url = metadata.preview_image;
+          this._setModalPreviewImage(metadata.preview_image);
+        } else if (this._isModalPreviewBroken()) {
+          // 远程图未变化，但当前展示的本地预览图已损坏（文件缺失/404）。
+          // 先展示远程图；保存时 _refreshShouldRetryPreview 会触发强制重下本地文件。
+          this._setModalPreviewImage(metadata.preview_image);
+        }
       }
 
       this._pendingMetadata = Object.keys(pending).length ? pending : null;

@@ -1139,6 +1139,10 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
             )
 
     def test_check_returns_bookmark_if_url_is_bookmarked(self):
+        import os
+        import shutil
+        import tempfile
+
         self.authenticate()
         from bookmarks.models import FaviconCache
         FaviconCache.objects.create(
@@ -1152,6 +1156,47 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
             preview_image_file="preview.png",
         )
 
+        preview_dir = tempfile.mkdtemp()
+        try:
+            # 预览图文件真实存在时，接口应返回本地预览图 URL
+            with open(os.path.join(preview_dir, "preview.png"), "w") as f:
+                f.write("test")
+            with override_settings(LD_PREVIEW_FOLDER=preview_dir):
+                url = reverse("linkding:bookmark-check")
+                check_url = urllib.parse.quote_plus("https://example.com")
+                response = self.get(
+                    f"{url}?url={check_url}", expected_status_code=status.HTTP_200_OK
+                )
+                bookmark_data = response.data["bookmark"]
+
+            self.assertIsNotNone(bookmark_data)
+            self.assertEqual(bookmark.id, bookmark_data["id"])
+            self.assertEqual(bookmark.url, bookmark_data["url"])
+            self.assertEqual(bookmark.title, bookmark_data["title"])
+            self.assertEqual(bookmark.description, bookmark_data["description"])
+            self.assertEqual(
+                "http://testserver/favicon/example.com", bookmark_data["favicon_url"]
+            )
+            self.assertEqual(
+                "http://testserver/static/preview.png", bookmark_data["preview_image_url"]
+            )
+        finally:
+            shutil.rmtree(preview_dir)
+
+    def test_check_returns_null_preview_when_file_missing_on_disk(self):
+        self.authenticate()
+        from bookmarks.models import FaviconCache
+        FaviconCache.objects.create(
+            domain="example.com", favicon_file="example_com.png", status="success"
+        )
+
+        bookmark = self.setup_bookmark(
+            url="https://example.com",
+            preview_image_file="missing-preview.png",
+        )
+        bookmark.preview_image_remote_url = "https://example.com/remote.png"
+        bookmark.save(update_fields=["preview_image_remote_url"])
+
         url = reverse("linkding:bookmark-check")
         check_url = urllib.parse.quote_plus("https://example.com")
         response = self.get(
@@ -1159,16 +1204,12 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
         )
         bookmark_data = response.data["bookmark"]
 
-        self.assertIsNotNone(bookmark_data)
-        self.assertEqual(bookmark.id, bookmark_data["id"])
-        self.assertEqual(bookmark.url, bookmark_data["url"])
-        self.assertEqual(bookmark.title, bookmark_data["title"])
-        self.assertEqual(bookmark.description, bookmark_data["description"])
+        # DB 里有 preview_image_file 但磁盘文件缺失，不能谎称有本地预览图，
+        # 否则前端会跳过强制重新下载。
+        self.assertIsNone(bookmark_data["preview_image_url"])
         self.assertEqual(
-            "http://testserver/favicon/example.com", bookmark_data["favicon_url"]
-        )
-        self.assertEqual(
-            "http://testserver/static/preview.png", bookmark_data["preview_image_url"]
+            "https://example.com/remote.png",
+            bookmark_data["preview_image_remote_url"],
         )
 
     def test_check_returns_scraped_metadata_if_url_is_bookmarked(self):

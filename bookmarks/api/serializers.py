@@ -1,6 +1,8 @@
 import json
 from functools import lru_cache
+from pathlib import Path
 
+from django.conf import settings
 from django.db.models import prefetch_related_objects
 from django.templatetags.static import static
 from django.utils.translation import gettext_lazy as _
@@ -144,6 +146,13 @@ class BookmarkSerializer(serializers.ModelSerializer):
 
     def get_preview_image_url(self, obj: Bookmark):
         if not obj.preview_image_file:
+            return None
+        # 磁盘文件可能因清理/迁移而缺失，此时不能对外谎称有本地预览图，
+        # 否则前端会把损坏的本地图当成"已有预览"而跳过强制重新下载。
+        preview_file_path = (
+            Path(settings.LD_PREVIEW_FOLDER) / obj.preview_image_file
+        )
+        if not preview_file_path.is_file():
             return None
         request = self.context.get("request")
         preview_image_file_path = static(obj.preview_image_file)
