@@ -441,6 +441,14 @@ function postProcess(articleContent) {
   });
   articleContent.querySelectorAll('figure[aria-label="ld-carousel"]').forEach((figure) => {
     figure.classList.add("ld-carousel");
+    // The snapshot pins a fixed inline height on the figure so the saved page
+    // matches the source layout. In the reader the media is sized by content
+    // (auto height, capped at 80vh), so the pinned height must go — otherwise
+    // taller images are clipped to a horizontal band (overflow-y hidden +
+    // align-items center = vertical center crop).
+    figure.style.height = "auto";
+    figure.style.maxHeight = "";
+    figure.style.minHeight = "";
     figure.querySelectorAll("img, video, iframe").forEach((media) => {
       media.classList.add("ld-carousel-item");
       const width = parseFloat(media.getAttribute("width"));

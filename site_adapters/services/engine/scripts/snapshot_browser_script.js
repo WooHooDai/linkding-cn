@@ -212,9 +212,25 @@
       if (!value) return true;
       const trimmed = value.trim();
       if (!trimmed || trimmed === "data:,") return true;
-      return /^data:image\/(?:gif|png);base64,(?:R0lGODlhAQAB|iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB)/i.test(
-        trimmed
-      );
+      // 1×1 transparent GIF/PNG placeholders
+      if (
+        /^data:image\/(?:gif|png);base64,(?:R0lGODlhAQAB|iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB)/i.test(
+          trimmed
+        )
+      ) {
+        return true;
+      }
+      // Transparent SVG placeholders (e.g. WeChat swipers render a
+      // data:image/svg+xml rect with fill-opacity="0" until the real image
+      // URL is swapped in). These carry no visual content and must never be
+      // treated as the real media URL.
+      if (
+        /^data:image\/svg\+xml/i.test(trimmed) &&
+        /fill-opacity\s*=\s*["']?0["']?/i.test(trimmed)
+      ) {
+        return true;
+      }
+      return false;
     };
 
     // Prefer the highest-resolution srcset candidate.
@@ -322,22 +338,41 @@
       el.style.objectFit = "contain";
     };
 
-    const applyCarouselItemStyle = (item, size) => {
-      item.style.cssText = [
+    // Style a carousel media item.
+    // fillHeight mode (fixed-height frames, e.g. Reddit): the item fills the
+    // frame height and width follows the aspect ratio — the previous behavior.
+    // Auto mode (WeChat-style, container height follows width): the item keeps
+    // a natural size but is capped at the container width, so it scales down
+    // proportionally when the carousel is rendered narrower than the capture
+    // width (e.g. a mobile viewport).
+    const applyCarouselItemStyle = (item, size, opts) => {
+      const styles = [
         "box-sizing:border-box",
         "display:block",
         "flex:0 0 auto",
-        "width:auto",
-        "height:100%",
-        "max-height:100%",
-        "max-width:none",
         "min-height:0",
         "object-fit:contain",
         "object-position:center",
-      ].join(";");
-      if (item.tagName === "IFRAME" && size.width) {
-        item.style.width = `${size.width}px`;
+      ];
+      if (item.tagName === "IFRAME") {
+        if (size.width) item.style.width = `${size.width}px`;
+        if (size.height) item.style.height = `${size.height}px`;
+      } else if (opts && opts.fillHeight) {
+        styles.push(
+          "width:auto",
+          "height:100%",
+          "max-height:100%",
+          "max-width:none"
+        );
+      } else {
+        styles.push(
+          "width:auto",
+          "height:auto",
+          "max-width:100%",
+          "max-height:80vh"
+        );
       }
+      item.style.cssText = styles.join(";");
       if (size.width && size.height) {
         item.setAttribute("width", String(size.width));
         item.setAttribute("height", String(size.height));
@@ -345,6 +380,24 @@
         item.removeAttribute("width");
         item.removeAttribute("height");
       }
+    };
+
+    // Size a carousel media item relative to its container:
+    // - fixed-height frames keep the measured size (CSS fills the height).
+    // - auto-height containers get the container width × the media ratio, so
+    //   the item fills the container and scales down proportionally on narrow
+    //   viewports (max-width:100% caps it below the capture width).
+    const getCarouselItemSize = (el, containerRect, fillHeight) => {
+      const size = getMediaSize(el, containerRect);
+      const containerWidth = containerRect ? containerRect.width : 0;
+      if (fillHeight || !containerWidth || !size.width || !size.height) {
+        return size;
+      }
+      const ratio = size.height / size.width;
+      return {
+        width: Math.round(containerWidth),
+        height: Math.round(containerWidth * ratio),
+      };
     };
 
     const getInlineMaxHeight = (element) => {
@@ -365,10 +418,33 @@
 
     // Some carousel wrappers constrain a descendant (for example Reddit's
     // faceplate-carousel). Preserve that ceiling in the snapshot.
+    // Hidden subtrees (display:none / [hidden]) do not participate in layout
+    // and must not cap the visible carousel — e.g. Reddit keeps a hidden
+    // lightbox variant of the post image whose max-height would otherwise
+    // shrink the whole media list.
+    const isInHiddenSubtree = (el) => {
+      let current = el;
+      while (current && current.nodeType === 1) {
+        if (current.hasAttribute && current.hasAttribute("hidden")) return true;
+        try {
+          if (getComputedStyle(current).display === "none") return true;
+        } catch {
+          return false;
+        }
+        if (current.parentNode && current.parentNode.nodeType === 11) {
+          current = current.parentNode.host || null;
+        } else {
+          current = current.parentElement;
+        }
+      }
+      return false;
+    };
+
     const getDescendantMaxHeight = (root) => {
       let maxHeight = null;
       const walk = (node) => {
         node.querySelectorAll("*").forEach((el) => {
+          if (isInHiddenSubtree(el)) return;
           if (el.shadowRoot) walk(el.shadowRoot);
           const styleText = el.getAttribute("style") || "";
           const inline = styleText.match(/max-height:\s*([\d.]+)px/i);
@@ -393,10 +469,12 @@
     const mountCarousel = (container, figure, capturedWidth = 0) => {
       if (capturedWidth) {
         // Keep shrink-wrapped containers (flex/grid items, inline-grid, etc.)
-        // from collapsing once their original children are removed.
+        // from collapsing once their original children are removed, but never
+        // force a width wider than the available space — this lets the
+        // carousel shrink to the viewport on narrow screens.
         setImportantStyles(container, {
           "box-sizing": "border-box",
-          "min-width": `${capturedWidth}px`,
+          "min-width": `min(${capturedWidth}px, 100%)`,
         });
       }
       const root = container.shadowRoot || container;
@@ -432,6 +510,23 @@
             : getInlineMaxHeight(container);
         if (!fixedMaxHeight) fixedMaxHeight = getDescendantMaxHeight(container);
       } catch {}
+      const capturedHeight =
+        containerRect && containerRect.height
+          ? Math.round(containerRect.height)
+          : 0;
+      // A container with an explicit fixed height (inline px height or a
+      // resolved max-height) is a fixed-height frame whose items fill the
+      // height. Otherwise (WeChat-style) the height follows the width and the
+      // items scale with the container width.
+      const containerHeightStyle = (container.style.height || "").trim();
+      const hasFixedHeight = Boolean(
+        (fixedMaxHeight && capturedHeight) ||
+          (containerHeightStyle &&
+            containerHeightStyle !== "auto" &&
+            !containerHeightStyle.includes("calc(") &&
+            !containerHeightStyle.includes("%"))
+      );
+      const itemOpts = { fillHeight: hasFixedHeight };
       collectMedia(container).forEach((el) => {
         prepareCarouselMediaForMeasurement(el);
         const url = resolveMediaUrl(el, Array.isArray(config.lazy) ? config.lazy : null);
@@ -441,7 +536,11 @@
           const img = container.ownerDocument.createElement("img");
           img.src = url;
           img.alt = el.getAttribute("alt") || "";
-          applyCarouselItemStyle(img, getMediaSize(el, containerRect));
+          applyCarouselItemStyle(
+            img,
+            getCarouselItemSize(el, containerRect, hasFixedHeight),
+            itemOpts
+          );
           items.push(img);
         } else if (el.tagName === "VIDEO") {
           if (url && seen.has(url)) return;
@@ -452,20 +551,32 @@
             const img = container.ownerDocument.createElement("img");
             img.src = poster;
             img.alt = el.getAttribute("alt") || "";
-            applyCarouselItemStyle(img, getMediaSize(el, containerRect));
+            applyCarouselItemStyle(
+              img,
+              getCarouselItemSize(el, containerRect, hasFixedHeight),
+              itemOpts
+            );
             items.push(img);
             return;
           }
           if (url) seen.add(url);
           const video = el.cloneNode(true);
           if (!video.hasAttribute("controls")) video.setAttribute("controls", "");
-          applyCarouselItemStyle(video, getMediaSize(el, containerRect));
+          applyCarouselItemStyle(
+            video,
+            getCarouselItemSize(el, containerRect, hasFixedHeight),
+            itemOpts
+          );
           items.push(video);
         } else if (el.tagName === "IFRAME") {
           if (!url || seen.has(url)) return;
           seen.add(url);
           const frame = el.cloneNode(true);
-          applyCarouselItemStyle(frame, getMediaSize(el, containerRect));
+          applyCarouselItemStyle(
+            frame,
+            getCarouselItemSize(el, containerRect, hasFixedHeight),
+            itemOpts
+          );
           items.push(frame);
         }
       });
@@ -473,13 +584,8 @@
 
       const figure = container.ownerDocument.createElement("figure");
       figure.setAttribute("aria-label", "ld-carousel");
-      const capturedHeight =
-        containerRect && containerRect.height
-          ? Math.round(containerRect.height)
-          : 0;
       // Prefer dynamic height in the snapshot, but keep fixed containers that
       // explicitly constrain their carousel. Reader uses the height attribute.
-      const containerHeightStyle = (container.style.height || "").trim();
       const figureHeight =
         fixedMaxHeight && capturedHeight
           ? `${Math.min(capturedHeight, Math.round(fixedMaxHeight))}px`
@@ -488,7 +594,7 @@
             !containerHeightStyle.includes("calc(") &&
             !containerHeightStyle.includes("%")
           ? containerHeightStyle
-          : "100%";
+          : "auto";
       const figureMaxHeight =
         fixedMaxHeight && capturedHeight
           ? `${Math.min(capturedHeight, Math.round(fixedMaxHeight))}px`
@@ -593,16 +699,52 @@
       });
     }
 
+    // Lazy-loaded carousels (e.g. WeChat swipers) render placeholder media
+    // first and swap in real URLs asynchronously. Wait until every configured
+    // carousel container has resolvable, non-placeholder media so the snapshot
+    // (and the reader extracted from it) keeps real images instead of
+    // transparent placeholders. Bounded by a timeout; media that never loads
+    // is skipped by processCarousel thanks to isPlaceholderSrc.
+    const carouselMediaReady = (container) => {
+      const media = collectMedia(container);
+      if (!media.length) return false;
+      return media.every((el) => {
+        if (el.tagName === "IFRAME") return !!el.getAttribute("src");
+        if (el.tagName === "VIDEO") return true;
+        const url = resolveMediaUrl(el);
+        return !!url && !isPlaceholderSrc(url);
+      });
+    };
+
+    const waitForCarouselMedia = async (
+      containers,
+      timeoutMs = 12000
+    ) => {
+      if (!containers.length) return;
+      const deadline = Date.now() + timeoutMs;
+      while (Date.now() < deadline) {
+        if (containers.every(carouselMediaReady)) return;
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      }
+    };
+
     // Convert configured carousels into a horizontal media list
-    for (const selector of config.carousels || []) {
-      queryAll(document, selector).forEach((container) => {
-        if (!container.isConnected) return;
+    const carouselSelectors = config.carousels || [];
+    if (carouselSelectors.length) {
+      const carouselContainers = [];
+      for (const selector of carouselSelectors) {
+        queryAll(document, selector).forEach((container) => {
+          if (container.isConnected) carouselContainers.push(container);
+        });
+      }
+      await waitForCarouselMedia(carouselContainers);
+      for (const container of carouselContainers) {
         const count = processCarousel(container);
         if (count) {
           stats.carousels += 1;
           stats.media += count;
         }
-      });
+      }
     }
 
     // Embed stats for diagnostics
