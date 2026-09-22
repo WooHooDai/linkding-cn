@@ -442,7 +442,7 @@ def _build_section_config(full_config: dict, section: str, base_dir: str, userna
         result['defuddle_args'] = section_data.get('defuddle_args', {})
 
     elif section == 'health':
-        result['health_enabled'] = section_data['enabled']
+        result['health_enabled'] = section_data.get('enabled', True)
 
     # URL processing
     url = full_config.get('_url', '')
@@ -510,7 +510,12 @@ def get_reader_config(url: str, username: str = '') -> dict | None:
 def get_health_config(url: str, username: str = '') -> dict | None:
     """Resolve merged health-check config (builtin + domain) for a URL."""
     base_dir = _get_base_dir()
-    config = _load_config(url, base_dir, username)
+    if not base_dir or not os.path.isdir(base_dir):
+        return None
+    builtin = load_builtin_config(base_dir) or {}
+    domain = load_domain_config(url, base_dir)
+    config = deep_merge(builtin, domain) if domain else builtin
     if not config:
         return None
+    config['_url'] = url
     return _build_section_config(config, 'health', base_dir, username)
