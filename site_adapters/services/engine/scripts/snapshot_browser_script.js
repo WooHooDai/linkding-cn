@@ -339,144 +339,52 @@
     };
 
     // Style a carousel media item.
-    // fillHeight mode (fixed-height frames, e.g. Reddit): the item fills the
-    // frame height and width follows the aspect ratio — the previous behavior.
-    // Auto mode (WeChat-style, container height follows width): the item keeps
-    // a natural size but is capped at the container width, so it scales down
-    // proportionally when the carousel is rendered narrower than the capture
-    // width (e.g. a mobile viewport).
-    const applyCarouselItemStyle = (item, size, opts) => {
-      const styles = [
+    // Each item fills one slide (100% width and height of the figure).
+    // The media content is fitted within the element box via object-fit:contain,
+    // so portrait/landscape media both display correctly and are centered.
+    const applyCarouselItemStyle = (item) => {
+      item.style.cssText = [
         "box-sizing:border-box",
         "display:block",
-        "flex:0 0 auto",
+        "flex:0 0 100%",
         "min-height:0",
+        "width:100%",
+        "height:100%",
+        "max-width:none",
+        "max-height:none",
         "object-fit:contain",
         "object-position:center",
-      ];
-      if (item.tagName === "IFRAME") {
-        if (size.width) item.style.width = `${size.width}px`;
-        if (size.height) item.style.height = `${size.height}px`;
-      } else if (opts && opts.fillHeight) {
-        styles.push(
-          "width:auto",
-          "height:100%",
-          "max-height:100%",
-          "max-width:none"
-        );
-      } else {
-        styles.push(
-          "width:auto",
-          "height:auto",
-          "max-width:100%",
-          "max-height:80vh"
-        );
-      }
-      item.style.cssText = styles.join(";");
-      if (size.width && size.height) {
-        item.setAttribute("width", String(size.width));
-        item.setAttribute("height", String(size.height));
-      } else {
-        item.removeAttribute("width");
-        item.removeAttribute("height");
-      }
-    };
-
-    // Size a carousel media item relative to its container:
-    // - fixed-height frames keep the measured size (CSS fills the height).
-    // - auto-height containers get the container width × the media ratio, so
-    //   the item fills the container and scales down proportionally on narrow
-    //   viewports (max-width:100% caps it below the capture width).
-    const getCarouselItemSize = (el, containerRect, fillHeight) => {
-      const size = getMediaSize(el, containerRect);
-      const containerWidth = containerRect ? containerRect.width : 0;
-      if (fillHeight || !containerWidth || !size.width || !size.height) {
-        return size;
-      }
-      const ratio = size.height / size.width;
-      return {
-        width: Math.round(containerWidth),
-        height: Math.round(containerWidth * ratio),
-      };
-    };
-
-    const getInlineMaxHeight = (element) => {
-      let current = element;
-      while (current && current.nodeType === 1) {
-        const styleText = current.getAttribute("style") || "";
-        const match = styleText.match(/max-height:\s*([\d.]+)px/i);
-        if (match) return parseFloat(match[1]);
-        const parent = current.parentNode;
-        if (parent && parent.nodeType === 11) {
-          current = parent.host || null;
-        } else {
-          current = parent;
-        }
-      }
-      return null;
-    };
-
-    // Some carousel wrappers constrain a descendant (for example Reddit's
-    // faceplate-carousel). Preserve that ceiling in the snapshot.
-    // Hidden subtrees (display:none / [hidden]) do not participate in layout
-    // and must not cap the visible carousel — e.g. Reddit keeps a hidden
-    // lightbox variant of the post image whose max-height would otherwise
-    // shrink the whole media list.
-    const isInHiddenSubtree = (el) => {
-      let current = el;
-      while (current && current.nodeType === 1) {
-        if (current.hasAttribute && current.hasAttribute("hidden")) return true;
-        try {
-          if (getComputedStyle(current).display === "none") return true;
-        } catch {
-          return false;
-        }
-        if (current.parentNode && current.parentNode.nodeType === 11) {
-          current = current.parentNode.host || null;
-        } else {
-          current = current.parentElement;
-        }
-      }
-      return false;
-    };
-
-    const getDescendantMaxHeight = (root) => {
-      let maxHeight = null;
-      const walk = (node) => {
-        node.querySelectorAll("*").forEach((el) => {
-          if (isInHiddenSubtree(el)) return;
-          if (el.shadowRoot) walk(el.shadowRoot);
-          const styleText = el.getAttribute("style") || "";
-          const inline = styleText.match(/max-height:\s*([\d.]+)px/i);
-          if (inline) {
-            const parsed = parseFloat(inline[1]);
-            if (parsed > 0 && (maxHeight === null || parsed < maxHeight)) {
-              maxHeight = parsed;
-            }
-          }
-          const computed = parseFloat(getComputedStyle(el).maxHeight);
-          if (computed > 0 && (maxHeight === null || computed < maxHeight)) {
-            maxHeight = computed;
-          }
-        });
-      };
-      walk(root);
-      return maxHeight;
+      ].join(";");
+      // Do NOT set width/height HTML attributes — let the browser use the
+      // media's natural aspect ratio. The measured box may be stretched to a
+      // different aspect ratio than the actual media (prepareCarouselMediaForMeasurement
+      // sets 100%×100%), and a wrong intrinsic ratio from these attributes
+      // would squash or stretch the image.
+      item.removeAttribute("width");
+      item.removeAttribute("height");
     };
 
     // Keep the original container as the layout host and isolate the media
     // list inside an open shadow root so page CSS cannot leak into it.
-    const mountCarousel = (container, figure, capturedWidth = 0) => {
+    const mountCarousel = (container, figure, capturedWidth = 0, capturedHeight = 0) => {
+      const containerStyles = {
+        "box-sizing": "border-box",
+      };
       if (capturedWidth) {
         // Keep shrink-wrapped containers (flex/grid items, inline-grid, etc.)
         // from collapsing once their original children are removed, but never
         // force a width wider than the available space — this lets the
         // carousel shrink to the viewport on narrow screens.
-        setImportantStyles(container, {
-          "box-sizing": "border-box",
-          "min-width": `min(${capturedWidth}px, 100%)`,
-        });
+        containerStyles["min-width"] = `min(${capturedWidth}px, 100%)`;
       }
+      if (capturedHeight) {
+        // Fill parent height so the scrollbar aligns with the card's bottom,
+        // not just the media-container element. min-height prevents collapse
+        // when the parent's height is auto.
+        containerStyles["height"] = "100%";
+        containerStyles["min-height"] = `${capturedHeight}px`;
+      }
+      setImportantStyles(container, containerStyles);
       const root = container.shadowRoot || container;
       while (root.firstChild) root.removeChild(root.firstChild);
       const host = container.ownerDocument.createElement("ld-carousel");
@@ -496,37 +404,17 @@
       const seen = new Set();
       const items = [];
       let containerRect = null;
-      let fixedMaxHeight = null;
       try {
         const rect = container.getBoundingClientRect();
         if (rect.width || rect.height) {
           containerRect = { width: rect.width, height: rect.height };
         }
-        const computed = getComputedStyle(container);
-        const parsedMaxHeight = parseFloat(computed.maxHeight);
-        fixedMaxHeight =
-          parsedMaxHeight > 0
-            ? parsedMaxHeight
-            : getInlineMaxHeight(container);
-        if (!fixedMaxHeight) fixedMaxHeight = getDescendantMaxHeight(container);
       } catch {}
       const capturedHeight =
         containerRect && containerRect.height
           ? Math.round(containerRect.height)
           : 0;
-      // A container with an explicit fixed height (inline px height or a
-      // resolved max-height) is a fixed-height frame whose items fill the
-      // height. Otherwise (WeChat-style) the height follows the width and the
-      // items scale with the container width.
-      const containerHeightStyle = (container.style.height || "").trim();
-      const hasFixedHeight = Boolean(
-        (fixedMaxHeight && capturedHeight) ||
-          (containerHeightStyle &&
-            containerHeightStyle !== "auto" &&
-            !containerHeightStyle.includes("calc(") &&
-            !containerHeightStyle.includes("%"))
-      );
-      const itemOpts = { fillHeight: hasFixedHeight };
+
       collectMedia(container).forEach((el) => {
         prepareCarouselMediaForMeasurement(el);
         const url = resolveMediaUrl(el, Array.isArray(config.lazy) ? config.lazy : null);
@@ -536,11 +424,7 @@
           const img = container.ownerDocument.createElement("img");
           img.src = url;
           img.alt = el.getAttribute("alt") || "";
-          applyCarouselItemStyle(
-            img,
-            getCarouselItemSize(el, containerRect, hasFixedHeight),
-            itemOpts
-          );
+          applyCarouselItemStyle(img);
           items.push(img);
         } else if (el.tagName === "VIDEO") {
           if (url && seen.has(url)) return;
@@ -551,32 +435,20 @@
             const img = container.ownerDocument.createElement("img");
             img.src = poster;
             img.alt = el.getAttribute("alt") || "";
-            applyCarouselItemStyle(
-              img,
-              getCarouselItemSize(el, containerRect, hasFixedHeight),
-              itemOpts
-            );
+            applyCarouselItemStyle(img);
             items.push(img);
             return;
           }
           if (url) seen.add(url);
           const video = el.cloneNode(true);
           if (!video.hasAttribute("controls")) video.setAttribute("controls", "");
-          applyCarouselItemStyle(
-            video,
-            getCarouselItemSize(el, containerRect, hasFixedHeight),
-            itemOpts
-          );
+          applyCarouselItemStyle(video);
           items.push(video);
         } else if (el.tagName === "IFRAME") {
           if (!url || seen.has(url)) return;
           seen.add(url);
           const frame = el.cloneNode(true);
-          applyCarouselItemStyle(
-            frame,
-            getCarouselItemSize(el, containerRect, hasFixedHeight),
-            itemOpts
-          );
+          applyCarouselItemStyle(frame);
           items.push(frame);
         }
       });
@@ -584,46 +456,31 @@
 
       const figure = container.ownerDocument.createElement("figure");
       figure.setAttribute("aria-label", "ld-carousel");
-      // Prefer dynamic height in the snapshot, but keep fixed containers that
-      // explicitly constrain their carousel. Reader uses the height attribute.
-      const figureHeight =
-        fixedMaxHeight && capturedHeight
-          ? `${Math.min(capturedHeight, Math.round(fixedMaxHeight))}px`
-          : containerHeightStyle &&
-            containerHeightStyle !== "auto" &&
-            !containerHeightStyle.includes("calc(") &&
-            !containerHeightStyle.includes("%")
-          ? containerHeightStyle
-          : "auto";
-      const figureMaxHeight =
-        fixedMaxHeight && capturedHeight
-          ? `${Math.min(capturedHeight, Math.round(fixedMaxHeight))}px`
-          : figureHeight;
-      figure.style.cssText = [
-        "box-sizing:border-box",
-        "display:flex",
-        "flex-direction:row",
-        "overflow-x:auto",
-        "overflow-y:hidden",
-        "gap:12px",
-        "width:100%",
-        `height:${figureHeight}`,
-        `max-height:${figureMaxHeight}`,
-        "max-width:100%",
-        "min-height:0",
-        "margin:0",
-        "align-items:center",
-        "scrollbar-width:thin",
-        "scrollbar-color:rgba(0,0,0,.35) rgba(0,0,0,.08)",
-        "scrollbar-gutter:stable",
-      ].join(";");
-      if (capturedHeight) {
-        figure.setAttribute("height", String(capturedHeight));
-      }
+      // Figure fills its host (shadow root → ld-carousel → original container).
+      // 100% height keeps the scrollbar aligned with the container's bottom
+      // at any viewport width.
+      setImportantStyles(figure, {
+        "box-sizing": "border-box",
+        "display": "flex",
+        "flex-direction": "row",
+        "overflow-x": "auto",
+        "overflow-y": "hidden",
+        "gap": "12px",
+        "width": "100%",
+        "height": "100%",
+        "max-height": "100%",
+        "max-width": "100%",
+        "min-height": "0",
+        "margin": "0",
+        "align-items": "center",
+        "scrollbar-width": "thin",
+        "scrollbar-color": "rgba(0,0,0,.35) rgba(0,0,0,.08)",
+        "scrollbar-gutter": "stable",
+      });
       items.forEach((item) => {
         figure.appendChild(item);
       });
-      mountCarousel(container, figure, containerRect && containerRect.width);
+      mountCarousel(container, figure, containerRect.width, capturedHeight);
       return items.length;
     };
 
