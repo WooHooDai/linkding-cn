@@ -71,6 +71,18 @@
   }
 }
 
+/* 保存/取消按钮行：按内容高度自动吸底跟随滚动。
+   sticky bottom:0 仅在按钮行移出视口时粘住；内容不足一屏时保持原位（与分页器行为一致） */
+.bookmarks-form .form-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  margin-top: 0;
+  background: var(--body-color);
+  padding: var(--unit-2) 0 calc(var(--unit-2) + env(safe-area-inset-bottom));
+  border-top: solid 1px var(--secondary-border-color);
+}
+
 
 
 

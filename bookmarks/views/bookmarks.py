@@ -639,6 +639,8 @@ def edit(request: HttpRequest, bookmark_id: int):
 
     if request.method == "POST" and form.is_valid():
         form.save()
+        if form.is_auto_close:
+            return HttpResponseRedirect(reverse("linkding:bookmarks.close"))
         return HttpResponseRedirect(return_url)
 
     status = 422 if request.method == "POST" and not form.is_valid() else 200

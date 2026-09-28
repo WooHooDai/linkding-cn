@@ -3,8 +3,21 @@
 
 {% block content %}
   <script type="application/javascript">
-    window.close()
+    // 进入即尝试关闭窗口；仅当浏览器拒绝（如标签页非由脚本 window.open 打开）时，
+    // 降级显示提示，由用户手动关闭
+    window.close();
+    setTimeout(function () {
+      if (!window.closed) {
+        var fallback = document.getElementById('close-fallback');
+        if (fallback) {
+          fallback.style.display = 'block';
+        }
+      }
+    }, 300);
   </script>
-  <p>{% translate "You can now close this window." %}</p>
+  <p id="close-fallback" style="display: none;">{% translate "You can now close this window." %}</p>
+  <noscript>
+    <p>{% translate "You can now close this window." %}</p>
+  </noscript>
 {% endblock %}
 
