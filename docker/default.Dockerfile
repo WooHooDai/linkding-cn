@@ -123,7 +123,7 @@ CMD ["./bootstrap.sh"]
 FROM linkding AS linkding-plus
 LABEL io.github.woohoodai.linkding.variant="plus"
 # Upgrade this pin deliberately, together with browser smoke tests.
-ARG CHROMIUM_VERSION=152.0.7977.82-1~deb12u1
+ARG CHROMIUM_VERSION=154.0.8037.57-1~deb12u1
 RUN --mount=type=cache,id=apt-cache-${TARGETARCH},target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=apt-lists-${TARGETARCH},target=/var/lib/apt/lists,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \

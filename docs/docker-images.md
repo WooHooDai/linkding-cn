@@ -89,7 +89,7 @@ Python/Node/uv 镜像按 digest 固定。生产 Playwright 使用 pyproject.toml
 
 Node 固定 24.20.0；SingleFile 2.1.3 要求 Node >=24。两个 Python/JS Playwright 包分别保留自己的驱动代码，共用 /usr/local/bin/node。不要在最终镜像安装工具后再用额外一层删除；应在 builder 中生成最终需要的文件后复制。
 
-Chromium 当前固定为 152.0.7977.82-1~deb12u1。APT 仍使用发行版实时仓库，并将实际安装版本保存为 /usr/share/linkding/os-packages.tsv；这不是完整的 Debian 仓库快照。旧 Chromium 版本从仓库下架时，显式更新 Dockerfile 或使用 --build-arg CHROMIUM_VERSION=可用版本，再运行浏览器回归。保持受控安全更新，不应为了固定体积冻结安全补丁。
+Chromium 当前固定为 154.0.8037.57-1~deb12u1。APT 仍使用发行版实时仓库，并将实际安装版本保存为 /usr/share/linkding/os-packages.tsv；这不是完整的 Debian 仓库快照。旧 Chromium 版本从仓库下架时，显式更新 Dockerfile 或使用 --build-arg CHROMIUM_VERSION=可用版本，再运行浏览器回归。保持受控安全更新，不应为了固定体积冻结安全补丁。
 
 uBlock 沿用构建时获取最新稳定版 Chromium 扩展的方式。构建脚本只跳过 `ublock-build` 下载阶段的缓存，下载工具和其他依赖继续使用缓存；下载及 ZIP 完整性检查成功后才替换目录。实际版本记录在扩展的 manifest.json 和镜像回归结果中，COPY --chown 保留正确权限。直接运行 buildx 时也应带上 `--no-cache-filter ublock-build`，才能重新检查最新版本。
 
