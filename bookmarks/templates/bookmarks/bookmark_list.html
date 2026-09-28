@@ -421,7 +421,8 @@
         }
 
         // Let interactive elements (links, buttons, inputs, textarea, labels) through
-        if (e.target.closest('a, button, input, textarea, label')) return;
+        // 健康状态指示器自带点击弹窗交互，不应触发工具栏展开/收起
+        if (e.target.closest('a, button, input, textarea, label, ld-health-indicator')) return;
 
         // Hide all other items' toolbars
         document.querySelectorAll('li[ld-bookmark-item].toolbar-visible').forEach(function(other) {

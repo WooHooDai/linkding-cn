@@ -121,6 +121,13 @@
   display: flex;
 }
 
+/* 移动端兜底：弹窗宽度不超过视口，避免 JS 未加载时右溢出（JS 会在此基础上再按视口平移） */
+@media (max-width: 640px) {
+  .health-status .health-popover {
+    max-width: min(20rem, calc(100vw - 16px));
+  }
+}
+
 .health-popover-status-row {
   display: flex;
   align-items: center;

@@ -775,6 +775,10 @@ ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-statu
 ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status .health-popover {
   display: none;
 }
+/* 显式点击/键盘打开健康 popover：与工具栏展开状态解耦（触屏点击也可弹出） */
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status.health-popover-open .health-popover {
+  display: flex;
+}
 ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status .health-dot,
 ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status.health-icon-mode .health-dot {
   position: static;
@@ -818,12 +822,6 @@ ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-statu
     display: block;
   }
   /* 悬浮工具栏不自动打开健康 popover（仅显式点击/键盘打开） */
-  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status .health-popover {
-    display: none;
-  }
-  ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status.health-popover-open .health-popover {
-    display: flex;
-  }
   ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status .health-dot,
   ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status.health-icon-mode .health-dot {
     width: 8px;
@@ -876,12 +874,6 @@ ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions
   display: block;
 }
 /* 工具栏展开不自动打开健康 popover（仅显式点击/键盘打开） */
-ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status .health-popover {
-  display: none;
-}
-ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status.health-popover-open .health-popover {
-  display: flex;
-}
 ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status .health-dot,
 ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status.health-icon-mode .health-dot {
   width: 8px;

@@ -15,9 +15,47 @@ import { Behavior, registerBehavior } from "./runtime.js";
 export function attachHealthPopover(host) {
   const isOpen = () => host.classList.contains("health-popover-open");
 
+  /**
+   * 将弹窗钳制在视口内：窄屏限制宽度，超出右/左/下边缘时反向平移。
+   * 列表工具栏中健康指示靠近行尾，绝对定位（left:0）的弹窗在小屏上
+   * 容易右溢出视口，打开时按当前视口重算一次，并在滚动/缩放时保持。
+   */
+  const clampPopover = () => {
+    const popover = host.querySelector(".health-popover");
+    if (!popover) return;
+    const margin = 8;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    if (vw < 640) {
+      popover.style.maxWidth = `calc(100vw - ${2 * margin}px)`;
+    } else {
+      popover.style.maxWidth = "";
+    }
+    const rect = popover.getBoundingClientRect();
+    const overflowRight = rect.right - (vw - margin);
+    const overflowLeft = margin - rect.left;
+    const overflowBottom = rect.bottom - (vh - margin);
+    if (overflowRight > 0) {
+      popover.style.left = `${-overflowRight}px`;
+    } else if (overflowLeft > 0) {
+      popover.style.left = `${overflowLeft}px`;
+    } else {
+      popover.style.left = "";
+    }
+    popover.style.top = overflowBottom > 0 ? `${-(rect.bottom - (vh - margin))}px` : "";
+  };
+
   const close = () => {
     host.classList.remove("health-popover-open");
     host.setAttribute("aria-expanded", "false");
+    const popover = host.querySelector(".health-popover");
+    if (popover) {
+      popover.style.left = "";
+      popover.style.top = "";
+      popover.style.maxWidth = "";
+    }
+    window.removeEventListener("resize", clampPopover);
+    window.removeEventListener("scroll", clampPopover);
     document.removeEventListener("click", handleOutside, true);
   };
 
@@ -25,6 +63,9 @@ export function attachHealthPopover(host) {
     host.classList.add("health-popover-open");
     host.setAttribute("aria-expanded", "true");
     document.addEventListener("click", handleOutside, true);
+    window.addEventListener("resize", clampPopover);
+    window.addEventListener("scroll", clampPopover, { passive: true });
+    clampPopover();
   };
 
   const toggle = () => {
