@@ -379,13 +379,9 @@ li[ld-bookmark-item] {
   }
 
   & .title img {
-    /* position: absolute; */
+    display: block;
     width: 16px;
     height: 16px;
-    /* left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    pointer-events: none; */
   }
 
   & .title img + a {
