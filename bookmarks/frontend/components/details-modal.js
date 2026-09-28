@@ -611,22 +611,23 @@ class DetailsModal extends Modal {
       const text = this.querySelector("[data-health-text]");
       if (dot) dot.className = `health-dot health-dot--${status}`;
       if (text) text.textContent = statusDisplay;
-      // 详情弹层内容
+      // 详情弹层内容（行元素在模板中始终渲染，用 hidden 控制显隐：
+      // 即使书签从未检查过，重检后也能就地补全 HTTP/原因/检查时间，无需整页刷新）
       const popoverStatus = this.querySelector("[data-popover-status]");
       const popoverHttp = this.querySelector("[data-popover-http]");
       const popoverReason = this.querySelector("[data-popover-reason]");
       const popoverChecked = this.querySelector("[data-popover-checked]");
       if (popoverStatus) popoverStatus.textContent = statusDisplay;
       if (popoverHttp) {
-        popoverHttp.style.display = data.http_status ? "" : "none";
-        popoverHttp.textContent = `HTTP ${data.http_status}`;
+        popoverHttp.hidden = !data.http_status;
+        popoverHttp.textContent = data.http_status ? `HTTP ${data.http_status}` : "";
       }
       if (popoverReason) {
-        popoverReason.style.display = data.reason ? "" : "none";
-        popoverReason.textContent = data.reason;
+        popoverReason.hidden = !data.reason;
+        popoverReason.textContent = data.reason || "";
       }
       if (popoverChecked) {
-        popoverChecked.style.display = data.checked_at_display ? "" : "none";
+        popoverChecked.hidden = !data.checked_at_display;
         popoverChecked.textContent = data.checked_at_display
           ? `${gettext("Checked at")} ${data.checked_at_display}`
           : "";

@@ -199,17 +199,12 @@
                 <span class="health-text" data-health-text>{{ details.health_display_status_display|default:"Unknown" }}</span>
                 <span class="health-popover" role="tooltip">
                   <span class="health-popover-status" data-popover-status>{{ details.health_display_status_display|default:"Unknown" }}</span>
-                  {% if details.health_http_status %}
-                    <span class="health-popover-row" data-popover-http>HTTP {{ details.health_http_status }}</span>
-                  {% endif %}
-                  {% if details.health_reason %}
-                    <span class="health-popover-row health-popover-reason" data-popover-reason>{{ details.health_reason }}</span>
-                  {% endif %}
-                  {% if details.health_checked_at_display %}
-                    <span class="health-popover-checked" data-popover-checked>
-                      {% if details.health_stale %}{% translate 'Checked at' %} {{ details.health_checked_at_display }}（{% translate 'expired' %}）{% else %}{% translate 'Checked at' %} {{ details.health_checked_at_display }}{% endif %}
-                    </span>
-                  {% endif %}
+                  {# HTTP/原因/检查时间行始终渲染，无数据时 hidden：重检后就地更新，无需整页刷新 #}
+                  <span class="health-popover-row" data-popover-http {% if not details.health_http_status %}hidden{% endif %}>{% if details.health_http_status %}HTTP {{ details.health_http_status }}{% endif %}</span>
+                  <span class="health-popover-row health-popover-reason" data-popover-reason {% if not details.health_reason %}hidden{% endif %}>{% if details.health_reason %}{{ details.health_reason }}{% endif %}</span>
+                  <span class="health-popover-checked" data-popover-checked {% if not details.health_checked_at_display %}hidden{% endif %}>
+                    {% if details.health_checked_at_display %}{% if details.health_stale %}{% translate 'Checked at' %} {{ details.health_checked_at_display }}（{% translate 'expired' %}）{% else %}{% translate 'Checked at' %} {{ details.health_checked_at_display }}{% endif %}{% endif %}
+                  </span>
                 </span>
               </span>
               {% if not details.bookmark.is_deleted %}

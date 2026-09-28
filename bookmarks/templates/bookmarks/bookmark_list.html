@@ -334,17 +334,12 @@
                                 <span class="health-popover-row health-popover-row-status">{{ bookmark_item.health_status_display }}</span>
                               {% endif %}
                             {% endif %}
-                            {% if bookmark_item.health_http_status %}
-                              <span class="health-popover-row health-popover-row-http">HTTP {{ bookmark_item.health_http_status }}</span>
-                            {% endif %}
-                            {% if bookmark_item.health_reason %}
-                              <span class="health-popover-row health-popover-reason">{{ bookmark_item.health_reason }}</span>
-                            {% endif %}
-                            {% if bookmark_item.health_checked_at_display %}
-                              <span class="health-popover-checked">
-                                {% translate 'Checked at' %} {{ bookmark_item.health_checked_at_display }}
-                              </span>
-                            {% endif %}
+                            {# HTTP/原因/检查时间行始终渲染，无数据时 hidden：重检后就地更新，无需整页刷新 #}
+                            <span class="health-popover-row health-popover-row-http" {% if not bookmark_item.health_http_status %}hidden{% endif %}>{% if bookmark_item.health_http_status %}HTTP {{ bookmark_item.health_http_status }}{% endif %}</span>
+                            <span class="health-popover-row health-popover-reason" {% if not bookmark_item.health_reason %}hidden{% endif %}>{% if bookmark_item.health_reason %}{{ bookmark_item.health_reason }}{% endif %}</span>
+                            <span class="health-popover-checked" {% if not bookmark_item.health_checked_at_display %}hidden{% endif %}>
+                              {% if bookmark_item.health_checked_at_display %}{% translate 'Checked at' %} {{ bookmark_item.health_checked_at_display }}{% endif %}
+                            </span>
                           </span>
                         </ld-health-indicator>
                       {% endif %}

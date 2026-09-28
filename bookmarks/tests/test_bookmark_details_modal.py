@@ -443,7 +443,11 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
         self.assertIn("HTTP 403", popover.get_text())
         # reason "HTTP 403" 与 HTTP 码重复 → 去重，不重复出现
         self.assertEqual(popover.get_text().count("HTTP 403"), 1)
-        self.assertIsNone(popover.select_one("[data-popover-reason]"))
+        # reason 行始终渲染（无内容时隐藏），保证重检后就地更新
+        reason = popover.select_one("[data-popover-reason]")
+        self.assertIsNotNone(reason)
+        self.assertTrue(reason.has_attr("hidden"))
+        self.assertEqual(reason.get_text(strip=True), "")
         checked = popover.select_one("[data-popover-checked]")
         self.assertIsNotNone(checked)
         # 检查时间：本地时区格式 检查于 2026/09/15 ...
@@ -519,9 +523,14 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
         self.assertEqual(
             chip.select_one("span.health-text").text.strip(), "Unknown"
         )
-        # 无检查时间
+        # 无检查时间：检查时间行始终渲染但隐藏（重检后就地更新依赖此行存在）
         popover = chip.select_one("span.health-popover")
-        self.assertIsNone(popover.select_one("[data-popover-checked]"))
+        checked = popover.select_one("[data-popover-checked]")
+        self.assertIsNotNone(checked)
+        self.assertTrue(checked.has_attr("hidden"))
+        # HTTP/原因行同样始终渲染且隐藏
+        self.assertTrue(popover.select_one("[data-popover-http]").has_attr("hidden"))
+        self.assertTrue(popover.select_one("[data-popover-reason]").has_attr("hidden"))
         # 刷新按钮 title 为"立即检查"
         btn = chip.select_one("button[data-health-check]")
         self.assertIsNotNone(btn)
