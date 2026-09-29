@@ -46,7 +46,12 @@ INSTALLED_APPS = [
     "mozilla_django_oidc",
 ]
 
+# 事务泄漏守卫开关：正常情况下保持开启；若启用 ATOMIC_REQUESTS 等每请求事务模式，
+# 守卫会逐请求误报，此时设为 False 关闭（见 TransactionGuardMiddleware docstring）
+LD_TRANSACTION_GUARD_ENABLED = True
+
 MIDDLEWARE = [
+    "bookmarks.middlewares.TransactionGuardMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
