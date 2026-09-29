@@ -91,7 +91,8 @@ ENV NODE_PATH=/opt/node-runtime/node_modules
 ENV PLAYWRIGHT_NODEJS_PATH=/usr/local/bin/node
 ENV LD_ENABLE_SNAPSHOTS=False
 ENV UWSGI_MAX_FD=4096
-RUN mkdir -p data /usr/share/linkding && chmod g+w . && chmod +x bootstrap.sh && \
+RUN mkdir -p data logs /usr/share/linkding && chmod g+w . && \
+    chown www-data:www-data logs && chmod +x bootstrap.sh && \
     apk info -v > /usr/share/linkding/os-packages.tsv
 EXPOSE 9090
 HEALTHCHECK --interval=30s --retries=3 --timeout=3s \

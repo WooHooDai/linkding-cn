@@ -32,20 +32,43 @@ BLOCK_NEW_STATES = (
 )
 
 
+def _resolve_python_bin() -> str:
+    """解析用于拉起子进程的 Python 解释器路径。
+
+    优先级：VIRTUAL_ENV 环境变量（runserver / uvicorn 激活的 venv）→
+    项目内 .venv（docker 镜像兜底）→ sys.executable。uWSGI 嵌入模式下
+    sys.executable 会指向 uwsgi 自身，不能直接用于启动子进程。
+    """
+    candidates = []
+    if os.environ.get("VIRTUAL_ENV"):
+        candidates.append(os.environ["VIRTUAL_ENV"])
+    candidates.append(os.path.join(settings.BASE_DIR, ".venv"))
+    for venv_dir in candidates:
+        if os.name == "nt":
+            python_bin = os.path.join(venv_dir, "Scripts", "python.exe")
+        else:
+            python_bin = os.path.join(venv_dir, "bin", "python")
+        if os.path.isfile(python_bin):
+            return python_bin
+    return sys.executable
+
+
 def _spawn_check_job(job: CheckJob) -> None:
     """以子进程方式拉起 health_check --job，脱离请求进程。
 
-    - sys.executable 为当前运行进程的解释器（venv 内），保证环境一致。
+    - 使用 venv 内的 Python 解释器而非 sys.executable：uWSGI 嵌入模式下
+      sys.executable 会指向 uwsgi 自身，直接调用会导致子进程启动失败。
     - start_new_session 使子进程不受请求进程/开发服务器重启连带影响。
     """
     log_dir = os.path.join(settings.BASE_DIR, "logs")
-    os.makedirs(log_dir, exist_ok=True)
     log_path = os.path.join(log_dir, f"health_check_{job.pk}.log")
     manage_py = os.path.join(settings.BASE_DIR, "manage.py")
+    python_bin = _resolve_python_bin()
     try:
+        os.makedirs(log_dir, exist_ok=True)
         with open(log_path, "ab") as log_file:
             subprocess.Popen(
-                [sys.executable, manage_py, "health_check", "--job", str(job.pk)],
+                [python_bin, manage_py, "health_check", "--job", str(job.pk)],
                 cwd=settings.BASE_DIR,
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
