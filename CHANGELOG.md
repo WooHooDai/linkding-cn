@@ -1,3 +1,16 @@
+# v1.3.1 (2026/09/30)
+
+> [!IMPORTANT]
+> 建议尽快更新至本版本，避免大页面快照大概率生成失败的问题
+
+修复：升级 single-file-cli 至 2.16.0 解决快照生成失败的问题
+
+> SingleFile CLI 2.1.3 的 preProcessDoc/markInvalidNesting 在页面 DOM 尚未就绪时会对 null 节点调用 setAttribute，抛出 TypeError 导致快照生成失败（linkding 表现为 "Failed to create snapshot"）。
+该问题属时序竞争型：页面加载越慢、越重越容易触发。
+>
+> single-file-cli 2.16.0 修复了 markInvalidNesting 对 null 元素的保护及 DOM 加固，消除了该崩溃路径。
+
+---
 # v1.3.0 (2026/09/29)
 
 ## 更新概览
