@@ -213,8 +213,6 @@ def _run_py(script_path: str, hook_name: str, url: str, config: dict,
         elif hook_name == 'replace' and hasattr(module, 'extract'):
             # Legacy fallback: replace hooks can use extract()
             target_fn = getattr(module, 'extract')
-        elif hasattr(module, 'extract'):
-            target_fn = getattr(module, 'extract')
 
         if target_fn is None:
             raise AttributeError(
