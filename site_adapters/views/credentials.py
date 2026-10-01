@@ -23,7 +23,7 @@ from site_adapters.services.auth.credentials import (
 )
 from site_adapters.views.helpers import _get_base_dir
 
-VALID_SCOPES = ('', 'metadata', 'snapshot', 'reader')
+VALID_SCOPES = ('', 'metadata', 'snapshot', 'reader', 'health')
 
 
 def _validate_scope(scope: str) -> str:

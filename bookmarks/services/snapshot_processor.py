@@ -229,7 +229,7 @@ def _verify_snapshot_cookie(url: str, filepath: str, config: dict) -> bool:
     if not cookie_config:
         return False
     domain_key = config.get("_domain_key")
-    before = _cookie_string_from_config(config)
+    before = website_loader._cookie_string_from_config(config)
     after = verify_and_refresh(
         cookie_config=cookie_config,
         url=config.get("_request_url", url),
@@ -242,21 +242,6 @@ def _verify_snapshot_cookie(url: str, filepath: str, config: dict) -> bool:
         config["_user_cookie"] = after
         return True
     return False
-
-
-def _cookie_string_from_config(config: dict = None) -> str | None:
-    if not config:
-        return None
-    user_cookie = config.get("_user_cookie")
-    if user_cookie:
-        return user_cookie
-    domain_key = config.get("_domain_key")
-    scope = config.get("_effective_cookie_scope", "")
-    if domain_key:
-        shared, _ = get_shared_cookie(hostname=domain_key, scope=scope)
-        if shared:
-            return shared
-    return config.get("headers", {}).get("Cookie")
 
 
 def create_snapshot(

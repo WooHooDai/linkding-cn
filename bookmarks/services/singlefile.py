@@ -11,7 +11,7 @@ from contextlib import suppress
 
 from django.conf import settings
 
-from site_adapters.services.auth.credentials import get_shared_cookie
+from site_adapters.services.auth.credentials import get_implicit_manual_cookie
 from site_adapters.services.auth.cookies import (
     copy_cookie_file_to_temp,
     generate_temp_cookies_file,
@@ -271,11 +271,17 @@ def _build_site_adapter_options(url: str, config: dict) -> tuple[list[str], list
             cookie_str=user_cookie, scope=snapshot_scope)
         if cookie_file:
             temp_files.append(cookie_file)
+    # Implicit injection for sections without an auth config: only
+    # user-provided (manual) cookies qualify. Auto cookies are config-driven
+    # and must not bleed into sections that never declared auth, or stale
+    # refresh leftovers would be forced onto every snapshot.
     if not cookie_file and (config.get("_domain_key") or config.get("domain_key")):
         domain_key = config.get("_domain_key") or config.get("domain_key")
-        best, _ = get_shared_cookie(hostname=domain_key, scope=snapshot_scope)
-        if best:
-            cookie_file = generate_temp_cookies_file(domain_key=domain_key, cookie_str=best, scope=snapshot_scope)
+        manual_cookie = get_implicit_manual_cookie(
+            hostname=domain_key, section_scope=snapshot_scope)
+        if manual_cookie:
+            cookie_file = generate_temp_cookies_file(
+                domain_key=domain_key, cookie_str=manual_cookie, scope=snapshot_scope)
             if cookie_file:
                 temp_files.append(cookie_file)
     if cookie_file:

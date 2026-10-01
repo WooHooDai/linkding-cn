@@ -459,7 +459,7 @@ def verify_cookie_declarative(verify_config: dict, context: dict) -> dict:
         if not text and context.get("html_path"):
             try:
                 with open(context["html_path"], encoding="utf-8") as f:
-                    text = f.read(5000)
+                    text = f.read()
             except Exception:
                 pass
         matched = next((p for p in ipatterns if p.search(text)), None)

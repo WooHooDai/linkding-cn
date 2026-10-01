@@ -40,10 +40,10 @@ logger = logging.getLogger(__name__)
 # Scope constants
 # ---------------------------------------------------------------------------
 
-VALID_SCOPES = ('', 'metadata', 'snapshot', 'reader')
+VALID_SCOPES = ('', 'metadata', 'snapshot', 'reader', 'health')
 
 # Sections that can carry their own auth config.
-_AUTH_SECTIONS = ('metadata', 'snapshot', 'reader')
+_AUTH_SECTIONS = ('metadata', 'snapshot', 'reader', 'health')
 
 
 def _validate_scope(scope: str) -> str:
@@ -307,7 +307,8 @@ def _remove_file(path: str):
 # Cookie credentials
 # ---------------------------------------------------------------------------
 
-def get_user_cookie(*, username: str, hostname: str, scope: str = '') -> tuple[str | None, str]:
+def get_user_cookie(*, username: str, hostname: str, scope: str = '',
+                    source: str | None = None) -> tuple[str | None, str]:
     """
     Get the user's cookie credential for a hostname in a given scope.
 
@@ -315,6 +316,10 @@ def get_user_cookie(*, username: str, hostname: str, scope: str = '') -> tuple[s
 
     Returns (cookie_string | None, status).
     Status: 'ok' | 'key_changed' | 'not_found' | 'error' | 'invalid'
+
+    source: optional provenance filter. 'auto' only matches framework
+    refresh-generated cookies; 'manual' matches user-provided cookies
+    (legacy 'paste' entries are treated as manual). None means no filter.
     """
     filename = _scoped_filename(cred_type='cookie', scope=scope)
     path = _resolve_credential_path(username=username, hostname=hostname, filename=filename)
@@ -327,16 +332,21 @@ def get_user_cookie(*, username: str, hostname: str, scope: str = '') -> tuple[s
         meta_entry = _get_cookie_expired_meta(cred_source=username, domain=matched, scope=scope)
         if meta_entry.get('cookie_status') == 'invalid':
             return None, 'invalid'
+        if source is not None and not _source_matches(meta_entry.get('source'), source):
+            return None, 'not_found'
     cookie_str = _json_cookie_to_header_string(content)
     return cookie_str, status
 
 
 def save_user_cookie(*, username: str, domain: str, cookie_str: str,
-                     scope: str = '', exact: bool = True):
+                     scope: str = '', exact: bool = True, source: str = 'manual'):
     """Save the user's cookie credential (encrypted storage).
 
     By default uses exact domain without fallback matching to avoid
     accidentally overwriting a different domain's credentials.
+
+    source: provenance marker — 'manual' (user-provided) or 'auto'
+    (framework refresh). Defaults to 'manual'.
     """
     from site_adapters.services.auth.cookies import cookie_string_to_playwright_list
     cookies_list = cookie_string_to_playwright_list(cookie_str, domain)
@@ -348,7 +358,7 @@ def save_user_cookie(*, username: str, domain: str, cookie_str: str,
         path = _resolve_credential_path(username=username, hostname=domain, filename=filename)
     _write_encrypted_file(path, cookie_content)
     _update_meta_entry(cred_type='cookies', username=username, domain=domain,
-                       scope=scope, updated_at=_now_iso(), source='paste')
+                       scope=scope, updated_at=_now_iso(), source=source)
     _clear_cookie_expired(cred_source=username, domain=domain, scope=scope)
 
 
@@ -553,11 +563,30 @@ def delete_user_basic_auth(*, username: str, domain: str, scope: str = ''):
 
 # ── Shared Cookie ──
 
-def get_shared_cookie(*, hostname: str, scope: str = '') -> tuple[str | None, str]:
+def _source_matches(stored_source: str | None, requested: str) -> bool:
+    """Whether a stored credential's provenance matches a requested filter.
+
+    Legacy entries were saved with source='paste' before provenance was
+    tracked; they are treated as user-provided (manual).
+    """
+    if not stored_source:
+        # Entries without any recorded source are treated as manual.
+        return requested == 'manual'
+    if requested == 'manual':
+        return stored_source in ('manual', 'paste')
+    return stored_source == requested
+
+
+def get_shared_cookie(*, hostname: str, scope: str = '',
+                      source: str | None = None) -> tuple[str | None, str]:
     """Get the shared cookie credential for a hostname.
 
     Uses DNS multi-level fallback. Returns (cookie_string | None, status).
     Status: 'ok' | 'key_changed' | 'not_found' | 'error' | 'invalid'
+
+    source: optional provenance filter — 'auto' matches framework
+    refresh-generated cookies, 'manual' matches user-provided cookies
+    (legacy 'paste' treated as manual). None means no filter.
     """
     matched = _resolve_shared_credential_domain(hostname)
     if not matched:
@@ -566,6 +595,8 @@ def get_shared_cookie(*, hostname: str, scope: str = '') -> tuple[str | None, st
     meta_entry = _get_cookie_expired_meta(cred_source='shared', domain=matched, scope=scope)
     if meta_entry.get('cookie_status') == 'invalid':
         return None, 'invalid'
+    if source is not None and not _source_matches(meta_entry.get('source'), source):
+        return None, 'not_found'
     path = _shared_credential_path(domain=matched, cred_type='cookie', scope=scope)
     content, status = _read_encrypted_file(path)
     if content is None:
@@ -574,8 +605,27 @@ def get_shared_cookie(*, hostname: str, scope: str = '') -> tuple[str | None, st
     return cookie_str, status
 
 
-def save_shared_cookie(*, domain: str, cookie_str: str, scope: str = ''):
-    """Save a shared cookie credential (encrypted storage)."""
+def get_implicit_manual_cookie(*, hostname: str, section_scope: str = '') -> str | None:
+    """Implicit cookie lookup for sections without an auth config.
+
+    Only user-provided (manual) cookies qualify — auto cookies are driven
+    by config and must not bleed into unconfigured sections. Lookup order:
+    section-scoped manual cookie first, then domain-level manual cookie.
+    """
+    for scope in (section_scope, ''):
+        cookie_str, _ = get_shared_cookie(hostname=hostname, scope=scope, source='manual')
+        if cookie_str:
+            return cookie_str
+    return None
+
+
+def save_shared_cookie(*, domain: str, cookie_str: str, scope: str = '',
+                       source: str = 'manual'):
+    """Save a shared cookie credential (encrypted storage).
+
+    source: provenance marker — 'manual' (user-provided) or 'auto'
+    (framework refresh). Defaults to 'manual'.
+    """
     from site_adapters.services.auth.cookies import cookie_string_to_playwright_list
     cookies_list = cookie_string_to_playwright_list(cookie_str, domain)
     cookie_content = json.dumps(cookies_list, ensure_ascii=False)
@@ -583,7 +633,7 @@ def save_shared_cookie(*, domain: str, cookie_str: str, scope: str = ''):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     _write_encrypted_file(path, cookie_content)
     _update_meta_entry(cred_type='cookies', username='shared', domain=domain,
-                       scope=scope, updated_at=_now_iso(), source='paste')
+                       scope=scope, updated_at=_now_iso(), source=source)
     _clear_cookie_expired(cred_source='shared', domain=domain, scope=scope)
 
 

@@ -24,7 +24,10 @@ from site_adapters.services.auth.cookies import (
     verify_and_refresh,
 )
 from site_adapters.services.auth.cookies import _should_refresh_cookie
-from site_adapters.services.auth.credentials import get_shared_cookie
+from site_adapters.services.auth.credentials import (
+    get_implicit_manual_cookie,
+    get_shared_cookie,
+)
 from site_adapters.services.config import (
     apply_request_url,
     apply_rewrite,
@@ -1678,9 +1681,19 @@ def _cookie_string_from_config(config: dict = None) -> str | None:
     domain_key = config.get("_domain_key")
     scope = config.get("_effective_cookie_scope", "")
     if domain_key:
-        shared, _ = get_shared_cookie(hostname=domain_key, scope=scope)
-        if shared:
-            return shared
+        if isinstance(cookie_config, dict) and cookie_config:
+            # Auth config declares cookies: look up the configured scope
+            # (both auto and manual credentials qualify).
+            shared, _ = get_shared_cookie(hostname=domain_key, scope=scope)
+            if shared:
+                return shared
+        else:
+            # No auth config: implicitly carry only user-provided (manual)
+            # cookies. Auto cookies are config-driven and must not bleed
+            # into unconfigured sections.
+            manual = get_implicit_manual_cookie(hostname=domain_key, section_scope=scope)
+            if manual:
+                return manual
     cookies_str = config.get("headers", {}).get("Cookie")
     if cookies_str:
         return cookies_str
