@@ -41,10 +41,20 @@ const after = vm.runInContext(
 );
 
 (async () => {
+  // Only rewrite the file when the after hook actually mutated the DOM:
+  // linkedom serialization is not lossless (attribute quote reordering, lost
+  // comments/noscript), so SingleFile's complete snapshot must not be
+  // re-serialized on a no-op hook.
+  // NB: do not name these locals `after` — that would shadow the hook resolved
+  // from the vm context below and hit a temporal-dead-zone error.
+  const beforeHtml = document.toString();
   if (typeof after === "function") {
     await after(url, config);
   }
-  fs.writeFileSync(outputPath, document.toString());
+  const afterHtml = document.toString();
+  if (afterHtml !== beforeHtml) {
+    fs.writeFileSync(outputPath, afterHtml);
+  }
 })().catch((error) => {
   process.stderr.write("Snapshot after hook error: " + (error.stack || error.message) + "\n");
   process.exitCode = 1;

@@ -275,9 +275,15 @@ def _run_py(script_path: str, hook_name: str, url: str, config: dict,
                       cmd=["python", script_path], returncode=-1,
                       stderr="Timeout (%ds) — daemon thread still running" % timeout,
                       duration_ms=duration_ms)
-        logger.error("Python script timeout: %s (%ds). "
-                     "Thread continues as daemon — consider optimizing the script.",
-                     script_path, timeout)
+        logger.warning(
+            "Python %s hook timed out after %ds (script=%s). The worker thread "
+            "keeps running as a daemon and is NOT interrupted — unlike JS hooks, "
+            "which the subprocess hard-kills on timeout. Such a hook must not hold "
+            "heavy resources (browser/Playwright or DB connections, long-running "
+            "subprocesses): they leak past the timeout. Optimize the script or "
+            "raise its `timeout`.",
+            hook_name or "script", timeout, script_path,
+        )
         return None
 
     if error_box:

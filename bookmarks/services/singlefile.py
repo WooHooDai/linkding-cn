@@ -159,10 +159,22 @@ _BROWSER_HOOK_BOILERPLATE = r"""
 
 
 _WAIT_ELEMENTS_TIMEOUT_CAP = 30  # seconds
+# Bounded default when neither wait_elements_timeout nor section timeout is set.
+# Prevents a stray wait_elements selector from hanging the capture forever.
+_DEFAULT_WAIT_ELEMENTS_TIMEOUT = 10  # seconds
 
 
 def _resolve_wait_elements_timeout(config: dict) -> int:
-    """Resolve wait_elements_timeout: explicit value, or min(timeout, 30), or 0."""
+    """Resolve wait_elements_timeout: explicit value, min(timeout, 30), or a bounded default.
+
+    Resolution chain (first matching branch wins):
+    1. Explicit ``wait_elements_timeout``: a positive int is used as-is; a
+       non-positive value means "no wait timeout" → 0 (the browser script then
+       waits unbounded by design).
+    2. Section ``timeout``: positive → min(value, 30); non-positive → 0.
+    3. Neither configured → the bounded default (10 s). Explicit 0 (from either
+       source) stays unbounded; only the truly-unconfigured case is capped.
+    """
     if not config:
         return 0
     explicit = config.get("wait_elements_timeout")
@@ -176,11 +188,10 @@ def _resolve_wait_elements_timeout(config: dict) -> int:
     if section_timeout is not None:
         try:
             val = int(section_timeout)
-            if val > 0:
-                return min(val, _WAIT_ELEMENTS_TIMEOUT_CAP)
+            return min(val, _WAIT_ELEMENTS_TIMEOUT_CAP) if val > 0 else 0
         except (TypeError, ValueError):
             pass
-    return 0
+    return _DEFAULT_WAIT_ELEMENTS_TIMEOUT
 
 
 def _wrap_user_hook_script(source: str) -> str:

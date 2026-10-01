@@ -101,12 +101,20 @@ def _launch_chromium(headless: bool = True, **kwargs):
     launch_args = ['--no-sandbox', '--disable-blink-features=AutomationControlled']
     extra_args = kwargs.pop('args', [])
     launch_args.extend(extra_args)
-    browser = pw.chromium.launch(
-        headless=headless,
-        executable_path=exec_path,
-        args=launch_args,
-        **kwargs,
-    )
+    try:
+        browser = pw.chromium.launch(
+            headless=headless,
+            executable_path=exec_path,
+            args=launch_args,
+            **kwargs,
+        )
+    except Exception:
+        # launch() failed after pw already started: stop the Playwright driver
+        # here, otherwise its asyncio loop leaks into the calling thread and
+        # later Django DB access raises SynchronousOnlyOperation.
+        with suppress(Exception):
+            pw.stop()
+        raise
     browser.__playwright__ = pw
     # Wrap browser.close() so stopping the Playwright event loop is automatic.
     # Without pw.stop() the asyncio loop leaks into the calling thread, and

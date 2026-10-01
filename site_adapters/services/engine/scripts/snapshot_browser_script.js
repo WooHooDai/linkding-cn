@@ -568,7 +568,11 @@
       return media.every((el) => {
         if (el.tagName === "IFRAME") return !!el.getAttribute("src");
         if (el.tagName === "VIDEO") return true;
-        const url = resolveMediaUrl(el);
+        // Use the same lazy-attr resolution as processCarousel (line above) so a
+        // custom process_lazy_images list is honoured by the readiness check;
+        // otherwise a custom attr (e.g. data-original) is never seen as ready and
+        // waitForCarouselMedia burns the full 12s timeout.
+        const url = resolveMediaUrl(el, Array.isArray(config.lazy) ? config.lazy : null);
         return !!url && !isPlaceholderSrc(url);
       });
     };
@@ -623,8 +627,19 @@
     const deadline = timeoutSec > 0 ? Date.now() + timeoutSec : 0;
 
     for (const entry of waitElements) {
-      // Split on "|" for OR semantics
-      const alternatives = String(entry).split("|").map(s => s.trim()).filter(Boolean);
+      // Split on "|" for OR semantics. A "|" that sits inside a CSS attribute
+      // selector (e.g. [lang|="zh"] or [xml|lang]) is part of the selector, not
+      // the OR separator; such entries are kept as a single selector.
+      const rawEntry = String(entry);
+      let bracketedPipe = false;
+      for (let depth = 0, i = 0; i < rawEntry.length; i++) {
+        const ch = rawEntry[i];
+        if (ch === "[") depth++;
+        else if (ch === "]") depth = Math.max(0, depth - 1);
+        else if (ch === "|" && depth > 0) { bracketedPipe = true; break; }
+      }
+      const alternatives = (bracketedPipe ? [rawEntry] : rawEntry.split("|"))
+        .map(s => s.trim()).filter(Boolean);
       if (!alternatives.length) continue;
 
       // Check if any alternative already matches

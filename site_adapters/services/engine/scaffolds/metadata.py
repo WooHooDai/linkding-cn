@@ -13,6 +13,17 @@ Hook execution order:
     before scripts -> [replace script OR built-in engine] -> after scripts
 
 --------------------------------------------------------------------------------
+Timeout & resource model  (read before holding heavy resources)
+--------------------------------------------------------------------------------
+
+Python hooks run in a daemon worker thread bounded by `timeout`. On timeout the
+runner stops waiting but CANNOT interrupt the thread — it keeps running in the
+background (JS hooks run as a subprocess and are hard-killed on timeout; Python
+hooks are not). Do NOT hold heavy resources across the timeout (browser/Playwright
+or DB connections, long-running subprocesses): they leak past the timeout.
+Acquire/release them in a `finally` block, or raise the hook's `timeout`.
+
+--------------------------------------------------------------------------------
 Config keys available in every hook
 --------------------------------------------------------------------------------
 
