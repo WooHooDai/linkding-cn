@@ -13,6 +13,7 @@ import logging
 import os
 import subprocess
 import tempfile
+import threading
 import time
 
 from bookmarks.utils import atomic_write
@@ -264,6 +265,34 @@ def _set_cooldown(domain_key: str):
 
 def _clear_cooldown(domain_key: str):
     _cooldowns.pop(domain_key, None)
+
+
+# ---------------------------------------------------------------------------
+# 域名级刷新互斥（防批量并发各自启动浏览器）
+# ---------------------------------------------------------------------------
+
+_domain_refresh_locks: dict[str, threading.Lock] = {}
+_domain_refresh_locks_guard = threading.Lock()
+# 每域最近一次浏览器刷新完成的时间戳（进程内，仅用于并发复用判断）
+_last_refresh_time: dict[str, float] = {}
+# 复用窗口：该域在此窗口内刚完成过刷新 → 等待锁的线程直接复用结果，
+# 不再启动浏览器；超出窗口则视为需要重新刷新（如旧 cookie 失效的 force_refresh）
+REFRESH_REUSE_WINDOW_SEC = 300
+
+
+def _domain_refresh_lock(domain_key: str) -> threading.Lock:
+    """按域名返回刷新互斥锁（惰性创建，进程内共享）。
+
+    批量健康检查 / 多线程 pipeline 同时命中 cookie 失效时，
+    同一域名只允许一个线程启动浏览器刷新，其余线程在锁内
+    复用刷新结果，避免 N 个并发各开一个浏览器。
+    """
+    with _domain_refresh_locks_guard:
+        lock = _domain_refresh_locks.get(domain_key)
+        if lock is None:
+            lock = threading.Lock()
+            _domain_refresh_locks[domain_key] = lock
+        return lock
 
 
 # ---------------------------------------------------------------------------
@@ -700,44 +729,61 @@ def verify_and_refresh(*, cookie_config: dict, url: str, domain_key: str,
             return
         if source == 'user' and username:
             save_user_cookie(username=username, domain=domain_key,
-                             cookie_str=cookie_str_save, scope=scope)
+                             cookie_str=cookie_str_save, scope=scope, source='auto')
         else:
-            save_shared_cookie(domain=domain_key, cookie_str=cookie_str_save, scope=scope)
+            save_shared_cookie(domain=domain_key, cookie_str=cookie_str_save,
+                               scope=scope, source='auto')
+
+    def _peek_cookie() -> str | None:
+        """锁内复查当前 scope 凭据（等待锁期间其他线程可能已刷新）。"""
+        if source == 'user' and username:
+            c, _ = get_user_cookie(username=username, hostname=lookup_hostname, scope=scope)
+            if c:
+                return c
+        c, _ = get_shared_cookie(hostname=lookup_hostname, scope=scope)
+        return c
+
+    def _refresh_locked() -> str | None:
+        """域名锁内刷新：并发只启动一次浏览器，其余线程复用刷新结果。
+
+        复用仅发生在该域刚完成过浏览器刷新（窗口期内）——等待锁期间
+        其他线程刚刷新的结果可直接使用；旧 cookie 不满足复用条件，
+        force_refresh 等场景仍会真正启动浏览器换新。
+        """
+        key = domain_key or lookup_hostname
+        with _domain_refresh_lock(key):
+            now = time.monotonic()
+            existing = _peek_cookie()
+            if existing and (now - _last_refresh_time.get(key, 0)) < REFRESH_REUSE_WINDOW_SEC:
+                return existing
+            data = refresh_cookie_declarative(cookie_config['refresh'], url, domain_key)
+            if not data:
+                return None
+            try:
+                _save_cookies(data)
+            except Exception as e:
+                logger.error("Failed to save cookies to credentials for %s: %s", domain_key, e)
+                return None
+            _last_refresh_time[key] = now
+            return _cookie_data_to_string(data)
 
     # Force refresh: replace hooks may return empty metadata even though a
     # cookie exists (e.g. the server rejected a just-acquired token).
     if force_refresh and _should_refresh_cookie(cookie_config):
         logger.info("Forcing cookie refresh for %s (scope=%s)",
                     domain_key, scope or 'domain')
-        data = refresh_cookie_declarative(cookie_config['refresh'], url, domain_key)
-        if not data:
-            logger.warning("Forced cookie refresh failed for %s", domain_key)
-            return None
-        try:
-            _save_cookies(data)
-            return _cookie_data_to_string(data)
-        except Exception as e:
-            logger.error("Failed to save forced cookies for %s: %s", domain_key, e)
-            return None
+        return _refresh_locked()
 
     # 没有 cookie 且有 refresh 配置 → 尝试刷新
     if not cookie_str and _should_refresh_cookie(cookie_config):
         logger.info("No cookie for %s (%s, scope=%s), attempting browser refresh",
                      domain_key, source or 'auto', scope or 'domain')
-        data = refresh_cookie_declarative(cookie_config['refresh'], url, domain_key)
-        if data:
-            try:
-                _save_cookies(data)
-                cookie_str = _cookie_data_to_string(data)
-                target = source or 'shared'
-                logger.info("Cookie acquired and saved to %s credentials for %s (scope=%s, %d cookies)",
-                           target, domain_key, scope or 'domain', len(data))
-            except Exception as e:
-                logger.error("Failed to save cookies to credentials for %s: %s", domain_key, e)
-                return None
+        refreshed = _refresh_locked()
+        if refreshed:
+            cookie_str = refreshed
             if not source:
                 source = 'shared'
-            return cookie_str
+            return refreshed
         else:
             logger.warning("Cookie refresh failed for %s, no cookies acquired", domain_key)
 
@@ -758,17 +804,11 @@ def verify_and_refresh(*, cookie_config: dict, url: str, domain_key: str,
                 if _should_refresh_cookie(cookie_config):
                     logger.info("L1 invalid for %s, attempting browser refresh",
                                 domain_key)
-                    data = refresh_cookie_declarative(
-                        cookie_config['refresh'], url, domain_key)
-                    if data:
-                        try:
-                            _save_cookies(data)
-                            logger.info("Cookie refreshed and saved for %s (scope=%s, %d cookies)",
-                                        domain_key, scope or 'domain', len(data))
-                        except Exception as e:
-                            logger.error("Failed to save refreshed cookies for %s: %s",
-                                         domain_key, e)
-                        return _cookie_data_to_string(data)
+                    refreshed = _refresh_locked()
+                    if refreshed:
+                        logger.info("Cookie refreshed after L1 for %s (scope=%s)",
+                                    domain_key, scope or 'domain')
+                        return refreshed
                     else:
                         logger.warning("Cookie refresh (after L1) failed for %s",
                                        domain_key)
@@ -801,15 +841,11 @@ def verify_and_refresh(*, cookie_config: dict, url: str, domain_key: str,
     # Refresh
     if _should_refresh_cookie(cookie_config):
         logger.info("Cookie invalid for %s, attempting browser refresh", domain_key)
-        data = refresh_cookie_declarative(cookie_config['refresh'], url, domain_key)
-        if data:
-            try:
-                _save_cookies(data)
-                logger.info("Cookie refreshed and saved for %s (scope=%s, %d cookies)",
-                           domain_key, scope or 'domain', len(data))
-            except Exception as e:
-                logger.error("Failed to save refreshed cookies to credentials for %s: %s", domain_key, e)
-            return _cookie_data_to_string(data)
+        refreshed = _refresh_locked()
+        if refreshed:
+            logger.info("Cookie refreshed after L2 for %s (scope=%s)",
+                        domain_key, scope or 'domain')
+            return refreshed
         else:
             logger.warning("Cookie refresh (after verification) failed for %s", domain_key)
             _mark_login_cookie_expired(source, username, domain_key, scope)
