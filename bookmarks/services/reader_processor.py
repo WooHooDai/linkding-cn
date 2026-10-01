@@ -183,12 +183,16 @@ def _collect_carousels(html_content: str) -> list[str]:
     ]
 
 
-def _carousel_is_before_text(html_content: str) -> bool:
-    """Return whether a carousel appears before the first paragraph in the source."""
+def _carousel_is_before_text(html_content: str, carousel: str) -> bool:
+    """Return whether the given carousel fragment appears before the first paragraph in the source.
+
+    Each carousel is located by its own serialized fragment, so multiple
+    carousels on one page are classified independently instead of all being
+    bucketed by the first carousel's position.
+    """
     from bs4 import BeautifulSoup
 
     soup = BeautifulSoup(html_content, "html.parser")
-    carousel = soup.find("figure", attrs={"aria-label": "ld-carousel"})
     paragraph = next(
         (
             item
@@ -201,7 +205,7 @@ def _carousel_is_before_text(html_content: str) -> bool:
         return False
 
     serialized = str(soup)
-    carousel_index = serialized.find('aria-label="ld-carousel"')
+    carousel_index = serialized.find(carousel)
     paragraph_index = serialized.find(str(paragraph))
     return (
         carousel_index >= 0
@@ -220,7 +224,7 @@ def _restore_missing_carousels(
     before = [
         carousel
         for carousel in carousels
-        if _carousel_is_before_text(html_content)
+        if _carousel_is_before_text(html_content, carousel)
     ]
     after = [
         carousel for carousel in carousels if carousel not in before
@@ -349,15 +353,30 @@ def parse_content(
         "application/rss+xml",
         "application/atom+xml",
     ):
-        selected, defuddle_opts = _resolve_structured_content_selector(
-            content, "xml", defuddle_opts
-        )
-        content = selected or xml_to_html(content)
+        try:
+            selected, defuddle_opts = _resolve_structured_content_selector(
+                content, "xml", defuddle_opts
+            )
+            content = selected or xml_to_html(content)
+        except Exception:
+            # Malformed XML must not bubble up to the task layer (which would
+            # abort the reader task and delete article assets). Fall through to
+            # lenient HTML extraction on the raw snapshot instead.
+            logger.warning(
+                "Failed to parse XML snapshot, falling back to HTML extraction"
+            )
     elif normalized_type in ("json", "application/json"):
-        selected, defuddle_opts = _resolve_structured_content_selector(
-            content, "json", defuddle_opts
-        )
-        content = selected or json_to_html(content)
+        try:
+            selected, defuddle_opts = _resolve_structured_content_selector(
+                content, "json", defuddle_opts
+            )
+            content = selected or json_to_html(content)
+        except Exception:
+            # Malformed JSON: degrade to plain HTML extraction rather than
+            # failing the whole reader task.
+            logger.warning(
+                "Failed to parse JSON snapshot, falling back to HTML extraction"
+            )
     return _parse_html(
         content,
         url=url,

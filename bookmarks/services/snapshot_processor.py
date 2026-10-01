@@ -71,8 +71,13 @@ def _create_raw_snapshot(url: str, filepath, config: dict):
     else:
         request_url = config.get("_request_url", url)
         content = website_loader.load_page(request_url, config, load_full_page=True)
+    # A 200 with an empty body must not be persisted as a COMPLETE snapshot,
+    # otherwise the dispatcher never retries. Align with the built-in engine
+    # path which raises when no snapshot file is produced.
+    if not (content or "").strip():
+        raise singlefile.SingleFileError("Raw snapshot content is empty")
     with open(filepath, "w", encoding="utf-8") as f:
-        f.write(content or "")
+        f.write(content)
 
 
 def _run_snapshot_with_hooks(url: str, filepath: str, config: dict, scripts: list):
@@ -85,6 +90,7 @@ def _run_snapshot_with_hooks(url: str, filepath: str, config: dict, scripts: lis
     raw_format = _snapshot_format(config)
     is_raw = raw_format in ("xml", "json")
     before_content_path = None
+    before_temp_paths = []
     external_before = []
     external_after = []
     replace_scripts = []
@@ -123,6 +129,7 @@ def _run_snapshot_with_hooks(url: str, filepath: str, config: dict, scripts: lis
             ) as tmp:
                 tmp.write(result)
             before_content_path = tmp.name
+            before_temp_paths.append(tmp.name)
             logger.debug("Before hook returned content, saved to: %s", before_content_path)
         elif isinstance(result, dict):
             # Before hook returned config overrides (e.g. dynamic User-Agent).
@@ -131,60 +138,68 @@ def _run_snapshot_with_hooks(url: str, filepath: str, config: dict, scripts: lis
             logger.debug("Before hook returned config overrides, merged: %s", result)
 
     # 2. Run replace hook or built-in engine
-    if replace_scripts:
-        if browser_before:
-            logger.warning(
-                "Snapshot SingleFile browser hooks are ignored when a replace hook is present"
-            )
-        for entry_replace in replace_scripts:
-            script_path = entry_replace.get('path', '')
-            hook_timeout = resolve_hook_timeout(entry_replace, config)
-            logger.debug("Running snapshot replace hook: %s (timeout=%ds)", script_path, hook_timeout)
-            run_script(script_path, hook_name='replace', url=url,
-                       config=dict(config), output_path=filepath, timeout=hook_timeout)
-            break  # Only one replace allowed
-    elif is_raw:
-        config_copy = dict(config)
-        if before_content_path:
-            config_copy['_before_content_path'] = before_content_path
-        _create_raw_snapshot(url, filepath, config_copy)
-    else:
-        # Built-in engine: SingleFile
-        config_copy = dict(config)
-        if browser_before:
-            config_copy['_browser_before_scripts'] = browser_before
-        if before_content_path:
-            config_copy['_before_html_path'] = before_content_path
-            _create_snapshot(url, filepath, config_copy)
+    try:
+        if replace_scripts:
+            if browser_before:
+                logger.warning(
+                    "Snapshot SingleFile browser hooks are ignored when a replace hook is present"
+                )
+            for entry_replace in replace_scripts:
+                script_path = entry_replace.get('path', '')
+                hook_timeout = resolve_hook_timeout(entry_replace, config)
+                logger.debug("Running snapshot replace hook: %s (timeout=%ds)", script_path, hook_timeout)
+                run_script(script_path, hook_name='replace', url=url,
+                           config=dict(config), output_path=filepath, timeout=hook_timeout)
+                break  # Only one replace allowed
+            # run_script only logs on failure; verify the replace hook actually
+            # produced a non-empty file, matching the built-in engine validation.
+            if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
+                raise singlefile.SingleFileError(
+                    "Replace hook did not produce a non-empty snapshot"
+                )
+        elif is_raw:
+            config_copy = dict(config)
+            if before_content_path:
+                config_copy['_before_content_path'] = before_content_path
+            _create_raw_snapshot(url, filepath, config_copy)
         else:
-            _create_snapshot(url, filepath, config_copy)
+            # Built-in engine: SingleFile
+            config_copy = dict(config)
+            if browser_before:
+                config_copy['_browser_before_scripts'] = browser_before
+            if before_content_path:
+                config_copy['_before_html_path'] = before_content_path
+                _create_snapshot(url, filepath, config_copy)
+            else:
+                _create_snapshot(url, filepath, config_copy)
 
-    # 3. Run built-in after hooks against the saved HTML
-    for script_path in builtin_after:
-        if is_raw:
-            logger.warning(
-                "SingleFile built-in after hook skipped for raw %s snapshot: %s",
-                raw_format,
-                script_path,
-            )
-        else:
-            _run_builtin_after_hook(script_path, url, filepath, config,
-                                     resolve_hook_timeout({}, config))
+        # 3. Run built-in after hooks against the saved HTML
+        for script_path in builtin_after:
+            if is_raw:
+                logger.warning(
+                    "SingleFile built-in after hook skipped for raw %s snapshot: %s",
+                    raw_format,
+                    script_path,
+                )
+            else:
+                _run_builtin_after_hook(script_path, url, filepath, config,
+                                         resolve_hook_timeout({}, config))
 
-    # 4. Run external after hooks
-    for entry in external_after:
-        script_path = entry.get('path', '')
-        hook_timeout = resolve_hook_timeout(entry, config)
-        logger.debug("Running snapshot after hook: %s (timeout=%ds)", script_path, hook_timeout)
-        after_config = dict(config)
-        after_config['_url'] = url
-        run_script(script_path, hook_name='after', output_path=filepath,
-                   config=after_config, timeout=hook_timeout)
-
-    # Cleanup temp file
-    if before_content_path:
-        with suppress(OSError):
-            os.unlink(before_content_path)
+        # 4. Run external after hooks
+        for entry in external_after:
+            script_path = entry.get('path', '')
+            hook_timeout = resolve_hook_timeout(entry, config)
+            logger.debug("Running snapshot after hook: %s (timeout=%ds)", script_path, hook_timeout)
+            after_config = dict(config)
+            after_config['_url'] = url
+            run_script(script_path, hook_name='after', output_path=filepath,
+                       config=after_config, timeout=hook_timeout)
+    finally:
+        # Cleanup every before-hook temp file. Only the last returned content
+        # feeds the engine, but earlier temp files must not leak either.
+        for path in before_temp_paths:
+            with suppress(OSError):
+                os.unlink(path)
 
 
 def _run_builtin_after_hook(script_path: str, url: str, filepath: str,
