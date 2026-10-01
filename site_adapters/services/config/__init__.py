@@ -22,7 +22,8 @@ def parse_jsonc(text: str):
 
 
 def load_jsonc_file(path: str):
-    with open(path, encoding='utf-8') as f:
+    # utf-8-sig: strip a leading UTF-8 BOM if present, otherwise behaves as utf-8
+    with open(path, encoding='utf-8-sig') as f:
         return parse_jsonc(f.read())
 
 
@@ -33,7 +34,8 @@ def load_jsonc_file_with_warnings(path: str, file_label: str | None = None) -> t
     """
     from site_adapters.services.config.jsonc import parse_with_dups
     label = file_label or path
-    with open(path, encoding='utf-8') as f:
+    # utf-8-sig: strip a leading UTF-8 BOM if present, otherwise behaves as utf-8
+    with open(path, encoding='utf-8-sig') as f:
         return parse_with_dups(f.read(), file_label=label)
 
 

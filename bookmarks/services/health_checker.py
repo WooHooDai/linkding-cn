@@ -134,8 +134,9 @@ def _normalize_config(raw: dict | None) -> dict:
     """把任意输入（resolver 输出 / 直接传入的嵌套结构）归一化为内部扁平结构。
 
     支持两种输入形态：
-    - 嵌套：http_head_probe.* / content_check.*（对齐 cookie.verify 的分层）
-    - 扁平：resolver 展开后的键（probe_enabled / accept_status / check_content / valid_* / invalid_*）
+    - 嵌套：http_head_probe.* / content_check.*（对齐 cookie.verify 的分层，也是用户配置的唯一写法）
+    - 扁平：内部归一化结构（probe_enabled / accept_status / check_content / valid_* /
+      invalid_*），即 _default_health_config() 的形状，供内部调用方与测试直接传入
     """
     raw = raw or {}
     out = _default_health_config()
@@ -158,10 +159,16 @@ def _normalize_config(raw: dict | None) -> dict:
         if raw.get(key) is not None:
             out[key] = raw[key]
 
-    # L1：嵌套优先，resolver 扁平输出回退
+    # L1：嵌套优先，扁平（内部归一化结构）回退
     probe = raw.get("http_head_probe") or {}
-    out["probe_enabled"] = probe.get("enabled", out["probe_enabled"])
-    out["probe_timeout"] = probe.get("timeout", out["probe_timeout"])
+    if "enabled" in probe:
+        out["probe_enabled"] = probe["enabled"]
+    elif raw.get("probe_enabled") is not None:
+        out["probe_enabled"] = raw["probe_enabled"]
+    if "timeout" in probe:
+        out["probe_timeout"] = probe["timeout"]
+    elif raw.get("probe_timeout") is not None:
+        out["probe_timeout"] = raw["probe_timeout"]
     if "accept_status" in probe:
         out["accept_status"] = probe["accept_status"]
     elif raw.get("accept_status") is not None:
@@ -174,14 +181,13 @@ def _normalize_config(raw: dict | None) -> dict:
         out["blocked_location_patterns"] = probe["blocked_location_patterns"]
     elif raw.get("blocked_location_patterns") is not None:
         out["blocked_location_patterns"] = raw["blocked_location_patterns"]
-    if raw.get("probe_enabled") is not None:
-        out["probe_enabled"] = raw["probe_enabled"]
-    if raw.get("probe_timeout") is not None:
-        out["probe_timeout"] = raw["probe_timeout"]
 
-    # L2：嵌套优先，resolver 扁平输出回退
+    # L2：嵌套优先，扁平（内部归一化结构）回退
     content = raw.get("content_check") or {}
-    out["check_content"] = content.get("enabled", out["check_content"])
+    if "enabled" in content:
+        out["check_content"] = content["enabled"]
+    elif raw.get("check_content") is not None:
+        out["check_content"] = raw["check_content"]
     if "timeout" in content:
         out["content_timeout"] = content["timeout"]
     elif raw.get("content_timeout") is not None:
@@ -206,8 +212,6 @@ def _normalize_config(raw: dict | None) -> dict:
         out["invalid_patterns"] = content["invalid_patterns"]
     elif raw.get("invalid_patterns") is not None:
         out["invalid_patterns"] = raw["invalid_patterns"]
-    if raw.get("check_content") is not None:
-        out["check_content"] = raw["check_content"]
 
     return out
 

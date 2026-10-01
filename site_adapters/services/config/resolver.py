@@ -60,10 +60,13 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 # Default lazy-load attribute names used when process_lazy_images is true.
-# Kept in sync with DEFAULT_LAZY_ATTRS in snapshot_browser_script.js.
+# Kept in sync with DEFAULT_LAZY_ATTRS in snapshot_browser_script.js (incl. the
+# trailing "src" fallback). This list is merged into section-level custom attrs
+# and passed to the browser script, so it must match the JS default exactly.
 _DEFAULT_LAZY_ATTRS = [
     "data-src", "data-actualsrc", "data-original", "data-lazy-src",
     "data-original-src", "data-actual-image", "data-lazy", "data-defer-src",
+    "src",
 ]
 
 
@@ -443,13 +446,10 @@ def _build_section_config(full_config: dict, section: str, base_dir: str, userna
 
     elif section == 'health':
         result['health_enabled'] = section_data.get('enabled', True)
-        # Health 判定字段透传：health_checker._normalize_config 同时支持
-        # 嵌套（http_head_probe.* / content_check.*）与扁平键。此前仅
+        # Health 判定字段透传：仅支持嵌套块写法（http_head_probe.* /
+        # content_check.*），由 health_checker._normalize_config 消费。此前仅
         # 输出 health_enabled，导致 health 段配置的判定字段被丢弃。
-        for key in ('http_head_probe', 'content_check', 'accept_status', 'blocked_status',
-                    'blocked_location_patterns', 'check_content', 'max_content_limit',
-                    'content_timeout', 'check_selectors', 'valid_selectors', 'valid_patterns',
-                    'invalid_selectors', 'invalid_patterns', 'reason'):
+        for key in ('http_head_probe', 'content_check', 'max_content_limit', 'reason'):
             if key in section_data:
                 result[key] = section_data[key]
 

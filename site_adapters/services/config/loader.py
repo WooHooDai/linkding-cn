@@ -590,6 +590,12 @@ def show_config(url: str, base_dir: str) -> dict:
     # Apply route matching to merged config
     merged_config = copy.deepcopy(domain_config)
     merged_config, route_key = _apply_route_matching(url, merged_config)
+    # 展示前合并 builtin 系统基线，口径与 resolver.get_*_config 的
+    # deep_merge(builtin, domain) 一致；否则 show-config 只显示用户/域配置，
+    # 用户看不到从 builtin 继承的默认键。
+    builtin = load_builtin_config(base_dir) or {}
+    if builtin:
+        merged_config = deep_merge(builtin, merged_config)
     result = {
         'url': url,
         'domain': _get_domain(url),
@@ -637,6 +643,24 @@ def _read_runtime_defaults(base_dir: str) -> dict | None:
     return data if isinstance(data, dict) else None
 
 
+# ---------------------------------------------------------------------------
+# load_builtin_config cache
+# ---------------------------------------------------------------------------
+
+# runtime defaults 适配器路径 -> ((mtime_ns, size), merged_builtin_or_None)
+# 该函数在每个域名请求的 metadata/snapshot/reader/health 解析路径上都会被调用，
+# 此前每次都重读磁盘文件；此处加模块级缓存，文件 mtime/size 变化时自动失效重载。
+_builtin_config_cache: dict[str, tuple] = {}
+
+
+def _runtime_defaults_signature(runtime_path: str) -> tuple:
+    try:
+        st = os.stat(runtime_path)
+        return (st.st_mtime_ns, st.st_size)
+    except OSError:
+        return (0, 0)
+
+
 def load_builtin_config(base_dir: str) -> dict | None:
     """Return the merged system-wide baseline config.
 
@@ -644,15 +668,30 @@ def load_builtin_config(base_dir: str) -> dict | None:
     (data/site_adapters/adapters/defaults/adapters.jsonc).  The _builtin
     block in that file is kept in sync with the source template at startup
     via AppConfig.ready().
+
+    Results are cached per runtime file path; the cache is invalidated when the
+    file's mtime or size changes. The returned dict is a deep copy of the
+    cached merged baseline, so callers may mutate it freely.
     """
     ensure_defaults_adapter(os.path.join(base_dir, 'adapters'), sync=False)
+    runtime_path = os.path.join(base_dir, 'adapters', 'defaults', 'adapters.jsonc')
+    sig = _runtime_defaults_signature(runtime_path)
+    cached = _builtin_config_cache.get(runtime_path)
+    if cached is not None and cached[0] == sig:
+        cached_value = cached[1]
+        return copy.deepcopy(cached_value) if cached_value is not None else None
     runtime = _read_runtime_defaults(base_dir)
     if not runtime:
+        _builtin_config_cache[runtime_path] = (sig, None)
         return None
     builtin = runtime.get('_builtin', {})
     if not isinstance(builtin, dict) or not builtin:
+        _builtin_config_cache[runtime_path] = (sig, None)
         return None
     overrides = runtime.get('_builtin_overrides', {})
     if isinstance(overrides, dict) and overrides:
-        return deep_merge(copy.deepcopy(builtin), overrides)
-    return copy.deepcopy(builtin)
+        result = deep_merge(copy.deepcopy(builtin), overrides)
+    else:
+        result = copy.deepcopy(builtin)
+    _builtin_config_cache[runtime_path] = (sig, result)
+    return copy.deepcopy(result)

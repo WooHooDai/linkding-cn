@@ -358,8 +358,8 @@ HEALTH_FIELDS = {
     },
     "http_head_probe.timeout": {
         "type": "int",
-        "en": "HEAD probe timeout in seconds. Defaults to 5. Independent of content_check.timeout.",
-        "zh": "HEAD 探测超时（秒）。默认 5。与 content_check.timeout 相互独立。",
+        "en": "HEAD probe timeout in seconds. Defaults to 3. Independent of content_check.timeout.",
+        "zh": "HEAD 探测超时（秒）。默认 3。与 content_check.timeout 相互独立。",
         "example": 3,
     },
     "http_head_probe.accept_status": {
@@ -423,6 +423,10 @@ HEALTH_FIELDS = {
         "zh": "字符串正则数组。title/body 中任一匹配即判定为 missing（软 404；普通关键词按子串匹配同样有效）。",
         "example": ["内容不存在", "该页面已被删除", "文章已下架"],
     },
+    # 注：health 判定字段仅支持嵌套块写法（http_head_probe.* / content_check.*）。
+    # 不再提供与内部归一化结构同名的顶层扁平别名——面向用户的配置从未使用它，
+    # 且与嵌套块并存会产生优先级歧义。内部扁平结构由 health_checker 的
+    # _normalize_config 自行处理，不作为配置字段对外暴露。
     # ── health 特有 ───────────────────────────────────────────────────
     "reason": {
         "type": "str|obj",

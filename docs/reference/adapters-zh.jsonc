@@ -1,6 +1,6 @@
 // ==========================================================================
 //  Site Adapters — 完整字段参考
-//  由 fields.py 自动生成（单一信源）  |  2026-09-21 10:06:49
+//  由 fields.py 自动生成（单一信源）  |  2026-10-07 16:54:20
 //
 //  Re-generate: python scripts/generate-adapters-reference.py
 //  Guide:       docs/site-adapters.md
@@ -248,7 +248,7 @@
         "enabled": true,                                   // 是否对该域名执行健康检查。默认 true。设为 false 时 L1 探测与 L2 内容检查均跳过（书签保持未检查）。纯减法控制，不能绕过用户级开关强制开启。
         "http_head_probe": {
           "enabled": true,                                 // 是否启用 L1 HTTP 探测（HEAD 优先、GET 兜底）。默认 true。关闭后跳过 HEAD，直接 GET 判定。
-          "timeout": 3,                                    // HEAD 探测超时（秒）。默认 5。与 content_check.timeout 相互独立。
+          "timeout": 3,                                    // HEAD 探测超时（秒）。默认 3。与 content_check.timeout 相互独立。
           "accept_status": [200, 206],                     // 视为可达（ok）的 HTTP 状态码。默认 [200]。
           "blocked_status": [403, 429],                    // 判定为 blocked（反爬/需认证）而非 dead 的状态码。默认 [401, 403, 407, 429]。
           "blocked_location_patterns": ["/login", "/signin", "/auth"], // 字符串正则数组，匹配 GET 探针之后的最终重定向 URL；任一匹配即判定为 blocked（如被重定向到登录页）。

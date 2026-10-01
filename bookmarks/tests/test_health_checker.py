@@ -284,6 +284,28 @@ class CheckUrlTestCase(TestCase):
             result = health_checker.check_url("https://example.com/gone", config=config)
         self.assertEqual(result["status"], HEALTH_STATUS_BLOCKED)
 
+    def test_nested_block_wins_over_flat_alias(self):
+        # 归一化优先级契约：嵌套块恒优先于同名扁平键。此前 check_content /
+        # probe_enabled / probe_timeout 反向为「扁平优先」，与注释及其余字段矛盾。
+        cfg = health_checker._normalize_config({
+            "http_head_probe": {"enabled": False, "timeout": 9},
+            "content_check": {"enabled": True, "timeout": 42},
+            # 与嵌套冲突的扁平键（内部归一化结构形态），应被嵌套覆盖
+            "probe_enabled": True,
+            "probe_timeout": 1,
+            "check_content": False,
+            "content_timeout": 5,
+            # 无嵌套对应项时，扁平键仍作为回退生效
+            "accept_status": [200],
+            "invalid_patterns": ["flat"],
+        })
+        self.assertFalse(cfg["probe_enabled"])        # 嵌套 False 覆盖扁平 True
+        self.assertEqual(cfg["probe_timeout"], 9)     # 嵌套 9 覆盖扁平 1
+        self.assertTrue(cfg["check_content"])         # 嵌套 True 覆盖扁平 False
+        self.assertEqual(cfg["content_timeout"], 42)  # 嵌套 42 覆盖扁平 5
+        self.assertEqual(cfg["accept_status"], [200])     # 扁平回退生效
+        self.assertEqual(cfg["invalid_patterns"], ["flat"])  # 扁平回退生效
+
     def test_valid_and_invalid_both_present_valid_wins(self):
         # valid_* 与 invalid_* 同时命中时，正向短路优先（文档化语义）
         config = {
