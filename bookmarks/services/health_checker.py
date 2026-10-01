@@ -149,7 +149,7 @@ def _normalize_config(raw: dict | None) -> dict:
         "_request_url",
         "_adapter",
         "_domain_key",
-        # 凭据/引擎相关：供 _maybe_acquire_cookie 预取与 _http_module 分发
+        # 凭据/引擎相关：供 _maybe_acquire_cookie 预取与 _open_http_stream 引擎分发
         "cookie",
         "http_engine",
         "_effective_cookie_scope",
@@ -225,47 +225,29 @@ def _resolve_config(url: str, config: dict | None, username: str = "") -> dict:
     return _normalize_config(resolved)
 
 
-def _http_module(config: dict):
-    """HTTP 客户端模块：适配器指定 curl_cffi 时用 TLS 指纹模拟客户端（如知乎）。
-
-    health 探测默认走标准 requests；对依赖 TLS 指纹的风控站点
-    （普通 requests 恒 403），配置 http_engine=curl_cffi 即可切换。
-    """
-    if config.get("http_engine") == "curl_cffi":
-        from curl_cffi import requests as chttp
-        return chttp
-    import requests
-    return requests
-
-
-def _request_kwargs(config: dict, timeout: float | None = None) -> dict:
-    kwargs = {
-        "allow_redirects": True,
-        "headers": build_request_headers(config),
-        "cookies": build_request_cookies(config),
-        "timeout": timeout if timeout is not None else config.get("content_timeout", 30),
-    }
-    proxy = config.get("proxy")
-    if proxy:
-        kwargs["proxies"] = proxy
-    # curl_cffi 引擎必须带 impersonate（Chrome TLS 指纹），否则风控站点
-    # （如知乎）识别出非浏览器指纹，与 metadata 链路行为不一致
-    if config.get("http_engine") == "curl_cffi":
-        kwargs["impersonate"] = "chrome"
-    return kwargs
-
-
 def _head_probe(url: str, config: dict, timeout: float):
     """HEAD 探测。返回 (status_code, final_url, duration_ms)；网络异常或状态不可信返回 None。
 
     请求目标优先取适配器解析出的 `_request_url`（对应通用 `request_url` 改写）。
     timeout 由调用方按总预算分配传入。
+
+    与 GET 探针 / metadata 链路完全同源：复用 _open_http_stream（curl_cffi 引擎分发、
+    impersonate=chrome、非显式 UA 剥离、失败回退 requests），避免 HEAD 单独一套画像
+    （Chrome TLS 指纹 + Edge/空 UA 的矛盾组合）被风控站点误判。
     """
     start = time.monotonic()
+    response = None
+    probe_url = config.get("_request_url") or url
     try:
-        kwargs = _request_kwargs(config, timeout=timeout)
-        probe_url = config.get("_request_url") or url
-        response = _http_module(config).head(probe_url, **{**kwargs, "stream": True})
+        response = _open_http_stream(
+            probe_url,
+            timeout=timeout,
+            headers=build_request_headers(config),
+            cookies=build_request_cookies(config),
+            proxies=config.get("proxy"),
+            config=config,
+            method="HEAD",
+        )
         status = response.status_code
         duration_ms = int((time.monotonic() - start) * 1000)
         if status in _HEAD_UNRELIABLE_STATUS:
@@ -276,6 +258,12 @@ def _head_probe(url: str, config: dict, timeout: float):
             raise
         logger.debug("HEAD probe failed for %s: %s", url, exc)
         return None
+    finally:
+        if response is not None:
+            try:
+                response.close()
+            except Exception:
+                pass
 
 
 def _get_probe(url: str, config: dict, need_content: bool, timeout: float):

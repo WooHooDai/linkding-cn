@@ -91,14 +91,17 @@ def _has_explicit_user_agent(config) -> bool:
     return False
 
 
-def _open_http_stream(url: str, timeout, headers, cookies, proxies, config=None):
-    """Open a streaming GET for page loading.
+def _open_http_stream(url: str, timeout, headers, cookies, proxies, config=None,
+                      method: str = "GET"):
+    """Open a streaming request for page loading.
 
+    method: "GET" (default) or "HEAD"; dispatched onto the selected engine.
     Engine selection: per-domain config ``http_engine`` > ``LD_HTTP_ENGINE``
     env var > default "requests". When curl_cffi is selected it impersonates a
     Chrome TLS/HTTP2 fingerprint (required by anti-bot sites such as zhihu) and
     falls back to the classic requests engine on transport failure.
     """
+    method = (method or "GET").upper()
     if _http_engine(config) == "curl_cffi":
         try:
             from curl_cffi import requests as chttp
@@ -109,13 +112,15 @@ def _open_http_stream(url: str, timeout, headers, cookies, proxies, config=None)
             # 会让反爬站点拒绝请求，因此默认交给 impersonate 注入的 Chrome UA。
             if not c_headers.get("User-Agent") or not _has_explicit_user_agent(config):
                 c_headers.pop("User-Agent", None)
-            resp = chttp.get(
+            sender = getattr(chttp, method.lower())
+            resp = sender(
                 url,
                 timeout=timeout,
                 headers=c_headers,
                 cookies=cookies,
                 proxies=proxies,
                 stream=True,
+                allow_redirects=True,
                 impersonate="chrome",
             )
             resp._http_engine = "curl_cffi"
@@ -125,13 +130,15 @@ def _open_http_stream(url: str, timeout, headers, cookies, proxies, config=None)
                 "curl_cffi request failed, falling back to requests. url=%s: %s",
                 url, exc,
             )
-    resp = requests.get(
+    sender = getattr(requests, method.lower())
+    resp = sender(
         url,
         timeout=timeout,
         headers=headers,
         cookies=cookies,
         proxies=proxies,
         stream=True,
+        allow_redirects=True,
     )
     resp._http_engine = "requests"
     return resp
@@ -183,9 +190,6 @@ def _wait_for_domain(domain: str):
             _domain_last_request[domain] = last + cooldown
         else:
             _domain_last_request[domain] = now
-    if wait > 0:
-        logger.debug('Rate limit: sleeping %.1fs for %s', wait, domain)
-        time.sleep(wait)
     if wait > 0:
         logger.debug('Rate limit: sleeping %.1fs for %s', wait, domain)
         time.sleep(wait)
