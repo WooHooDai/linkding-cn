@@ -95,6 +95,8 @@ def _check_type(value, type_str: str) -> bool:
         return isinstance(value, list) and all(isinstance(i, str) for i in value)
     if type_str == 'array<str>':
         return isinstance(value, list) and all(isinstance(i, str) for i in value)
+    if type_str == 'array<int>':
+        return isinstance(value, list) and all(isinstance(i, int) and not isinstance(i, bool) for i in value)
     if type_str == 'object<string, string>':
         return isinstance(value, dict) and all(
             isinstance(k, str) and isinstance(v, str) for k, v in value.items()
@@ -118,10 +120,13 @@ def _check_type(value, type_str: str) -> bool:
             return False
         return all(isinstance(item, dict) for item in value)
     # Enum types: "html"|"xml"|"json" or "auto"|"login" etc.
-    if '|' in type_str and '<' not in type_str:
+    if '|' in type_str:
         import re
         options = re.findall(r'"([^"]+)"', type_str)
         if options:
+            if type_str.startswith('array<'):
+                # array<"title" | "body">：元素须为枚举值之一的数组
+                return isinstance(value, list) and all(i in options for i in value)
             return value in options
     # Fallback: no type check available
     return True
@@ -503,6 +508,18 @@ def _validate_domain_config(issues: list[dict], label: str, data: dict, file_dir
                 issues.append(_issue('warning', 'unknown_field', f"{label}.{section}.{key} is unknown, will be ignored at runtime", file=file, adapter=adapter, path=f"{label}.{section}.{key}"))
             else:
                 _auto_type_check(issues, label, section, key, value, file, adapter)
+                # health 段的嵌套容器（http_head_probe.* / content_check.*）按
+                # fields.py 的点路径类型表递归校验内层键；容器本身已识别，
+                # 不再对其裸 key 报 unknown。
+                if section == 'health' and key in ('http_head_probe', 'content_check') \
+                        and isinstance(value, dict):
+                    known = ALL_SECTIONS.get(section, {})
+                    for inner_key, inner_value in value.items():
+                        dotted = f"{key}.{inner_key}"
+                        if dotted in known:
+                            _auto_type_check(issues, label, section, dotted, inner_value, file, adapter)
+                        else:
+                            issues.append(_issue('warning', 'unknown_field', f"{label}.{section}.{dotted} is unknown, will be ignored at runtime", file=file, adapter=adapter, path=f"{label}.{section}.{dotted}"))
             if key == 'scripts':
                 if not isinstance(value, list):
                     issues.append(_issue('error', 'scripts_not_array', f"{label}.{section}.scripts must be an array", file=file, adapter=adapter, path=f"{label}.{section}.scripts"))

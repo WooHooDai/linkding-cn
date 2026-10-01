@@ -449,7 +449,7 @@ def _build_section_config(full_config: dict, section: str, base_dir: str, userna
         for key in ('http_head_probe', 'content_check', 'accept_status', 'blocked_status',
                     'blocked_location_patterns', 'check_content', 'max_content_limit',
                     'content_timeout', 'check_selectors', 'valid_selectors', 'valid_patterns',
-                    'invalid_selectors', 'invalid_patterns'):
+                    'invalid_selectors', 'invalid_patterns', 'reason'):
             if key in section_data:
                 result[key] = section_data[key]
 
