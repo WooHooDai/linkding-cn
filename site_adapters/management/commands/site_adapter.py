@@ -4,7 +4,7 @@ import shutil
 import tempfile
 
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from bookmarks.services.website_loader import (
     load_website_metadata,
@@ -25,6 +25,43 @@ from site_adapters.services.config.validator import classify_field, validate_con
 from site_adapters.services.subscriptions import (
     fetch_subscription,
 )
+
+
+_SENSITIVE_HEADER_NAMES = {
+    "cookie",
+    "authorization",
+    "proxy-authorization",
+    "set-cookie",
+}
+
+
+def _redact_config_for_output(obj):
+    """递归脱敏解析后的配置，避免会话 cookie/凭据明文进入 stdout。
+
+    保持键集合不变，仅把敏感值替换为 "<redacted>"：
+    - `_user_cookie` 键（resolver 注入的原始 cookie 串）
+    - `headers` 块中的 Cookie/Authorization 等敏感头值
+    """
+    if isinstance(obj, dict):
+        redacted = {}
+        for key, value in obj.items():
+            if key == "_user_cookie":
+                redacted[key] = "<redacted>" if value else value
+                continue
+            if key == "headers" and isinstance(value, dict):
+                redacted_headers = {}
+                for hname, hval in value.items():
+                    if isinstance(hname, str) and hname.lower() in _SENSITIVE_HEADER_NAMES:
+                        redacted_headers[hname] = "<redacted>"
+                    else:
+                        redacted_headers[hname] = hval
+                redacted[key] = redacted_headers
+                continue
+            redacted[key] = _redact_config_for_output(value)
+        return redacted
+    if isinstance(obj, list):
+        return [_redact_config_for_output(item) for item in obj]
+    return obj
 
 
 class Command(BaseCommand):
@@ -75,6 +112,9 @@ class Command(BaseCommand):
             style = self.style.ERROR if level == 'error' else self.style.WARNING
             msg = issue['message'] if isinstance(issue, dict) else str(issue)
             self.stdout.write(style(msg))
+        if any((issue.get('level', 'error') if isinstance(issue, dict) else 'error') == 'error'
+               for issue in issues):
+            raise CommandError("site adapters validation failed")
 
     def handle_show_config(self, opts):
         result = show_config(opts["url"], opts["dir"] or settings.LD_SITE_ADAPTERS_DIR)
@@ -84,7 +124,7 @@ class Command(BaseCommand):
         config = get_metadata_config(opts["url"])
         metadata = load_website_metadata(opts["url"], ignore_cache=True)
         self.stdout.write(json.dumps({
-            "config": config,
+            "config": _redact_config_for_output(config),
             "metadata": metadata.to_dict(),
         }, indent=2, ensure_ascii=False, default=str))
 
@@ -150,7 +190,7 @@ class Command(BaseCommand):
                     )
             else:
                 result["reader"] = reader_processor.parse_url(url)
-            self.stdout.write(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+            self.stdout.write(json.dumps(_redact_config_for_output(result), indent=2, ensure_ascii=False, default=str))
         finally:
             if tmp_dir:
                 shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -159,8 +199,7 @@ class Command(BaseCommand):
         try:
             data, root = self._load_subscription(opts["source"])
         except Exception as exc:
-            self.stdout.write(self.style.ERROR(f"load failed: {exc}"))
-            return
+            raise CommandError(f"load failed: {exc}") from exc
         issues = self._validate_subscription_data(data, root)
         if not issues:
             self.stdout.write(self.style.SUCCESS(f"subscription ok, {len(data.get('domains', {}))} domains"))
@@ -170,6 +209,9 @@ class Command(BaseCommand):
             style = self.style.ERROR if level == 'error' else self.style.WARNING
             msg = issue['message'] if isinstance(issue, dict) else str(issue)
             self.stdout.write(style(msg))
+        if any((issue.get('level', 'error') if isinstance(issue, dict) else 'error') == 'error'
+               for issue in issues):
+            raise CommandError("subscription validation failed")
 
     def handle_prefetch_subscriptions(self, opts):
         """Download remote subscriptions that are missing or due for refresh."""
@@ -218,7 +260,10 @@ class Command(BaseCommand):
             root = fetch_subscription(source, force=True)
             if not root:
                 raise ValueError("subscription fetch failed")
-            return self._load_subscription_dir(root)
+            # fetch_subscription 返回缓存的 adapters.jsonc 文件路径，
+            # _load_subscription_dir 接收的是目录（内部拼接 adapters.jsonc），
+            # 这里取其所在目录，否则会拼出 adapters.jsonc/adapters.jsonc。
+            return self._load_subscription_dir(os.path.dirname(root))
         if source.startswith("http://"):
             raise ValueError("subscription url must use HTTPS")
         with open(source, encoding="utf-8") as f:
