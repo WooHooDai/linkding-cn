@@ -619,6 +619,7 @@ def _load_website_metadata(url: str, config: dict = None, username: str = '', in
                     },
                     username=username,
                     scope=config.get("_effective_cookie_scope", ""),
+                    force_refresh=True,
                 )
                 if new_cookie:
                     config["_user_cookie"] = new_cookie
@@ -705,6 +706,63 @@ def _load_website_metadata(url: str, config: dict = None, username: str = '', in
     if include_sources:
         return metadata, sources
     return metadata
+
+
+def fetch_page_html(url: str, config: dict = None, username: str = '') -> str:
+    """获取页面 HTML 文本供下游解析（如 reader 模式）。
+
+    复用 metadata 抓取通路：http_engine（curl_cffi）、auto cookie 预取、
+    401/403 触发 cookie 自愈刷新——保证 TLS 指纹 / 会话风控站点
+    （如知乎）在各区块行为一致，避免绕过凭据直连被抓。
+    """
+    if config is None:
+        from site_adapters.services.config.resolver import get_reader_config
+        config = get_reader_config(url, username=username) or {}
+    fetch_url = config.get("_request_url") or url
+    load_full = config.get("load_full_page", True)
+    cookie_config = config.get("cookie") or {}
+    scope = config.get("_effective_cookie_scope", "")
+
+    # Pre-flight: auto cookie 站点无凭据时先浏览器刷新
+    if (cookie_config.get("type") == "auto" and cookie_config.get("refresh")
+            and not _cookie_string_from_config(config)):
+        domain_key = config.get("_domain_key")
+        new_cookie = verify_and_refresh(
+            cookie_config=cookie_config, url=fetch_url, domain_key=domain_key,
+            verify_context={"url": fetch_url, "status": 0, "title": "", "body_preview": ""},
+            username=username, scope=scope,
+        )
+        if new_cookie:
+            config["_user_cookie"] = new_cookie
+
+    for attempt in range(_METADATA_MAX_RETRIES + 1):
+        try:
+            return load_page(fetch_url, config, load_full_page=load_full)
+        except NonRetryableMetadataError as exc:
+            invalid_status = (
+                cookie_config.get("verify", {})
+                .get("http_head_probe", {})
+                .get("invalid_status", [401, 403])
+            ) if cookie_config else [401, 403]
+            if (cookie_config and _should_refresh_cookie(cookie_config)
+                    and exc.status_code in invalid_status
+                    and attempt < _METADATA_MAX_RETRIES):
+                domain_key = config.get("_domain_key")
+                new_cookie = verify_and_refresh(
+                    cookie_config=cookie_config, url=fetch_url, domain_key=domain_key,
+                    verify_context={"url": fetch_url, "status": exc.status_code or 0,
+                                    "title": "", "body_preview": ""},
+                    username=username, scope=scope, force_refresh=True,
+                )
+                if new_cookie:
+                    config["_user_cookie"] = new_cookie
+                    continue
+            raise
+        except RetryableMetadataError as exc:
+            if attempt < _METADATA_MAX_RETRIES:
+                time.sleep(_METADATA_RETRY_BASE_DELAY * (2 ** attempt))
+                continue
+            raise
 
 
 _JSON_SELECTOR_RE = re.compile(r'^(.*?)(?:::json\((.*)\))$', re.DOTALL)

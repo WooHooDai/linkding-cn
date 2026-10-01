@@ -304,14 +304,27 @@ def parse_url(url: str, username: str = "") -> dict:
     Dispatch logic:
     1. defuddle_args defined -> defuddle with options
     2. No config -> default defuddle
+
+    抓取复用 loader 通路（http_engine / auto cookie / 403 自愈）后交给
+    defuddle 解析 HTML，避免 node 直连被 TLS 指纹风控站点拦截（如知乎）。
     """
-    from bookmarks.services import defuddle
+    from bookmarks.services import defuddle, website_loader
 
     config = get_reader_config(url, username=username)
 
     defuddle_opts = _extract_defuddle_options(config) if config else {}
 
-    return defuddle.parse_url(url, options=defuddle_opts or None)
+    try:
+        html = website_loader.fetch_page_html(url, config, username=username)
+    except Exception as exc:
+        raise defuddle.DefuddleError(f"Failed to fetch page: {exc}") from exc
+
+    return _parse_html(
+        html,
+        url=url,
+        username=username,
+        defuddle_opts=defuddle_opts,
+    )
 
 
 def parse_content(
