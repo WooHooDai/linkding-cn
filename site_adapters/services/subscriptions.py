@@ -36,6 +36,13 @@ _SCRIPT_DOWNLOAD_WORKERS = 8
 _HTTP_RETRY_ATTEMPTS = 3
 _HTTP_RETRY_BACKOFF = 0.5
 
+# 订阅镜像下载的大小上限（adapters.jsonc 与脚本 .js 共用），防止超大响应撑爆磁盘。
+_MAX_DOWNLOAD_SIZE = 10 * 1024 * 1024
+# 手动跟随重定向的最大跳数（SSRF 逐跳校验时使用）。
+_MAX_REDIRECTS = 5
+# 上次拉取失败后的短重试窗口：不等待完整 update_interval，按此间隔重试。
+_ERROR_RETRY_INTERVAL = 300
+
 
 # ---------------------------------------------------------------------------
 # _meta.json — 订阅源运行时状态
@@ -152,11 +159,17 @@ def _resolve_script_ref(script_ref: str, base_url: str) -> tuple[str | None, str
     return download_url, local_key
 
 
-def _validate_https_url(url: str, resolve_dns: bool = False):
+def _assert_public_host(url: str):
+    """校验 URL 的 host 不指向私网/回环/链路本地地址（SSRF 防护）。
+
+    与 _validate_https_url 使用同一套字面 IP 判定，初始 URL 与重定向逐跳复用。
+    只判定字面 IP：主机名是否解析到内网取决于 DNS，强制反查会让离线环境与
+    占位主机名（如测试用 cdn.example.com）直接失败，故不做 DNS 反查。
+    """
     parsed = urlparse(url)
-    if parsed.scheme != "https" or not parsed.hostname:
-        raise ValueError("URL must be HTTPS with a hostname: %s" % url)
     hostname = parsed.hostname
+    if not hostname:
+        raise ValueError("URL has no hostname: %s" % url)
 
     def _check_ip(addr_str: str):
         try:
@@ -167,22 +180,17 @@ def _validate_https_url(url: str, resolve_dns: bool = False):
             raise ValueError("URL cannot target private/loopback: %s" % addr_str)
 
     _check_ip(hostname)
-    if hostname and hostname[0].isdigit():
+    if hostname[0].isdigit():
         _check_ip(hostname)
 
-    if resolve_dns:
-        import socket
-        try:
-            infos = socket.getaddrinfo(hostname, None, proto=socket.IPPROTO_TCP)
-            for family, _, _, _, sockaddr in infos:
-                resolved = ipaddress.ip_address(sockaddr[0])
-                if resolved.is_private or resolved.is_loopback or resolved.is_link_local:
-                    raise ValueError(
-                        "URL resolves to private/loopback address: %s -> %s" % (hostname, resolved)
-                    )
-        except socket.gaierror as exc:
-            raise ValueError("Cannot resolve hostname: %s: %s" % (hostname, exc)) from exc
+    return parsed
 
+
+def _validate_https_url(url: str):
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or not parsed.hostname:
+        raise ValueError("URL must be HTTPS with a hostname: %s" % url)
+    _assert_public_host(url)
     return parsed
 
 
@@ -230,6 +238,15 @@ def _normalize_source_to_file(source: str) -> str:
     return os.path.join(directory, _ADAPTER_FILE)
 
 
+def _cache_key(source: str, name: str = '') -> tuple[str, str]:
+    """统一 _last_fetch_cache 的键。
+
+    source 一律规范化为目录形式（带 scheme、末尾斜杠），name 去首尾空白，
+    避免“带/不带 adapters.jsonc 文件名”“带/不带尾斜杠”等写法落到不同的键上。
+    """
+    return (_normalize_source_to_directory(source), (name or '').strip())
+
+
 def resolve_adapter_path(name: str, source: str, adapters_dir: str | None = None,
                            adapter_id: str = '') -> str:
     """解析适配器文件路径。
@@ -263,16 +280,38 @@ def _adapter_dir(entry: dict) -> str:
 # 下载
 # ---------------------------------------------------------------------------
 
+def _get_following_redirects(url: str, timeout: int, headers: dict | None = None):
+    """GET 并手动跟随重定向，每一跳都校验目标 host（SSRF 防护）。
+
+    requests 默认自动跟随重定向，会让初始 URL 的 host 校验形同虚设——
+    例如 https://外部地址 302 到 http://169.254.169.254/。这里禁用自动
+    重定向，手动展开 Location，逐跳经 _assert_public_host 校验后才继续。
+    """
+    current = url
+    for _ in range(_MAX_REDIRECTS + 1):
+        resp = requests.get(current, timeout=timeout, headers=headers, allow_redirects=False)
+        if resp.status_code not in (301, 302, 303, 307, 308):
+            return resp
+        location = resp.headers.get('Location')
+        if not location:
+            return resp
+        current = urljoin(current, location)
+        # 重定向目标同样不允许落到私网/回环/链路本地地址
+        _assert_public_host(current)
+    raise requests.TooManyRedirects(f"Too many redirects: {url}")
+
+
 def _http_get(url: str, timeout: int, headers: dict | None = None):
     """带重试的 GET，仅对网络异常与 5xx/429 重试。
 
     304 与 4xx 等确定性结果直接返回，重试不会改变结果。
     重试耗尽后抛出最后一个异常，由调用方降级处理。
+    重定向逐跳校验见 _get_following_redirects。
     """
     last_exc: Exception | None = None
     for attempt in range(_HTTP_RETRY_ATTEMPTS):
         try:
-            resp = requests.get(url, timeout=timeout, headers=headers)
+            resp = _get_following_redirects(url, timeout=timeout, headers=headers)
         except requests.RequestException as exc:
             last_exc = exc
         else:
@@ -302,17 +341,16 @@ def _download_jsonc(url: str, etag: str = '', last_modified: str = '') -> tuple[
         return None, {}
 
     resp.raise_for_status()
-    _MAX_SUBSCRIPTION_SIZE = 10 * 1024 * 1024
     content_length = resp.headers.get('Content-Length')
     if content_length:
         try:
-            if int(content_length) > _MAX_SUBSCRIPTION_SIZE:
-                raise ValueError("Subscription too large (%s bytes, max %d)" % (content_length, _MAX_SUBSCRIPTION_SIZE))
+            if int(content_length) > _MAX_DOWNLOAD_SIZE:
+                raise ValueError("Subscription too large (%s bytes, max %d)" % (content_length, _MAX_DOWNLOAD_SIZE))
         except (ValueError, TypeError):
             pass
     content = resp.text
-    if len(content) > _MAX_SUBSCRIPTION_SIZE:
-        raise ValueError("Subscription too large (%d bytes, max %d)" % (len(content), _MAX_SUBSCRIPTION_SIZE))
+    if len(content) > _MAX_DOWNLOAD_SIZE:
+        raise ValueError("Subscription too large (%d bytes, max %d)" % (len(content), _MAX_DOWNLOAD_SIZE))
 
     data = parse_jsonc(content)
     if not isinstance(data, dict):
@@ -542,9 +580,25 @@ def _write_adapter_file(file_path: str, url: str, data: dict,
                 _validate_download_url(dl_url)
                 resp = _http_get(dl_url, timeout=30)
                 resp.raise_for_status()
-                content = resp.text
-                # 有 Content-Length 且未经压缩时，校验字节数，捕获静默截断
+                # 大小上限（与 adapters.jsonc 对齐）：先按 Content-Length 预判，
+                # 再按实际文本长度兜底，避免超大脚本撑爆磁盘。
                 content_length = resp.headers.get('Content-Length')
+                if content_length:
+                    try:
+                        if int(content_length) > _MAX_DOWNLOAD_SIZE:
+                            raise ValueError(
+                                "Script too large (%s bytes, max %d)"
+                                % (content_length, _MAX_DOWNLOAD_SIZE)
+                            )
+                    except (TypeError, ValueError):
+                        pass
+                content = resp.text
+                if len(content) > _MAX_DOWNLOAD_SIZE:
+                    raise ValueError(
+                        "Script too large (%d chars, max %d)"
+                        % (len(content), _MAX_DOWNLOAD_SIZE)
+                    )
+                # 有 Content-Length 且未经压缩时，校验字节数，捕获静默截断
                 if content_length and not resp.headers.get('Content-Encoding'):
                     try:
                         expected = int(content_length)
@@ -758,7 +812,9 @@ def fetch_subscription(url: str, name: str = '', adapter_id: str = '', force: bo
         logger.error(str(exc))
         return None
 
-    if update_interval == 0:
+    # update_interval=0 表示不自动更新，但首次拉取（缓存缺失）仍必须落盘：
+    # interval 只影响后续自动更新频率，不影响首次镜像。
+    if update_interval == 0 and os.path.exists(file_path):
         return file_path
 
     # 从 _meta.json 读取运行时状态
@@ -800,7 +856,7 @@ def fetch_subscription(url: str, name: str = '', adapter_id: str = '', force: bo
                         update_fields['script_failures'] = failed
                         update_fields['fetch_status'] = 'partial' if failed else 'ok'
                     _update_meta_entry(meta_key, **update_fields)
-                    _last_fetch_cache[(meta_key, name)] = (time.time(), update_interval)
+                    _last_fetch_cache[_cache_key(meta_key, name)] = (time.time(), update_interval)
                     logger.info("Subscription version unchanged: %s (%s)", meta_key, remote_version)
                     return file_path
                 logger.info("Subscription version changed: %s -> %s", stored_version, remote_version)
@@ -836,7 +892,7 @@ def fetch_subscription(url: str, name: str = '', adapter_id: str = '', force: bo
                 update_fields['script_failures'] = failed
                 update_fields['fetch_status'] = 'partial' if failed else 'ok'
             _update_meta_entry(meta_key, **update_fields)
-            _last_fetch_cache[(meta_key, name)] = (time.time(), update_interval)
+            _last_fetch_cache[_cache_key(meta_key, name)] = (time.time(), update_interval)
             logger.info("Subscription unchanged: %s", meta_key)
             return file_path
 
@@ -882,13 +938,15 @@ def fetch_subscription(url: str, name: str = '', adapter_id: str = '', force: bo
 
         _update_meta_entry(meta_key, **update_fields)
 
-        cache_key = (meta_key, name)
+        cache_key = _cache_key(meta_key, name)
         _last_fetch_cache[cache_key] = (time.time(), update_interval)
 
         return file_path
     except Exception as e:
         logger.error("Subscription fetch failed: %s: %s", meta_key, e)
-        _update_meta_entry(meta_key, last_fetch=time.time(), fetch_status='error')
+        # 失败不覆盖 last_fetch（保留上次成功时间），改记失败时间戳，
+        # 供调度侧在短重试窗口内重试，而非等待完整 update_interval。
+        _update_meta_entry(meta_key, fetch_status='error', last_error_at=time.time())
         return file_path if os.path.exists(file_path) else None
 
 def _needs_fetch(sub: dict) -> bool:
@@ -903,18 +961,32 @@ def _needs_fetch(sub: dict) -> bool:
     now = time.time()
     name = sub.get('name', '')
     interval = sub.get('update_interval', 86400)
-    if interval == 0:
-        return False
-    cache_key = (source, name)
 
     adapter_id = sub.get('id', '')
     sub_file = _get_adapter_cache_path(_sub_name(source, name), adapter_id or name)
+    # 缓存缺失时无论 interval 都要拉一次（首次落盘）
     if not os.path.exists(sub_file):
         return True
+
+    # update_interval=0：不自动更新；首次落盘已由上面的缓存缺失兜底。
+    if interval == 0:
+        return False
 
     # 本地完整性优先于时间闸门：脚本缺失时立即重试，直到补齐
     if _missing_scripts(sub_file, _normalize_source_to_directory(source)):
         return True
+
+    cache_key = _cache_key(source, name)
+
+    # 失败短重试窗口：上次拉取失败时不等待完整 interval，按更短间隔重试。
+    meta_key = _normalize_source_to_directory(source)
+    meta_entry = _get_meta_entry(meta_key)
+    if meta_entry.get('fetch_status') == 'error':
+        last_error = meta_entry.get('last_error_at') or 0
+        retry_after = min(interval, _ERROR_RETRY_INTERVAL)
+        if now - last_error >= retry_after:
+            return True
+        # 仍在短重试窗口内：继续走常规时间闸门判定
 
     cached = _last_fetch_cache.get(cache_key)
     if cached is not None:
@@ -922,9 +994,6 @@ def _needs_fetch(sub: dict) -> bool:
         if cached_interval == interval and now - cached_fetch < interval:
             return False
 
-    # 从 _meta.json 获取 last_fetch（key 需规范化为目录 URL）
-    meta_key = _normalize_source_to_directory(source)
-    meta_entry = _get_meta_entry(meta_key)
     last_fetch = meta_entry.get('last_fetch')
     if last_fetch is None:
         return True
