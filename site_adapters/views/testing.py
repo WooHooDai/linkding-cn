@@ -32,7 +32,6 @@ from site_adapters.services.execution_log import collect_executions
 from site_adapters.views.helpers import (
     TEST_ASSETS_DIR,
     _get_base_dir,
-    _resolve_domain_path,
     _sanitize_url_for_filename,
     site_adapters_required,
 )
@@ -54,11 +53,12 @@ def action(request):
     if act == 'test':
         try:
             return _handle_test(request)
-        except Exception as exc:
+        except Exception:
+            # 不把异常文本（可能含本地路径/目标 URL/嵌入凭据）回显给前端
             logger.exception("Site adapter test failed")
             return JsonResponse({
                 'type': request.POST.get('test_type', 'test'),
-                'error': str(exc),
+                'error': 'Test failed. See server logs for details.',
             })
     elif act == 'validate':
         return _handle_validate(request)
@@ -70,11 +70,6 @@ def action(request):
 def _handle_validate(request) -> JsonResponse:
     base_dir = _get_base_dir()
     filename = request.POST.get('filename', '')
-    if filename:
-        try:
-            _resolve_domain_path(filename)
-        except ValueError as e:
-            return JsonResponse({'error': str(e)}, status=400)
     issues = validate_config(base_dir, domain_filename=filename)
     return JsonResponse({'issues': issues})
 
@@ -666,12 +661,14 @@ def _test_credential(url, base_dir, username, entries):
         has_user_before = bool(before_user)
         has_shared_before = bool(before_shared)
 
-        # Refresh
+        # Refresh（只读诊断：测试面板不启动浏览器、不写回凭据、不标过期，
+        # 仅做 L1/L2 只读探测，避免"测试"动作产生全局写副作用）
         cookie_config = config.get('cookie', {}) if config else {}
         before = before_best
         after = verify_and_refresh(cookie_config=cookie_config, url=url, domain_key=domain_key,
                                    verify_context={'url': url, 'status': 0, 'title': '', 'body_preview': ''},
-                                   username=username, scope=test_scope) if cookie_config else None
+                                   username=username, scope=test_scope,
+                                   dry_run=True) if cookie_config else None
         refreshed = bool(after and (not before or after != before))
 
         # After state

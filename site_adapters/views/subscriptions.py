@@ -349,5 +349,15 @@ def subscription_domain_read(request):
 @site_adapters_required
 @require_POST
 def subscription_domain_toggle(request):
-    """开关订阅域名（兼容旧 API）。"""
-    return JsonResponse({'success': True})
+    """开关订阅域名（兼容旧 API）。
+
+    与 local_domain_toggle 对齐：写入 config.jsonc 的 _disabled_domains，
+    不再返回无状态变更的假成功。
+    """
+    from site_adapters.views.helpers import _toggle_domain_disabled
+    domain_key = request.POST.get('domain', '')
+    if not domain_key:
+        return JsonResponse({'error': 'domain key required'}, status=400)
+    enabled = request.POST.get('enabled', '1') == '1'
+    _toggle_domain_disabled(domain_key, disabled=not enabled)
+    return JsonResponse({'success': True, 'domain': domain_key, 'enabled': enabled})

@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+import threading
 from functools import wraps
 
 from django.conf import settings as django_settings
@@ -109,15 +110,6 @@ def site_adapters_required(view_func):
     return login_required(wrapped)
 
 
-
-
-
-
-def _resolve_domain_path(filename: str) -> str:
-    """解析域名文件路径。已废弃：域名现在存储在适配器文件内部。"""
-    raise NotImplementedError("Domains are now stored inside adapter files, not as separate files")
-
-
 def _invalidate_site_adapters_cache():
     from site_adapters.services.config.loader import _cache
     _cache.invalidate()
@@ -143,6 +135,12 @@ def _is_safe_subscription_name(name: str) -> bool:
 # Config (config.jsonc) management
 # ---------------------------------------------------------------------------
 
+# 进程内全局锁：config.jsonc 是"读整文件→内存改→整文件覆写"，atomic_write 只防
+# 写一半，不防并发 POST 之间的丢更新。add/save/reorder/enable/disable 与
+# local_domain_toggle 并发时用此锁串行化整个读-改-写临界区。
+_config_lock = threading.RLock()
+
+
 def _config_path() -> str:
     return os.path.join(_get_adapters_dir(), 'config.jsonc')
 
@@ -162,14 +160,15 @@ def _load_config() -> tuple[dict, str]:
 
 
 def _save_adapters_list(adapters: list[dict]):
-    path = _config_path()
-    text = ''
-    if os.path.exists(path):
-        with open(path, encoding='utf-8') as f:
-            text = f.read()
-    new_text = _replace_top_level_jsonc_value(text, '_adapters', adapters)
-    atomic_write(path, new_text)
-    _invalidate_site_adapters_cache()
+    with _config_lock:
+        path = _config_path()
+        text = ''
+        if os.path.exists(path):
+            with open(path, encoding='utf-8') as f:
+                text = f.read()
+        new_text = _replace_top_level_jsonc_value(text, '_adapters', adapters)
+        atomic_write(path, new_text)
+        _invalidate_site_adapters_cache()
 
 
 
@@ -177,6 +176,10 @@ def _save_adapters_list(adapters: list[dict]):
 
 
 def _get_adapters_list() -> list:
+    # 自愈入口：创建运行时目录并清理磁盘上已被删除的本地适配器条目。
+    # 管理页加载（subscription_manage / all_domains）与后台订阅同步都会经过此函数，
+    # 故在此接入，无需额外启动钩子。
+    _ensure_base_dirs()
     # Self-heal the defaults adapter before exposing or operating on the list.
     _ensure_defaults_adapter(_get_adapters_dir(), sync=False)
     data, _ = _load_config()
@@ -209,19 +212,20 @@ def _get_disabled_domains() -> set[str]:
 
 def _toggle_domain_disabled(domain_key: str, disabled: bool):
     """Add or remove domain_key from _disabled_domains in config.jsonc."""
-    current = _get_disabled_domains()
-    if disabled:
-        current.add(domain_key)
-    else:
-        current.discard(domain_key)
-    path = _config_path()
-    text = ''
-    if os.path.exists(path):
-        with open(path, encoding='utf-8') as f:
-            text = f.read()
-    new_text = _replace_top_level_jsonc_value(text, '_disabled_domains', sorted(current))
-    atomic_write(path, new_text)
-    _invalidate_site_adapters_cache()
+    with _config_lock:
+        current = _get_disabled_domains()
+        if disabled:
+            current.add(domain_key)
+        else:
+            current.discard(domain_key)
+        path = _config_path()
+        text = ''
+        if os.path.exists(path):
+            with open(path, encoding='utf-8') as f:
+                text = f.read()
+        new_text = _replace_top_level_jsonc_value(text, '_disabled_domains', sorted(current))
+        atomic_write(path, new_text)
+        _invalidate_site_adapters_cache()
 
 
 

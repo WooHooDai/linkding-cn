@@ -283,7 +283,8 @@ class SiteAdaptersViewsTestCase(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["type"], "metadata")
-        self.assertEqual(response.json()["error"], "blocked")
+        # P2-G-7：action 视图不再回显异常内部信息，改为通用文案 + 服务端日志
+        self.assertEqual(response.json()["error"], "Test failed. See server logs for details.")
 
     def test_action_metadata_returns_non_retryable_error_message(self):
         from bookmarks.services.website_loader import WebsiteMetadata
@@ -340,7 +341,7 @@ class SiteAdaptersViewsTestCase(TestCase):
         cookie_config = {"type": "anon"}
         meta_config = {"_domain_key": "example.com", "cookie": cookie_config}
 
-        def mock_verify_and_refresh(*, cookie_config, url, domain_key, verify_context, username="", scope=""):
+        def mock_verify_and_refresh(*, cookie_config, url, domain_key, verify_context, username="", scope="", dry_run=False):
             from site_adapters.services.auth.credentials import save_shared_cookie
             save_shared_cookie(domain="example.com", cookie_str="session=abc", scope=scope)
             return "session=abc"
@@ -625,6 +626,16 @@ class SiteAdaptersViewsTestCase(TestCase):
                     },
                 ]
             },
+        )
+        # P2-G-8 自愈清理（_ensure_base_dirs）会移除源文件不存在的本地适配器，
+        # 因此需创建源文件让条目在清理后保留，才能验证"defaults id + 其他 name 不受保护"。
+        self._write_jsonc(
+            "adapters/other/adapters.jsonc",
+            {"_meta": {"id": "defaults", "name": "other"}, "domains": {}},
+        )
+        self._write_jsonc(
+            "adapters/defaults/adapters.jsonc",
+            {"_meta": {"id": "defaults", "name": "defaults"}, "domains": {}},
         )
         url = reverse("linkding:settings.site_adapters.subscription_manage")
 

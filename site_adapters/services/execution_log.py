@@ -20,9 +20,19 @@ from datetime import UTC, datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-SECRET_KEYS = {"authorization", "cookie", "cookie_file", "set-cookie"}
+SECRET_KEYS = {
+    "authorization", "cookie", "cookies", "cookie_file", "set-cookie",
+    "token", "access_token", "refresh_token", "id_token",
+    "password", "passwd", "sessionid", "csrftoken", "x-csrf-token",
+}
+# 键名长/复合的放前面，避免被短名（如 token）截断。值在引号/逗号/分号/花括号处
+# 截止，以覆盖脚本 stdout 直接输出的裸 "sessionid=abc; csrftoken=xyz" 与
+# JSON 形式的 `"sessionid":"abc"`（原先要求先出现 cookie:/authorization: 才命中）。
 SECRET_RE = re.compile(
-    r"""(?i)(authorization|cookie|set-cookie)(["']?\s*[:=]\s*["']?)[^"',;}]+"""
+    r"""(?i)(authorization|set-cookie|cookie_file|cookies|cookie|"""
+    r"""access_token|refresh_token|id_token|token|"""
+    r"""password|passwd|sessionid|csrftoken|x-csrf-token)"""
+    r"""(["']?\s*[:=]\s*["']?)[^"',;}]+"""
 )
 
 # Lock for serializing JSONL file writes (prevents line tearing)
@@ -149,7 +159,7 @@ def log_execution(
     if cmd:
         entry['cmd'] = _redact_cmd_args(cmd)
     if stdin:
-        entry['stdin'] = stdin[:2000]
+        entry['stdin'] = _redact(stdin)[:2000]
     if stdout and not step.startswith('cookie_'):
         entry['stdout'] = _redact(stdout)[:1000]
     if stderr:
