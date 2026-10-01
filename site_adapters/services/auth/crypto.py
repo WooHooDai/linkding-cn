@@ -15,6 +15,7 @@ from cryptography.fernet import Fernet, InvalidToken
 logger = logging.getLogger(__name__)
 
 _fernet: Fernet | None = None
+_fernet_mtime: float = 0
 _fingerprint: str | None = None
 _fingerprint_mtime: float = 0
 _lock = threading.Lock()
@@ -26,27 +27,42 @@ def _get_key_path() -> str:
 
 
 def _get_fernet() -> Fernet:
-    global _fernet
-    if _fernet is not None:
+    global _fernet, _fernet_mtime
+    key_path = _get_key_path()
+    # Detect external key rotation: rebuild if the key file's mtime changed
+    # since we last cached the Fernet instance. Without this, a process that
+    # had already cached the old key would keep failing to decrypt new creds.
+    try:
+        current_mtime = os.path.getmtime(key_path)
+    except OSError:
+        current_mtime = 0
+
+    # Fast path: key file unchanged → reuse cached fernet
+    if _fernet is not None and _fernet_mtime == current_mtime:
         return _fernet
 
     with _lock:
         # double-check after acquiring lock
-        if _fernet is not None:
+        if _fernet is not None and _fernet_mtime == current_mtime:
             return _fernet
 
-        key_path = _get_key_path()
         if os.path.exists(key_path):
             with open(key_path, encoding='utf-8') as f:
                 key = f.read().strip()
+            new_mtime = current_mtime
         else:
             key = Fernet.generate_key().decode()
             from bookmarks.utils import atomic_write
             atomic_write(key_path, key)
             os.chmod(key_path, 0o600)
             logger.info("Generated new credentials encryption key")
+            try:
+                new_mtime = os.path.getmtime(key_path)
+            except OSError:
+                new_mtime = current_mtime
 
         _fernet = Fernet(key.encode())
+        _fernet_mtime = new_mtime
         return _fernet
 
 

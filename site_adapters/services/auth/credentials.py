@@ -237,7 +237,18 @@ def _load_meta() -> dict:
         data.setdefault('key_fingerprint', '')
         data.setdefault('credentials', {})
         return data
-    except (json.JSONDecodeError, OSError):
+    except json.JSONDecodeError:
+        # A single corrupt meta file must not take down every credential read
+        # path. Preserve the evidence by moving the bad file aside, then start
+        # fresh so callers degrade gracefully instead of crashing.
+        backup = f'{path}.corrupt-{int(time.time())}'
+        try:
+            os.rename(path, backup)
+            logger.warning("Corrupt encryption.meta renamed to %s", backup)
+        except OSError as rename_err:
+            logger.error("Failed to rename corrupt meta %s: %s", path, rename_err)
+        return {'key_fingerprint': '', 'credentials': {}}
+    except OSError:
         return {'key_fingerprint': '', 'credentials': {}}
 
 
@@ -249,6 +260,32 @@ def _meta_key(*, cred_type: str, username: str, domain: str, scope: str = '') ->
     """Build the encryption metadata key with scope."""
     scope = _validate_scope(scope)
     return f'{cred_type}:{username}:{domain}:{scope}'
+
+
+def _lookup_meta_domain_variant(meta: dict, *, cred_type: str, username: str,
+                                domain: str, scope: str = '') -> dict:
+    """Find a meta entry whose domain is a wildcard/suffix variant of `domain`.
+
+    Used when the exact meta_key (built from the on-disk directory name)
+    misses: the entry may have been written under the request hostname or a
+    wildcard directory (e.g. file lives in `www.example.com/` but the
+    cookie_status='invalid' mark was stored under `*.example.com`). Without
+    this fallback the listing would silently drop that status.
+    """
+    key_prefix = f'{cred_type}:{username}:'
+    key_suffix = f':{scope}'
+    for key, entry in meta.get('credentials', {}).items():
+        if not key.startswith(key_prefix) or not key.endswith(key_suffix):
+            continue
+        stored_domain = key[len(key_prefix):-len(key_suffix)] if len(key_suffix) else key[len(key_prefix):]
+        if stored_domain == domain:
+            continue
+        if stored_domain.startswith('*.'):
+            if domain.endswith(stored_domain[1:]):
+                return entry
+        elif domain.endswith('.' + stored_domain):
+            return entry
+    return {}
 
 
 def _update_meta_entry(*, cred_type: str, username: str, domain: str,
@@ -362,24 +399,31 @@ def save_user_cookie(*, username: str, domain: str, cookie_str: str,
     cookie_content = json.dumps(cookies_list, ensure_ascii=False)
     filename = _scoped_filename(cred_type='cookie', scope=scope)
     if exact:
-        path = _credential_path(username=username, domain=domain, filename=filename)
+        effective_domain = domain
     else:
-        path = _resolve_credential_path(username=username, hostname=domain, filename=filename)
+        # exact=False resolves the file into the eTLD+1 / wildcard directory;
+        # key the meta entry by that same directory name so the cookie_status
+        # written later by the refresh path lines up with what listing scans.
+        matched = _resolve_credential_domain(username, domain)
+        effective_domain = matched if matched else domain
+    path = _credential_path(username=username, domain=effective_domain, filename=filename)
     _write_encrypted_file(path, cookie_content)
-    _update_meta_entry(cred_type='cookies', username=username, domain=domain,
+    _update_meta_entry(cred_type='cookies', username=username, domain=effective_domain,
                        scope=scope, updated_at=_now_iso(), source=source)
-    _clear_cookie_expired(cred_source=username, domain=domain, scope=scope)
+    _clear_cookie_expired(cred_source=username, domain=effective_domain, scope=scope)
 
 
 def delete_user_cookie(*, username: str, domain: str, scope: str = ''):
     """Delete the user's cookie credential."""
     filename = _scoped_filename(cred_type='cookie', scope=scope)
-    path = _resolve_credential_path(username=username, hostname=domain, filename=filename)
+    matched = _resolve_credential_domain(username, domain)
+    effective_domain = matched if matched else domain
+    path = _credential_path(username=username, domain=effective_domain, filename=filename)
     _remove_file(path)
     with _meta_lock:
         meta = _load_meta()
         meta['credentials'].pop(
-            _meta_key(cred_type='cookies', username=username, domain=domain, scope=scope), None)
+            _meta_key(cred_type='cookies', username=username, domain=effective_domain, scope=scope), None)
         _save_meta(meta)
 
 
@@ -850,29 +894,6 @@ def get_best_header(*, username: str, hostname: str, header_name: str,
     return get_shared_header(hostname=hostname, header_name=header_name, scope=scope)
 
 
-def get_best_headers(*, username: str, hostname: str,
-                     scope: str = '') -> tuple[dict, str]:
-    """Get all saved header credentials within a single scope: user first, shared fallback.
-
-    Returns (merged headers dict, status).
-    """
-    result: dict[str, str] = {}
-    status = 'not_found'
-    if username:
-        user_hdrs, status = get_user_headers(username=username, hostname=hostname, scope=scope)
-        if user_hdrs:
-            result.update(user_hdrs)
-    shared_hdrs, shared_status = get_shared_headers(hostname=hostname, scope=scope)
-    if shared_hdrs:
-        for k, v in shared_hdrs.items():
-            if k not in result:
-                result[k] = v
-        status = status if status != 'not_found' else shared_status
-    if result:
-        status = 'ok' if status != 'error' else status
-    return result, status
-
-
 def get_best_token(*, username: str, hostname: str,
                    scope: str = '') -> tuple[str | None, str]:
     """Get the best available token within a single scope: user first, shared fallback."""
@@ -973,7 +994,14 @@ def _list_credentials_in_dir(base_dir: str, meta_prefix: str,
 
             meta_key = _meta_key(cred_type=cred_type + 's', username=meta_prefix,
                                  domain=domain, scope=scope)
-            m = meta['credentials'].get(meta_key, {})
+            m = meta['credentials'].get(meta_key)
+            if not m:
+                # Exact key miss: recover a wildcard/hostname variant entry so
+                # a cookie_status='invalid' mark stored under a different but
+                # compatible domain still surfaces in the listing.
+                m = _lookup_meta_domain_variant(
+                    meta, cred_type=cred_type + 's', username=meta_prefix,
+                    domain=domain, scope=scope) or {}
             content, status = _read_encrypted_file(path)
             if not fingerprint_ok and status == 'ok':
                 status = 'key_changed'
