@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import re
+import threading
 import time
 
 from bookmarks.utils import atomic_write
@@ -193,13 +194,14 @@ def _mark_cookie_expired(*, cred_source: str, domain: str, scope: str = ''):
 
 def _clear_cookie_expired(*, cred_source: str, domain: str, scope: str = ''):
     """Clear cookie expiry metadata (e.g. after user re-saves cookie)."""
-    meta = _load_meta()
-    key = _meta_key(cred_type='cookies', username=cred_source, domain=domain, scope=scope)
-    entry = meta['credentials'].get(key, {})
-    entry.pop('cookie_status', None)
-    entry.pop('expired_at', None)
-    meta['credentials'][key] = entry
-    _save_meta(meta)
+    with _meta_lock:
+        meta = _load_meta()
+        key = _meta_key(cred_type='cookies', username=cred_source, domain=domain, scope=scope)
+        entry = meta['credentials'].get(key, {})
+        entry.pop('cookie_status', None)
+        entry.pop('expired_at', None)
+        meta['credentials'][key] = entry
+        _save_meta(meta)
 
 
 def _resolve_credential_path(*, username: str, hostname: str, filename: str) -> str:
@@ -216,6 +218,12 @@ def _get_meta_path() -> str:
 # ---------------------------------------------------------------------------
 # Metadata
 # ---------------------------------------------------------------------------
+
+# Process-wide lock guarding load-modify-save cycles on encryption.meta.
+# Prevents concurrent writers from clobbering each other's entries (e.g.
+# losing an invalid/cookie_status mark or a source provenance tag).
+_meta_lock = threading.RLock()
+
 
 def _load_meta() -> dict:
     path = _get_meta_path()
@@ -245,14 +253,15 @@ def _meta_key(*, cred_type: str, username: str, domain: str, scope: str = '') ->
 
 def _update_meta_entry(*, cred_type: str, username: str, domain: str,
                        scope: str = '', **fields):
-    meta = _load_meta()
-    # keep fingerprint current
-    meta['key_fingerprint'] = get_key_fingerprint()
-    key = _meta_key(cred_type=cred_type, username=username, domain=domain, scope=scope)
-    entry = meta['credentials'].get(key, {})
-    entry.update(fields)
-    meta['credentials'][key] = entry
-    _save_meta(meta)
+    with _meta_lock:
+        meta = _load_meta()
+        # keep fingerprint current
+        meta['key_fingerprint'] = get_key_fingerprint()
+        key = _meta_key(cred_type=cred_type, username=username, domain=domain, scope=scope)
+        entry = meta['credentials'].get(key, {})
+        entry.update(fields)
+        meta['credentials'][key] = entry
+        _save_meta(meta)
 
 
 def check_key_fingerprint() -> bool:
@@ -367,10 +376,11 @@ def delete_user_cookie(*, username: str, domain: str, scope: str = ''):
     filename = _scoped_filename(cred_type='cookie', scope=scope)
     path = _resolve_credential_path(username=username, hostname=domain, filename=filename)
     _remove_file(path)
-    meta = _load_meta()
-    meta['credentials'].pop(
-        _meta_key(cred_type='cookies', username=username, domain=domain, scope=scope), None)
-    _save_meta(meta)
+    with _meta_lock:
+        meta = _load_meta()
+        meta['credentials'].pop(
+            _meta_key(cred_type='cookies', username=username, domain=domain, scope=scope), None)
+        _save_meta(meta)
 
 
 # ---------------------------------------------------------------------------
@@ -442,10 +452,11 @@ def delete_user_header(*, username: str, domain: str, header_name: str = '',
     path = _resolve_credential_path(username=username, hostname=domain, filename=filename)
     if not header_name:
         _remove_file(path)
-        meta = _load_meta()
-        meta['credentials'].pop(
-            _meta_key(cred_type='headers', username=username, domain=domain, scope=scope), None)
-        _save_meta(meta)
+        with _meta_lock:
+            meta = _load_meta()
+            meta['credentials'].pop(
+                _meta_key(cred_type='headers', username=username, domain=domain, scope=scope), None)
+            _save_meta(meta)
         return
     # delete single header
     existing, _ = _read_encrypted_file(path)
@@ -458,10 +469,11 @@ def delete_user_header(*, username: str, domain: str, header_name: str = '',
         _write_encrypted_file(path, json.dumps(headers, ensure_ascii=False))
     else:
         _remove_file(path)
-        meta = _load_meta()
-        meta['credentials'].pop(
-            _meta_key(cred_type='headers', username=username, domain=domain, scope=scope), None)
-        _save_meta(meta)
+        with _meta_lock:
+            meta = _load_meta()
+            meta['credentials'].pop(
+                _meta_key(cred_type='headers', username=username, domain=domain, scope=scope), None)
+            _save_meta(meta)
 
 
 # ---------------------------------------------------------------------------
@@ -504,10 +516,11 @@ def delete_user_token(*, username: str, domain: str, scope: str = ''):
     cache_filename = _scoped_filename(cred_type='token_cache', scope=scope)
     cache_path = _resolve_credential_path(username=username, hostname=domain, filename=cache_filename)
     _remove_file(cache_path)
-    meta = _load_meta()
-    meta['credentials'].pop(
-        _meta_key(cred_type='tokens', username=username, domain=domain, scope=scope), None)
-    _save_meta(meta)
+    with _meta_lock:
+        meta = _load_meta()
+        meta['credentials'].pop(
+            _meta_key(cred_type='tokens', username=username, domain=domain, scope=scope), None)
+        _save_meta(meta)
 
 
 # ---------------------------------------------------------------------------
@@ -551,10 +564,11 @@ def delete_user_basic_auth(*, username: str, domain: str, scope: str = ''):
     filename = _scoped_filename(cred_type='basic_auth', scope=scope)
     path = _resolve_credential_path(username=username, hostname=domain, filename=filename)
     _remove_file(path)
-    meta = _load_meta()
-    meta['credentials'].pop(
-        _meta_key(cred_type='basic_auth', username=username, domain=domain, scope=scope), None)
-    _save_meta(meta)
+    with _meta_lock:
+        meta = _load_meta()
+        meta['credentials'].pop(
+            _meta_key(cred_type='basic_auth', username=username, domain=domain, scope=scope), None)
+        _save_meta(meta)
 
 
 # ---------------------------------------------------------------------------
@@ -641,10 +655,11 @@ def delete_shared_cookie(*, domain: str, scope: str = ''):
     """Delete a shared cookie credential."""
     path = _shared_credential_path(domain=domain, cred_type='cookie', scope=scope)
     _remove_file(path)
-    meta = _load_meta()
-    meta['credentials'].pop(
-        _meta_key(cred_type='cookies', username='shared', domain=domain, scope=scope), None)
-    _save_meta(meta)
+    with _meta_lock:
+        meta = _load_meta()
+        meta['credentials'].pop(
+            _meta_key(cred_type='cookies', username='shared', domain=domain, scope=scope), None)
+        _save_meta(meta)
 
 
 # ── Shared Header ──
@@ -706,10 +721,11 @@ def delete_shared_header(*, domain: str, header_name: str = '', scope: str = '')
     path = _shared_credential_path(domain=domain, cred_type='header', scope=scope)
     if not header_name:
         _remove_file(path)
-        meta = _load_meta()
-        meta['credentials'].pop(
-            _meta_key(cred_type='headers', username='shared', domain=domain, scope=scope), None)
-        _save_meta(meta)
+        with _meta_lock:
+            meta = _load_meta()
+            meta['credentials'].pop(
+                _meta_key(cred_type='headers', username='shared', domain=domain, scope=scope), None)
+            _save_meta(meta)
         return
     existing, _ = _read_encrypted_file(path)
     try:
@@ -721,10 +737,11 @@ def delete_shared_header(*, domain: str, header_name: str = '', scope: str = '')
         _write_encrypted_file(path, json.dumps(headers, ensure_ascii=False))
     else:
         _remove_file(path)
-        meta = _load_meta()
-        meta['credentials'].pop(
-            _meta_key(cred_type='headers', username='shared', domain=domain, scope=scope), None)
-        _save_meta(meta)
+        with _meta_lock:
+            meta = _load_meta()
+            meta['credentials'].pop(
+                _meta_key(cred_type='headers', username='shared', domain=domain, scope=scope), None)
+            _save_meta(meta)
 
 
 # ── Shared Token ──
@@ -761,10 +778,11 @@ def delete_shared_token(*, domain: str, scope: str = ''):
     _remove_file(path)
     cache_path = _shared_credential_path(domain=domain, cred_type='token_cache', scope=scope)
     _remove_file(cache_path)
-    meta = _load_meta()
-    meta['credentials'].pop(
-        _meta_key(cred_type='tokens', username='shared', domain=domain, scope=scope), None)
-    _save_meta(meta)
+    with _meta_lock:
+        meta = _load_meta()
+        meta['credentials'].pop(
+            _meta_key(cred_type='tokens', username='shared', domain=domain, scope=scope), None)
+        _save_meta(meta)
 
 
 # ── Shared Basic Auth ──
@@ -800,10 +818,11 @@ def delete_shared_basic_auth(*, domain: str, scope: str = ''):
     """Delete a shared basic auth credential."""
     path = _shared_credential_path(domain=domain, cred_type='basic_auth', scope=scope)
     _remove_file(path)
-    meta = _load_meta()
-    meta['credentials'].pop(
-        _meta_key(cred_type='basic_auth', username='shared', domain=domain, scope=scope), None)
-    _save_meta(meta)
+    with _meta_lock:
+        meta = _load_meta()
+        meta['credentials'].pop(
+            _meta_key(cred_type='basic_auth', username='shared', domain=domain, scope=scope), None)
+        _save_meta(meta)
 
 
 # ---------------------------------------------------------------------------
@@ -1024,17 +1043,32 @@ def list_user_credentials(username: str) -> list[dict]:
 
 def load_user_token_cache(*, username: str, hostname: str,
                           scope: str = '') -> dict | None:
-    """Load token cache (access_token + expires_at) for a hostname."""
+    """Load token cache (access_token + expires_at) for a hostname.
+
+    Reads encrypted storage; transparently migrates legacy plaintext
+    cache files to encrypted on first successful read.
+    """
     filename = _scoped_filename(cred_type='token_cache', scope=scope)
     path = _resolve_credential_path(username=username, hostname=hostname, filename=filename)
     if not os.path.exists(path):
         return None
+    content, status = _read_encrypted_file(path)
+    if content is None or status == 'key_changed':
+        return None
+    try:
+        data = json.loads(content)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    # Migrate legacy plaintext token_cache to encrypted storage.
     try:
         with open(path, encoding='utf-8') as f:
-            data = json.load(f)
-        return data if isinstance(data, dict) else None
-    except (json.JSONDecodeError, OSError):
-        return None
+            if not is_encrypted(f.read()):
+                _write_encrypted_file(path, json.dumps(data, ensure_ascii=False))
+    except OSError:
+        pass
+    return data
 
 
 def save_user_token_cache(*, username: str, domain: str, cache_data: dict,
@@ -1048,7 +1082,7 @@ def save_user_token_cache(*, username: str, domain: str, cache_data: dict,
     matched = _resolve_credential_domain(username, domain)
     effective_domain = matched if matched else domain
     path = _credential_path(username=username, domain=effective_domain, filename=filename)
-    atomic_write(path, json.dumps(cache_data, ensure_ascii=False))
+    _write_encrypted_file(path, json.dumps(cache_data, ensure_ascii=False))
 
 
 # ---------------------------------------------------------------------------

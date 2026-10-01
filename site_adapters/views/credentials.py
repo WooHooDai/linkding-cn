@@ -50,7 +50,7 @@ def _get_domains_needing_auth(base_dir):
         # Check if domain or any section needs auth
         has_any = domain_auth.get('cookie') or domain_auth.get('headers_active') or \
                   domain_auth.get('oauth2') or domain_auth.get('basic_auth')
-        for sec in ('metadata', 'snapshot', 'reader'):
+        for sec in ('metadata', 'snapshot', 'reader', 'health'):
             sec_auth = sections.get(sec, {})
             if sec_auth.get('cookie') or sec_auth.get('headers_active') or \
                sec_auth.get('oauth2') or sec_auth.get('basic_auth'):
@@ -80,6 +80,8 @@ def user_credentials(request):
 @require_http_methods(["GET"])
 def shared_credential_list(request):
     """List all shared credentials. Returns JSON for the admin page credentials tab."""
+    if not request.user.is_staff:
+        return JsonResponse({'error': 'Permission denied'}, status=403)
     base_dir = _get_base_dir()
     domains = _get_domains_needing_auth(base_dir)
     credentials = list_shared_credentials(include_values=True)
