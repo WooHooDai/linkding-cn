@@ -4,7 +4,8 @@
  * 输入（stdin JSON）：
  *   { "url": "...", "cookie_file": "...", "wait_cookie": "...", "chromium_path": "", "timeout": 30000 }
  *
- * 合并策略：新 cookie 更新/新增，保留已有 cookie（如登录态）。
+ * 输出：浏览器抓到的完整 cookie 列表（Python 端先把 tmp 写成 []，
+ * 因此不存在"保留已有 cookie"的合并分支）。
  */
 
 const { execFileSync } = require("child_process");
@@ -30,15 +31,6 @@ if (!url || !outPath) {
   console.error("Missing required fields: url, cookie_file");
   process.exit(1);
 }
-
-// 读取已有 cookie
-let existingCookies = [];
-try {
-  if (existsSync(outPath)) {
-    const raw = readFileSync(outPath, "utf-8").trim();
-    if (raw && raw !== "[]") existingCookies = JSON.parse(raw);
-  }
-} catch {}
 
 // 确保输出目录存在
 const dir = dirname(outPath);
@@ -167,14 +159,8 @@ async function getLauncher() {
 
     const freshCookies = await context.cookies();
 
-    // 合并
-    const merged = new Map();
-    for (const c of existingCookies) merged.set(c.name, c);
-    for (const c of freshCookies) merged.set(c.name, c);
-
-    const result = [...merged.values()];
-    writeFileSync(outPath, JSON.stringify(result, null, 2));
-    console.log(`${result.length} cookies (${freshCookies.length} fresh, ${result.length - freshCookies.length} preserved)`);
+    writeFileSync(outPath, JSON.stringify(freshCookies, null, 2));
+    console.log(`${freshCookies.length} cookies`);
   } finally {
     await context.close();
     if (browser) {
