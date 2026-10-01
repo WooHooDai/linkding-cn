@@ -305,7 +305,7 @@ def _load_with_hooks(url: str, config: dict, scripts: list, username: str = '',
                 cookie_config=config.get("cookie"),
                 url=config.get("_request_url", url),
                 domain_key=config.get("_domain_key"),
-                verify_context={"url": url, "status": 0, "title": "", "body_preview": ""},
+                verify_context={"url": url, "status": 0, "title": "", "body_preview": "", "http_engine": config.get("http_engine")},
                 username=username,
                 scope=config.get("_effective_cookie_scope", ""),
             )
@@ -366,7 +366,7 @@ def _load_with_hooks(url: str, config: dict, scripts: list, username: str = '',
                         cookie_config=cookie_config,
                         url=config.get("_request_url", url),
                         domain_key=config.get("_domain_key"),
-                        verify_context={"url": url, "status": 0, "title": "", "body_preview": ""},
+                        verify_context={"url": url, "status": 0, "title": "", "body_preview": "", "http_engine": config.get("http_engine")},
                         username=username,
                         scope=config.get("_effective_cookie_scope", ""),
                         force_refresh=True,
@@ -554,7 +554,7 @@ def _load_website_metadata(url: str, config: dict = None, username: str = '', in
                 logger.info("No cookie for auto site %s, acquiring via browser refresh", domain_key)
                 new_cookie = verify_and_refresh(
                     cookie_config=cookie_config, url=fetch_url, domain_key=domain_key,
-                    verify_context={"url": fetch_url, "status": 0, "title": "", "body_preview": ""},
+                    verify_context={"url": fetch_url, "status": 0, "title": "", "body_preview": "", "http_engine": config.get("http_engine")},
                     username=username,
                     scope=config.get('_effective_cookie_scope', ''),
                 )
@@ -620,6 +620,7 @@ def _load_website_metadata(url: str, config: dict = None, username: str = '', in
                         "status": exc.status_code or 0,
                         "title": "",
                         "body_preview": "",
+                        "http_engine": config.get("http_engine"),
                     },
                     username=username,
                     scope=config.get("_effective_cookie_scope", ""),
@@ -667,6 +668,7 @@ def _load_website_metadata(url: str, config: dict = None, username: str = '', in
                 "status": 200,
                 "title": title or "",
                 "body_preview": (page_text or "")[:2000],
+                "http_engine": config.get("http_engine"),
             }
             before = _cookie_string_from_config(config)
             after = verify_and_refresh(cookie_config=cookie_config, url=fetch_url,
@@ -733,7 +735,7 @@ def fetch_page_html(url: str, config: dict = None, username: str = '') -> str:
         domain_key = config.get("_domain_key")
         new_cookie = verify_and_refresh(
             cookie_config=cookie_config, url=fetch_url, domain_key=domain_key,
-            verify_context={"url": fetch_url, "status": 0, "title": "", "body_preview": ""},
+            verify_context={"url": fetch_url, "status": 0, "title": "", "body_preview": "", "http_engine": config.get("http_engine")},
             username=username, scope=scope,
         )
         if new_cookie:
@@ -755,7 +757,8 @@ def fetch_page_html(url: str, config: dict = None, username: str = '') -> str:
                 new_cookie = verify_and_refresh(
                     cookie_config=cookie_config, url=fetch_url, domain_key=domain_key,
                     verify_context={"url": fetch_url, "status": exc.status_code or 0,
-                                    "title": "", "body_preview": ""},
+                                    "title": "", "body_preview": "",
+                                    "http_engine": config.get("http_engine")},
                     username=username, scope=scope, force_refresh=True,
                 )
                 if new_cookie:

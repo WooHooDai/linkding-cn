@@ -299,17 +299,25 @@ def _domain_refresh_lock(domain_key: str) -> threading.Lock:
 # Verification (declarative)
 # ---------------------------------------------------------------------------
 
+# HEAD 返回这些状态码时不可信（站点可能仅支持 GET）：HEAD 结果既不判
+# valid 也不判 invalid，交由 L2 内容校验定夺（与 health_checker 对齐）。
+_HEAD_UNRELIABLE_STATUS = frozenset({405, 406, 501})
+
+
 def _verify_cookie_l1_probe(verify_config: dict, url: str,
                               cookie_str: str, domain_key: str,
-                              timeout: int = 5) -> dict:
+                              timeout: int = 5,
+                              http_config: dict | None = None) -> dict:
     """L1 HTTP HEAD 探针：HEAD 请求检测 Cookie 有效性。
 
     检查项：
     - 响应状态码（是否在 invalid_status 列表中，如 401/403）
-    - Location 头（是否重定向到 login / signin 等页面）
+    - 重定向目标（终址 / 即时 Location 是否命中 login / signin 等页面）
     - Set-Cookie 头（是否被服务端清空/覆盖）
 
-    返回 {"valid": bool, "reason": str}。
+    返回 {"valid": True|False|None, "reason": str}。
+    valid=None（reason=head_unreliable）表示 HEAD 方法不被服务端支持
+    （405/406/501），HEAD 结果不可信，由调用方放行到 L2 内容校验定夺。
     网络错误时返回 {"valid": True, "reason": "http_head_probe_error"}，不阻塞后续 L2 检查。
     """
     probe_cfg = verify_config.get('http_head_probe', {})
@@ -322,18 +330,27 @@ def _verify_cookie_l1_probe(verify_config: dict, url: str,
     invalid_location = [_l1_re.compile(p, _l1_re.IGNORECASE) for p in raw_patterns]
     check_set_cookie = probe_cfg.get('set_cookie_cleared', True)
     probe_timeout = probe_cfg.get('timeout', timeout)
+    # verify.http_head_probe.url：覆盖探针 URL（探轻量端点代替重型正文页）
+    probe_url = probe_cfg.get('url') or url
 
     if not invalid_status and not invalid_location and not check_set_cookie:
         return {"valid": True, "reason": "no_http_head_probe_checks"}
 
     try:
-        import requests as _requests
+        # 与 metadata/health 同源：复用 website_loader 的引擎分发
+        # （curl_cffi + impersonate=chrome + 非显式 UA 剥离 + 失败回退 requests），
+        # 避免裸 requests 的 python-requests 指纹被风控站点拦截 403 而误判
+        # cookie 失效。函数内懒加载：website_loader 已 import 本模块。
+        from bookmarks.services.website_loader import _open_http_stream
         headers = {'Cookie': cookie_str} if cookie_str else {}
-        resp = _requests.head(
-            url,
-            headers=headers,
-            allow_redirects=False,
+        resp = _open_http_stream(
+            probe_url,
             timeout=probe_timeout,
+            headers=headers,
+            cookies=None,
+            proxies=None,
+            config=http_config,
+            method="HEAD",
         )
     except Exception as e:
         logger.debug("L1 http_head_probe network error for %s: %s", domain_key, e)
@@ -344,13 +361,25 @@ def _verify_cookie_l1_probe(verify_config: dict, url: str,
         return {"valid": False,
                 "reason": f"L1: invalid status {resp.status_code}"}
 
-    # 2. 检查 Location 重定向目标
-    if invalid_location and 'Location' in resp.headers:
-        location = resp.headers['Location']
-        matched = next((p for p in invalid_location if p.search(location)), None)
-        if matched:
-            return {"valid": False,
-                    "reason": f'L1: redirect to "{matched}"'}
+    # HEAD 方法不被服务端支持（405/406/501）：HEAD 结果不可信，
+    # 既不判 valid 也不判 invalid，交由 L2 内容校验定夺。
+    if resp.status_code in _HEAD_UNRELIABLE_STATUS:
+        return {"valid": None, "reason": "head_unreliable"}
+
+    # 2. 检查重定向目标（_open_http_stream 默认跟随重定向，故同时匹配
+    #    终址 resp.url 与未跟随时的即时 Location 头）
+    if invalid_location:
+        candidates = []
+        if 'Location' in resp.headers:
+            candidates.append(resp.headers['Location'])
+        final_url = getattr(resp, 'url', None)
+        if final_url:
+            candidates.append(final_url)
+        for location in candidates:
+            matched = next((p for p in invalid_location if p.search(location)), None)
+            if matched:
+                return {"valid": False,
+                        "reason": f'L1: redirect to "{matched}"'}
 
     # 3. 检查 Set-Cookie 是否在清空已有 cookie
     if check_set_cookie and 'Set-Cookie' in resp.headers:
@@ -363,13 +392,48 @@ def _verify_cookie_l1_probe(verify_config: dict, url: str,
     return {"valid": True, "reason": f"L1: status={resp.status_code}"}
 
 
+# Set-Cookie 已知属性名：逗号后跟这些 token 属于上一条 cookie 的属性，
+# 不是新条目开始（Expires 的值本身含逗号，如 "Wed, 21 Oct 2015 ..."）
+_SET_COOKIE_ATTR_NAMES = frozenset({
+    'expires', 'domain', 'path', 'max-age', 'secure', 'httponly', 'samesite',
+})
+
+
+def _split_set_cookie_entries(header: str) -> list[str]:
+    """把 requests 用逗号合并的多条 Set-Cookie 拆成单条。
+
+    requests 会把同名响应头合并为 ", " 分隔的字符串，但 Expires 属性的值
+    本身含逗号（RFC 1123 日期），不能简单 split(',')。判定规则：逗号后紧跟
+    的 token 形如 "name=" 且不是已知属性名时，才视为新条目开始。
+    """
+    if not header:
+        return []
+    import re as _re
+    entries = []
+    current = ''
+    for part in header.split(','):
+        stripped = part.strip()
+        m = _re.match(r'^([^=\s;]+)=', stripped) if stripped else None
+        if current and m and m.group(1).lower() not in _SET_COOKIE_ATTR_NAMES:
+            entries.append(current.strip())
+            current = part
+        else:
+            current = f'{current},{part}' if current else part
+    if current.strip():
+        entries.append(current.strip())
+    return entries
+
+
 def _is_cookie_being_cleared(set_cookie_header: str, current_cookie_str: str) -> bool:
     """检测 Set-Cookie 响应头是否在清空/过期当前使用的 cookie。
 
-    判断标准：
-    - Set-Cookie 设置为空值或 deleted
-    - Set-Cookie 的 Max-Age=0 或 expires 为过去时间
-    - 且 cookie name 与当前使用的 cookie 中的某个 name 匹配
+    按单条 Set-Cookie 绑定 cookie 名判定（多条 Set-Cookie 已被 requests
+    用逗号合并，先拆条再分析）：
+    - 某条的 name ∈ 当前在用 cookie，且该条空值/deleted / Max-Age=0 /
+      Expires 为过去时间 → 视为"正在清空"
+    - 但同一条响应里若有另一条在给当前在用 cookie 重新签发有效值，则属于
+      "清辅助 cookie + 刷新主会话"的正常 churn，不算清空会话
+    只认某条 Set-Cookie 的清空信号，不再扫整个合并后的头字符串。
     """
     if not current_cookie_str:
         return False
@@ -379,26 +443,43 @@ def _is_cookie_being_cleared(set_cookie_header: str, current_cookie_str: str) ->
         pair = pair.strip()
         if '=' in pair:
             current_names.add(pair.split('=', 1)[0].strip().lower())
+    if not current_names:
+        return False
 
-    # 解析 Set-Cookie（可能有多个，用逗号分隔）
-    set_cookie_lower = set_cookie_header.lower()
-    for name in current_names:
-        if name in set_cookie_lower:
-            # 检查是否在清空
-            if f'{name}=' in set_cookie_lower:
-                # 提取该 cookie 的值部分
-                import re as _re
-                pattern = _re.compile(
-                    rf'{_re.escape(name)}=([^;]*)', _re.IGNORECASE
-                )
-                match = pattern.search(set_cookie_header)
-                if match:
-                    value = match.group(1).strip()
-                    if value == '' or value.lower() == 'deleted':
-                        return True
-                if 'max-age=0' in set_cookie_lower:
-                    return True
-    return False
+    import re as _re
+    cleared = False
+    for entry in _split_set_cookie_entries(set_cookie_header):
+        m = _re.match(r'^\s*([^=;\s]+)=', entry)
+        if not m:
+            continue
+        name = m.group(1).strip().lower()
+        if name not in current_names:
+            continue
+        # 该条的值部分（第一个 '=' 之后、第一个 ';' 之前）
+        value = entry.split(';', 1)[0].split('=', 1)[1].strip()
+        low = entry.lower()
+        is_clear = (
+            value == ''
+            or value.lower() == 'deleted'
+            or _re.search(r'max-age=\s*0\b', low) is not None
+        )
+        if not is_clear:
+            exp_match = _re.search(r'expires=([^;]+)', low)
+            if exp_match:
+                try:
+                    from email.utils import parsedate_to_datetime
+                    exp_dt = parsedate_to_datetime(exp_match.group(1).strip())
+                    if exp_dt.tzinfo is not None and exp_dt.timestamp() <= time.time():
+                        is_clear = True
+                except Exception:
+                    pass
+        if is_clear:
+            cleared = True
+            continue
+        # 该条正在给当前在用的 cookie 重新签发有效值 → 会话在刷新而非清空
+        if value:
+            return False
+    return cleared
 
 
 def verify_cookie_declarative(verify_config: dict, context: dict) -> dict:
@@ -792,12 +873,20 @@ def verify_and_refresh(*, cookie_config: dict, url: str, domain_key: str,
     invalid_patterns = content_check_cfg.get('invalid_patterns', content_check_cfg.get('invalid_selectors', []))
 
     # L0 已过（有 cookie 字符串），进入 L1 探针
+    l1_unreliable = False
     if cookie_str:
         probe_cfg = verify_cfg.get('http_head_probe', {})
         if probe_cfg and probe_cfg.get('enabled', True):
+            # 域名级 http_engine 经 verify_context 透传（cookie 子块本身不含该键），
+            # 使 L1 与 metadata/health 走同一引擎分发（curl_cffi + impersonate）；
+            # verify_context 无该键时 http_config 不带 http_engine，回落 env→requests。
+            http_config = dict(cookie_config) if cookie_config else {}
+            ctx_http_engine = verify_context.get("http_engine")
+            if ctx_http_engine:
+                http_config["http_engine"] = ctx_http_engine
             l1_result = _verify_cookie_l1_probe(
-                verify_cfg, url, cookie_str, domain_key)
-            if not l1_result.get('valid'):
+                verify_cfg, url, cookie_str, domain_key, http_config=http_config)
+            if l1_result.get('valid') is False:
                 logger.info("Cookie invalid (L1): %s: %s",
                             domain_key, l1_result.get("reason"))
                 # L1 判定失效 → 如果配置了 refresh 就直接刷新，不再走 L2
@@ -816,23 +905,33 @@ def verify_and_refresh(*, cookie_config: dict, url: str, domain_key: str,
                 else:
                     _mark_login_cookie_expired(source, username, domain_key, scope)
                 return None
+            # HEAD 不可信（405/406/501）：不判 valid 也不判 invalid，放行到 L2 定夺
+            l1_unreliable = l1_result.get('valid') is None
 
     # L2 content_check: skip if disabled or no checks configured
-    if content_check_cfg.get('enabled', True) is False:
+    l2_disabled = content_check_cfg.get('enabled', True) is False
+    if l2_disabled:
         logger.debug("L2 content_check disabled for %s", domain_key)
-        return cookie_str
 
     invalid_selectors = content_check_cfg.get('invalid_selectors',
                           content_check_cfg.get('invalid_selector', []))
     valid_patterns = content_check_cfg.get('valid_patterns', [])
     valid_selectors = content_check_cfg.get('valid_selectors',
                         content_check_cfg.get('valid_selector', []))
-    if not valid_patterns and not valid_selectors and not invalid_patterns and not invalid_selectors:
-        return cookie_str
+    l2_skipped = l2_disabled or not (
+        valid_patterns or valid_selectors or invalid_patterns or invalid_selectors)
 
-    # L2 页面内容验证
-    verify_context.setdefault('domain_key', domain_key)
-    result = verify_cookie_declarative(verify_cfg, verify_context)
+    if l2_skipped:
+        if not l1_unreliable:
+            return cookie_str
+        # L1 HEAD 不可信且 L2 不做任何内容判定 → "未确认前不算 valid"，
+        # 保守按失效处理，落入下方统一的刷新/标记路径
+        result = {"valid": False,
+                  "reason": "L1 head unreliable, no L2 content confirmation"}
+    else:
+        # L2 页面内容验证
+        verify_context.setdefault('domain_key', domain_key)
+        result = verify_cookie_declarative(verify_cfg, verify_context)
     if result.get('valid'):
         return cookie_str
 
