@@ -18,6 +18,7 @@ from datetime import timedelta
 
 import requests
 from bs4 import BeautifulSoup
+from charset_normalizer import from_bytes
 from django.conf import settings
 from django.utils import timezone
 
@@ -105,8 +106,16 @@ def _default_health_config() -> dict:
         "probe_timeout": 3,
         "accept_status": list(DEFAULT_ACCEPT_STATUS),
         "blocked_status": list(DEFAULT_BLOCKED_STATUS),
-        # 登录墙路径词：带路径锚定避免子串误伤（如 "auth" 会命中 author_share=1）
-        "blocked_location_patterns": ["/login", "/signin", "/auth", "/passport", "/accounts"],
+        # 登录墙路径词：带路径锚定避免子串误伤（如 "/auth" 会命中 /oauth/authorize、
+        # /auth_callback 这类真实可达的 200 页）。锚定到路径边界（/ ? # 或串尾），
+        # 与下方注释意图一致；适配器自定义 pattern 不受影响。
+        "blocked_location_patterns": [
+            "/login(?:[/?#]|$)",
+            "/signin(?:[/?#]|$)",
+            "/auth(?:[/?#]|$)",
+            "/passport(?:[/?#]|$)",
+            "/accounts(?:[/?#]|$)",
+        ],
         # L2 内容检查
         "check_content": DEFAULT_CHECK_CONTENT,
         "check_selectors": list(DEFAULT_CHECK_SELECTORS),
@@ -229,6 +238,24 @@ def _resolve_config(url: str, config: dict | None, username: str = "") -> dict:
     return _normalize_config(resolved)
 
 
+def _is_redirect_loop_exception(exc) -> bool:
+    """True for redirect-loop errors from either the requests or curl_cffi engine.
+
+    curl_cffi 抛自己的 TooManyRedirects（与 requests 的不兼容、也不是
+    requests.RequestException 子类），此前会落进通用 except 被当传输错误
+    → FAILED，与 requests 引擎下判 DEAD "redirect loop" 不一致。这里统一识别。
+    """
+    if isinstance(exc, requests.exceptions.TooManyRedirects):
+        return True
+    try:
+        from curl_cffi.requests.exceptions import (
+            TooManyRedirects as _CurlTooManyRedirects,
+        )
+    except ImportError:
+        return False
+    return isinstance(exc, _CurlTooManyRedirects)
+
+
 def _head_probe(url: str, config: dict, timeout: float):
     """HEAD 探测。返回 (status_code, final_url, duration_ms)；网络异常或状态不可信返回 None。
 
@@ -314,6 +341,10 @@ def _get_probe(url: str, config: dict, need_content: bool, timeout: float):
     except requests.exceptions.TooManyRedirects:
         raise
     except Exception as exc:
+        # curl_cffi 抛自己的 TooManyRedirects（与 requests 不兼容），统一按
+        # redirect-loop 语义向上抛，避免落进传输错误分支 → FAILED
+        if _is_redirect_loop_exception(exc):
+            raise
         # _open_http_stream 内部已把 curl_cffi 传输失败回退到 requests；
         # 此处兜底捕获 curl_cffi 的独立异常类型（与 requests 不兼容）
         if not _is_transport_exception(exc):
@@ -334,7 +365,7 @@ def _fetch(url: str, config: dict):
     `probes` 记录各分段（HEAD / GET）的状态、终址与耗时，供测试看板
     与书签详情展示；未执行的分段为 None。
 
-    超时：L1 HEAD 用 `probe_timeout`（默认 5s），L2 GET 用 `content_timeout`
+    超时：L1 HEAD 用 `probe_timeout`（默认 3s），L2 GET 用 `content_timeout`
     （默认 30s），两者独立。
 
     - probe_enabled=False：跳过 HEAD，直接 GET（GET 拿满总预算）。
@@ -345,7 +376,7 @@ def _fetch(url: str, config: dict):
     probe_enabled = config.get("probe_enabled", True)
     accept = set(config.get("accept_status", DEFAULT_ACCEPT_STATUS))
     blocked = set(config.get("blocked_status", DEFAULT_BLOCKED_STATUS))
-    probe_timeout = config.get("probe_timeout", 5)
+    probe_timeout = config.get("probe_timeout", 3)
     content_timeout = config.get("content_timeout", 30)
 
     domain = get_registrable_domain(url)
@@ -387,10 +418,19 @@ def _fetch(url: str, config: dict):
                 return head_status, head_final_url, None, probes
             # 需要正文：继续 GET
 
-    # GET 探针使用 L2 独立超时
-    get_status, get_final_url, content, get_duration = _get_probe(
-        url, config, need_content=check_content, timeout=content_timeout
-    )
+    # GET 探针使用 L2 独立超时。
+    # 5xx 与传输错误（get_status is None）做一次短退避重试：metadata 链路对
+    # RetryableMetadataError 有指数退避，health 此前零重试，瞬时服务端抖动会被
+    # 直接计入 DEAD/FAILED 统计。这里轻量重试一次（~1s），保持返回结构不变。
+    get_status = get_final_url = content = get_duration = None
+    for attempt in range(2):
+        get_status, get_final_url, content, get_duration = _get_probe(
+            url, config, need_content=check_content, timeout=content_timeout
+        )
+        transient = get_status is None or 500 <= get_status < 600
+        if not transient or attempt == 1:
+            break
+        time.sleep(1.0)
     if get_status is not None:
         probes["get"] = {
             "status": get_status,
@@ -404,6 +444,8 @@ def _fetch(url: str, config: dict):
 
 _profile_domain_last_request: dict[str, float] = {}
 _profile_domain_rate_lock = threading.Lock()
+# 与 website_loader 全局限流器对齐：防止无界增长
+_PROFILE_DOMAIN_RATE_MAX_SIZE = 1000
 
 
 def _wait_for_domain_with_interval(domain: str, interval: float):
@@ -414,6 +456,9 @@ def _wait_for_domain_with_interval(domain: str, interval: float):
 
     wait = 0.0
     with _profile_domain_rate_lock:
+        # 与全局 _wait_for_domain 一致：超限清空，防止 dict 无界增长
+        if len(_profile_domain_last_request) >= _PROFILE_DOMAIN_RATE_MAX_SIZE:
+            _profile_domain_last_request.clear()
         now = _time.monotonic()
         last = _profile_domain_last_request.get(domain, 0)
         wait = interval - (now - last)
@@ -429,9 +474,14 @@ def _decode_text(content: bytes | None) -> str:
     if not content:
         return ""
     try:
-        return content.decode("utf-8", errors="replace")
-    except Exception:
-        return ""
+        # 与 metadata 链路同源：用 charset_normalizer 探测编码，避免 GBK/GB2312
+        # 老站被硬编码 utf-8(errors=replace) 解成乱码后 L2 中文关键词信号静默失效。
+        match = from_bytes(content).best()
+        if match is not None:
+            return str(match)
+    except Exception as exc:
+        logger.debug("charset detection failed: %s", exc)
+    return content.decode("utf-8", errors="replace")
 
 
 def _content_signals(html: str, config: dict) -> list[dict]:
@@ -709,24 +759,27 @@ def _check_url(url: str, resolved_config: dict) -> dict:
 
     try:
         status, final_url, content, probes = _fetch(url, resolved_config)
-    except requests.exceptions.TooManyRedirects:
-        result.update(
-            {
-                "status": HEALTH_STATUS_DEAD,
-                "reason": "redirect loop",
-                "duration_ms": int((time.monotonic() - start) * 1000),
-            }
-        )
-        return result
-    except requests.RequestException as exc:
-        result.update(
-            {
-                "status": HEALTH_STATUS_FAILED,
-                "reason": f"request failed: {exc}",
-                "duration_ms": int((time.monotonic() - start) * 1000),
-            }
-        )
-        return result
+    except Exception as exc:
+        # requests 与 curl_cffi 引擎的重定向环统一 → DEAD "redirect loop"
+        if _is_redirect_loop_exception(exc):
+            result.update(
+                {
+                    "status": HEALTH_STATUS_DEAD,
+                    "reason": "redirect loop",
+                    "duration_ms": int((time.monotonic() - start) * 1000),
+                }
+            )
+            return result
+        if isinstance(exc, requests.RequestException):
+            result.update(
+                {
+                    "status": HEALTH_STATUS_FAILED,
+                    "reason": f"request failed: {exc}",
+                    "duration_ms": int((time.monotonic() - start) * 1000),
+                }
+            )
+            return result
+        raise
 
     result["http_status"] = status
     result["probes"] = probes
