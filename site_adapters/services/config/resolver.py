@@ -443,6 +443,15 @@ def _build_section_config(full_config: dict, section: str, base_dir: str, userna
 
     elif section == 'health':
         result['health_enabled'] = section_data.get('enabled', True)
+        # Health 判定字段透传：health_checker._normalize_config 同时支持
+        # 嵌套（http_head_probe.* / content_check.*）与扁平键。此前仅
+        # 输出 health_enabled，导致 health 段配置的判定字段被丢弃。
+        for key in ('http_head_probe', 'content_check', 'accept_status', 'blocked_status',
+                    'blocked_location_patterns', 'check_content', 'max_content_limit',
+                    'content_timeout', 'check_selectors', 'valid_selectors', 'valid_patterns',
+                    'invalid_selectors', 'invalid_patterns'):
+            if key in section_data:
+                result[key] = section_data[key]
 
     # URL processing
     url = full_config.get('_url', '')

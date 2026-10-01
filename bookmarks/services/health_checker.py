@@ -31,6 +31,8 @@ from bookmarks.models import (
     CheckJob,
 )
 from bookmarks.services.website_loader import (
+    _is_transport_exception,
+    _open_http_stream,
     _record_domain_request,
     _wait_for_domain,
     build_request_cookies,
@@ -147,6 +149,11 @@ def _normalize_config(raw: dict | None) -> dict:
         "_request_url",
         "_adapter",
         "_domain_key",
+        # 凭据/引擎相关：供 _maybe_acquire_cookie 预取与 _http_module 分发
+        "cookie",
+        "http_engine",
+        "_effective_cookie_scope",
+        "_user_cookie",
     ):
         if raw.get(key) is not None:
             out[key] = raw[key]
@@ -218,6 +225,19 @@ def _resolve_config(url: str, config: dict | None, username: str = "") -> dict:
     return _normalize_config(resolved)
 
 
+def _http_module(config: dict):
+    """HTTP 客户端模块：适配器指定 curl_cffi 时用 TLS 指纹模拟客户端（如知乎）。
+
+    health 探测默认走标准 requests；对依赖 TLS 指纹的风控站点
+    （普通 requests 恒 403），配置 http_engine=curl_cffi 即可切换。
+    """
+    if config.get("http_engine") == "curl_cffi":
+        from curl_cffi import requests as chttp
+        return chttp
+    import requests
+    return requests
+
+
 def _request_kwargs(config: dict, timeout: float | None = None) -> dict:
     kwargs = {
         "allow_redirects": True,
@@ -228,6 +248,10 @@ def _request_kwargs(config: dict, timeout: float | None = None) -> dict:
     proxy = config.get("proxy")
     if proxy:
         kwargs["proxies"] = proxy
+    # curl_cffi 引擎必须带 impersonate（Chrome TLS 指纹），否则风控站点
+    # （如知乎）识别出非浏览器指纹，与 metadata 链路行为不一致
+    if config.get("http_engine") == "curl_cffi":
+        kwargs["impersonate"] = "chrome"
     return kwargs
 
 
@@ -241,13 +265,15 @@ def _head_probe(url: str, config: dict, timeout: float):
     try:
         kwargs = _request_kwargs(config, timeout=timeout)
         probe_url = config.get("_request_url") or url
-        response = requests.head(probe_url, **{**kwargs, "stream": True})
+        response = _http_module(config).head(probe_url, **{**kwargs, "stream": True})
         status = response.status_code
         duration_ms = int((time.monotonic() - start) * 1000)
         if status in _HEAD_UNRELIABLE_STATUS:
             return None
         return status, response.url or probe_url, duration_ms
-    except requests.RequestException as exc:
+    except Exception as exc:
+        if not _is_transport_exception(exc):
+            raise
         logger.debug("HEAD probe failed for %s: %s", url, exc)
         return None
 
@@ -263,33 +289,51 @@ def _get_probe(url: str, config: dict, need_content: bool, timeout: float):
     max_bytes = config.get("max_content_limit", DEFAULT_MAX_CONTENT_BYTES)
     target = config.get("_request_url") or url
     accept = set(config.get("accept_status", DEFAULT_ACCEPT_STATUS))
+    response = None
     try:
-        with requests.get(
-            target, stream=True, **_request_kwargs(config, timeout=timeout)
-        ) as response:
-            status = response.status_code
-            final_url = response.url or target
-            # 只有 2xx 成功页才需要读 body 扫内容信号；
-            # 4xx/5xx 的状态码已定性，body 无价值，完全不读
-            if need_content and status in accept:
-                read_limit = max_bytes
-                size = 0
-                chunks = []
-                for chunk in response.iter_content(chunk_size=32 * 1024):
-                    size += len(chunk)
-                    chunks.append(chunk)
-                    if size >= read_limit:
-                        break
-                content = b"".join(chunks)[:read_limit]
-            else:
-                content = b""
-            duration_ms = int((time.monotonic() - start) * 1000)
-            return status, final_url, content, duration_ms
+        # 与 metadata 链路完全同源：curl_cffi + impersonate="chrome" + UA 策略
+        # （否则 TLS 指纹非 Chrome，风控站点如知乎会拦截/重定向）
+        response = _open_http_stream(
+            target,
+            timeout=timeout,
+            headers=build_request_headers(config),
+            cookies=build_request_cookies(config),
+            proxies=config.get("proxy"),
+            config=config,
+        )
+        status = response.status_code
+        final_url = response.url or target
+        # 只有 2xx 成功页才需要读 body 扫内容信号；
+        # 4xx/5xx 的状态码已定性，body 无价值，完全不读
+        if need_content and status in accept:
+            read_limit = max_bytes
+            size = 0
+            chunks = []
+            for chunk in response.iter_content(chunk_size=32 * 1024):
+                size += len(chunk)
+                chunks.append(chunk)
+                if size >= read_limit:
+                    break
+            content = b"".join(chunks)[:read_limit]
+        else:
+            content = b""
+        duration_ms = int((time.monotonic() - start) * 1000)
+        return status, final_url, content, duration_ms
     except requests.exceptions.TooManyRedirects:
         raise
-    except requests.RequestException as exc:
+    except Exception as exc:
+        # _open_http_stream 内部已把 curl_cffi 传输失败回退到 requests；
+        # 此处兜底捕获 curl_cffi 的独立异常类型（与 requests 不兼容）
+        if not _is_transport_exception(exc):
+            raise
         logger.debug("GET probe failed for %s: %s", url, exc)
         return None, None, None, None
+    finally:
+        if response is not None:
+            try:
+                response.close()
+            except Exception:
+                pass
 
 
 def _fetch(url: str, config: dict):
@@ -483,11 +527,115 @@ def check_url(url: str, config: dict | None = None, username: str = "") -> dict:
 
     返回的 `status` 为五类判定之一；若该域名的适配器设置 `health.enabled=false`，
     返回 `skipped=True` 且 `status=None`，调用方应把书签标记为未检查（unknown）。
+
+    与 metadata 一致，命中反爬信号（401/403、人机验证重定向）时自动刷新
+    cookie 并重试一次，避免把风控拦截误判为页面真实状态。
     """
     resolved_config = _resolve_config(url, config, username)
+    _maybe_acquire_cookie(url, resolved_config, username)
     result = _check_url(url, resolved_config)
+    if _is_anti_bot_retryable(url, resolved_config, result):
+        new_cookie = _refresh_and_retry(url, resolved_config, username)
+        if new_cookie:
+            resolved_config["_user_cookie"] = new_cookie
+            result = _check_url(url, resolved_config)
     _apply_custom_reason(result, resolved_config)
     return result
+
+
+def _is_anti_bot_retryable(url: str, config: dict, result: dict) -> bool:
+    """判定结果是否命中"可刷新"的反爬信号。
+
+    仅当配置声明了 auto/login cookie 且带 refresh 时才允许重试，
+    避免对真实不可访问（dead/404）或真实 missing 页面做无谓刷新。
+    """
+    from urllib.parse import urlparse
+    from site_adapters.services.auth.cookies import _should_refresh_cookie
+
+    cookie_config = config.get("cookie") or {}
+    if not cookie_config or not _should_refresh_cookie(cookie_config):
+        return False
+    if result.get("http_status") in (401, 403):
+        return True
+    # 重定向到人机验证/登录类地址（与 verify 的 location 检测对齐）
+    redirect_url = result.get("redirect_url")
+    if redirect_url:
+        location_patterns = (
+            cookie_config.get("verify", {})
+            .get("http_head_probe", {})
+            .get("invalid_location_patterns", [])
+        ) or ["/login", "/signin", "/auth", "/passport", "/accounts",
+              "/account/unhuman", "/unhuman"]
+        for pattern in location_patterns:
+            try:
+                if re.search(pattern, redirect_url, re.IGNORECASE):
+                    return True
+            except re.error:
+                continue
+    return False
+
+
+def _refresh_and_retry(url: str, config: dict, username: str) -> str | None:
+    """风控信号触发 cookie 强制刷新，返回新 cookie（失败返回 None）。"""
+    from site_adapters.services.auth.cookies import verify_and_refresh
+
+    domain_key = config.get("_domain_key")
+    if not domain_key:
+        return None
+    scope = config.get("_effective_cookie_scope", "")
+    cookie_config = config.get("cookie") or {}
+    return verify_and_refresh(
+        cookie_config=cookie_config,
+        url=url,
+        domain_key=domain_key,
+        verify_context={"url": url, "status": 0,
+                        "title": "", "body_preview": ""},
+        username=username,
+        scope=scope,
+        force_refresh=True,
+    )
+
+
+def _maybe_acquire_cookie(url: str, config: dict, username: str) -> None:
+    """Health 检查前的 auto cookie 预取。
+
+    适配器声明了 auto cookie 且当前 scope 无任何凭据时，用浏览器
+    刷新获取并缓存；已有凭据（auto 或手动）则直接使用，不重复刷新。
+    刷新结果写入 config["_user_cookie"]，随请求携带。
+    """
+    from urllib.parse import urlparse
+
+    from site_adapters.services.auth.credentials import get_shared_cookie
+    from site_adapters.services.auth.cookies import (
+        _should_refresh_cookie,
+        verify_and_refresh,
+    )
+
+    cookie_config = config.get("cookie") or {}
+    if not cookie_config or cookie_config.get("type") != "auto":
+        return
+    if not cookie_config.get("refresh"):
+        return
+    domain_key = config.get("_domain_key")
+    if not domain_key:
+        return
+    scope = config.get("_effective_cookie_scope", "")
+    hostname = urlparse(url).hostname or domain_key
+    existing, _ = get_shared_cookie(hostname=hostname, scope=scope)
+    if existing:
+        return
+    if not _should_refresh_cookie(cookie_config):
+        return
+    new_cookie = verify_and_refresh(
+        cookie_config=cookie_config,
+        url=url,
+        domain_key=domain_key,
+        verify_context={"url": url, "status": 0, "title": "", "body_preview": ""},
+        username=username,
+        scope=scope,
+    )
+    if new_cookie:
+        config["_user_cookie"] = new_cookie
 
 
 def _apply_custom_reason(result: dict, resolved_config: dict) -> None:

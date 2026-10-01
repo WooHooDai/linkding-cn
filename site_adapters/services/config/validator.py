@@ -203,6 +203,12 @@ def classify_field(section: str, key: str) -> str:
     fields = _SECTION_FIELDS.get(section, set())
     if key in fields:
         return "field"
+    # Nested container keys (e.g. `http_head_probe`, `content_check`) are
+    # declared in the schema with dotted paths (`http_head_probe.enabled`),
+    # so the bare top-level key must be recognized as a known container.
+    prefix = key + "."
+    if any(f.startswith(prefix) for f in fields):
+        return "field"
     return "unknown"
 
 
@@ -234,9 +240,8 @@ def separate_http_fields(data: dict) -> tuple[dict, dict]:
 def validate_section_fields(section: str, data: dict) -> list[dict]:
     """Validate section fields, return issues. Unknown fields are discarded."""
     issues = []
-    fields = _SECTION_FIELDS.get(section, set())
     for key in data:
-        if key not in fields:
+        if classify_field(section, key) != "field":
             issues.append(_issue('warning', 'unknown_field', f"{section}.{key} is unknown, discarded"))
     return issues
 
