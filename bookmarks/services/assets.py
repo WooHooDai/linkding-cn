@@ -84,31 +84,35 @@ def _create_html_snapshot(asset: BookmarkAsset, username: str = ''):
     # Create snapshot into temporary file
     temp_filename = _generate_asset_filename(asset, asset.bookmark.url, "tmp")
     temp_filepath = os.path.join(settings.LD_ASSET_FOLDER, temp_filename)
-    snapshot_processor.create_snapshot(asset.bookmark.url, temp_filepath, username=username)
+    try:
+        snapshot_processor.create_snapshot(asset.bookmark.url, temp_filepath, username=username)
 
-    # Store as gzip in asset folder
-    filename = _generate_asset_filename(asset, asset.bookmark.url, "html.gz")
-    filepath = os.path.join(settings.LD_ASSET_FOLDER, filename)
-    with open(temp_filepath, "rb") as temp_file, gzip.open(filepath, "wb") as gz_file:
-        shutil.copyfileobj(temp_file, gz_file)
+        # Store as gzip in asset folder
+        filename = _generate_asset_filename(asset, asset.bookmark.url, "html.gz")
+        filepath = os.path.join(settings.LD_ASSET_FOLDER, filename)
+        with open(temp_filepath, "rb") as temp_file, gzip.open(filepath, "wb") as gz_file:
+            shutil.copyfileobj(temp_file, gz_file)
 
-    # Remove temporary file
-    os.remove(temp_filepath)
+        # Remove temporary file
+        os.remove(temp_filepath)
 
-    timestamp = _format_asset_timestamp(asset.date_created)
+        timestamp = _format_asset_timestamp(asset.date_created)
 
-    asset.status = BookmarkAsset.STATUS_COMPLETE
-    asset.content_type = BookmarkAsset.CONTENT_TYPE_HTML
-    asset.display_name = _("HTML snapshot from %(timestamp)s") % {
-        "timestamp": timestamp
-    }
-    asset.file = filename
-    asset.gzip = True
-    asset.save()
+        asset.status = BookmarkAsset.STATUS_COMPLETE
+        asset.content_type = BookmarkAsset.CONTENT_TYPE_HTML
+        asset.display_name = _("HTML snapshot from %(timestamp)s") % {
+            "timestamp": timestamp
+        }
+        asset.file = filename
+        asset.gzip = True
+        asset.save()
 
-    asset.bookmark.latest_snapshot = asset
-    asset.bookmark.date_modified = timezone.now()
-    _save_bookmark_updates(asset.bookmark, ["latest_snapshot", "date_modified"])
+        asset.bookmark.latest_snapshot = asset
+        asset.bookmark.date_modified = timezone.now()
+        _save_bookmark_updates(asset.bookmark, ["latest_snapshot", "date_modified"])
+    finally:
+        if os.path.exists(temp_filepath):
+            os.remove(temp_filepath)
 
 
 def _create_pdf_snapshot(asset: BookmarkAsset):
@@ -195,35 +199,39 @@ def _create_data_snapshot(
 
     temp_filename = _generate_asset_filename(asset, url, "tmp")
     temp_filepath = os.path.join(settings.LD_ASSET_FOLDER, temp_filename)
-    snapshot_processor.create_snapshot(
-        url,
-        temp_filepath,
-        username=username,
-        content_type=content_type,
-    )
+    try:
+        snapshot_processor.create_snapshot(
+            url,
+            temp_filepath,
+            username=username,
+            content_type=content_type,
+        )
 
-    filename = _generate_asset_filename(asset, url, f"{extension}.gz")
-    filepath = os.path.join(settings.LD_ASSET_FOLDER, filename)
-    with open(temp_filepath, "rb") as temp_file, gzip.open(filepath, "wb") as gz_file:
-        shutil.copyfileobj(temp_file, gz_file)
-    os.remove(temp_filepath)
+        filename = _generate_asset_filename(asset, url, f"{extension}.gz")
+        filepath = os.path.join(settings.LD_ASSET_FOLDER, filename)
+        with open(temp_filepath, "rb") as temp_file, gzip.open(filepath, "wb") as gz_file:
+            shutil.copyfileobj(temp_file, gz_file)
+        os.remove(temp_filepath)
 
-    timestamp = _format_asset_timestamp(asset.date_created)
-    label = "JSON" if content_type == "json" else "XML"
+        timestamp = _format_asset_timestamp(asset.date_created)
+        label = "JSON" if content_type == "json" else "XML"
 
-    asset.status = BookmarkAsset.STATUS_COMPLETE
-    asset.content_type = mime_type
-    asset.display_name = _("%(label)s snapshot from %(timestamp)s") % {
-        "label": label,
-        "timestamp": timestamp,
-    }
-    asset.file = filename
-    asset.gzip = True
-    asset.save()
+        asset.status = BookmarkAsset.STATUS_COMPLETE
+        asset.content_type = mime_type
+        asset.display_name = _("%(label)s snapshot from %(timestamp)s") % {
+            "label": label,
+            "timestamp": timestamp,
+        }
+        asset.file = filename
+        asset.gzip = True
+        asset.save()
 
-    asset.bookmark.latest_snapshot = asset
-    asset.bookmark.date_modified = timezone.now()
-    _save_bookmark_updates(asset.bookmark, ["latest_snapshot", "date_modified"])
+        asset.bookmark.latest_snapshot = asset
+        asset.bookmark.date_modified = timezone.now()
+        _save_bookmark_updates(asset.bookmark, ["latest_snapshot", "date_modified"])
+    finally:
+        if os.path.exists(temp_filepath):
+            os.remove(temp_filepath)
 
 
 def upload_snapshot(bookmark: Bookmark, html: bytes):

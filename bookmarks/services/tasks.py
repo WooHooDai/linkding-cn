@@ -55,6 +55,11 @@ PRIORITY_PREVIEW = 10
 NON_URGENT_MAX_CONCURRENCY = 3
 _non_urgent_slots = threading.BoundedSemaphore(NON_URGENT_MAX_CONCURRENCY)
 
+# SingleFile does not support running multiple snapshot captures in parallel.
+# Temporary snapshots (adapter snapshot.enabled=false) bypass the dispatcher,
+# so serialize in-process create_snapshot calls with this lock.
+_TEMPORARY_SNAPSHOT_LOCK = threading.RLock()
+
 
 def acquire_non_urgent_slot() -> bool:
     return _non_urgent_slots.acquire(blocking=False)
@@ -1400,7 +1405,8 @@ def _create_temporary_snapshot(
         ) as tmp:
             tmp_path = tmp.name
 
-        create_snapshot(url, tmp_path, username=username)
+        with _TEMPORARY_SNAPSHOT_LOCK:
+            create_snapshot(url, tmp_path, username=username)
         with open(tmp_path, encoding='utf-8') as f:
             raw_content = f.read()
         content_type = (
