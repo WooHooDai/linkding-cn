@@ -268,6 +268,13 @@ def _build_site_adapter_options(url: str, config: dict) -> tuple[list[str], list
         if value is None or name.lower() == "cookie":
             continue
         if name.lower() == "user-agent":
+            # 仅显式配置的 UA 注入快照浏览器；默认无 UA 时使用引擎自身 UA
+            # （全局 UA 与运行引擎平台失配会被反爬站点拦截）。
+            # 延迟导入避免 engine → singlefile → website_loader 循环导入。
+            from bookmarks.services.website_loader import _has_explicit_user_agent
+
+            if not _has_explicit_user_agent(config):
+                continue
             options.append(f"--user-agent={value}")
         else:
             options.append(f"--http-header={name}: {value}")
@@ -304,13 +311,34 @@ def _build_site_adapter_options(url: str, config: dict) -> tuple[list[str], list
     return options, temp_files
 
 
+def _strip_user_agent(options: list[str]) -> list[str]:
+    """剔除框架级选项（env）中的 --user-agent。
+
+    全局 UA 无法匹配运行环境引擎，注入会导致反爬站点拦截快照；
+    UA 只允许来自适配器显式配置，或由浏览器使用引擎自身 UA。
+    """
+    out = []
+    i = 0
+    while i < len(options):
+        opt = options[i]
+        if opt.startswith("--user-agent"):
+            # 支持 --user-agent=VALUE 与 --user-agent VALUE 两种形式
+            if "=" not in opt:
+                i += 1  # 跳过值 token
+            i += 1
+            continue
+        out.append(opt)
+        i += 1
+    return out
+
+
 def create_snapshot(url: str, filepath: str, config: dict = None):
     singlefile_path = settings.LD_SINGLEFILE_PATH
 
     custom_options = get_custom_options(config)
     injected_options, temp_files = _build_site_adapter_options(url, config)
-    global_options = shlex.split(settings.LD_SINGLEFILE_OPTIONS)
-    ublock_options = shlex.split(settings.LD_SINGLEFILE_UBLOCK_OPTIONS)
+    global_options = _strip_user_agent(shlex.split(settings.LD_SINGLEFILE_OPTIONS))
+    ublock_options = _strip_user_agent(shlex.split(settings.LD_SINGLEFILE_UBLOCK_OPTIONS))
     required_options = [
         # see the field `_builtin.snapshot.single_args` in `site_adapters/services/config/adapters/defaults/adapters.jsonc`
     ]

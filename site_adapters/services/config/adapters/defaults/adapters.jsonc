@@ -7,11 +7,13 @@
   "_builtin": {
     // The _builtin section is regenerated and overwritten on every service restart.
     // To add or override fields, define them in the _builtin_overrides section below.
+    // No global default User-Agent: a static UA cannot match the runtime browser
+    // engine or the curl_cffi Chrome TLS fingerprint, and may trigger anti-bot
+    // blocks. Set a per-site UA explicitly in the adapter's http/headers when
+    // needed; otherwise the engine UA (snapshot) or the built-in default UA
+    // (requests) applies.
     "defaults": {
-      "timeout": 30,
-      "http": {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0"
-      }
+      "timeout": 30
     },
     "metadata": {
       "load_full_page": true,   // Stream the full page content
@@ -75,6 +77,10 @@
       "max_content_limit": 1048576 // 1MB
     }
   },
+  // User overrides for the _builtin baseline (merged on top of it).
+  // NOTE: do not set a global User-Agent here — it cannot match the runtime
+  // browser engine / TLS fingerprint and may trigger anti-bot blocks.
+  // Configure a UA per site in the adapter's http/headers instead.
   "_builtin_overrides": {},
   "defaults": {},
   "domains": {}

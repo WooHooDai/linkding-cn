@@ -71,24 +71,13 @@ def _is_transport_exception(exc) -> bool:
 
 
 def _has_explicit_user_agent(config) -> bool:
-    """True when the site adapter explicitly configures a User-Agent.
+    """True when the merged config carries an explicit User-Agent.
 
-    Only explicit configs (in the adapter's http/headers, visible in the raw
-    merged config) should override the impersonated Chrome UA; the _builtin
-    global default UA (Edge) would otherwise conflict with the Chrome TLS
-    fingerprint and get rejected by fingerprint-checking sites.
+    The _builtin baseline provides no default UA anymore, so any UA in the
+    merged headers comes from an explicit site adapter (domain config or
+    _builtin_overrides) and must be honored.
     """
-    raw = (config or {}).get("_raw") or {}
-    for section in ("defaults", "metadata", "snapshot", "reader"):
-        sec = raw.get(section)
-        if isinstance(sec, dict):
-            h = sec.get("http") or sec.get("headers")
-            if isinstance(h, dict) and h.get("User-Agent"):
-                return True
-    h = raw.get("http") or raw.get("headers")
-    if isinstance(h, dict) and h.get("User-Agent"):
-        return True
-    return False
+    return bool((config or {}).get("headers", {}).get("User-Agent"))
 
 
 def _open_http_stream(url: str, timeout, headers, cookies, proxies, config=None,
@@ -131,6 +120,12 @@ def _open_http_stream(url: str, timeout, headers, cookies, proxies, config=None,
                 url, exc,
             )
     sender = getattr(requests, method.lower())
+    # requests 引擎无 TLS 指纹伪装：非显式 UA 回落内置默认；显式 UA 保留。
+    if not _has_explicit_user_agent(config):
+        headers = {
+            k: v for k, v in (headers or {}).items() if k.lower() != "user-agent"
+        }
+        headers["User-Agent"] = settings.LD_DEFAULT_USER_AGENT
     resp = sender(
         url,
         timeout=timeout,
