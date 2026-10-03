@@ -123,13 +123,22 @@ CMD ["./bootstrap.sh"]
 
 FROM linkding AS linkding-plus
 LABEL io.github.woohoodai.linkding.variant="plus"
-# Upgrade this pin deliberately, together with browser smoke tests.
-ARG CHROMIUM_VERSION=154.0.8037.57-1~deb12u1
+# Chromium 仅存在于 bookworm-security，且每次安全更新都会把上一版本从仓库移除，
+# 因此精确固定版本必然周期性失效。默认（latest）安装仓库当前候选版本，构建不会
+# 因版本下架而失败，实际安装版本记录在 os-packages.tsv；需要临时固定（如浏览器
+# 回归对照）时用 --build-arg CHROMIUM_VERSION=当前仓库中的可用版本 传入。
+ARG CHROMIUM_VERSION=latest
 RUN --mount=type=cache,id=apt-cache-${TARGETARCH},target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=apt-lists-${TARGETARCH},target=/var/lib/apt/lists,sharing=locked \
-    apt-get update && apt-get install -y --no-install-recommends \
-        chromium="${CHROMIUM_VERSION}" chromium-common="${CHROMIUM_VERSION}" \
-        chromium-sandbox="${CHROMIUM_VERSION}" fonts-liberation fonts-wqy-zenhei && \
+    apt-get update && \
+    if [ "$CHROMIUM_VERSION" = "latest" ]; then \
+        apt-get install -y --no-install-recommends \
+            chromium chromium-common chromium-sandbox fonts-liberation fonts-wqy-zenhei; \
+    else \
+        apt-get install -y --no-install-recommends \
+            chromium="${CHROMIUM_VERSION}" chromium-common="${CHROMIUM_VERSION}" \
+            chromium-sandbox="${CHROMIUM_VERSION}" fonts-liberation fonts-wqy-zenhei; \
+    fi && \
     dpkg-query -W -f='${binary:Package}\t${Version}\n' > /usr/share/linkding/os-packages.tsv
 COPY --from=browser-deps /etc/linkding/.venv .venv/
 COPY --chown=www-data:www-data --from=ublock-build /etc/linkding/uBOLite.chromium.mv3 uBOLite.chromium.mv3/
