@@ -1,0 +1,4 @@
+img.favicon,
+img.info-favicon {
+  object-fit: contain;
+}
