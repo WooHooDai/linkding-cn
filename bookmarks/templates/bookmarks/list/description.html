@@ -1,0 +1,28 @@
+{% if bookmark_list.description_display == 'inline' %}
+  <div class="description inline">
+    <div class="description-container truncate">
+      {% if bookmark_item.tags %}
+        <span class="tags">
+          {% for tag in bookmark_item.tags %}<a href="{{ tag.query_string }}">{{ tag.name }}</a>{% endfor %}
+        </span>
+      {% endif %}
+      {% if bookmark_item.tags and bookmark_item.description %}<span class="description-separator"> | </span>{% endif %}
+      {% if bookmark_item.description %}
+        <span class="description-text">{{ bookmark_item.description }}</span>
+      {% endif %}
+    </div>
+  </div>
+{% else %}
+  <div class="description">
+    <div class="description-container separate">
+      {% if bookmark_item.description %}
+        <span class="description-text">{{ bookmark_item.description }}</span>
+      {% endif %}
+    </div>
+  </div>
+  {% if bookmark_item.tags %}
+    <div class="tags">
+      {% for tag in bookmark_item.tags %}<a href="{{ tag.query_string }}">{{ tag.name }}</a>{% endfor %}
+    </div>
+  {% endif %}
+{% endif %}

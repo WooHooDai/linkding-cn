@@ -1,0 +1,8 @@
+{% if bookmark_list.show_url %}
+  <div class="url-path truncate">
+    <a href="{{ bookmark_item.url }}" target="{{ bookmark_list.link_target }}" rel="noopener"
+       class="url-display">
+      {{ bookmark_item.url }}
+    </a>
+  </div>
+{% endif %}

@@ -1,0 +1,7 @@
+{% load shared %}
+{% if bookmark_item.notes %}
+  <div class="inline-edit inline-edit-notes">
+    <div class="markdown">{% markdown bookmark_item.notes %}</div>
+    <textarea class="inline-edit-textarea" style="display:none;">{{ bookmark_item.notes }}</textarea>
+  </div>
+{% endif %}
