@@ -14,8 +14,12 @@
         <h1 id="main-heading">{% translate "Shared bookmarks" %}</h1>
         <div class="header-controls">
           {% bookmark_search bookmark_list.search mode='shared' %}
-          {% random_sort bookmark_list.search %}
+          <div class="hc-wide header-controls-wide">
+            {% random_sort bookmark_list.search %}
+            {% include 'bookmarks/header/layout_menu.html' %}
+          </div>
           {% include 'bookmarks/sidebar/components/toggle_button.html' %}
+          {% include 'bookmarks/header/more_menu.html' with show_bulk=False show_random=True %}
         </div>
       </div>
 

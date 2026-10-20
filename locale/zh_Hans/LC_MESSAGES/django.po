@@ -1373,6 +1373,14 @@ msgstr "批量编辑"
 msgid "Random sort"
 msgstr "随机排序"
 
+#: bookmarks/templates/bookmarks/header/more_menu.html
+msgid "More options"
+msgstr "更多选项"
+
+#: bookmarks/templates/bookmarks/header/layout_menu.html
+msgid "Layout"
+msgstr "布局"
+
 #: bookmarks/templates/bookmarks/highlights/index.html:207
 #, python-format
 msgid "%(total)s highlights, %(notes)s annotations, across %(bms)s bookmarks"

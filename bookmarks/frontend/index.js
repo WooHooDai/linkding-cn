@@ -18,6 +18,7 @@ import "./components/details-modal.js";
 import "./components/health.js";
 import "./components/health-job-progress.js";
 import "./components/dropdown.js";
+import "./components/header-more.js";
 import "./components/favicon-contrast.js";
 
 import "./components/form.js";

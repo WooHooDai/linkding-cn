@@ -14,9 +14,13 @@
         <h1 id="main-heading">{% translate "Trash" %}<span id="bookmark-list-total">({{ bookmark_list.bookmarks_total }})</span></h1>
         <div class="header-controls">
           {% bookmark_search bookmark_list.search mode='trash' %}
-          {% include 'bookmarks/bulk_edit/toggle.html' %}
-          {% random_sort bookmark_list.search %}
+          <div class="hc-wide header-controls-wide">
+            {% include 'bookmarks/bulk_edit/toggle.html' %}
+            {% random_sort bookmark_list.search %}
+            {% include 'bookmarks/header/layout_menu.html' %}
+          </div>
           {% include 'bookmarks/sidebar/components/toggle_button.html' %}
+          {% include 'bookmarks/header/more_menu.html' with show_bulk=True show_random=True %}
         </div>
       </div>
 

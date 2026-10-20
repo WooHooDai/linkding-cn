@@ -285,6 +285,160 @@
   }
 }
 
+/* Section header toolbar: search + action buttons + layout/sidebar, one gap system */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--unit-2);
+  min-width: 0;
+}
+
+/* 间距统一由 gap 控制，清除按钮/下拉上残留的 ml-* 工具类 */
+.header-controls > *,
+.header-controls ld-dropdown {
+  margin-left: 0;
+}
+
+#bookmark-search-container {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.header-controls-wide {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: var(--unit-2);
+}
+
+.header-more {
+  display: none;
+  flex: 0 0 auto;
+}
+
+.menu.header-more-panel {
+  display: none;
+  width: 260px;
+  min-width: 260px;
+  padding: var(--unit-2) 0;
+  flex-direction: column;
+}
+
+.dropdown.active .menu.header-more-panel {
+  display: flex;
+}
+
+.header-menu-divider {
+  height: 1px;
+  background: var(--menu-border-color);
+  margin: var(--unit-2) var(--unit-4);
+}
+
+.header-prefs-group {
+  display: flex;
+  flex-direction: column;
+  padding: var(--unit-1) 0;
+}
+
+.header-pref-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  align-items: center;
+  gap: var(--unit-3);
+  padding: var(--unit-1) var(--unit-4);
+}
+
+.header-pref-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-pref-control {
+  width: 120px;
+  height: var(--control-size-sm);
+  padding-block: 0;
+  line-height: var(--control-size-sm);
+  justify-self: end;
+}
+
+.header-action-btn {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-size-sm);
+  height: var(--control-size-sm);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius);
+  background: transparent;
+  color: var(--menu-item-color);
+  cursor: pointer;
+
+  &:hover,
+  &:active {
+    background: var(--menu-item-hover-bg-color);
+    color: var(--menu-item-hover-color);
+  }
+}
+
+.header-pref-switch {
+  --checkbox-checked-bg-color: color-mix(
+    in srgb,
+    var(--primary-color) 70%,
+    var(--body-color-contrast)
+  );
+  --switch-bg-color: color-mix(
+    in srgb,
+    var(--body-color-contrast) 84%,
+    var(--body-color)
+  );
+  --switch-border-color: color-mix(
+    in srgb,
+    var(--secondary-border-color) 58%,
+    var(--body-color)
+  );
+  --switch-toggle-color: var(--body-color);
+
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  height: var(--control-size-sm);
+  margin: 0;
+  padding: 0;
+  padding-right: calc(var(--unit-8) + var(--control-padding-x));
+  cursor: pointer;
+}
+
+.header-pref-switch input {
+  left: auto;
+  right: 0;
+}
+
+.menu.header-more-panel .header-pref-switch .form-icon {
+  position: absolute;
+  left: auto;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  box-shadow: none;
+}
+
+@media (max-width: 600px) {
+  .hc-wide {
+    display: none !important;
+  }
+
+  .header-more {
+    display: inline-flex;
+  }
+}
+
 /* Bookmark list */
 ul.bookmark-list {
   list-style: none;

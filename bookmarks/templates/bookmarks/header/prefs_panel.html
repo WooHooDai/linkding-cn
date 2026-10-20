@@ -1,0 +1,46 @@
+{% load i18n %}
+{# 显示偏好：视图 / 每页书签数 / 两个跟随开关。宽屏布局弹层与窄屏更多菜单共用。 #}
+<div class="header-prefs-group">
+  <div class="header-pref-row">
+    <span class="header-pref-label">{% translate 'List view' %}</span>
+    <select class="form-select input-sm header-pref-control" name="bookmark_view_mode"
+            data-pref="bookmark_view_mode">
+      <option value="list"
+              {% if request.user_profile.bookmark_view_mode == 'list' %}selected{% endif %}>
+        {% translate 'Default' %}
+      </option>
+      <option value="compact"
+              {% if request.user_profile.bookmark_view_mode == 'compact' %}selected{% endif %}>
+        {% translate 'Compact' %}
+      </option>
+    </select>
+  </div>
+
+  <div class="header-pref-row">
+    <span class="header-pref-label">{% translate 'Bookmarks per page' %}</span>
+    <input type="number" class="form-input input-sm header-pref-control header-items-per-page"
+           name="items_per_page" min="10"
+           data-pref="items_per_page"
+           value="{{ request.user_profile.items_per_page }}">
+  </div>
+
+  <div class="header-pref-row">
+    <span class="header-pref-label">{% translate 'Search bar follows' %}</span>
+    <label class="form-switch header-pref-switch">
+      <input type="checkbox" name="sticky_header_controls"
+             data-pref="sticky_header_controls"
+             {% if request.user_profile.sticky_header_controls %}checked{% endif %}>
+      <i class="form-icon"></i>
+    </label>
+  </div>
+
+  <div class="header-pref-row">
+    <span class="header-pref-label">{% translate 'Paginator follows' %}</span>
+    <label class="form-switch header-pref-switch">
+      <input type="checkbox" name="sticky_pagination"
+             data-pref="sticky_pagination"
+             {% if request.user_profile.sticky_pagination %}checked{% endif %}>
+      <i class="form-icon"></i>
+    </label>
+  </div>
+</div>

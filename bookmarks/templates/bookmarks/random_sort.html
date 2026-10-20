@@ -3,7 +3,7 @@
   {# 随机按钮已禁用 #}
 {% elif profile and profile.random_mode == 'single' %}
   {# 单条目随机模式：配置通过 data 属性传递给 ld-random-single Behavior #}
-  <button type="button" class="btn ml-2"
+  <button type="button" class="btn"
           ld-random-single
           data-csrf-token="{{ csrf_token }}"
           data-random-target="{{ profile.random_target }}"
@@ -22,7 +22,7 @@
     {% for key, value in filtered_params.items %}
       <input type="hidden" name="{{ key|force_escape }}" value="{{ value|force_escape }}">
     {% endfor %}
-    <button type="submit" class="btn ml-2" title="{% translate 'Random sort' %}">
+    <button type="submit" class="btn" title="{% translate 'Random sort' %}">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" stroke-width="2"
            stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>

@@ -1,0 +1,54 @@
+{% load i18n %}
+{# 窄屏外露的「更多」菜单：动作项在前，分隔线后是显示偏好。宽屏隐藏。 #}
+<ld-dropdown class="header-more dropdown dropdown-right" data-header-more
+             data-save-url="{% url 'linkding:settings.save' %}">
+  <button type="button" class="btn dropdown-toggle"
+          aria-label="{% translate 'More options' %}"
+          title="{% translate 'More options' %}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+         fill="currentColor" stroke="none">
+      <circle cx="12" cy="5" r="1.9"></circle>
+      <circle cx="12" cy="12" r="1.9"></circle>
+      <circle cx="12" cy="19" r="1.9"></circle>
+    </svg>
+  </button>
+  <div class="menu menu-panel header-more-panel" tabindex="0">
+    {% if show_bulk %}
+      <div class="header-pref-row header-action-row">
+        <span class="header-pref-label">{% translate 'Bulk edit' %}</span>
+        <button type="button" class="btn header-action-btn header-menu-action"
+                data-menu-action="bulk-edit"
+                title="{% translate 'Bulk edit' %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+            <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"></path>
+            <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"></path>
+            <path d="M16 5l3 3"></path>
+          </svg>
+        </button>
+      </div>
+    {% endif %}
+    {% if show_random %}
+      <div class="header-pref-row header-action-row">
+        <span class="header-pref-label">{% translate 'Random sort' %}</span>
+        <button type="button" class="btn header-action-btn header-menu-action"
+                data-menu-action="random-sort"
+                title="{% translate 'Random sort' %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+            <path d="M18 4l3 3l-3 3"></path>
+            <path d="M18 20l3 -3l-3 -3"></path>
+            <path d="M3 7h3a5 5 0 0 1 5 5a5 5 0 0 1 -5 5h-3"></path>
+            <path d="M21 7h-3a5 5 0 0 0 -5 5a5 5 0 0 0 5 5h3"></path>
+          </svg>
+        </button>
+      </div>
+    {% endif %}
+
+    <div class="header-menu-divider"></div>
+
+    {% include 'bookmarks/header/prefs_panel.html' %}
+  </div>
+</ld-dropdown>
