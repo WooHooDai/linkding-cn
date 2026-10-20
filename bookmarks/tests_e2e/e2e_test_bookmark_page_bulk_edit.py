@@ -287,34 +287,70 @@ class BookmarkPagePartialUpdatesE2ETestCase(LinkdingE2ETestCase):
                 self.locate_bulk_edit_bar().locator(".bulk-edit-count")
             ).to_have_text("Selected(100)")
 
-    def test_execute_resets_all_checkboxes(self):
+    def test_execute_keeps_selection_for_non_removing_action(self):
+        # Non-removing actions keep the selection for the next operation.
         self.setup_numbered_bookmarks(100)
 
         with sync_playwright() as p:
             url = reverse("linkding:bookmarks.index")
             page = self.open(url, p)
 
-            # Select all bookmarks, enable select across
             self.locate_bulk_edit_toggle().click()
             self.locate_bulk_edit_select_all().click()
             self.locate_bulk_edit_select_across().click()
 
-            # Execute bulk action
             self.select_bulk_action("Mark as unread")
             self.locate_bulk_edit_bar().get_by_text("Execute").click()
             self.page.get_by_text("Confirm").click()
-
-            # Wait for turbo stream to update the page (checkboxes get reset)
             page.wait_for_timeout(1000)
 
-            # Verify bulk edit checkboxes are reset
+            # Selection preserved after the action
             checkboxes = page.locator("label.bulk-edit-checkbox input")
             self.assertEqual(31, checkboxes.count())
             for i in range(checkboxes.count()):
-                expect(checkboxes.nth(i)).not_to_be_checked()
+                expect(checkboxes.nth(i)).to_be_checked()
+            expect(self.locate_bulk_edit_select_across()).to_be_checked()
+            expect(
+                self.locate_bulk_edit_bar().locator(".bulk-edit-count")
+            ).to_have_text("Selected(100)")
+            expect(
+                self.locate_bulk_edit_bar().locator(
+                    'button[name="bulk_execute"]'
+                )
+            ).to_be_enabled()
 
-            # Toggle select all and verify select across is reset
+            # A second action applies to the same batch
+            self.select_bulk_action("Mark as read")
+            self.locate_bulk_edit_bar().get_by_text("Execute").click()
+            self.page.get_by_text("Confirm").click()
+            page.wait_for_timeout(1000)
+
+            expect(self.locate_bulk_edit_select_across()).to_be_checked()
+            expect(
+                self.locate_bulk_edit_bar().locator(".bulk-edit-count")
+            ).to_have_text("Selected(100)")
+
+        self.assertEqual(0, Bookmark.objects.filter(unread=True).count())
+
+    def test_execute_clears_selection_for_removing_action(self):
+        # Removing actions clear the selection.
+        self.setup_numbered_bookmarks(30)
+
+        with sync_playwright() as p:
+            url = reverse("linkding:bookmarks.index")
+            page = self.open(url, p)
+
+            self.locate_bulk_edit_toggle().click()
             self.locate_bulk_edit_select_all().click()
+
+            self.select_bulk_action("Move to trash")
+            self.locate_bulk_edit_bar().get_by_text("Execute").click()
+            self.page.get_by_text("Confirm").click()
+            page.wait_for_timeout(1000)
+
+            checkboxes = page.locator("label.bulk-edit-checkbox input")
+            for i in range(checkboxes.count()):
+                expect(checkboxes.nth(i)).not_to_be_checked()
             expect(self.locate_bulk_edit_select_across()).not_to_be_checked()
 
     def test_update_select_across_bookmark_count(self):

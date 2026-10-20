@@ -74,7 +74,8 @@ class LinkdingE2ETestCase(LiveServerTestCase, BookmarkFactoryMixin):
         return self.locate_bulk_edit_bar().locator("label.select-across")
 
     def locate_bulk_edit_toggle(self):
-        return self.page.get_by_title("Bulk edit")
+        # More-menu has a same-title action; target the toggle directly.
+        return self.page.locator("button.bulk-edit-active-toggle")
 
     def select_bulk_action(self, value: str):
         return (

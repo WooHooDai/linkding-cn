@@ -3,6 +3,15 @@ import { gettext, interpolate } from "../utils/i18n.js";
 
 const STORAGE_KEY = "linkding:bulk-edit";
 
+// List-removing actions clear the selection; others keep it for the next op.
+const REMOVING_ACTIONS = new Set([
+  "bulk_archive",
+  "bulk_unarchive",
+  "bulk_trash",
+  "bulk_restore",
+  "bulk_delete",
+]);
+
 class BulkEdit extends Behavior {
   constructor(element) {
     super(element);
@@ -129,7 +138,10 @@ class BulkEdit extends Behavior {
 
   onSubmit() {
     this._injectHiddenFields();
-    this.clearState();
+    // Only list-removing actions clear the selection.
+    if (REMOVING_ACTIONS.has(this.actionSelect?.value)) {
+      this.clearState();
+    }
   }
 
   onToggleBookmark(event) {
@@ -380,7 +392,9 @@ class BulkEdit extends Behavior {
       // pages that are not currently rendered. Ids rendered as checkboxes on
       // the current page are already submitted by those checkboxes, so skip
       // them to avoid duplicates.
-      const renderedIds = new Set(this.bookmarkCheckboxes.map((cb) => cb.value));
+      const renderedIds = new Set(
+        this.bookmarkCheckboxes.map((cb) => cb.value),
+      );
       state.selectedIds.forEach((id) => {
         if (renderedIds.has(id)) {
           return;
