@@ -2314,3 +2314,231 @@ ul.bookmark-list {
     z-index: var(--zindex-4);
   }
 }
+
+/* ==================== Compact view ==================== */
+/* 紧凑视图：常驻只显示标题 + 域名；hover（桌面）或点行展开（触屏 .toolbar-visible）
+   后，按 list 原生样式展开描述、动作栏与已打开的笔记；健康指示器常驻。 */
+ul.bookmark-list.view-compact li[ld-bookmark-item] {
+  display: flex;
+  align-items: center;
+  gap: var(--unit-2);
+  padding: var(--unit-1) 0;
+  margin-bottom: 0;
+}
+
+/* 紧凑视图收紧列表容器顶部留白（ul 外包了一层 section，不能用 > 直接命中） */
+#bookmark-list-container:has(ul.view-compact) {
+  margin-top: var(--unit-1);
+}
+
+.bookmarks-page:has(ul.view-compact) .section-header {
+  margin-bottom: var(--unit-2);
+}
+
+/* 紧凑视图兜底：保证搜索头按 sticky_header_controls 吸顶，不被级联覆盖 */
+.bookmarks-page:has(ul.view-compact) .section-header[data-sticky-on="true"] {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--body-color);
+}
+
+/* 始终 flex 的标题行：收起/展开都占满整行，按钮用 margin-left:auto 贴右，位置不跳动 */
+ul.bookmark-list.view-compact .compact-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: var(--unit-2);
+}
+
+ul.bookmark-list.view-compact .compact-head {
+  flex: 1 1 auto;
+  min-width: 6em;
+  display: flex;
+  align-items: center;
+  gap: var(--unit-2);
+}
+
+/* 收起状态：content 占满整行，标题占满剩余宽度，展开按钮贴右 */
+ul.bookmark-list.view-compact .content {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+ul.bookmark-list.view-compact .actions {
+  flex: none;
+  align-items: center;
+}
+
+ul.bookmark-list.view-compact .compact-head .title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+ul.bookmark-list.view-compact .compact-head .title .title-link {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 右侧组：标签 + 展开按钮，整体贴右；限制宽度，避免挤压标题 */
+ul.bookmark-list.view-compact .compact-side {
+  flex: none;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--unit-2);
+  min-width: 0;
+  max-width: 55%;
+}
+
+ul.bookmark-list.view-compact .compact-tags {
+  display: flex;
+  align-items: center;
+  gap: var(--unit-2);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
+}
+
+ul.bookmark-list.view-compact .compact-tag {
+  flex: none;
+  max-width: 6em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--gray-400);
+  text-decoration: none;
+}
+
+ul.bookmark-list.view-compact .compact-tag::before {
+  content: "#";
+}
+
+ul.bookmark-list.view-compact .compact-tag:hover {
+  color: var(--primary-color-highlight);
+}
+
+/* 触屏/窄屏的展开折叠按钮；桌面 hover 唤起，默认隐藏 */
+ul.bookmark-list.view-compact .compact-toggle-btn {
+  flex: none;
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  width: 20px;
+  height: 20px;
+  padding: 0 4px 0 0;
+  border: none;
+  background: none;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+}
+
+ul.bookmark-list.view-compact .compact-chevron {
+  display: block;
+  transform-origin: center;
+  transition: transform 0.15s ease;
+}
+
+/* 收起箭头朝右，展开旋转朝下 */
+ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .compact-chevron {
+  transform: rotate(90deg);
+}
+
+@media (hover: none), (max-width: 600px) {
+  ul.bookmark-list.view-compact .compact-toggle-btn {
+    display: inline-flex;
+  }
+}
+
+/* 保留动作栏模块间竖分隔线，只隐藏末尾多余的那条 */
+ul.bookmark-list.view-compact .actions > .toolbar-sep:last-child {
+  display: none;
+}
+
+/* 动作栏子项统一 16px 高度并居中，避免图标/文字高低参差 */
+ul.bookmark-list.view-compact .actions :is(a, button, .quick-tag-menu-wrapper, ld-health-indicator) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  line-height: 1;
+}
+
+ul.bookmark-list.view-compact .actions .action-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+/* 默认收起：隐藏描述、动作按钮与健康指示器（含日期/快捷标签菜单）；
+   笔记仅在已打开（.show-notes）时保留。 */
+ul.bookmark-list.view-compact .description,
+ul.bookmark-list.view-compact .actions :is(a, button, .toolbar-date, .quick-tag-menu-wrapper, ld-health-indicator) {
+  display: none;
+}
+
+ul.bookmark-list.view-compact li:not(.show-notes) .inline-edit-notes {
+  display: none;
+}
+
+/* 桌面 hover 或触屏点行展开：描述与动作按 list 原生样式显示，
+   笔记仍由 .show-notes 控制，不强制展开。 */
+ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible {
+  align-items: flex-start;
+}
+
+ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .content {
+  display: block;
+}
+
+ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .description,
+ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .actions :is(a, button, .toolbar-date, .quick-tag-menu-wrapper, ld-health-indicator) {
+  display: revert;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  ul.bookmark-list.view-compact li[ld-bookmark-item]:hover {
+    align-items: flex-start;
+  }
+
+  ul.bookmark-list.view-compact li[ld-bookmark-item]:hover .content {
+    display: block;
+  }
+
+  ul.bookmark-list.view-compact li[ld-bookmark-item]:hover .description,
+  ul.bookmark-list.view-compact li[ld-bookmark-item]:hover .actions :is(a, button, .toolbar-date, .quick-tag-menu-wrapper, ld-health-indicator) {
+    display: revert;
+  }
+}
+
+/* 窄屏紧凑展开态：保持“同行”单行，不改容器结构（避免破坏描述点击展开测量
+   与内联编辑标签挂载）。标签组限宽并可横向滑动看全，描述按原生单行/展开逻辑走。 */
+@media (max-width: 600px) {
+  ul.bookmark-list.view-compact .description.inline .tags {
+    display: inline-block;
+    max-width: 55%;
+    max-height: 1.4em;
+    white-space: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    vertical-align: bottom;
+    scrollbar-width: none;
+  }
+
+  ul.bookmark-list.view-compact .description.inline .tags::-webkit-scrollbar {
+    display: none;
+  }
+
+  ul.bookmark-list.view-compact .description.inline .tags a {
+    display: inline-block;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+}

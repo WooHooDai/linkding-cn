@@ -168,7 +168,19 @@
           <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card" data-settings-save-mode="instant">
             {% csrf_token %}
             <input type="hidden" name="form_id" value="profile_quick">
-            <input type="hidden" name="form_fields" value="items_per_page,sticky_header_controls,sticky_pagination">
+            <input type="hidden" name="form_fields" value="bookmark_view_mode,items_per_page,sticky_header_controls,sticky_pagination">
+            <div class="settings-row">
+              <div class="settings-copy">
+                <label for="{{ profile_quick_form.bookmark_view_mode.id_for_label }}" class="settings-label">{% translate "List view" %}</label>
+                <div class="form-input-hint">
+                  {% translate "Choose how bookmarks are arranged in the list." %}
+                </div>
+              </div>
+              <div class="settings-control">
+                {% formfield profile_quick_form.bookmark_view_mode class="form-select settings-select-input" %}
+                <div class="settings-field-errors" data-field-error-for="bookmark_view_mode"></div>
+              </div>
+            </div>
             <div class="settings-row">
               <div class="settings-copy">
                 <label for="{{ profile_quick_form.items_per_page.id_for_label }}" class="settings-label">{% translate "Bookmarks per page" %}</label>

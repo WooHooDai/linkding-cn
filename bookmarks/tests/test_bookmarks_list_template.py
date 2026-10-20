@@ -1294,3 +1294,55 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertIn("health-icon-mode", indicator.get("class", []))
         self.assertIsNotNone(indicator.select_one(".health-dot--blocked"))
         self.assertIsNone(indicator.select_one(".health-text"))
+
+    def test_compact_view_renders_compact_row_without_expanded_blocks(self):
+        user = self.get_or_create_test_user()
+        user.profile.bookmark_view_mode = UserProfile.BOOKMARK_VIEW_MODE_COMPACT
+        user.profile.save()
+
+        tag = self.setup_tag(name="tag1")
+        bookmark = self.setup_bookmark(
+            description="A long description that must not render in compact",
+            tags=[tag],
+            notes="Secret note",
+        )
+
+        html = self.render_template()
+        soup = self.make_soup(html)
+
+        ul = soup.select_one("ul.bookmark-list")
+        self.assertIn("view-compact", ul.get("class", []))
+
+        # 紧凑分支：不渲染 URL 行与预览图；描述/笔记/动作留在 DOM 中由 CSS 收起
+        self.assertIsNone(soup.select_one(".url-path"))
+        self.assertIsNone(soup.select_one(".preview-image"))
+
+        # 常驻渲染标题 + 标签，不渲染独立日期；健康指示器由 CSS 隐藏
+        self.assertIsNotNone(soup.select_one(".compact-head"))
+        self.assertIsNotNone(soup.select_one(".compact-tags .compact-tag"))
+        self.assertEqual(soup.select_one(".compact-tag").get_text(strip=True), "tag1")
+        self.assertIsNone(soup.select_one(".compact-date"))
+
+        # 触屏/窄屏展开按钮
+        self.assertIsNotNone(soup.select_one(".compact-toggle-btn"))
+
+        # 标题链接与动作（含详情入口）仍然存在
+        self.assertIsNotNone(
+            soup.select_one(f'a.title-link[href="{bookmark.url}"]')
+        )
+        self.assertIsNotNone(soup.select_one("a.view-action"))
+
+        # 描述、笔记片段仍在 DOM 中，hover/点行展开时按 list 样式显示
+        self.assertIsNotNone(soup.select_one(".description"))
+        self.assertIsNotNone(soup.select_one(".inline-edit-notes"))
+
+    def test_default_profile_uses_list_view(self):
+        self.setup_bookmark(description="A description")
+
+        html = self.render_template()
+        soup = self.make_soup(html)
+
+        ul = soup.select_one("ul.bookmark-list")
+        self.assertNotIn("view-compact", ul.get("class", []))
+        self.assertIsNotNone(soup.select_one(".content"))
+        self.assertIsNotNone(soup.select_one(".description"))

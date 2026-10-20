@@ -3,7 +3,7 @@
   {% include 'bookmarks/empty_bookmarks.html' %}
 {% else %}
   <section aria-label="{% translate 'Bookmark list' %}">
-    <ul class="bookmark-list{% if bookmark_list.toolbar_auto_hide %} toolbar-auto-hide{% endif %}"
+    <ul class="bookmark-list{% if bookmark_list.toolbar_auto_hide %} toolbar-auto-hide{% endif %}{% if bookmark_list.view_mode == 'compact' %} view-compact{% endif %}"
         role="list" tabindex="-1"
         style="--ld-bookmark-description-max-lines:{{ bookmark_list.description_max_lines }};"
         data-bookmarks-total="{{ bookmark_list.bookmarks_total }}"
@@ -12,6 +12,9 @@
         <li ld-bookmark-item data-bookmark-id="{{ bookmark_item.id }}" role="listitem"
             data-notes-enabled="{{ bookmark_list.show_notes|yesno:'true,false,false' }}"
             class="{% if bookmark_item.css_classes %}{{ bookmark_item.css_classes }}{% endif %}{% if bookmark_list.show_notes %} show-notes{% endif %}">
+          {% if bookmark_list.view_mode == 'compact' %}
+            {% include 'bookmarks/list/compact_row.html' %}
+          {% else %}
           <div class="content">
             {% include 'bookmarks/list/title.html' %}
             {% include 'bookmarks/list/url.html' %}
@@ -20,6 +23,7 @@
           </div>
           {% include 'bookmarks/list/notes.html' %}
           {% include 'bookmarks/list/preview_image.html' %}
+          {% endif %}
         </li>
       {% endfor %}
     </ul>
@@ -64,6 +68,37 @@
         });
 
         // Toggle toolbar visibility on this item
+        item.classList.toggle('toolbar-visible');
+      });
+    })();
+    </script>
+    {% endif %}
+    {% if bookmark_list.view_mode == 'compact' %}
+    <script>
+    (function() {
+      'use strict';
+      if (window.__ldCompactToggleBound) return;
+      window.__ldCompactToggleBound = true;
+      // Document-level delegation so the handler survives Turbo DOM swaps
+      document.addEventListener('click', function(e) {
+        // 点在列表外：收起全部
+        var item = e.target.closest('ul.bookmark-list.view-compact li[ld-bookmark-item]');
+        if (!item) {
+          document.querySelectorAll('li[ld-bookmark-item].toolbar-visible').forEach(function(el) {
+            el.classList.remove('toolbar-visible');
+          });
+          return;
+        }
+        // 展开/折叠按钮（触屏/窄屏）：独立切换当前条目，不联动其他条目
+        var toggleBtn = e.target.closest('.compact-toggle-btn');
+        if (toggleBtn) {
+          var toggleItem = toggleBtn.closest('li[ld-bookmark-item]');
+          var expanded = toggleItem.classList.toggle('toolbar-visible');
+          toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+          return;
+        }
+        // 其余交互元素（链接/输入/健康指示等）自行处理，不触发切换
+        if (e.target.closest('a, button, input, textarea, label, ld-health-indicator')) return;
         item.classList.toggle('toolbar-visible');
       });
     })();

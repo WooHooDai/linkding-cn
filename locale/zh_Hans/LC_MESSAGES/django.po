@@ -582,6 +582,22 @@ msgstr "图标"
 msgid "List"
 msgstr "列表"
 
+#: bookmarks/models.py:1009
+msgid "Default"
+msgstr "默认"
+
+#: bookmarks/models.py:1010
+msgid "Compact"
+msgstr "紧凑"
+
+#: bookmarks/templates/settings/general.html
+msgid "List view"
+msgstr "列表视图"
+
+#: bookmarks/templates/settings/general.html
+msgid "Choose how bookmarks are arranged in the list."
+msgstr "选择书签在列表中的排列方式。"
+
 #: bookmarks/models.py:1170
 msgid "Single"
 msgstr "单条目"

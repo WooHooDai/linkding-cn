@@ -1392,6 +1392,15 @@ class BookmarkListContext:
         self.date_display = user_profile.bookmark_date_display
         self.date_route = user_profile.bookmark_date_route
         self.description_display = user_profile.bookmark_description_display
+        self.view_mode = (
+            user_profile.bookmark_view_mode
+            if user_profile.bookmark_view_mode
+            in (
+                UserProfile.BOOKMARK_VIEW_MODE_LIST,
+                UserProfile.BOOKMARK_VIEW_MODE_COMPACT,
+            )
+            else UserProfile.BOOKMARK_VIEW_MODE_LIST
+        )
         self.description_max_lines = user_profile.bookmark_description_max_lines
         self.show_url = user_profile.display_url
         self.action_list = [

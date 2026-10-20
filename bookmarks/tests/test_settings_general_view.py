@@ -57,6 +57,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
             "bookmark_date_display": UserProfile.BOOKMARK_DATE_DISPLAY_RELATIVE,
             "bookmark_description_display": UserProfile.BOOKMARK_DESCRIPTION_DISPLAY_INLINE,
             "bookmark_description_max_lines": "1",
+            "bookmark_view_mode": UserProfile.BOOKMARK_VIEW_MODE_LIST,
             "bookmark_link_target": UserProfile.BOOKMARK_LINK_TARGET_BLANK,
             "enable_web_archive": False,
             "tag_search": UserProfile.TAG_SEARCH_STRICT,
@@ -225,6 +226,27 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         ]
         self.assertEqual(landing_page_labels, ["Login page", "Shared page"])
 
+    def test_should_render_bookmark_view_mode_select_options(self):
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = self.make_soup(response.content.decode())
+
+        select = soup.select_one('select[name="bookmark_view_mode"]')
+        self.assertIsNotNone(select)
+        values = [option.get("value") for option in select.select("option")]
+        self.assertEqual(
+            values,
+            [
+                UserProfile.BOOKMARK_VIEW_MODE_LIST,
+                UserProfile.BOOKMARK_VIEW_MODE_COMPACT,
+            ],
+        )
+        selected = [
+            option.get("value")
+            for option in select.select("option")
+            if option.has_attr("selected")
+        ]
+        self.assertEqual(selected, [UserProfile.BOOKMARK_VIEW_MODE_LIST])
+
     def test_search_and_tag_cards_should_render_in_expected_sections(self):
         response = self.client.get(reverse("linkding:settings.general"))
         soup = self.make_soup(response.content.decode())
@@ -384,6 +406,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
                     "bookmark_date_display": UserProfile.BOOKMARK_DATE_DISPLAY_HIDDEN,
                     "bookmark_description_display": UserProfile.BOOKMARK_DESCRIPTION_DISPLAY_SEPARATE,
                     "bookmark_description_max_lines": "3",
+                    "bookmark_view_mode": UserProfile.BOOKMARK_VIEW_MODE_COMPACT,
                     "bookmark_link_target": UserProfile.BOOKMARK_LINK_TARGET_SELF,
                     "enable_web_archive": True,
                     "tag_search": UserProfile.TAG_SEARCH_LAX,
@@ -436,6 +459,10 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
             UserProfile.BOOKMARK_DESCRIPTION_DISPLAY_SEPARATE,
         )
         self.assertEqual(self.user.profile.bookmark_description_max_lines, 3)
+        self.assertEqual(
+            self.user.profile.bookmark_view_mode,
+            UserProfile.BOOKMARK_VIEW_MODE_COMPACT,
+        )
         self.assertEqual(
             self.user.profile.bookmark_link_target,
             UserProfile.BOOKMARK_LINK_TARGET_SELF,

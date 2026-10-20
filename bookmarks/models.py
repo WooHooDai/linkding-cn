@@ -1003,6 +1003,12 @@ class UserProfile(models.Model):
         (BOOKMARK_DESCRIPTION_DISPLAY_INLINE, _("Inline")),
         (BOOKMARK_DESCRIPTION_DISPLAY_SEPARATE, _("Separate")),
     ]
+    BOOKMARK_VIEW_MODE_LIST = "list"
+    BOOKMARK_VIEW_MODE_COMPACT = "compact"
+    BOOKMARK_VIEW_MODE_CHOICES = [
+        (BOOKMARK_VIEW_MODE_LIST, _("Default")),
+        (BOOKMARK_VIEW_MODE_COMPACT, _("Compact")),
+    ]
     BOOKMARK_LINK_TARGET_BLANK = "_blank"
     BOOKMARK_LINK_TARGET_SELF = "_self"
     BOOKMARK_LINK_TARGET_CHOICES = [
@@ -1175,6 +1181,12 @@ class UserProfile(models.Model):
     bookmark_description_max_lines = models.IntegerField(
         null=False,
         default=1,
+    )
+    bookmark_view_mode = models.CharField(
+        max_length=10,
+        choices=BOOKMARK_VIEW_MODE_CHOICES,
+        blank=False,
+        default=BOOKMARK_VIEW_MODE_LIST,
     )
     bookmark_link_target = models.CharField(
         max_length=10,
@@ -1759,6 +1771,7 @@ class UserProfileForm(forms.ModelForm):
             "bookmark_date_route",
             "bookmark_description_display",
             "bookmark_description_max_lines",
+            "bookmark_view_mode",
             "bookmark_link_target",
             "web_archive_integration",
             "tag_search",
@@ -1834,6 +1847,7 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
             "bookmark_date_route",
             "bookmark_description_display",
             "bookmark_description_max_lines",
+            "bookmark_view_mode",
             "bookmark_link_target",
             "web_archive_integration",
             "tag_search",
