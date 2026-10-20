@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from huey.contrib.djhuey import HUEY as huey
-from huey.exceptions import RetryTask
+from huey.exceptions import RetryTask, TaskLockedException
 from waybackpy.exceptions import WaybackError
 
 from bookmarks.models import BookmarkAsset, UserProfile
@@ -994,6 +994,82 @@ class BookmarkTasksTestCase(TestCase, BookmarkFactoryMixin):
         self.assertTrue(sleep_calls)
         self.assertTrue(all(seconds <= 1 for seconds in sleep_calls))
         self.assertEqual(sum(sleep_calls), 5)
+
+    @override_settings(LD_ENABLE_SNAPSHOTS=True)
+    def test_html_snapshot_dispatcher_should_release_stale_lock(self):
+        """持有者已死（没有心跳）时，新调度任务应清掉残留锁并接管。"""
+
+        class FakeLock:
+            def __init__(self, held):
+                self.held = held
+
+            def __enter__(self):
+                if self.held:
+                    raise TaskLockedException("locked")
+                self.held = True
+
+            def __exit__(self, *exc):
+                self.held = False
+
+            def clear(self):
+                self.held = False
+
+        lock = FakeLock(held=True)
+        fake_huey = mock.Mock()
+        fake_huey.get.return_value = None
+        loop_calls = []
+
+        with (
+            mock.patch.object(tasks, "HTML_SNAPSHOT_DISPATCHER_LOCK", lock),
+            mock.patch.object(tasks, "huey", fake_huey),
+            mock.patch.object(
+                tasks,
+                "_run_html_snapshot_dispatcher_loop",
+                side_effect=lambda: loop_calls.append(1),
+            ),
+        ):
+            tasks._html_snapshot_dispatcher_task.call_local()
+
+        self.assertEqual(loop_calls, [1])
+        self.assertFalse(lock.held)
+
+    @override_settings(LD_ENABLE_SNAPSHOTS=True)
+    def test_html_snapshot_dispatcher_should_respect_live_lock(self):
+        """持有者仍在写心跳时，新调度任务应放弃并保留锁。"""
+
+        class FakeLock:
+            def __init__(self, held):
+                self.held = held
+
+            def __enter__(self):
+                if self.held:
+                    raise TaskLockedException("locked")
+                self.held = True
+
+            def __exit__(self, *exc):
+                self.held = False
+
+            def clear(self):
+                self.held = False
+
+        lock = FakeLock(held=True)
+        fake_huey = mock.Mock()
+        fake_huey.get.return_value = timezone.now().timestamp()
+        loop_calls = []
+
+        with (
+            mock.patch.object(tasks, "HTML_SNAPSHOT_DISPATCHER_LOCK", lock),
+            mock.patch.object(tasks, "huey", fake_huey),
+            mock.patch.object(
+                tasks,
+                "_run_html_snapshot_dispatcher_loop",
+                side_effect=lambda: loop_calls.append(1),
+            ),
+        ):
+            tasks._html_snapshot_dispatcher_task.call_local()
+
+        self.assertEqual(loop_calls, [])
+        self.assertTrue(lock.held)
 
     @override_settings(LD_ENABLE_SNAPSHOTS=True)
     def test_create_html_snapshot_should_handle_missing_asset(self):

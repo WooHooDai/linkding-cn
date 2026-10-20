@@ -44,6 +44,9 @@ logger = logging.getLogger(__name__)
 HTML_SNAPSHOT_DISPATCHER_LOCK = huey.lock_task("html-snapshot-dispatcher-lock")
 BACKGROUND_SERIAL_LOCK = huey.lock_task("background-serial-lock")
 
+HTML_SNAPSHOT_DISPATCHER_HEARTBEAT_KEY = "html-snapshot-dispatcher-heartbeat"
+HTML_SNAPSHOT_DISPATCHER_HEARTBEAT_MIN_TIMEOUT_SEC = 120
+
 PRIORITY_READING = 100
 PRIORITY_MANUAL_SNAPSHOT = 90
 PRIORITY_NEW_BOOKMARK = 80
@@ -1053,6 +1056,33 @@ def _get_html_snapshot_dispatcher_sleep_seconds(now, next_wake_at) -> float:
     return min(remaining_seconds, _get_html_snapshot_dispatcher_tick_seconds())
 
 
+def _html_snapshot_dispatcher_heartbeat_timeout() -> float:
+    """心跳超时阈值：至少 MIN_TIMEOUT，且不小于 10 个 tick。
+
+    循环每次 sleep 最长一个 tick，正常情况下心跳间隔远小于该阈值；
+    超时只可能是持有者已经死了。
+    """
+    tick = _get_html_snapshot_dispatcher_tick_seconds()
+    return max(float(HTML_SNAPSHOT_DISPATCHER_HEARTBEAT_MIN_TIMEOUT_SEC), tick * 10.0)
+
+
+def _touch_html_snapshot_dispatcher_heartbeat():
+    huey.put(HTML_SNAPSHOT_DISPATCHER_HEARTBEAT_KEY, time.time())
+
+
+def _html_snapshot_dispatcher_lock_is_stale() -> bool:
+    """锁还在，但写心跳的持有者已经不在了（或从未写过心跳）。"""
+    last = huey.get(HTML_SNAPSHOT_DISPATCHER_HEARTBEAT_KEY, peek=True)
+    if last is None:
+        return True
+    if isinstance(last, bytes):
+        last = last.decode("utf-8", "ignore")
+    try:
+        return time.time() - float(last) > _html_snapshot_dispatcher_heartbeat_timeout()
+    except (TypeError, ValueError):
+        return True
+
+
 def _run_html_snapshot_dispatcher_loop(
     now_func: Callable[[], object] | None = None,
     sleep_func: Callable[[float], None] | None = None,
@@ -1073,6 +1103,7 @@ def _run_html_snapshot_dispatcher_loop(
     next_eligible_at: dict[str, object] = {}
 
     while True:
+        _touch_html_snapshot_dispatcher_heartbeat()
         now = now_func()
         asset, next_wake_at = _select_next_html_snapshot_asset(now, next_eligible_at)
         if asset is None:
@@ -1092,11 +1123,19 @@ def _run_html_snapshot_dispatcher_loop(
 
 @task(retries=0, retry_delay=0, priority=PRIORITY_CORE)
 def _html_snapshot_dispatcher_task():
-    try:
-        with HTML_SNAPSHOT_DISPATCHER_LOCK:
-            _run_html_snapshot_dispatcher_loop()
-    except TaskLockedException:
-        logger.debug("HTML snapshot dispatcher already running.")
+    for attempt in (1, 2):
+        try:
+            with HTML_SNAPSHOT_DISPATCHER_LOCK:
+                _run_html_snapshot_dispatcher_loop()
+                return
+        except TaskLockedException:
+            if attempt == 2 or not _html_snapshot_dispatcher_lock_is_stale():
+                logger.debug("HTML snapshot dispatcher already running.")
+                return
+            logger.warning(
+                "Releasing stale HTML snapshot dispatcher lock (holder heartbeat expired)."
+            )
+            HTML_SNAPSHOT_DISPATCHER_LOCK.clear()
 
 
 def create_html_snapshot(bookmark: Bookmark, priority: int | None = None):
