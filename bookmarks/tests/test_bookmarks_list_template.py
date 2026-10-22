@@ -662,7 +662,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         html = self.render_template()
         soup = self.make_soup(html)
 
-        list_item = soup.select_one("ul.bookmark-list > li")
+        list_item = soup.select_one("ul.bookmark-list > li[ld-bookmark-item]")
         self.assertIsNotNone(list_item)
         self.assertListEqual(["unread"], list_item["class"])
 
@@ -675,7 +675,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         html = self.render_template()
         soup = self.make_soup(html)
 
-        list_item = soup.select_one("ul.bookmark-list > li")
+        list_item = soup.select_one("ul.bookmark-list > li[ld-bookmark-item]")
         self.assertIsNotNone(list_item)
         self.assertListEqual(["shared"], list_item["class"])
 
@@ -688,7 +688,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         html = self.render_template()
         soup = self.make_soup(html)
 
-        list_item = soup.select_one("ul.bookmark-list > li")
+        list_item = soup.select_one("ul.bookmark-list > li[ld-bookmark-item]")
         self.assertIsNotNone(list_item)
         self.assertListEqual(["unread", "shared"], list_item["class"])
 
@@ -1205,7 +1205,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         html = self.render_template()
 
         soup = self.make_soup(html)
-        bookmarks = soup.select("ul.bookmark-list > li")
+        bookmarks = soup.select("ul.bookmark-list > li[ld-bookmark-item]")
         self.assertEqual(30, len(bookmarks))
 
     def test_items_per_page_is_configurable(self):
@@ -1216,7 +1216,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         html = self.render_template()
 
         soup = self.make_soup(html)
-        bookmarks = soup.select("ul.bookmark-list > li")
+        bookmarks = soup.select("ul.bookmark-list > li[ld-bookmark-item]")
         self.assertEqual(10, len(bookmarks))
 
     def test_no_actions_rendered_when_is_preview(self):
@@ -1346,3 +1346,123 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertNotIn("view-compact", ul.get("class", []))
         self.assertIsNotNone(soup.select_one(".content"))
         self.assertIsNotNone(soup.select_one(".description"))
+
+    # ---- 按日期分组（与视图模式正交） ----
+
+    def test_group_by_date_renders_group_headers_by_default(self):
+        self.setup_numbered_bookmarks(5)
+
+        html = self.render_template()
+        soup = self.make_soup(html)
+
+        headers = soup.select("ul.bookmark-list > li.group-header")
+        self.assertEqual(len(headers), 1)
+        self.assertEqual(headers[0].get("data-group-key"), "today")
+        self.assertEqual(
+            headers[0].select_one(".group-title").get_text(strip=True), "Today"
+        )
+        # 组内数量
+        self.assertEqual(
+            headers[0].select_one(".group-count").get_text(strip=True), "5"
+        )
+        # 折叠交互结构
+        self.assertEqual(headers[0].select_one(".group-toggle").get("aria-expanded"), "true")
+        self.assertIsNotNone(headers[0].select_one(".group-chevron"))
+
+    def test_group_by_date_disabled_hides_group_headers(self):
+        profile = self.get_or_create_test_user().profile
+        profile.group_by_date = False
+        profile.save()
+        self.setup_numbered_bookmarks(5)
+
+        html = self.render_template()
+        soup = self.make_soup(html)
+
+        self.assertIsNone(soup.select_one("ul.bookmark-list > li.group-header"))
+        self.assertEqual(len(soup.select("ul.bookmark-list > li[ld-bookmark-item]")), 5)
+
+    def test_group_by_date_splits_into_date_groups(self):
+        now = timezone.now()
+        self.setup_bookmark(url="https://today.example", added=now)
+        self.setup_bookmark(url="https://yesterday.example", added=now - datetime.timedelta(days=1))
+        # 40 天前必然跨月，归入按月分组
+        month_ago = now - datetime.timedelta(days=40)
+        self.setup_bookmark(url="https://month.example", added=month_ago)
+
+        html = self.render_template()
+        soup = self.make_soup(html)
+
+        headers = soup.select("ul.bookmark-list > li.group-header")
+        self.assertEqual(
+            [h.get("data-group-key") for h in headers],
+            ["today", "yesterday", timezone.localdate(month_ago).strftime("%Y-%m")],
+        )
+        # 月份组标题按本地化月格式显示
+        month_title = headers[2].select_one(".group-title").get_text(strip=True)
+        self.assertEqual(month_title, timezone.localdate(month_ago).strftime("%Y年%m月"))
+        # 各组数量
+        counts = [h.select_one(".group-count").get_text(strip=True) for h in headers]
+        self.assertEqual(counts, ["1", "1", "1"])
+
+    def test_group_count_shows_total_across_pages_with_hint(self):
+        profile = self.get_or_create_test_user().profile
+        profile.items_per_page = 3
+        profile.save()
+        self.setup_numbered_bookmarks(7)
+
+        # 第 1 页：主数字 = 本页 3 条，总数 7 跟在后面
+        html = self.render_template(url="/bookmarks?page=1")
+        soup = self.make_soup(html)
+        header = soup.select_one("ul.bookmark-list > li.group-header")
+        self.assertEqual(header.select_one(".group-count").get_text(strip=True), "3")
+        self.assertIsNotNone(header.select_one(".group-more"))
+        self.assertIn("7", header.select_one(".group-more").get_text(strip=True))
+
+        # 第 3 页：本页 1 条，总数仍为 7（7 = 3 + 3 + 1）
+        html = self.render_template(url="/bookmarks?page=3")
+        soup = self.make_soup(html)
+        header = soup.select_one("ul.bookmark-list > li.group-header")
+        self.assertEqual(header.select_one(".group-count").get_text(strip=True), "1")
+        self.assertIn("7", header.select_one(".group-more").get_text(strip=True))
+
+    def test_group_count_hides_hint_when_group_fully_on_page(self):
+        # 组在单页内显示全：无引导提示
+        self.setup_numbered_bookmarks(3)
+        html = self.render_template()
+        soup = self.make_soup(html)
+        header = soup.select_one("ul.bookmark-list > li.group-header")
+        self.assertEqual(header.select_one(".group-count").get_text(strip=True), "3")
+        self.assertIsNone(header.select_one(".group-more"))
+
+    def test_group_key_computation(self):
+        from bookmarks.views.contexts import _bookmark_group_key
+
+        today = timezone.localdate()
+        midnight = timezone.make_aware(
+            datetime.datetime.combine(today, datetime.time.min)
+        )
+
+        self.assertEqual(_bookmark_group_key(midnight), "today")
+        self.assertEqual(
+            _bookmark_group_key(midnight - datetime.timedelta(days=1)), "yesterday"
+        )
+        # 40 天前必然跨月 -> 按月分组键
+        month_ago = today - datetime.timedelta(days=40)
+        self.assertEqual(
+            _bookmark_group_key(midnight - datetime.timedelta(days=40)),
+            month_ago.strftime("%Y-%m"),
+        )
+        # this_week：本周一至昨天；若该区间存在（今天非周一/周二）
+        monday = today - datetime.timedelta(days=today.weekday())
+        if monday <= today - datetime.timedelta(days=2):
+            monday_dt = timezone.make_aware(
+                datetime.datetime.combine(monday, datetime.time.min)
+            )
+            self.assertEqual(_bookmark_group_key(monday_dt), "this_week")
+        # this_month：本月 1 号起至本周一之前；若该区间存在（月初不在本周内）
+        month_first = today.replace(day=1)
+        if month_first < monday and month_first != today - datetime.timedelta(days=1):
+            month_first_dt = timezone.make_aware(
+                datetime.datetime.combine(month_first, datetime.time.min)
+            )
+            self.assertEqual(_bookmark_group_key(month_first_dt), "this_month")

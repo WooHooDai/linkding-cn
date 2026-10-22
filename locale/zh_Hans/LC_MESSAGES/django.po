@@ -1682,6 +1682,23 @@ msgstr "今天"
 msgid "This week"
 msgstr "本周"
 
+#: bookmarks/templates/bookmarks/bookmark_list.html
+msgid "Earlier"
+msgstr "更早"
+
+#: bookmarks/templates/bookmarks/header/prefs_panel.html
+#: bookmarks/templates/settings/general.html
+msgid "Group by date"
+msgstr "按日期分组"
+
+#: bookmarks/templates/settings/general.html
+msgid "Group bookmarks by when they were added: today, yesterday, this week, this month, by month."
+msgstr "书签按添加日期分组显示：今天、昨天、本周、本月、按月"
+
+#: bookmarks/templates/bookmarks/bookmark_list.html
+msgid "%(total)s in total"
+msgstr "共 %(total)s 条"
+
 #: bookmarks/templates/bookmarks/search.html:169
 #: bookmarks/templates/bundles/form.html:193
 msgid "This month"

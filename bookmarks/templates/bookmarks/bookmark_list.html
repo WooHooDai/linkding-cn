@@ -9,6 +9,26 @@
         data-bookmarks-total="{{ bookmark_list.bookmarks_total }}"
         data-notes-global="{{ bookmark_list.show_notes|yesno:'true,false,false' }}">
       {% for bookmark_item in bookmark_list.items %}
+        {% if bookmark_list.group_by_date %}
+          {% ifchanged bookmark_item.group_key %}
+          <li class="group-header" data-group-key="{{ bookmark_item.group_key }}" role="listitem">
+            <button type="button" class="group-toggle" aria-expanded="true">
+              <svg class="group-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              <span class="group-title">
+                {% if bookmark_item.group_key == 'today' %}{% translate 'Today' %}
+                {% elif bookmark_item.group_key == 'yesterday' %}{% translate 'Yesterday' %}
+                {% elif bookmark_item.group_key == 'this_week' %}{% translate 'This week' %}
+                {% elif bookmark_item.group_key == 'this_month' %}{% translate 'This month' %}
+                {% else %}{{ bookmark_item.group_month|date:"Y年m月" }}{% endif %}
+              </span>
+              <span class="group-count">{{ bookmark_item.group_page_count }}</span>
+              {% if bookmark_item.group_page_count < bookmark_item.group_total %}
+              <span class="group-more">{% blocktranslate with total=bookmark_item.group_total %}{{ total }} in total{% endblocktranslate %}</span>
+              {% endif %}
+            </button>
+          </li>
+          {% endifchanged %}
+        {% endif %}
         <li ld-bookmark-item data-bookmark-id="{{ bookmark_item.id }}" role="listitem"
             data-notes-enabled="{{ bookmark_list.show_notes|yesno:'true,false,false' }}"
             class="{% if bookmark_item.css_classes %}{{ bookmark_item.css_classes }}{% endif %}{% if bookmark_list.show_notes %} show-notes{% endif %}">
@@ -33,6 +53,31 @@
     </div>
 
     {% include 'bookmarks/health_job_capsule.html' %}
+
+    {% if bookmark_list.group_by_date %}
+    <script>
+    (function() {
+      'use strict';
+      if (window.__ldGroupToggleBound) return;
+      window.__ldGroupToggleBound = true;
+      // document 级委托，Turbo DOM 替换后依然生效
+      document.addEventListener('click', function(e) {
+        var toggle = e.target.closest('.group-toggle');
+        if (!toggle) return;
+        var header = toggle.closest('.group-header');
+        if (!header) return;
+        var collapsed = header.classList.toggle('group-collapsed');
+        toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        // 折叠/展开当前组内（直到下一个组标题）的所有条目
+        var el = header.nextElementSibling;
+        while (el && !el.classList.contains('group-header')) {
+          el.classList.toggle('group-hidden', collapsed);
+          el = el.nextElementSibling;
+        }
+      });
+    })();
+    </script>
+    {% endif %}
 
     {% if bookmark_list.quick_tags_submenu_json %}
     <script>

@@ -91,6 +91,25 @@ def _health_status_display(health_status) -> str:
             HEALTH_STATUS_UNKNOWN, "Unknown"
         )
     return dict(HEALTH_STATUS_CHOICES).get(health_status, health_status)
+
+
+def _bookmark_group_key(date_added) -> str:
+    """按收藏日期（本地时区）计算分组键：
+    today / yesterday / this_week（本周一至昨天）/ this_month（本月非本周）/
+    更早按自然月返回 "YYYY-MM"。
+    列表按收藏时间倒序，组顺序天然为 today → yesterday → this_week → this_month → 更早月份。"""
+    today = timezone.localdate()
+    d = timezone.localdate(date_added)
+    if d == today:
+        return "today"
+    if d == today - timedelta(days=1):
+        return "yesterday"
+    monday = today - timedelta(days=today.weekday())
+    if d >= monday:
+        return "this_week"
+    if d.year == today.year and d.month == today.month:
+        return "this_month"
+    return d.strftime("%Y-%m")
 from bookmarks.type_defs import HttpRequest
 from bookmarks.views import access
 
@@ -277,6 +296,9 @@ class BookmarkItem:
         self.preview_image_remote_url = bookmark.preview_image_remote_url
         self.preview_image_file = bookmark.preview_image_file
         self.is_archived = bookmark.is_archived
+        self.group_key = _bookmark_group_key(bookmark.date_added)
+        # 月份组标题使用：该收藏日期所在月的 1 号（非月份组不使用）
+        self.group_month = timezone.localdate(bookmark.date_added).replace(day=1)
         self.unread = bookmark.unread
         self.shared = bookmark.shared
         self.owner = bookmark.owner
@@ -1381,6 +1403,19 @@ class BookmarkListContext:
             BookmarkItem(request_context, bookmark, user, user_profile)
             for bookmark in bookmarks_page
         ]
+        self.group_by_date = user_profile.group_by_date
+        # 组计数：总数统计自完整结果集（跨页），本页数量用于判断是否需要翻页引导
+        if self.group_by_date:
+            from collections import Counter
+
+            page_counts = Counter(item.group_key for item in self.items)
+            total_counts = Counter(
+                _bookmark_group_key(added)
+                for added in query_set.values_list("date_added", flat=True)
+            )
+            for item in self.items:
+                item.group_total = total_counts[item.group_key]
+                item.group_page_count = page_counts[item.group_key]
         self.is_empty = paginator.count == 0
         self.bookmarks_page = bookmarks_page
         self.bookmarks_total = paginator.count

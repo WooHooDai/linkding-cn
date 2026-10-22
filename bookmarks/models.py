@@ -1188,6 +1188,8 @@ class UserProfile(models.Model):
         blank=False,
         default=BOOKMARK_VIEW_MODE_LIST,
     )
+    # 按日期分组显示（今天 / 昨天 / 本周 / 更早），与视图模式正交可叠加
+    group_by_date = models.BooleanField(default=True, null=False)
     bookmark_link_target = models.CharField(
         max_length=10,
         choices=BOOKMARK_LINK_TARGET_CHOICES,
@@ -1772,6 +1774,7 @@ class UserProfileForm(forms.ModelForm):
             "bookmark_description_display",
             "bookmark_description_max_lines",
             "bookmark_view_mode",
+            "group_by_date",
             "bookmark_link_target",
             "web_archive_integration",
             "tag_search",
@@ -1848,6 +1851,7 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
             "bookmark_description_display",
             "bookmark_description_max_lines",
             "bookmark_view_mode",
+            "group_by_date",
             "bookmark_link_target",
             "web_archive_integration",
             "tag_search",

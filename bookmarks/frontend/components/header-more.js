@@ -91,7 +91,11 @@ class HeaderMoreMenu extends Behavior {
 
     if (field === "sticky_header_controls" || field === "sticky_pagination") {
       applyStickyPref(field, Boolean(value));
-    } else if (field === "bookmark_view_mode" || field === "items_per_page") {
+    } else if (
+      field === "bookmark_view_mode" ||
+      field === "items_per_page" ||
+      field === "group_by_date"
+    ) {
       window.location.reload();
     }
   }

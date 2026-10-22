@@ -2696,3 +2696,87 @@ ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .actions :is(
     vertical-align: bottom;
   }
 }
+
+/* ---- 按日期分组：组标题（与视图模式正交，list/compact 共用） ---- */
+ul.bookmark-list li.group-header {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  margin: var(--unit-4) 0 var(--unit-2);
+  padding: var(--unit-1) 0;
+  background: var(--body-color);
+  border-bottom: 1px solid var(--secondary-border-color);
+}
+
+/* 列表首行紧跟搜索区：无顶部间距、无分隔线，与上方元素自然衔接 */
+ul.bookmark-list li.group-header:first-child {
+  margin-top: 0;
+  border-bottom: none;
+}
+
+/* 搜索栏吸顶时组标题改为普通定位，避免与吸顶搜索栏重叠 */
+.bookmarks-page:has(.section-header[data-sticky-on="true"]) ul.bookmark-list li.group-header {
+  position: static;
+}
+
+ul.bookmark-list .group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--unit-2);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--secondary-text-color);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: color 0.15s ease;
+}
+
+ul.bookmark-list .group-toggle:hover {
+  color: var(--text-color);
+}
+
+ul.bookmark-list .group-chevron {
+  flex: none;
+  transition: transform 0.15s ease;
+}
+
+ul.bookmark-list li.group-header.group-collapsed .group-chevron {
+  transform: rotate(-90deg);
+}
+
+ul.bookmark-list .group-count {
+  flex: none;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: var(--border-radius);
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  color: var(--primary-color);
+}
+
+/* 折叠态隐藏组内条目（JS 逐条切换）
+   特异性需覆盖 li[ld-bookmark-item] 及其 view-compact 变体（0,3,2） */
+ul.bookmark-list li[ld-bookmark-item].group-hidden {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ul.bookmark-list .group-toggle,
+  ul.bookmark-list .group-chevron {
+    transition: none;
+  }
+}
+
+/* 组标题：跨页未显示全时的引导提示 */
+ul.bookmark-list .group-more {
+  margin-left: var(--unit-1);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--tertiary-text-color);
+}

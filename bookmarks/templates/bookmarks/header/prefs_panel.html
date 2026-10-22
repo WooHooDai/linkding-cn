@@ -17,6 +17,16 @@
   </div>
 
   <div class="header-pref-row">
+    <span class="header-pref-label">{% translate 'Group by date' %}</span>
+    <label class="form-switch header-pref-switch">
+      <input type="checkbox" name="group_by_date"
+             data-pref="group_by_date"
+             {% if request.user_profile.group_by_date %}checked{% endif %}>
+      <i class="form-icon"></i>
+    </label>
+  </div>
+
+  <div class="header-pref-row">
     <span class="header-pref-label">{% translate 'Bookmarks per page' %}</span>
     <input type="number" class="form-input input-sm header-pref-control header-items-per-page"
            name="items_per_page" min="10"

@@ -23,7 +23,9 @@ document.addEventListener("keydown", (event) => {
   if (isArrowUp || isArrowDown) {
     event.preventDefault();
 
-    const items = [...document.querySelectorAll("ul.bookmark-list > li")];
+    const items = [
+      ...document.querySelectorAll("ul.bookmark-list > li[ld-bookmark-item]"),
+    ];
     const path = event.composedPath();
     const currentItem = path.find((item) => items.includes(item));
 
