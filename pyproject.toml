@@ -9,9 +9,7 @@ dependencies = [
     "bleach>=6.4.0",
     "bleach-allowlist>=1.0.3",
     "django>=6.0.7",
-    # DRF PyPI 发布版 (3.18.0) 仍引用 Django 6.0 已移除的 cc_delim_re，
-    # 使用主分支修复版本，待 PyPI 发布新版本后可改回普通版本约束
-    "djangorestframework @ git+https://github.com/encode/django-rest-framework.git",
+    "djangorestframework>=3.18.3",
     "huey>=3.0.0",
     "markdown>=3.10.2",
     "mozilla-django-oidc>=5.0.2",
