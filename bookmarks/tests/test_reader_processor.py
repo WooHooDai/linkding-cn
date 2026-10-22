@@ -276,6 +276,7 @@ class ReaderProcessorTestCase(TestCase):
 
     def test_reader_defuddle_args_are_passed_to_defuddle(self):
         config = {"defuddle_args": {"contentSelector": ".article", "ignored": True}}
+        html = "<html><body><article><p>text</p></article></body></html>"
 
         with (
             mock.patch(
@@ -283,11 +284,22 @@ class ReaderProcessorTestCase(TestCase):
                 return_value=config,
             ),
             mock.patch(
-                "bookmarks.services.defuddle.parse_url",
+                "bookmarks.services.website_loader.fetch_page_html",
+                return_value=html,
+            ) as mock_fetch,
+            mock.patch(
+                "bookmarks.services.defuddle.parse_html",
                 return_value={"title": "ok"},
             ) as mock_parse,
         ):
             result = reader_processor.parse_url("https://example.com")
 
         self.assertEqual(result, {"title": "ok"})
-        mock_parse.assert_called_once_with("https://example.com", options={"contentSelector": ".article"})
+        # 抓取复用 loader 通路（http_engine / auto cookie / 403 自愈）
+        mock_fetch.assert_called_once_with(
+            "https://example.com", config, username=""
+        )
+        # defuddle_args 中仅已知参数传递给 defuddle（ignored 被过滤）
+        mock_parse.assert_called_once_with(
+            html, url="https://example.com", options={"contentSelector": ".article"}
+        )

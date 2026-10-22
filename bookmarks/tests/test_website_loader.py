@@ -1901,16 +1901,13 @@ class HttpEngineTestCase(TestCase):
             self.assertIn("HTTP", result)
 
     def test_curl_cffi_drops_builtin_ua(self):
-        """内置默认 UA（Edge）不与 Chrome 指纹同发；未显式配置时交给 Chrome UA。"""
+        """未显式配置 UA 时（仅内置默认），不发送 User-Agent，交给 impersonate 注入的 Chrome UA。"""
         with mock.patch("curl_cffi.requests.get") as mock_cget:
             mock_response = mock.Mock()
             mock_response.status_code = 200
             mock_response.iter_content.return_value = [b"<html></html>"]
             mock_cget.return_value = mock_response
-            config = {
-                "http_engine": "curl_cffi",
-                "headers": {"User-Agent": "Mozilla/5.0 Edg/138.0.0.0"},
-            }
+            config = {"http_engine": "curl_cffi"}
             website_loader.load_page("https://example.com", config)
             kwargs = mock_cget.call_args.kwargs
             self.assertNotIn("User-Agent", kwargs.get("headers", {}))

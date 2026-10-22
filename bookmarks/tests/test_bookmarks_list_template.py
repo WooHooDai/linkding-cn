@@ -1251,7 +1251,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         bookmark = self.setup_bookmark()
         bookmark.health_status = "dead"
         bookmark.health_details = {
-            "checked_at": "2026-09-15T16:18:00",
+            "checked_at": timezone.now().isoformat(),
             "http_status": 404,
             "reason": "HTTP 404",
         }
@@ -1274,17 +1274,22 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         )
         self.assertIsNotNone(indicator.select_one("[data-health-check]"))
 
-    def test_health_indicator_hidden_when_unchecked(self):
+    def test_health_indicator_shows_unknown_when_unchecked(self):
+        """未检查：indicator 仍渲染，状态派生为 Unknown（与详情弹层一致）。"""
         bookmark = self.setup_bookmark()  # 从未检查 → health_status 为 NULL
         html = self.render_template()
         soup = self.make_soup(html)
-        self.assertIsNone(soup.select_one("ld-health-indicator"))
+        indicator = soup.select_one("ld-health-indicator")
+        self.assertIsNotNone(indicator)
+        # 默认 icon 模式：只有带颜色 dot（无文字）
+        self.assertIsNotNone(indicator.select_one(".health-dot--unknown"))
+        self.assertIsNone(indicator.select_one(".health-text"))
 
     def test_health_indicator_icon_mode_uses_dot(self):
         # 默认 status_display_mode = icon：只有带颜色 dot（无文字）
         bookmark = self.setup_bookmark()
         bookmark.health_status = "blocked"
-        bookmark.health_details = {"checked_at": "2026-09-15T16:18:00", "http_status": 403}
+        bookmark.health_details = {"checked_at": timezone.now().isoformat(), "http_status": 403}
         bookmark.save()
 
         html = self.render_template()
