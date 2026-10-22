@@ -1410,20 +1410,27 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         profile.save()
         self.setup_numbered_bookmarks(7)
 
-        # 第 1 页：主数字 = 本页 3 条，总数 7 跟在后面
+        # 第 1 页：主数字 = 本页 3 条，引导提示为组内区间 + 总数（1-3，共 7）
         html = self.render_template(url="/bookmarks?page=1")
         soup = self.make_soup(html)
         header = soup.select_one("ul.bookmark-list > li.group-header")
         self.assertEqual(header.select_one(".group-count").get_text(strip=True), "3")
-        self.assertIsNotNone(header.select_one(".group-more"))
-        self.assertIn("7", header.select_one(".group-more").get_text(strip=True))
+        more = header.select_one(".group-more")
+        self.assertIsNotNone(more)
+        text = more.get_text(strip=True)
+        self.assertIn("1-3", text)
+        self.assertIn("7", text)
 
-        # 第 3 页：本页 1 条，总数仍为 7（7 = 3 + 3 + 1）
+        # 第 3 页：本页 1 条，区间为该组第 7 条（7 = 3 + 3 + 1）
         html = self.render_template(url="/bookmarks?page=3")
         soup = self.make_soup(html)
         header = soup.select_one("ul.bookmark-list > li.group-header")
         self.assertEqual(header.select_one(".group-count").get_text(strip=True), "1")
-        self.assertIn("7", header.select_one(".group-more").get_text(strip=True))
+        more = header.select_one(".group-more")
+        self.assertIsNotNone(more)
+        text = more.get_text(strip=True)
+        self.assertIn("7-7", text)
+        self.assertIn("7", text)
 
     def test_group_count_hides_hint_when_group_fully_on_page(self):
         # 组在单页内显示全：无引导提示

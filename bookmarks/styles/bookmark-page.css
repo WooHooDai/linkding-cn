@@ -2486,7 +2486,8 @@ ul.bookmark-list.view-compact li[ld-bookmark-item] {
 }
 
 .bookmarks-page:has(ul.view-compact) .section-header {
-  margin-bottom: var(--unit-2);
+  /* mb-0 工具类带 !important，需同样提升才能覆盖 */
+  margin-bottom: var(--unit-2) !important;
 }
 
 /* 紧凑视图兜底：保证搜索头按 sticky_header_controls 吸顶，不被级联覆盖 */
@@ -2698,21 +2699,60 @@ ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .actions :is(
 }
 
 /* ---- 按日期分组：组标题（与视图模式正交，list/compact 共用） ---- */
+/* ===== 分组间距系统 =====
+ * 原则：视图差异全部收敛为 5 个间距变量（定义在页面根，compact 用 :has 覆盖），
+ *       组标题 / 首组 / 分页器只引用变量推导，新增视图只需补充变量定义。
+ *   --bookmark-group-gap    组与组之间的目标间距
+ *   --bookmark-edge-gap     首组上方 / 末组下方的目标间距（各视图一致）
+ *   --bookmark-item-mb      条目下边距（参与 margin 塌陷，正负代数相加）
+ *   --bookmark-section-mb   搜索区下边距
+ *   --bookmark-container-mt 列表容器上边距
+ */
+.bookmarks-page {
+  --bookmark-group-gap: 0.5rem;
+  --bookmark-edge-gap: 0.5rem;
+  --bookmark-item-mb: 0.6rem;
+  --bookmark-section-mb: 0px;
+  --bookmark-container-mt: 0.8rem;
+}
+
+.bookmarks-page:has(ul.view-compact) {
+  --bookmark-group-gap: 0.25rem;
+  --bookmark-edge-gap: 0.5rem;
+  --bookmark-item-mb: 0px;
+  --bookmark-section-mb: 0.4rem;
+  --bookmark-container-mt: 0.2rem;
+}
+
 ul.bookmark-list li.group-header {
   position: sticky;
   top: 0;
   z-index: 90;
   display: flex;
   align-items: center;
-  margin: var(--unit-4) 0 var(--unit-2);
+  /* 组间距 = 目标 - 条目下边距（塌陷代数相加后精确等于目标） */
+  margin-top: calc(var(--bookmark-group-gap) - var(--bookmark-item-mb));
+  margin-bottom: var(--unit-2);
   padding: var(--unit-1) 0;
   background: var(--body-color);
   border-bottom: 1px solid var(--secondary-border-color);
 }
 
-/* 列表首行紧跟搜索区：无顶部间距、无分隔线，与上方元素自然衔接 */
+/* 首组上方 = 目标 - 搜索区下边距 - 容器上边距 */
 ul.bookmark-list li.group-header:first-child {
-  margin-top: 0;
+  margin-top: calc(
+    var(--bookmark-edge-gap) - var(--bookmark-section-mb) - var(--bookmark-container-mt)
+  );
+}
+
+/* 末组下方（仅启用分组时）：分页器上边距 = 目标 - 最后条目下边距，
+   sticky 吸底模式同样补偿（mt 仅影响文档流占位，不影响吸底视觉位置） */
+#bookmark-list-container[data-grouped] .bookmark-pagination {
+  margin-top: calc(var(--bookmark-edge-gap) - var(--bookmark-item-mb));
+}
+
+/* 折叠态组标题无内容跟随，去掉底部分隔线，避免与分页器顶部边框叠成双线 */
+ul.bookmark-list li.group-header.group-collapsed {
   border-bottom: none;
 }
 
@@ -2764,6 +2804,26 @@ ul.bookmark-list .group-count {
    特异性需覆盖 li[ld-bookmark-item] 及其 view-compact 变体（0,3,2） */
 ul.bookmark-list li[ld-bookmark-item].group-hidden {
   display: none;
+}
+
+/* 全部折叠/展开按钮：两种图标按整体折叠状态显隐，span 居中承载 svg */
+.group-toggle-all .icon-collapse,
+.group-toggle-all .icon-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.group-toggle-all .icon-expand {
+  display: none;
+}
+
+.group-toggle-all.all-collapsed .icon-collapse {
+  display: none;
+}
+
+.group-toggle-all.all-collapsed .icon-expand {
+  display: inline-flex;
 }
 
 @media (prefers-reduced-motion: reduce) {

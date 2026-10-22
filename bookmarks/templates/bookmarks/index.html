@@ -34,7 +34,7 @@
         {% csrf_token %}
         {% include 'bookmarks/bulk_edit/bar.html' with disable_actions='bulk_unarchive,bulk_restore' %}
 
-        <div id="bookmark-list-container">
+        <div id="bookmark-list-container"{% if bookmark_list.group_by_date %} data-grouped{% endif %}>
           {% include 'bookmarks/bookmark_list.html' %}
         </div>
       </form>

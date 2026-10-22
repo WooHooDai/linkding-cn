@@ -1409,13 +1409,27 @@ class BookmarkListContext:
             from collections import Counter
 
             page_counts = Counter(item.group_key for item in self.items)
-            total_counts = Counter(
-                _bookmark_group_key(added)
-                for added in query_set.values_list("date_added", flat=True)
-            )
-            for item in self.items:
-                item.group_total = total_counts[item.group_key]
-                item.group_page_count = page_counts[item.group_key]
+            group_starts = {}
+            total_counts = Counter()
+            for idx, added in enumerate(query_set.values_list("date_added", flat=True)):
+                key = _bookmark_group_key(added)
+                total_counts[key] += 1
+                if key not in group_starts:
+                    # 该组第一条在完整结果集中的全局序号（1-based）
+                    group_starts[key] = idx + 1
+            # 本页第一条的全局序号；组首条之前的条目数即其在 items 中的下标
+            page_start = bookmarks_page.start_index()
+            seen_keys = set()
+            for page_idx, item in enumerate(self.items):
+                key = item.group_key
+                item.group_total = total_counts[key]
+                item.group_page_count = page_counts[key]
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    group_first_global = page_start + page_idx
+                    group_page_start = group_first_global - group_starts[key] + 1
+                    item.group_page_start = group_page_start
+                    item.group_page_end = group_page_start + page_counts[key] - 1
         self.is_empty = paginator.count == 0
         self.bookmarks_page = bookmarks_page
         self.bookmarks_total = paginator.count

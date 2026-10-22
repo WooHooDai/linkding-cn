@@ -26,6 +26,23 @@
     </label>
   </div>
 
+  {% if request.user_profile.group_by_date %}
+  <div class="header-pref-row header-action-row">
+    <span class="header-pref-label">{% translate 'Collapse groups' %}</span>
+    <button type="button" class="btn header-action-btn group-toggle-all"
+            data-label-collapse="{% translate 'Collapse all groups' %}"
+            data-label-expand="{% translate 'Expand all groups' %}"
+            title="{% translate 'Collapse all groups' %}">
+      <span class="icon-collapse">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </span>
+      <span class="icon-expand">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+      </span>
+    </button>
+  </div>
+  {% endif %}
+
   <div class="header-pref-row">
     <span class="header-pref-label">{% translate 'Bookmarks per page' %}</span>
     <input type="number" class="form-input input-sm header-pref-control header-items-per-page"

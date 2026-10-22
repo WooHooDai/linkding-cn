@@ -1696,8 +1696,20 @@ msgid "Group bookmarks by when they were added: today, yesterday, this week, thi
 msgstr "书签按添加日期分组显示：今天、昨天、本周、本月、按月"
 
 #: bookmarks/templates/bookmarks/bookmark_list.html
-msgid "%(total)s in total"
-msgstr "共 %(total)s 条"
+msgid "Showing %(start)s-%(end)s of %(total)s"
+msgstr "第 %(start)s-%(end)s 条 / 共 %(total)s 条"
+
+#: bookmarks/templates/bookmarks/index.html
+msgid "Collapse all groups"
+msgstr "折叠全部分组"
+
+#: bookmarks/templates/bookmarks/index.html
+msgid "Expand all groups"
+msgstr "展开全部分组"
+
+#: bookmarks/templates/bookmarks/header/prefs_panel.html
+msgid "Collapse groups"
+msgstr "分组折叠"
 
 #: bookmarks/templates/bookmarks/search.html:169
 #: bookmarks/templates/bundles/form.html:193

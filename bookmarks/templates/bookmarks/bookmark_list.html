@@ -23,7 +23,7 @@
               </span>
               <span class="group-count">{{ bookmark_item.group_page_count }}</span>
               {% if bookmark_item.group_page_count < bookmark_item.group_total %}
-              <span class="group-more">{% blocktranslate with total=bookmark_item.group_total %}{{ total }} in total{% endblocktranslate %}</span>
+              <span class="group-more">{% blocktranslate with start=bookmark_item.group_page_start end=bookmark_item.group_page_end total=bookmark_item.group_total %}Showing {{ start }}-{{ end }} of {{ total }}{% endblocktranslate %}</span>
               {% endif %}
             </button>
           </li>
@@ -58,23 +58,101 @@
     <script>
     (function() {
       'use strict';
-      if (window.__ldGroupToggleBound) return;
-      window.__ldGroupToggleBound = true;
-      // document 级委托，Turbo DOM 替换后依然生效
-      document.addEventListener('click', function(e) {
-        var toggle = e.target.closest('.group-toggle');
+      // 折叠状态持久化（localStorage，命名遵循项目 ld:模块:用途 规范）
+      // 两层：按组记录（ld:bookmarks:group-collapsed，局部覆盖）+ 全局默认（ld:bookmarks:group-default-collapsed，无记录组遵循）
+      var GROUP_COLLAPSE_STORAGE_KEY = 'ld:bookmarks:group-collapsed';
+      var GROUP_COLLAPSE_DEFAULT_KEY = 'ld:bookmarks:group-default-collapsed';
+      function loadCollapsedMap() {
+        try { return JSON.parse(localStorage.getItem(GROUP_COLLAPSE_STORAGE_KEY)) || {}; } catch(e) { return {}; }
+      }
+      function loadGroupDefaultCollapsed() {
+        return localStorage.getItem(GROUP_COLLAPSE_DEFAULT_KEY) === 'true';
+      }
+      function saveGroupDefaultCollapsed(collapsed) {
+        try { localStorage.setItem(GROUP_COLLAPSE_DEFAULT_KEY, collapsed ? 'true' : 'false'); } catch(e) {}
+      }
+      function loadCollapsedMap() {
+        try { return JSON.parse(localStorage.getItem(GROUP_COLLAPSE_STORAGE_KEY)) || {}; } catch(e) { return {}; }
+      }
+      // 合并写：保留历史记录（其他页的组），仅更新当前页各组的折叠状态
+      function saveCollapsedMap() {
+        var map = loadCollapsedMap();
+        var headers = document.querySelectorAll('ul.bookmark-list li.group-header');
+        for (var i = 0; i < headers.length; i++) {
+          map[headers[i].getAttribute('data-group-key')] = headers[i].classList.contains('group-collapsed');
+        }
+        try { localStorage.setItem(GROUP_COLLAPSE_STORAGE_KEY, JSON.stringify(map)); } catch(e) {}
+      }
+      function anyGroupExpanded() {
+        var headers = document.querySelectorAll('ul.bookmark-list li.group-header');
+        for (var i = 0; i < headers.length; i++) {
+          if (!headers[i].classList.contains('group-collapsed')) return true;
+        }
+        return false;
+      }
+      function refreshAllGroupsButton() {
+        // 宽屏布局菜单与窄屏更多菜单各有一份按钮，全部同步
+        var allBtns = document.querySelectorAll('.group-toggle-all');
+        var expanded = anyGroupExpanded();
+        for (var b = 0; b < allBtns.length; b++) {
+          var allBtn = allBtns[b];
+          allBtn.classList.toggle('all-collapsed', !expanded);
+          var label = expanded ? allBtn.getAttribute('data-label-collapse') : allBtn.getAttribute('data-label-expand');
+          allBtn.setAttribute('aria-label', label);
+          allBtn.setAttribute('title', label);
+        }
+      }
+      function setGroupCollapsed(header, collapsed) {
+        var toggle = header.querySelector('.group-toggle');
         if (!toggle) return;
-        var header = toggle.closest('.group-header');
-        if (!header) return;
-        var collapsed = header.classList.toggle('group-collapsed');
+        header.classList.toggle('group-collapsed', collapsed);
         toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-        // 折叠/展开当前组内（直到下一个组标题）的所有条目
         var el = header.nextElementSibling;
         while (el && !el.classList.contains('group-header')) {
           el.classList.toggle('group-hidden', collapsed);
           el = el.nextElementSibling;
         }
-      });
+      }
+      // 事件绑定只做一次（document 级委托，Turbo DOM 替换后依然生效）
+      if (!window.__ldGroupToggleBound) {
+        window.__ldGroupToggleBound = true;
+        document.addEventListener('click', function(e) {
+          var allToggleBtn = e.target.closest('.group-toggle-all');
+          if (allToggleBtn) {
+            var headers = document.querySelectorAll('ul.bookmark-list li.group-header');
+            var collapseAll = anyGroupExpanded();
+            for (var i = 0; i < headers.length; i++) {
+              setGroupCollapsed(headers[i], collapseAll);
+            }
+            saveCollapsedMap();
+            // 全局默认同步：无 localStorage 记录的组将遵循该状态
+            saveGroupDefaultCollapsed(collapseAll);
+            refreshAllGroupsButton();
+            return;
+          }
+          var toggle = e.target.closest('.group-toggle');
+          if (!toggle) return;
+          var header = toggle.closest('.group-header');
+          if (!header) return;
+          setGroupCollapsed(header, !header.classList.contains('group-collapsed'));
+          saveCollapsedMap();
+          refreshAllGroupsButton();
+        });
+      }
+      // 恢复记忆（每次 DOM 渲染/替换后都执行）：有记录的组按记录，无记录的组遵循全局默认
+      var savedMap = loadCollapsedMap();
+      var defaultCollapsed = loadGroupDefaultCollapsed();
+      var headers = document.querySelectorAll('ul.bookmark-list li.group-header');
+      for (var i = 0; i < headers.length; i++) {
+        var key = headers[i].getAttribute('data-group-key');
+        var collapsed = key && savedMap.hasOwnProperty(key)
+          ? savedMap[key] === true
+          : defaultCollapsed;
+        if (collapsed) {
+          setGroupCollapsed(headers[i], true);
+        }
+      }
+      refreshAllGroupsButton();
     })();
     </script>
     {% endif %}
