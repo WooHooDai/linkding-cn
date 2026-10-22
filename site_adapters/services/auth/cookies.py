@@ -296,25 +296,32 @@ _last_refresh_time: dict[str, float] = {}
 REFRESH_REUSE_WINDOW_SEC = 300
 
 
+def _default_user_data_dir() -> str:
+    """``user_data_dir="default"`` 指向的 profile 目录，与快照共用同一来源。"""
+    from django.conf import settings as django_settings
+
+    return getattr(django_settings, 'LD_CHROMIUM_PROFILE_DIR', '') or ''
+
+
 def _profile_key_for_refresh(refresh_config: dict) -> str:
     """浏览器 profile 维度键：相同 profile 的域互斥刷新，不同 profile 并行。
 
-    user_data_dir="default" 或未配置时，不同域共享同一 chromium-profile
+    user_data_dir="default" 或未配置时，不同域共享同一持久化 profile
     目录（Playwright 持久化 profile 是单实例锁），必须按 profile 维度互斥；
     不同 user_data_dir 的域各自独立 profile，可并行。
     """
     raw = (refresh_config or {}).get('user_data_dir', '')
     if not raw:
         return 'default'
+    if raw == 'default':
+        return _default_user_data_dir() or 'default'
+    if os.path.isabs(raw):
+        return raw
     try:
         from django.conf import settings as django_settings
         base_dir = getattr(django_settings, 'BASE_DIR', '')
     except Exception:
         base_dir = ''
-    if raw == 'default':
-        return os.path.join(base_dir, 'chromium-profile') if base_dir else 'default'
-    if os.path.isabs(raw):
-        return raw
     return os.path.join(base_dir, raw) if base_dir else raw
 
 
@@ -735,15 +742,12 @@ def refresh_cookie_declarative(refresh_config: dict, url: str,
     timeout = int(refresh_config.get('timeout', 30) * 1000)  # s → ms for Playwright
     license_key = getattr(django_settings, 'LD_BROWSER_CLOAKBROWSER_LICENSE_KEY', '')
 
-    # Resolve persistent profile directory (optional).
-    # "default" → {BASE_DIR}/chromium-profile (same path SingleFile uses).
-    # Relative paths resolve against BASE_DIR; absolute paths used as-is.
+    # "default" → settings.LD_CHROMIUM_PROFILE_DIR; relative paths against BASE_DIR.
     raw_profile = refresh_config.get('user_data_dir', '')
     user_data_dir = ''
     if raw_profile:
         if raw_profile == 'default':
-            base_dir = getattr(django_settings, 'BASE_DIR', '')
-            user_data_dir = os.path.join(base_dir, 'chromium-profile') if base_dir else ''
+            user_data_dir = _default_user_data_dir()
         elif os.path.isabs(raw_profile):
             user_data_dir = raw_profile
         else:

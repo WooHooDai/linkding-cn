@@ -658,7 +658,12 @@ def run_in_container(args):
                 )
                 result["checks"].append("cookie-refresh")
 
-                from bookmarks.services.singlefile import create_snapshot
+                from django.conf import settings as django_settings
+
+                from bookmarks.services.singlefile import (
+                    create_snapshot,
+                    resolve_profile_dir,
+                )
 
                 single = folder / "single.html"
                 create_snapshot(
@@ -676,9 +681,10 @@ def run_in_container(args):
 
                 from playwright.sync_api import sync_playwright
 
-                extension = str(Path("uBOLite.chromium.mv3").resolve())
+                extension = django_settings.LD_CHROMIUM_EXTENSION_DIR
+                profile_dir = resolve_profile_dir()
                 assert os.access(extension, os.R_OK) and os.access(
-                    "chromium-profile", os.W_OK
+                    profile_dir, os.W_OK
                 )
                 with sync_playwright() as pw:
                     context = pw.chromium.launch_persistent_context(

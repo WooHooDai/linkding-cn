@@ -36,5 +36,3 @@ unzip -q "$archive" -d uBOLite.chromium.mv3
 # Enable annoyances rulesets in manifest.json
 jq '.declarative_net_request.rule_resources |= map(if .id == "annoyances-overlays" or .id == "annoyances-cookies" or .id == "annoyances-social" or .id == "annoyances-widgets" or .id == "annoyances-others" then .enabled = true else . end)' uBOLite.chromium.mv3/manifest.json > temp.json
 mv temp.json uBOLite.chromium.mv3/manifest.json
-
-mkdir -p chromium-profile

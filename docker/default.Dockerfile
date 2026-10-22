@@ -142,7 +142,6 @@ RUN --mount=type=cache,id=apt-cache-${TARGETARCH},target=/var/cache/apt,sharing=
     dpkg-query -W -f='${binary:Package}\t${Version}\n' > /usr/share/linkding/os-packages.tsv
 COPY --from=browser-deps /etc/linkding/.venv .venv/
 COPY --chown=www-data:www-data --from=ublock-build /etc/linkding/uBOLite.chromium.mv3 uBOLite.chromium.mv3/
-RUN mkdir -p chromium-profile && chown www-data:www-data chromium-profile
 ENV LD_ENABLE_SNAPSHOTS=True
 ENV LD_BROWSER_ENGINE=chromium
 # 确保chromium可以运行

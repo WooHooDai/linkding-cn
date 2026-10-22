@@ -1,10 +1,12 @@
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
 from unittest import mock
 
+from django.conf import settings
 from django.test import TestCase, override_settings
 
 from bookmarks.services import singlefile
@@ -13,6 +15,8 @@ from bookmarks.services import singlefile
 class SingleFileServiceTestCase(TestCase):
     def setUp(self):
         self.temp_html_filepath = None
+        # 进程级"只警告一次"的开关，测试间需要复位以免相互影响
+        singlefile._PROFILE_ARG_STRIPPED_WARNED = False
 
     def tearDown(self):
         if self.temp_html_filepath and os.path.exists(self.temp_html_filepath):
@@ -21,11 +25,21 @@ class SingleFileServiceTestCase(TestCase):
     def create_test_file(self, *args, **kwargs):
         self.temp_html_filepath = tempfile.mkstemp(suffix=".tmp")[1]
 
-    def successful_singlefile_process(self):
+    def successful_singlefile_process(self, output=""):
         process = mock.Mock()
         process.returncode = 0
-        process.wait.side_effect = lambda timeout=None: open(self.temp_html_filepath, "w").close()
+
+        def _communicate(timeout=None):
+            open(self.temp_html_filepath, "w").close()
+            return output, None
+
+        process.communicate.side_effect = _communicate
         return process
+
+    def temp_profile_dir(self):
+        profile_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, profile_dir, True)
+        return profile_dir
 
     def test_create_snapshot_failure(self):
         with mock.patch("subprocess.Popen") as mock_popen:
@@ -35,8 +49,10 @@ class SingleFileServiceTestCase(TestCase):
                 singlefile.create_snapshot("http://example.com", "nonexistentfile.tmp")
 
         # so also check that it raises error if output file isn't created
+        mock_process = mock.Mock()
+        mock_process.communicate.return_value = ("", None)
         with (
-            mock.patch("subprocess.Popen"),
+            mock.patch("subprocess.Popen", return_value=mock_process),
             self.assertRaises(singlefile.SingleFileError),
         ):
             singlefile.create_snapshot("http://example.com", "nonexistentfile.tmp")
@@ -44,7 +60,7 @@ class SingleFileServiceTestCase(TestCase):
     def test_create_snapshot_does_not_accept_stale_output_file(self):
         self.create_test_file()
         mock_process = mock.Mock()
-        mock_process.wait.return_value = 0
+        mock_process.communicate.return_value = ("", None)
 
         with (
             mock.patch("subprocess.Popen", return_value=mock_process),
@@ -54,18 +70,40 @@ class SingleFileServiceTestCase(TestCase):
 
     def test_create_snapshot_accepts_nonzero_exit_code_with_fresh_output_file(self):
         self.create_test_file()
-        mock_process = mock.Mock()
+        mock_process = self.successful_singlefile_process()
         mock_process.returncode = 1
-        mock_process.wait.side_effect = lambda timeout=None: open(self.temp_html_filepath, "w").close()
 
         with mock.patch("subprocess.Popen", return_value=mock_process):
             singlefile.create_snapshot("http://example.com", self.temp_html_filepath)
 
+    def test_create_snapshot_error_includes_browser_output(self):
+        """失败信息必须带上子进程输出，否则只剩一句无信息量的框架自述。"""
+        self.create_test_file()
+        mock_process = mock.Mock()
+        mock_process.returncode = 255
+        mock_process.communicate.return_value = (
+            "The browser exited unexpectedly\n",
+            None,
+        )
+
+        with (
+            mock.patch("subprocess.Popen", return_value=mock_process),
+            self.assertRaises(singlefile.SingleFileError) as ctx,
+        ):
+            singlefile.create_snapshot("http://example.com", self.temp_html_filepath)
+
+        self.assertIn("The browser exited unexpectedly", str(ctx.exception))
+        self.assertIn("exit=255", str(ctx.exception))
+
     def test_create_snapshot_empty_options(self):
         mock_process = self.successful_singlefile_process()
         self.create_test_file()
+        profile_dir = self.temp_profile_dir()
 
-        with mock.patch("subprocess.Popen", return_value=mock_process) as mock_popen:
+        with (
+            self.settings(LD_CHROMIUM_PROFILE_DIR=profile_dir),
+            mock.patch("subprocess.Popen", return_value=mock_process) as mock_popen,
+        ):
             singlefile.create_snapshot("http://example.com", self.temp_html_filepath)
 
             called_args = mock_popen.call_args.args[0]
@@ -77,7 +115,7 @@ class SingleFileServiceTestCase(TestCase):
                 1,
             )
             self.assertEqual(
-                called_args.count("--browser-arg=--user-data-dir=chromium-profile"),
+                called_args.count(f"--browser-arg=--user-data-dir={profile_dir}"),
                 1,
             )
             self.assertEqual(
@@ -85,9 +123,111 @@ class SingleFileServiceTestCase(TestCase):
                 1,
             )
             self.assertEqual(
-                called_args.count("--browser-arg=--load-extension=uBOLite.chromium.mv3"),
+                called_args.count(
+                    "--browser-arg=--load-extension="
+                    + os.path.join(settings.BASE_DIR, "uBOLite.chromium.mv3")
+                ),
                 1,
             )
+
+    def test_relative_profile_dir_is_rejected(self):
+        """相对路径会按 CWD 解析（正是故障成因），必须硬失败而不是降级。"""
+        self.create_test_file()
+
+        with (
+            self.settings(LD_CHROMIUM_PROFILE_DIR="chromium-profile"),
+            mock.patch("subprocess.Popen") as mock_popen,
+            self.assertRaises(singlefile.SingleFileError) as ctx,
+        ):
+            singlefile.create_snapshot("http://example.com", self.temp_html_filepath)
+
+        self.assertIn("absolute path", str(ctx.exception))
+        self.assertIn("/etc/linkding/data/chromium-profile", str(ctx.exception))
+        mock_popen.assert_not_called()
+
+    def test_uncreatable_profile_dir_is_rejected(self):
+        """目录建不出来（不可作为目录/无权限/只读）时要报出具体原因。"""
+        self.create_test_file()
+
+        # /dev/null/... 无法作为目录创建（NotADirectoryError）
+        with (
+            self.settings(LD_CHROMIUM_PROFILE_DIR="/dev/null/linkding-profile"),
+            mock.patch("subprocess.Popen") as mock_popen,
+            self.assertRaises(singlefile.SingleFileError) as ctx,
+        ):
+            singlefile.create_snapshot("http://example.com", self.temp_html_filepath)
+
+        self.assertIn("Cannot create LD_CHROMIUM_PROFILE_DIR", str(ctx.exception))
+        mock_popen.assert_not_called()
+
+    def test_profile_dir_owned_by_another_user_is_rejected(self):
+        """目录存在但被别的用户占住时，报错要带上 uid 与属主/权限。"""
+        self.create_test_file()
+        profile_dir = self.temp_profile_dir()
+
+        with (
+            self.settings(LD_CHROMIUM_PROFILE_DIR=profile_dir),
+            mock.patch(
+                "bookmarks.services.singlefile.os.access", return_value=False
+            ),
+            mock.patch(
+                "bookmarks.services.singlefile._describe_owner",
+                return_value=(0, "0o700"),
+            ),
+            mock.patch("subprocess.Popen") as mock_popen,
+            self.assertRaises(singlefile.SingleFileError) as ctx,
+        ):
+            singlefile.create_snapshot("http://example.com", self.temp_html_filepath)
+
+        message = str(ctx.exception)
+        self.assertIn("not accessible", message)
+        self.assertIn("owner uid=0 mode=0o700", message)
+        self.assertIn("owned by another user", message)
+        mock_popen.assert_not_called()
+
+    def test_profile_dir_without_write_permission_is_rejected(self):
+        """属主是自己但缺 w/x 位时，提示要指向权限而不是"别的用户"。"""
+        self.create_test_file()
+        profile_dir = self.temp_profile_dir()
+
+        with (
+            self.settings(LD_CHROMIUM_PROFILE_DIR=profile_dir),
+            mock.patch(
+                "bookmarks.services.singlefile.os.access", return_value=False
+            ),
+            mock.patch("subprocess.Popen") as mock_popen,
+            self.assertRaises(singlefile.SingleFileError) as ctx,
+        ):
+            singlefile.create_snapshot("http://example.com", self.temp_html_filepath)
+
+        message = str(ctx.exception)
+        self.assertIn("mode does not grant", message)
+        mock_popen.assert_not_called()
+
+    @override_settings(
+        LD_SINGLEFILE_UBLOCK_OPTIONS="--browser-arg=--headless=new "
+        "--browser-arg=--user-data-dir=chromium-profile"
+    )
+    def test_env_user_data_dir_is_ignored(self):
+        """环境变量里的相对 profile 路径必须被剔除，否则重新引入跨用户权限冲突。"""
+        mock_process = self.successful_singlefile_process()
+        self.create_test_file()
+        profile_dir = self.temp_profile_dir()
+
+        with (
+            self.settings(LD_CHROMIUM_PROFILE_DIR=profile_dir),
+            mock.patch("subprocess.Popen", return_value=mock_process) as mock_popen,
+        ):
+            singlefile.create_snapshot("http://example.com", self.temp_html_filepath)
+
+        profile_args = [
+            arg
+            for arg in mock_popen.call_args.args[0]
+            if arg.startswith("--browser-arg=--user-data-dir")
+        ]
+        self.assertEqual(
+            profile_args, [f"--browser-arg=--user-data-dir={profile_dir}"]
+        )
 
     @override_settings(
         LD_SINGLEFILE_OPTIONS='--some-option "some value" --another-option "another value" --third-option="third value"'
@@ -130,7 +270,10 @@ class SingleFileServiceTestCase(TestCase):
                     "--browser-arg=--disable-blink-features=AutomationControlled",
                     called_args,
                 )
-                self.assertTrue(any(arg.startswith("--user-agent=") for arg in called_args))
+                # 全局 UA 不再注入快照：只有适配器显式配置的 UA 才允许出现
+                self.assertFalse(
+                    any(arg.startswith("--user-agent") for arg in called_args)
+                )
                 self.assertIn("--block-fonts", called_args)
         finally:
             adapter_cache.invalidate()
@@ -142,7 +285,7 @@ class SingleFileServiceTestCase(TestCase):
         with mock.patch("subprocess.Popen", return_value=mock_process):
             singlefile.create_snapshot("http://example.com", self.temp_html_filepath)
 
-            mock_process.wait.assert_called_with(timeout=120)
+            mock_process.communicate.assert_called_with(timeout=120)
 
     @override_settings(LD_SINGLEFILE_TIMEOUT_SEC=180)
     def test_create_snapshot_custom_timeout_setting(self):
@@ -152,7 +295,7 @@ class SingleFileServiceTestCase(TestCase):
         with mock.patch("subprocess.Popen", return_value=mock_process):
             singlefile.create_snapshot("http://example.com", self.temp_html_filepath)
 
-            mock_process.wait.assert_called_with(timeout=180)
+            mock_process.communicate.assert_called_with(timeout=180)
 
     def test_custom_options_type_aware_bool_true(self):
         """Boolean True values should produce flag-only args."""

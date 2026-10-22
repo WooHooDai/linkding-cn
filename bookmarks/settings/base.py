@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 import json
 import os
 import shlex
+import tempfile
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -388,14 +389,26 @@ LD_BROWSER_ENGINE = os.getenv("LD_BROWSER_ENGINE", "chromium")
 CLOAKBROWSER_LICENSE_KEY = os.getenv("CLOAKBROWSER_LICENSE_KEY", "")
 
 LD_SINGLEFILE_PATH = os.getenv("LD_SINGLEFILE_PATH", "single-file")
+
+# 快照与 Cookie 刷新共用的持久化 Chromium profile（单一来源）。
+# 必须绝对路径：相对路径按 CWD 解析，会让不同用户命中同一目录并互相夺走属主。
+LD_CHROMIUM_PROFILE_DIR = os.getenv(
+    "LD_CHROMIUM_PROFILE_DIR",
+    os.path.join(tempfile.gettempdir(), "linkding-chromium-profile"),
+)
+# 随镜像分发的 uBlock Origin Lite 扩展目录（绝对化，摆脱 CWD 依赖）。
+LD_CHROMIUM_EXTENSION_DIR = os.getenv(
+    "LD_CHROMIUM_EXTENSION_DIR",
+    os.path.join(BASE_DIR, "uBOLite.chromium.mv3"),
+)
+
 LD_SINGLEFILE_UBLOCK_OPTIONS = os.getenv(
     "LD_SINGLEFILE_UBLOCK_OPTIONS",
     shlex.join(
         [
             "--browser-arg=--headless=new",
-            "--browser-arg=--user-data-dir=chromium-profile",
             "--browser-arg=--no-sandbox",
-            "--browser-arg=--load-extension=uBOLite.chromium.mv3",
+            f"--browser-arg=--load-extension={LD_CHROMIUM_EXTENSION_DIR}",
         ]
     ),
 )
