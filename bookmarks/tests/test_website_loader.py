@@ -46,7 +46,7 @@ class WebsiteLoaderTestCase(TestCase):
         _cache.invalidate()
 
     def render_html_document(
-        self, title, description="", og_description="", og_image=""
+        self, title, description="", og_description="", og_image="", author=""
     ):
         meta_description = (
             f'<meta name="description" content="{description}">' if description else ""
@@ -59,6 +59,9 @@ class WebsiteLoaderTestCase(TestCase):
         meta_og_image = (
             f'<meta property="og:image" content="{og_image}">' if og_image else ""
         )
+        meta_author = (
+            f'<meta name="author" content="{author}">' if author else ""
+        )
         return f"""
         <!DOCTYPE html>
         <html lang="en">
@@ -68,6 +71,7 @@ class WebsiteLoaderTestCase(TestCase):
             {meta_description}
             {meta_og_description}
             {meta_og_image}
+            {meta_author}
         </head>
         <body></body>
         </html>
@@ -195,6 +199,24 @@ class WebsiteLoaderTestCase(TestCase):
             )
             metadata = website_loader.load_website_metadata("https://example.com")
             self.assertEqual("http://example.com/image.jpg", metadata.preview_image)
+
+    def test_load_website_metadata_using_author(self):
+        with mock.patch(
+            "bookmarks.services.website_loader.load_page"
+        ) as mock_load_page:
+            mock_load_page.return_value = self.render_html_document(
+                "test title", author="test author"
+            )
+            metadata = website_loader.load_website_metadata("https://example.com")
+            self.assertEqual("test author", metadata.author)
+
+    def test_load_website_metadata_returns_none_author_when_absent(self):
+        with mock.patch(
+            "bookmarks.services.website_loader.load_page"
+        ) as mock_load_page:
+            mock_load_page.return_value = self.render_html_document("test title")
+            metadata = website_loader.load_website_metadata("https://example.com")
+            self.assertIsNone(metadata.author)
 
     def test_load_website_metadata_gets_absolute_og_image_path_when_path_starts_with_dots(
         self,
@@ -372,6 +394,33 @@ class WebsiteLoaderTestCase(TestCase):
             self.assertEqual("JSON-LD Headline", metadata.title)
             self.assertEqual("JSON-LD Desc", metadata.description)
             self.assertEqual("https://example.com/ld.png", metadata.preview_image)
+
+    def test_json_ld_author_extraction(self):
+        """Should extract author from JSON-LD when no meta tags."""
+        with mock.patch("bookmarks.services.website_loader.load_page") as mock_load:
+            mock_load.return_value = """
+            <html><head>
+            <script type="application/ld+json">
+            {"@type":"Article","headline":"JSON-LD Headline","author":{"@type":"Person","name":"JSON-LD Author"}}
+            </script>
+            </head><body></body></html>
+            """
+            metadata = website_loader.load_website_metadata("https://example.com")
+            self.assertEqual("JSON-LD Headline", metadata.title)
+            self.assertEqual("JSON-LD Author", metadata.author)
+
+    def test_json_ld_author_extraction_from_string(self):
+        """Should extract author when JSON-LD author is a plain string."""
+        with mock.patch("bookmarks.services.website_loader.load_page") as mock_load:
+            mock_load.return_value = """
+            <html><head>
+            <script type="application/ld+json">
+            {"@type":"Article","headline":"JSON-LD Headline","author":"Plain Author"}
+            </script>
+            </head><body></body></html>
+            """
+            metadata = website_loader.load_website_metadata("https://example.com")
+            self.assertEqual("Plain Author", metadata.author)
 
     def test_json_ld_graph_extraction(self):
         """Should handle @graph arrays in JSON-LD."""
@@ -588,6 +637,7 @@ class WebsiteLoaderTestCase(TestCase):
             "_rewrite_url": "https://final.example.com/item",
             "rewrite_title": [["^Client title$", "Rewritten title"]],
             "rewrite_description": [["^Client desc$", "Rewritten desc"]],
+            "rewrite_author": [["^Client author$", "Rewritten author"]],
         }
 
         with mock.patch(
@@ -598,19 +648,45 @@ class WebsiteLoaderTestCase(TestCase):
                 "https://client.example.com/item",
                 title="Client title",
                 description="Client desc",
+                author="Client author",
             )
 
         self.assertEqual(metadata.url, "https://final.example.com/item")
         self.assertEqual(metadata.title, "Rewritten title")
         self.assertEqual(metadata.description, "Rewritten desc")
+        self.assertEqual(metadata.author, "Rewritten author")
         # 预览图始终由服务器抓取处理，不参与客户端 rewrite 链路
         self.assertIsNone(metadata.preview_image)
+
+    def test_configured_soup_metadata_uses_select_author(self):
+        html = """
+        <html><body>
+          <meta property="og:title" content="CSS title">
+          <span class="byline">CSS Author</span>
+        </body></html>
+        """
+        config = {
+            "select_author": ["span.byline"],
+            "headers": {},
+        }
+
+        with (
+            mock.patch(
+                "bookmarks.services.website_loader.get_metadata_config",
+                return_value=config,
+            ),
+            mock.patch.object(website_loader, "load_page", return_value=html),
+        ):
+            metadata = website_loader.load_website_metadata("https://example.com/post")
+
+        self.assertEqual(metadata.author, "CSS Author")
 
     def test_configured_xml_metadata_uses_selectors(self):
         xml = """<?xml version="1.0" encoding="UTF-8"?>
         <feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
           <entry>
             <title>XML title</title>
+            <author><name>XML Author</name></author>
             <content type="html">&lt;p&gt;XML &lt;strong&gt;description&lt;/strong&gt;&lt;/p&gt;</content>
             <media:thumbnail url="https://preview.redd.it/pic.jpg?width=140&amp;auto=webp" />
           </entry>
@@ -620,6 +696,7 @@ class WebsiteLoaderTestCase(TestCase):
             "content_type": "xml",
             "select_title": ["//atom:feed/atom:entry/atom:title"],
             "select_description": ["//atom:feed/atom:entry/atom:content"],
+            "select_author": ["//atom:feed/atom:entry/atom:author/atom:name"],
             "select_image": ["//atom:feed/atom:entry/media:thumbnail/@url"],
             "rewrite_image": [
                 "^https://preview\\.redd\\.it/([^?]+).*$",
@@ -639,6 +716,7 @@ class WebsiteLoaderTestCase(TestCase):
 
         self.assertEqual(metadata.title, "XML title")
         self.assertEqual(metadata.description, "XML\ndescription")
+        self.assertEqual(metadata.author, "XML Author")
         self.assertEqual(metadata.preview_image, "https://i.redd.it/pic.jpg")
 
     def test_configured_xml_metadata_binds_unprefixed_xpath_to_default_namespace(self):

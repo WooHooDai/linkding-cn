@@ -305,6 +305,53 @@ class ParserTestCase(TestCase, ImportTestMixin):
         self.assertEqual(bookmarks[1].description, "Example description")
         self.assertEqual(bookmarks[1].notes, "")
 
+    def test_author(self):
+        # no author
+        html = self.render_html(
+            tags_html="""
+        <DT><A HREF="https://example.com" ADD_DATE="1">Example title</A>
+        """
+        )
+        bookmarks = parse(html)
+        self.assertEqual(bookmarks[0].description, "")
+        self.assertEqual(bookmarks[0].author, "")
+
+        # author only
+        html = self.render_html(
+            tags_html="""
+        <DT><A HREF="https://example.com" ADD_DATE="1">Example title</A>
+        <DD>[linkding-author]Example author[/linkding-author]
+        """
+        )
+        bookmarks = parse(html)
+        self.assertEqual(bookmarks[0].description, "")
+        self.assertEqual(bookmarks[0].author, "Example author")
+
+        # description, author, notes
+        html = self.render_html(
+            tags_html="""
+        <DT><A HREF="https://example.com" ADD_DATE="1">Example title</A>
+        <DD>Example description[linkding-author]Example author[/linkding-author][linkding-notes]Example notes[/linkding-notes]
+        """
+        )
+        bookmarks = parse(html)
+        self.assertEqual(bookmarks[0].description, "Example description")
+        self.assertEqual(bookmarks[0].author, "Example author")
+        self.assertEqual(bookmarks[0].notes, "Example notes")
+
+        # author reset between bookmarks
+        html = self.render_html(
+            tags_html="""
+        <DT><A HREF="https://example.com/1" ADD_DATE="1">Example title</A>
+        <DD>[linkding-author]Example author[/linkding-author]
+        <DT><A HREF="https://example.com/2" ADD_DATE="1">Example title</A>
+        <DD>Example description
+        """
+        )
+        bookmarks = parse(html)
+        self.assertEqual(bookmarks[0].author, "Example author")
+        self.assertEqual(bookmarks[1].author, "")
+
     def test_unescape_content(self):
         html = self.render_html(
             tags_html="""

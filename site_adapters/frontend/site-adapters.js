@@ -1331,7 +1331,7 @@ var MODE = (function () { try { return localStorage.getItem(TAB_KEY) || "subscri
       if (r.metadata_error) {
         h += '<div class="wa-result-error">' + esc(r.metadata_error) + '</div>';
       }
-      var orderedKeys = ['title', 'description', 'preview_image'];
+      var orderedKeys = ['title', 'author', 'description', 'preview_image'];
       var restKeys = fields ? Object.keys(fields).filter(function (k) { return orderedKeys.indexOf(k) < 0 && k !== 'url'; }) : [];
       var allKeys = orderedKeys.concat(restKeys);
       var orderedFields = {};
@@ -1561,7 +1561,7 @@ var MODE = (function () { try { return localStorage.getItem(TAB_KEY) || "subscri
         h += '<div class="wa-result-error">' + esc(m.metadata_error) + '</div>';
       }
       if (m.result) {
-        var orderedKeys = ['title', 'description', 'preview_image'];
+        var orderedKeys = ['title', 'author', 'description', 'preview_image'];
         var restKeys = Object.keys(m.result).filter(function (k) { return orderedKeys.indexOf(k) < 0 && k !== 'url'; });
         var allKeys = orderedKeys.concat(restKeys);
         var orderedFields = {};

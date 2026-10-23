@@ -82,6 +82,22 @@ class FeedsTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(response.status_code, 200)
         self.assertFeedItems(response, bookmarks)
 
+    def test_all_renders_author_as_dc_creator(self):
+        self.setup_bookmark(author="Grace Hopper")
+
+        response = self.client.get(reverse("linkding:feeds.all", args=[self.token.key]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response, "<dc:creator xmlns:dc=\"http://purl.org/dc/elements/1.1/\">Grace Hopper</dc:creator>"
+        )
+
+    def test_all_omits_dc_creator_when_author_empty(self):
+        self.setup_bookmark(author="")
+
+        response = self.client.get(reverse("linkding:feeds.all", args=[self.token.key]))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "<dc:creator>")
+
     def test_all_returns_only_user_owned_bookmarks(self):
         other_user = User.objects.create_user(
             "otheruser", "otheruser@example.com", "password123"

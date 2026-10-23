@@ -1115,6 +1115,7 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
                 "Rewritten title",
                 "Rewritten description",
                 None,
+                "Rewritten author",
             )
             mock_rewrite_metadata.return_value = expected_metadata
 
@@ -1122,7 +1123,8 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
             check_url = urllib.parse.quote_plus("https://example.com")
             response = self.get(
                 f"{url}?url={check_url}&from_client=1"
-                "&title=Client%20title&description=Client%20description",
+                "&title=Client%20title&description=Client%20description"
+                "&author=Client%20author",
                 expected_status_code=status.HTTP_200_OK,
             )
             metadata = response.data["metadata"]
@@ -1131,10 +1133,12 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
             self.assertEqual(expected_metadata.url, metadata["url"])
             self.assertEqual("Rewritten title", metadata["title"])
             self.assertEqual("Rewritten description", metadata["description"])
+            self.assertEqual("Rewritten author", metadata["author"])
             mock_rewrite_metadata.assert_called_once_with(
                 "https://example.com",
                 title="Client title",
                 description="Client description",
+                author="Client author",
                 username=self.user.username,
             )
 
@@ -1174,6 +1178,7 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
             self.assertEqual(bookmark.url, bookmark_data["url"])
             self.assertEqual(bookmark.title, bookmark_data["title"])
             self.assertEqual(bookmark.description, bookmark_data["description"])
+            self.assertEqual(bookmark.author, bookmark_data["author"])
             self.assertEqual(
                 "http://testserver/favicon/example.com", bookmark_data["favicon_url"]
             )

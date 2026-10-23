@@ -192,6 +192,7 @@ def _import_batch(
             "shared",
             "title",
             "description",
+            "author",
             "notes",
             "owner",
         ],
@@ -256,6 +257,8 @@ def _copy_bookmark_data(
         bookmark.title = netscape_bookmark.title
     if netscape_bookmark.description:
         bookmark.description = netscape_bookmark.description
+    if netscape_bookmark.author:
+        bookmark.author = netscape_bookmark.author
     if netscape_bookmark.notes:
         bookmark.notes = netscape_bookmark.notes
     if options.map_private_flag and not netscape_bookmark.private:

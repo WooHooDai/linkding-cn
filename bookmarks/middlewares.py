@@ -39,6 +39,9 @@ default_global_settings = GlobalSettings()
 PREF_COOKIE_DOMAIN_VIEW_MODE = "ld_domain_view_mode"
 PREF_COOKIE_DOMAIN_COMPACT_MODE = "ld_domain_compact_mode"
 PREF_COOKIE_TAG_GROUPING = "ld_tag_grouping"
+PREF_COOKIE_AUTHOR_GROUPING = "ld_author_grouping"
+PREF_COOKIE_AUTHOR_SORT = "ld_author_sort"
+PREF_COOKIE_AUTHOR_MODE = "ld_author_mode"
 
 
 def _build_anonymous_profile(request) -> UserProfile:
@@ -60,6 +63,26 @@ def _build_anonymous_profile(request) -> UserProfile:
     )
     if tag_grouping in dict(UserProfile.TAG_GROUPING_CHOICES):
         profile.tag_grouping = tag_grouping
+
+    author_grouping = request.COOKIES.get(
+        PREF_COOKIE_AUTHOR_GROUPING, UserProfile.AUTHOR_GROUPING_ALPHABETICAL
+    )
+    if author_grouping in dict(UserProfile.AUTHOR_GROUPING_CHOICES):
+        profile.author_grouping = author_grouping
+
+    author_sort = request.COOKIES.get(
+        PREF_COOKIE_AUTHOR_SORT, UserProfile.AUTHOR_SORT_COUNT
+    )
+    if author_sort in dict(UserProfile.AUTHOR_SORT_CHOICES):
+        profile.author_sort = author_sort
+
+    # 三态模式 cookie 优先，覆盖 grouping/sort 组合
+    author_mode = request.COOKIES.get(PREF_COOKIE_AUTHOR_MODE, "")
+    if author_mode in dict(UserProfile.AUTHOR_MODE_CHOICES):
+        (
+            profile.author_grouping,
+            profile.author_sort,
+        ) = UserProfile.author_grouping_sort_for(author_mode)
 
     return profile
 

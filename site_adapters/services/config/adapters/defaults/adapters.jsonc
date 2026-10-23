@@ -36,6 +36,14 @@
         "meta[name=\"description\"]",
         "meta[name=\"twitter:description\"]"
       ],
+      "select_author": [
+        "meta[name=\"author\"]",
+        "meta[property=\"author\"]",
+        "meta[property=\"article:author\"]",
+        "meta[name=\"parsely-author\"]",
+        "meta[name=\"citation_author\"]",
+        "script[type=\"application/ld+json\"]::json(author.name)"
+      ],
       "select_image": [
         "meta[property=\"og:image\"]",
         "meta[name=\"og:image\"]",

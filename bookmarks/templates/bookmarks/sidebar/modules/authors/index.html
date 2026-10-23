@@ -1,0 +1,30 @@
+{% extends "bookmarks/sidebar/components/module_base.html" %}
+{% load i18n %}
+
+{% block section_attrs %}id="author-section-container" aria-labelledby="authors-heading"{% endblock %}
+{% block toggle_storage_key %}authorSectionState{% endblock %}
+{% block heading_id %}authors-heading{% endblock %}
+{% block title %}{% translate "Authors" %}{% endblock %}
+
+{% block dropdown_label %}{% translate "Authors menu" %}{% endblock %}
+{% block dropdown_items %}
+  {% for value, label, is_active in author_cloud.mode_options %}
+  <li class="menu-item{% if is_active %} menu-item-active{% endif %}">
+    {% if is_active %}
+      <span class="menu-link menu-link-active">{{ label }}</span>
+    {% else %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="pref_action" value="toggle_author_mode">
+        <input type="hidden" name="value" value="{{ value }}">
+        <button type="submit" class="menu-link">{{ label }}</button>
+      </form>
+    {% endif %}
+  </li>
+  {% endfor %}
+{% endblock %}
+
+{% block content_attrs %}id="author-cloud-container"{% endblock %}
+{% block content %}
+  {% include 'bookmarks/sidebar/modules/authors/cloud.html' %}
+{% endblock %}

@@ -30,6 +30,8 @@ def append_bookmark(doc: BookmarkDocument, bookmark: Bookmark):
     url = bookmark.url
     title = html.escape(bookmark.resolved_title or "")
     desc = html.escape(bookmark.resolved_description or "")
+    if bookmark.author:
+        desc += f"[linkding-author]{html.escape(bookmark.author)}[/linkding-author]"
     if bookmark.notes:
         desc += f"[linkding-notes]{html.escape(bookmark.notes)}[/linkding-notes]"
     tag_names = bookmark.tag_names

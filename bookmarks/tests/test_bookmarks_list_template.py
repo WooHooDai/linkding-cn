@@ -7,6 +7,7 @@ from django.template import RequestContext, Template
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from django.utils import timezone
+from urllib.parse import unquote_plus
 
 from bookmarks.middlewares import LinkdingMiddleware
 from bookmarks.models import Bookmark, BookmarkSearch, User, UserProfile
@@ -305,6 +306,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         soup = self.make_soup(html)
 
         has_description = bool(bookmark.description)
+        has_author = bool(bookmark.author)
         has_tags = len(bookmark.tags.all()) > 0
 
         # inline description block exists
@@ -317,11 +319,36 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         separate_description = soup.select_one(".description.separate")
         self.assertIsNone(separate_description)
 
-        # one direct child element per description, tags, and optional separator
+        # author 位于标题行（title-link 之后），不在描述行内
+        title = soup.select_one(".title")
+        self.assertIsNotNone(title)
+        if has_author:
+            author_span = title.select_one(".author")
+            self.assertIsNotNone(author_span)
+            self.assertEqual(author_span.text, bookmark.author)
+            # author 可点击：链接到 author 搜索（空格等 URL 编码后仍可还原）
+            self.assertEqual(author_span.name, "a")
+            author_href = unquote_plus(author_span.get("href", ""))
+            self.assertIn(f'q=author:"{bookmark.author}"', author_href)
+            self.assertIsNone(
+                description.select_one(".author"),
+                "author must not render inside the description container",
+            )
+            title_link = title.select_one(".title-link")
+            self.assertIsNotNone(title_link)
+            # author 必须位于 title-link 之后
+            self.assertTrue(
+                list(title.children).index(author_span)
+                > list(title.children).index(title_link)
+            )
+        else:
+            self.assertIsNone(title.select_one(".author"))
+
+        # 描述行：仅 tags、可选分隔符与 description
         expected_selectors = []
         if has_tags:
             expected_selectors.append(".tags")
-        if has_description and has_tags:
+        if has_tags and has_description:
             expected_selectors.append(".description-separator")
         if has_description:
             expected_selectors.append(".description-text")
@@ -331,9 +358,13 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             [selector.removeprefix(".") for selector in expected_selectors],
         )
 
-        if has_description and has_tags:
-            separator = description.select_one(".description-separator")
-            self.assertIsNotNone(separator)
+        # separators exist between adjacent non-empty segments
+        separators = description.select(".description-separator")
+        segment_count = sum(1 for s in (has_tags, has_description) if s)
+        self.assertEqual(
+            len(separators), segment_count - 1 if segment_count > 1 else 0
+        )
+        for separator in separators:
             self.assertEqual(separator.text, " | ")
 
         # contains description text, without leading/trailing whitespace
@@ -366,24 +397,53 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         )
         profile.save()
 
-        # no description, no tags
+        # no description, no tags, no author
         bookmark = self.setup_bookmark(description="")
         self.inline_bookmark_description_test(bookmark)
 
-        # with description, no tags
+        # with description, no tags, no author
         bookmark = self.setup_bookmark(description="Test description")
         self.inline_bookmark_description_test(bookmark)
 
-        # no description, with tags
+        # with author, no tags, no description
+        Bookmark.objects.all().delete()
+        bookmark = self.setup_bookmark(author="Test author")
+        self.inline_bookmark_description_test(bookmark)
+
+        # with author and description, no tags
+        Bookmark.objects.all().delete()
+        bookmark = self.setup_bookmark(
+            author="Test author", description="Test description"
+        )
+        self.inline_bookmark_description_test(bookmark)
+
+        # no description, no author, with tags
         Bookmark.objects.all().delete()
         bookmark = self.setup_bookmark(
             description="", tags=[self.setup_tag(), self.setup_tag(), self.setup_tag()]
         )
         self.inline_bookmark_description_test(bookmark)
 
-        # with description, with tags
+        # with author, with tags, no description
         Bookmark.objects.all().delete()
         bookmark = self.setup_bookmark(
+            author="Test author",
+            tags=[self.setup_tag(), self.setup_tag(), self.setup_tag()],
+        )
+        self.inline_bookmark_description_test(bookmark)
+
+        # with description, with tags, no author
+        Bookmark.objects.all().delete()
+        bookmark = self.setup_bookmark(
+            description="Test description",
+            tags=[self.setup_tag(), self.setup_tag(), self.setup_tag()],
+        )
+        self.inline_bookmark_description_test(bookmark)
+
+        # with description, with tags, with author
+        Bookmark.objects.all().delete()
+        bookmark = self.setup_bookmark(
+            author="Test author",
             description="Test description",
             tags=[self.setup_tag(), self.setup_tag(), self.setup_tag()],
         )
@@ -394,6 +454,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         soup = self.make_soup(html)
 
         has_description = bool(bookmark.description)
+        has_author = bool(bookmark.author)
         has_tags = len(bookmark.tags.all()) > 0
 
         # inline description block does not exist
@@ -403,13 +464,33 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         description = soup.select_one(".description .description-container.separate")
         self.assertIsNotNone(description)
 
-        if not has_description:
-            description_text = description.select_one(".description-text")
-            self.assertIsNone(description_text)
+        # author 位于标题行，不在描述容器内
+        title = soup.select_one(".title")
+        self.assertIsNotNone(title)
+        if has_author:
+            author_span = title.select_one(".author")
+            self.assertIsNotNone(author_span)
+            self.assertEqual(author_span.text, bookmark.author)
+            title_link = title.select_one(".title-link")
+            self.assertIsNotNone(title_link)
+            # author 必须位于 title-link 之后
+            self.assertTrue(
+                list(title.children).index(author_span)
+                > list(title.children).index(title_link)
+            )
         else:
+            self.assertIsNone(title.select_one(".author"))
+        self.assertIsNone(description.select_one(".author"))
+
+        if has_description:
             description_text = description.select_one(".description-text")
             self.assertIsNotNone(description_text)
             self.assertEqual(description_text.text, bookmark.description)
+        else:
+            self.assertIsNone(description.select_one(".description-text"))
+
+        # 描述容器内不再有作者分隔符
+        self.assertEqual(len(description.select(".description-separator")), 0)
 
         if not has_tags:
             # no tags element
@@ -440,8 +521,19 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         bookmark = self.setup_bookmark(description="")
         self.separate_bookmark_description_test(bookmark)
 
+        # with author, no description, no tags
+        bookmark = self.setup_bookmark(author="Test author")
+        self.separate_bookmark_description_test(bookmark)
+
         # with description, no tags
         bookmark = self.setup_bookmark(description="Test description")
+        self.separate_bookmark_description_test(bookmark)
+
+        # with author and description, no tags
+        Bookmark.objects.all().delete()
+        bookmark = self.setup_bookmark(
+            author="Test author", description="Test description"
+        )
         self.separate_bookmark_description_test(bookmark)
 
         # no description, with tags
@@ -454,6 +546,15 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         # with description, with tags
         Bookmark.objects.all().delete()
         bookmark = self.setup_bookmark(
+            description="Test description",
+            tags=[self.setup_tag(), self.setup_tag(), self.setup_tag()],
+        )
+        self.separate_bookmark_description_test(bookmark)
+
+        # with author and description, with tags
+        Bookmark.objects.all().delete()
+        bookmark = self.setup_bookmark(
+            author="Test author",
             description="Test description",
             tags=[self.setup_tag(), self.setup_tag(), self.setup_tag()],
         )
@@ -1308,6 +1409,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         tag = self.setup_tag(name="tag1")
         bookmark = self.setup_bookmark(
             description="A long description that must not render in compact",
+            author="Test author",
             tags=[tag],
             notes="Secret note",
         )
@@ -1322,10 +1424,13 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertIsNone(soup.select_one(".url-path"))
         self.assertIsNone(soup.select_one(".preview-image"))
 
-        # 常驻渲染标题 + 标签，不渲染独立日期；健康指示器由 CSS 隐藏
+        # 常驻渲染标题 + 作者名，不渲染独立日期；健康指示器由 CSS 隐藏
         self.assertIsNotNone(soup.select_one(".compact-head"))
-        self.assertIsNotNone(soup.select_one(".compact-tags .compact-tag"))
-        self.assertEqual(soup.select_one(".compact-tag").get_text(strip=True), "tag1")
+        # 紧凑视图不渲染标签（右侧组留给展开按钮，作者名在标题行展示）
+        self.assertIsNone(soup.select_one(".compact-tags"))
+        author = soup.select_one(".compact-head .title .author")
+        self.assertIsNotNone(author)
+        self.assertEqual(author.get_text(strip=True), bookmark.author)
         self.assertIsNone(soup.select_one(".compact-date"))
 
         # 触屏/窄屏展开按钮

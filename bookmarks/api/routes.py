@@ -167,6 +167,7 @@ class BookmarkViewSet(
         from_client = request.GET.get("from_client", False) == "1"
         client_title = request.GET.get("title")
         client_description = request.GET.get("description")
+        client_author = request.GET.get("author")
 
         bookmark = Bookmark.query_existing(request.user, url).first()
 
@@ -179,6 +180,7 @@ class BookmarkViewSet(
                 title=client_title,
                 description=client_description,
                 username=request.user.username,
+                author=client_author,
             )
         else:
             try:

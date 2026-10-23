@@ -500,6 +500,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
                 {"key": "summary", "enabled": True},
                 {"key": "bundles", "enabled": False},
                 {"key": "tags", "enabled": True},
+                {"key": "authors", "enabled": True},
                 {"key": "colors", "enabled": True},
             ],
         )

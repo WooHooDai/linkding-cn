@@ -96,6 +96,7 @@ class Bookmark(models.Model):
     url_normalized = models.CharField(max_length=2048, blank=True, db_index=True)
     title = models.TextField(blank=True)
     description = models.TextField(blank=True)
+    author = models.TextField(blank=True, verbose_name=_("Author"))
     notes = models.TextField(blank=True)
     preview_image_remote_url = models.URLField(max_length=2048, blank=True)
     # Obsolete field, kept to not remove column when generating migrations
@@ -1035,16 +1036,57 @@ class UserProfile(models.Model):
         (TAG_GROUPING_SMART_TREE, _("Smart tree")),
         (TAG_GROUPING_DISABLED, _("Disabled")),
     ]
+    AUTHOR_GROUPING_ALPHABETICAL = "alphabetical"
+    AUTHOR_GROUPING_DISABLED = "disabled"
+    AUTHOR_GROUPING_CHOICES = [
+        (AUTHOR_GROUPING_ALPHABETICAL, _("Alphabetical")),
+        (AUTHOR_GROUPING_DISABLED, _("Disabled")),
+    ]
+    AUTHOR_SORT_COUNT = "count"
+    AUTHOR_SORT_NAME = "name"
+    AUTHOR_SORT_CHOICES = [
+        (AUTHOR_SORT_COUNT, _("By count")),
+        (AUTHOR_SORT_NAME, _("By name")),
+    ]
+    # 侧边栏作者模块的三态显示模式（互斥单选）
+    AUTHOR_MODE_COUNT_DESC = "count_desc"
+    AUTHOR_MODE_ALPHABETICAL = "alphabetical"
+    AUTHOR_MODE_DISABLED = "disabled"
+    AUTHOR_MODE_CHOICES = [
+        (AUTHOR_MODE_COUNT_DESC, _("By count desc")),
+        (AUTHOR_MODE_ALPHABETICAL, _("Grouped by first letter")),
+        (AUTHOR_MODE_DISABLED, _("Disable grouping")),
+    ]
+
+    @classmethod
+    def author_mode_for(cls, grouping: str, sort: str) -> str:
+        """由 (grouping, sort) 组合推导当前模式"""
+        if grouping == cls.AUTHOR_GROUPING_ALPHABETICAL:
+            return cls.AUTHOR_MODE_ALPHABETICAL
+        if sort == cls.AUTHOR_SORT_NAME:
+            return cls.AUTHOR_MODE_DISABLED
+        return cls.AUTHOR_MODE_COUNT_DESC
+
+    @classmethod
+    def author_grouping_sort_for(cls, mode: str) -> tuple[str, str]:
+        """由模式映射回 (grouping, sort) 组合"""
+        if mode == cls.AUTHOR_MODE_ALPHABETICAL:
+            return cls.AUTHOR_GROUPING_ALPHABETICAL, cls.AUTHOR_SORT_COUNT
+        if mode == cls.AUTHOR_MODE_DISABLED:
+            return cls.AUTHOR_GROUPING_DISABLED, cls.AUTHOR_SORT_NAME
+        return cls.AUTHOR_GROUPING_DISABLED, cls.AUTHOR_SORT_COUNT
     SIDEBAR_MODULE_SUMMARY = "summary"
     SIDEBAR_MODULE_BUNDLES = "bundles"
     SIDEBAR_MODULE_DOMAINS = "domains"
     SIDEBAR_MODULE_TAGS = "tags"
+    SIDEBAR_MODULE_AUTHORS = "authors"
     SIDEBAR_MODULE_COLORS = "colors"
     SIDEBAR_MODULE_LABELS = {
         SIDEBAR_MODULE_SUMMARY: _("User summary"),
         SIDEBAR_MODULE_BUNDLES: _("Filters"),
         SIDEBAR_MODULE_DOMAINS: _("Domains"),
         SIDEBAR_MODULE_TAGS: _("Tags"),
+        SIDEBAR_MODULE_AUTHORS: _("Authors"),
         SIDEBAR_MODULE_COLORS: _("Colors"),
     }
 
@@ -1128,23 +1170,27 @@ class UserProfile(models.Model):
     # 快捷编辑按钮
     QUICK_EDIT_TITLE = "title"
     QUICK_EDIT_DESCRIPTION = "description"
+    QUICK_EDIT_AUTHOR = "author"
     QUICK_EDIT_NOTES = "notes"
     QUICK_EDIT_TAGS = "tags"
     QUICK_EDIT_KEYS = [
         QUICK_EDIT_TITLE,
         QUICK_EDIT_DESCRIPTION,
+        QUICK_EDIT_AUTHOR,
         QUICK_EDIT_NOTES,
         QUICK_EDIT_TAGS,
     ]
     QUICK_EDIT_LABELS = {
         QUICK_EDIT_TITLE: _("Title"),
         QUICK_EDIT_DESCRIPTION: _("Description"),
+        QUICK_EDIT_AUTHOR: _("Author"),
         QUICK_EDIT_NOTES: _("Notes"),
         QUICK_EDIT_TAGS: _("Tags"),
     }
     QUICK_EDIT_ICONS = {
         QUICK_EDIT_TITLE: "ld-icon-edit-title",
         QUICK_EDIT_DESCRIPTION: "ld-icon-edit-description",
+        QUICK_EDIT_AUTHOR: "ld-icon-edit-author",
         QUICK_EDIT_NOTES: "ld-icon-edit-notes",
         QUICK_EDIT_TAGS: "ld-icon-tag",
     }
@@ -1213,6 +1259,18 @@ class UserProfile(models.Model):
         choices=TAG_GROUPING_CHOICES,
         blank=False,
         default=TAG_GROUPING_ALPHABETICAL,
+    )
+    author_grouping = models.CharField(
+        max_length=12,
+        choices=AUTHOR_GROUPING_CHOICES,
+        blank=False,
+        default=AUTHOR_GROUPING_ALPHABETICAL,
+    )
+    author_sort = models.CharField(
+        max_length=12,
+        choices=AUTHOR_SORT_CHOICES,
+        blank=False,
+        default=AUTHOR_SORT_COUNT,
     )
     legacy_search = models.BooleanField(default=False, null=False)
     enable_sharing = models.BooleanField(default=False, null=False)
@@ -1459,6 +1517,7 @@ class UserProfile(models.Model):
             {"key": cls.SIDEBAR_MODULE_BUNDLES, "enabled": bundles_enabled},
             {"key": cls.SIDEBAR_MODULE_DOMAINS, "enabled": True},
             {"key": cls.SIDEBAR_MODULE_TAGS, "enabled": True},
+            {"key": cls.SIDEBAR_MODULE_AUTHORS, "enabled": True},
             {"key": cls.SIDEBAR_MODULE_COLORS, "enabled": True},
         ]
 

@@ -1,0 +1,43 @@
+{% load shared %}
+{% load i18n %}
+{% htmlmin %}
+  <div class="author-cloud">
+    {% if author_cloud.mode == "count_desc" %}
+      {# 按计数降序：每行一个作者（Bundles 过滤器风格） #}
+      <ul class="bundle-menu">
+        {% for item in author_cloud.authors %}
+          <li class="bundle-menu-item{% if item.is_selected %} selected{% endif %}">
+            <a href="{{ item.query_string }}" class="author-item" data-is-author-item title="{% translate 'Author' %}">
+              {% if item.is_selected %}<span class="author-selection-prefix" aria-hidden="true">-</span>{% endif %}
+              <span class="bundle-content">{{ item.name }}</span>
+              <span class="count">{{ item.count }}</span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% elif author_cloud.mode == "alphabetical" %}
+      {# 按首字母分组：标签云式，组头与作者名同行 #}
+      {% for group in author_cloud.groups %}
+        <p class="group">
+          {% if group.is_cjk %}
+            <span class="highlight-char cjk-group-head mr-2">{{ group.char }}</span>
+          {% endif %}
+          {% for item in group.items %}
+            {% if forloop.counter == 1 and not group.is_cjk %}
+              <a href="{{ item.query_string }}" class="mr-2{% if item.is_selected %} selected{% endif %}" data-is-author-item title="{% translate 'Author' %}">{% if item.is_selected %}<span class="author-selection-prefix" aria-hidden="true">-</span>{% endif %}<span class="highlight-char">{{ item.name|first_char }}</span><span>{{ item.name|remaining_chars:1 }}</span><span class="count">{{ item.count }}</span></a>
+            {% else %}
+              <a href="{{ item.query_string }}" class="mr-2{% if item.is_selected %} selected{% endif %}" data-is-author-item title="{% translate 'Author' %}">{% if item.is_selected %}<span class="author-selection-prefix" aria-hidden="true">-</span>{% endif %}{{ item.name }}<span class="count">{{ item.count }}</span></a>
+            {% endif %}
+          {% endfor %}
+        </p>
+      {% endfor %}
+    {% else %}
+      {# 禁用分组：标签云式平铺，不换行 #}
+      <p class="group">
+        {% for item in author_cloud.authors %}
+          <a href="{{ item.query_string }}" class="mr-2{% if item.is_selected %} selected{% endif %}" data-is-author-item title="{% translate 'Author' %}">{% if item.is_selected %}<span class="author-selection-prefix" aria-hidden="true">-</span>{% endif %}{{ item.name }}<span class="count">{{ item.count }}</span></a>
+        {% endfor %}
+      </p>
+    {% endif %}
+  </div>
+{% endhtmlmin %}

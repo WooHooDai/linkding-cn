@@ -56,16 +56,28 @@ def sidebar_content(request):
         }
         tag_ctx_cls = tag_ctx_map.get(ctx_key, contexts.ActiveTagCloudContext)
         template_context["tag_cloud"] = tag_ctx_cls(request, search)
-    
+
+    if "authors" in requested_modules:
+        author_ctx_map = {
+            "active": contexts.ActiveAuthorCloudContext,
+            "archived": contexts.ArchivedAuthorCloudContext,
+            "shared": contexts.SharedAuthorCloudContext,
+            "trash": contexts.TrashedAuthorCloudContext,
+            "highlights": contexts.ActiveAuthorCloudContext,
+        }
+        author_ctx_cls = author_ctx_map.get(ctx_key, contexts.ActiveAuthorCloudContext)
+        template_context["author_cloud"] = author_ctx_cls(request, search)
+
     module_templates = {
         "summary": "bookmarks/sidebar/modules/summary/index.html",
         "bundles": "bookmarks/sidebar/modules/bundles/index.html",
         "domains": "bookmarks/sidebar/modules/domains/index.html",
         "tags": "bookmarks/sidebar/modules/tags/index.html",
+        "authors": "bookmarks/sidebar/modules/authors/index.html",
     }
-    
+
     html_parts = []
-    for module_name in ["summary", "bundles", "domains", "tags"]:
+    for module_name in ["summary", "bundles", "domains", "tags", "authors"]:
         if module_name in requested_modules and module_name in module_templates:
             template = loader.get_template(module_templates[module_name])
             html = template.render(template_context, request)

@@ -1054,3 +1054,12 @@ msgstr "元数据"
 #: site_adapters/frontend/site-adapters.js:1501
 msgid "Snapshot"
 msgstr "快照"
+
+
+#: bookmarks/frontend/reader/reader-sidebar.js:599
+msgid "Author"
+msgstr "作者"
+
+#: bookmarks/frontend/reader/reader-sidebar.js:465
+msgid "Click to edit author"
+msgstr "点击编辑作者"

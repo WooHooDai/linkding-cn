@@ -5,6 +5,7 @@
                   data-bookmark-url="{{ details.bookmark.url }}"
                   data-bookmark-title="{{ details.bookmark.resolved_title }}"
                   data-bookmark-description="{{ details.bookmark.resolved_description|default_if_none:'' }}"
+                  data-bookmark-author="{{ details.bookmark.author|default_if_none:'' }}"
                   data-bookmark-notes="{{ details.bookmark.notes|default_if_none:'' }}"
                   data-bookmark-preview-image-remote-url="{{ details.bookmark.preview_image_remote_url }}"
                   data-bookmark-is-archived="{{ details.bookmark.is_archived|yesno:'true,false' }}"
@@ -135,7 +136,7 @@
                 {% if details.tags %}
                   <span class="info-tags">
                     {% for tag in details.tags %}
-                      <span class="info-tag">{{ tag.name }}</span>
+                      <span class="info-tag">#{{ tag.name }}</span>
                     {% endfor %}
                   </span>
                 {% else %}
@@ -146,7 +147,7 @@
           {% else %}
             <div>
               {% for tag in details.tags %}
-                <a href="{% url 'linkding:bookmarks.index' %}?{{ tag.query_string }}">{{ tag.name }}</a>
+                <a href="{% url 'linkding:bookmarks.index' %}?{{ tag.query_string }}">#{{ tag.name }}</a>
               {% endfor %}
             </div>
           {% endif %}
@@ -240,6 +241,25 @@
             {% include 'bookmarks/details/assets_inline.html' %}
           </div>
         {% endif %}
+
+        {# 作者 #}
+        <div class="detail-section">
+          <div class="detail-label-row">
+            <span class="detail-label">{% translate "Author" %}</span>
+            {% if details.is_editable %}
+              <button class="btn btn-link btn-sm detail-clear-btn" data-clear-field="author">{% translate "Clear" %}</button>
+            {% endif %}
+          </div>
+          {% if details.is_editable %}
+            <textarea class="detail-textarea" data-field="author"
+                      placeholder="{% translate 'Click to edit author' %}"
+                      rows="1">{{ details.bookmark.author|default_if_none:'' }}</textarea>
+          {% else %}
+            {% if details.bookmark.author %}
+              <div class="info-value-readonly">{{ details.bookmark.author }}</div>
+            {% endif %}
+          {% endif %}
+        </div>
 
         {# 描述 #}
         <div class="detail-section">

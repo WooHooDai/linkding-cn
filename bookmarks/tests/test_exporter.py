@@ -48,6 +48,7 @@ class ExporterTestCase(TestCase, BookmarkFactoryMixin):
                 modified=datetime.fromtimestamp(55, UTC),
                 shared=True,
                 description="Example description",
+                author="Example author",
                 notes="Example notes",
             ),
             self.setup_bookmark(
@@ -57,6 +58,13 @@ class ExporterTestCase(TestCase, BookmarkFactoryMixin):
                 modified=datetime.fromtimestamp(66, UTC),
                 shared=True,
                 notes="Example notes",
+            ),
+            self.setup_bookmark(
+                url="https://example.com/6b",
+                title="Title 6b",
+                added=datetime.fromtimestamp(6, UTC),
+                modified=datetime.fromtimestamp(66, UTC),
+                author="Only author",
             ),
             self.setup_bookmark(
                 url="https://example.com/7",
@@ -83,9 +91,11 @@ class ExporterTestCase(TestCase, BookmarkFactoryMixin):
             '<DT><A HREF="https://example.com/3" ADD_DATE="3" LAST_MODIFIED="33" PRIVATE="1" TOREAD="1" TAGS="">Title 3</A>',
             '<DT><A HREF="https://example.com/4" ADD_DATE="4" LAST_MODIFIED="44" PRIVATE="0" TOREAD="0" TAGS="">Title 4</A>',
             '<DT><A HREF="https://example.com/5" ADD_DATE="5" LAST_MODIFIED="55" PRIVATE="0" TOREAD="0" TAGS="">Title 5</A>',
-            "<DD>Example description[linkding-notes]Example notes[/linkding-notes]",
+            "<DD>Example description[linkding-author]Example author[/linkding-author][linkding-notes]Example notes[/linkding-notes]",
             '<DT><A HREF="https://example.com/6" ADD_DATE="6" LAST_MODIFIED="66" PRIVATE="0" TOREAD="0" TAGS="">Title 6</A>',
             "<DD>[linkding-notes]Example notes[/linkding-notes]",
+            '<DT><A HREF="https://example.com/6b" ADD_DATE="6" LAST_MODIFIED="66" PRIVATE="1" TOREAD="0" TAGS="">Title 6b</A>',
+            "<DD>[linkding-author]Only author[/linkding-author]",
             '<DT><A HREF="https://example.com/7" ADD_DATE="7" LAST_MODIFIED="77" PRIVATE="1" TOREAD="0" TAGS="linkding:bookmarks.archived">Title 7</A>',
             '<DT><A HREF="https://example.com/8" ADD_DATE="8" LAST_MODIFIED="88" PRIVATE="1" TOREAD="0" TAGS="tag4,tag5,linkding:bookmarks.archived">Title 8</A>',
         ]

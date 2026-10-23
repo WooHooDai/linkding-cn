@@ -116,6 +116,11 @@ METADATA_FIELDS = {
         "en": "Selectors for the description, tried in order. HTML uses standard CSS, including the ::json(path) pseudo-element extension to extract fields from JSON-LD script tags (e.g. 'script[type=\"application/ld+json\"]::json(description)') and the ::attr(name) pseudo-element extension to read an explicit HTML attribute (e.g. 'img::attr(data-src)'); XML uses standard XPath; JSON uses standard JSONPath.",
         "zh": "描述选择器，按顺序尝试。HTML 使用标准 CSS，支持 ::json(path) 伪元素扩展以从 JSON-LD script 标签提取字段（如 'script[type=\"application/ld+json\"]::json(description)'），也支持 ::attr(name) 伪元素扩展读取指定 HTML 属性（如 'img::attr(data-src)'）；XML 使用标准 XPath；JSON 使用标准 JSONPath。",
     },
+    "select_author": {
+        "type": "str|array<str>",
+        "en": "Selectors for the author, tried in order. HTML uses standard CSS, including the ::json(path) pseudo-element extension to extract fields from JSON-LD script tags (e.g. 'script[type=\"application/ld+json\"]::json(author.name)') and the ::attr(name) pseudo-element extension to read an explicit HTML attribute; XML uses standard XPath; JSON uses standard JSONPath. Dict/list JSON values (e.g. {\"name\": \"...\"}) are flattened to a string via the name/title/content keys.",
+        "zh": "作者选择器，按顺序尝试。HTML 使用标准 CSS，支持 ::json(path) 伪元素扩展以从 JSON-LD script 标签提取字段（如 'script[type=\"application/ld+json\"]::json(author.name)'），也支持 ::attr(name) 伪元素扩展读取指定 HTML 属性；XML 使用标准 XPath；JSON 使用标准 JSONPath。JSON 中的字典/数组值（如 {\"name\": \"...\"}）会通过 name/title/content 键扁平化为字符串。",
+    },
     "select_image": {
         "type": "str|array<str>",
         "en": "Selectors for the preview image, tried in order. HTML uses standard CSS, including the ::json(path) pseudo-element extension to extract fields from JSON-LD script tags (e.g. 'script[type=\"application/ld+json\"]::json(image.url)') and the ::attr(name) pseudo-element extension to read an explicit HTML attribute (e.g. 'img::attr(data-src)'); values that are blob:/empty/about:/# or base64 data URIs are skipped so later selectors are tried. XML uses standard XPath; JSON uses standard JSONPath.",
@@ -132,6 +137,12 @@ METADATA_FIELDS = {
         "en": _REWRITE_RULE_EN + " Applied to the extracted description.",
         "zh": _REWRITE_RULE_ZH + "应用于提取到的描述。",
         "example": ["\\[read more\\]", ""],
+    },
+    "rewrite_author": {
+        "type": "rewrite",
+        "en": _REWRITE_RULE_EN + " Applied to the extracted author.",
+        "zh": _REWRITE_RULE_ZH + "应用于提取到的作者。",
+        "example": ["^由", ""],
     },
     "rewrite_image": {
         "type": "rewrite",

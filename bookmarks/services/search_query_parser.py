@@ -27,7 +27,7 @@ class Token:
 
 
 class SearchQueryTokenizer:
-    FIELD_NAMES = ("title", "desc", "notes", "url", "domain", "hl", "ann")
+    FIELD_NAMES = ("title", "desc", "notes", "url", "domain", "author", "hl", "ann")
 
     def __init__(self, query: str):
         self.query = query.strip()

@@ -3,6 +3,7 @@ import { handleBookmarkAction } from "../utils/bookmark-action.js";
 import { getCSRFToken } from "../utils/csrf.js";
 import { Modal } from "./modal.js";
 import { attachHealthPopover } from "./health.js";
+import { initAuthorScroll } from "../utils/author-scroll.js";
 
 function gettext(s) {
   return window.gettext ? window.gettext(s) : s;
@@ -19,6 +20,7 @@ class DetailsModal extends Modal {
       url: this.dataset.bookmarkUrl || "",
       title: this.dataset.bookmarkTitle || "",
       description: this.dataset.bookmarkDescription || "",
+      author: this.dataset.bookmarkAuthor || "",
       notes: this.dataset.bookmarkNotes || "",
       preview_image_remote_url: this.dataset.bookmarkPreviewImageRemoteUrl || "",
       tag_names: (this.dataset.bookmarkTagNames || "")
@@ -297,6 +299,28 @@ class DetailsModal extends Modal {
         if (descText) descText.textContent = value || "";
         break;
       }
+      case "author": {
+        const title = item.querySelector(".title");
+        if (!title) break;
+        let authorSpan = title.querySelector(".author");
+        if (value) {
+          if (!authorSpan) {
+            authorSpan = document.createElement("span");
+            authorSpan.className = "author";
+            const titleLink = title.querySelector(".title-link");
+            if (titleLink) {
+              titleLink.insertAdjacentElement("afterend", authorSpan);
+            } else {
+              title.appendChild(authorSpan);
+            }
+          }
+          authorSpan.textContent = value;
+          initAuthorScroll(authorSpan);
+        } else if (authorSpan) {
+          authorSpan.remove();
+        }
+        break;
+      }
       case "preview_image_remote_url": {
         const previewImg = item.querySelector("img.preview-image");
         if (previewImg) {
@@ -312,8 +336,7 @@ class DetailsModal extends Modal {
         }
         break;
       }
-      case "tag_names": {
-        const tags = Array.isArray(value) ? value : [];
+      case "tag_names": {        const tags = Array.isArray(value) ? value : [];
         const tagsContainer = item.querySelector(".tags");
         if (!tagsContainer) break;
         if (tags.length === 0) {
@@ -451,7 +474,7 @@ class DetailsModal extends Modal {
 
     const patches = [];
     let previewChanged = false;
-    const fields = ["title", "description", "preview_image_remote_url"];
+    const fields = ["title", "description", "author", "preview_image_remote_url"];
     for (const field of fields) {
       if (
         Object.prototype.hasOwnProperty.call(pending, field) &&
@@ -480,6 +503,11 @@ class DetailsModal extends Modal {
     if (descEl) {
       descEl.value = this._data.description;
       this._autoResize(descEl);
+    }
+    const authorEl = this.querySelector('.detail-textarea[data-field="author"]');
+    if (authorEl) {
+      authorEl.value = this._data.author;
+      this._autoResize(authorEl);
     }
     this._setModalPreviewImage(this._data.preview_image_remote_url);
   }
@@ -692,6 +720,13 @@ class DetailsModal extends Modal {
         }
       }
 
+      // (4) 作者：获取到的作者非空，且与现有作者不同 → 覆盖
+      if (metadata.author && metadata.author !== this._data.author) {
+        pending.author = metadata.author;
+        const el = this.querySelector('.detail-textarea[data-field="author"]');
+        if (el) { el.value = metadata.author; this._autoResize(el); }
+      }
+
       this._pendingMetadata = Object.keys(pending).length ? pending : null;
     } catch (err) {
       console.error("Refresh metadata failed:", err);
@@ -809,7 +844,7 @@ class DetailsModal extends Modal {
     const view = this.querySelector(".detail-tags-view");
     if (!view) return;
     if (tagNames.length) {
-      view.innerHTML = `<span class="info-tags">${tagNames.map((t) => `<span class="info-tag">${t}</span>`).join("")}</span>`;
+      view.innerHTML = `<span class="info-tags">${tagNames.map((t) => `<span class="info-tag">#${t}</span>`).join("")}</span>`;
     } else {
       view.innerHTML = `<span class="info-placeholder">${gettext("Click to edit tags")}</span>`;
     }

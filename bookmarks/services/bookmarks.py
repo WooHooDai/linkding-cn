@@ -135,6 +135,10 @@ def enhance_with_website_metadata(bookmark: Bookmark):
         bookmark.description = metadata.description or ""
         update_fields.append("description")
 
+    if not bookmark.author:
+        bookmark.author = metadata.author or ""
+        update_fields.append("author")
+
     if not bookmark.preview_image_remote_url and metadata.preview_image:
         bookmark.preview_image_remote_url = metadata.preview_image
         update_fields.append("preview_image_remote_url")
@@ -149,6 +153,7 @@ def _needs_metadata_enrichment(bookmark: Bookmark):
     return (
         not bookmark.title
         or not bookmark.description
+        or not bookmark.author
         or not bookmark.preview_image_remote_url
     )
 

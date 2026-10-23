@@ -233,7 +233,7 @@ class BookmarkDetailsModalTestCase(TestCase, BookmarkFactoryMixin, HtmlTestMixin
         bookmark = self.setup_bookmark(tags=[self.setup_tag(), self.setup_tag()])
         soup = self.get_index_details_modal(bookmark)
         for tag in bookmark.tags.all():
-            tag_el = soup.find("span", {"class": "info-tag"}, string=tag.name)
+            tag_el = soup.find("span", {"class": "info-tag"}, string=f"#{tag.name}")
             self.assertIsNotNone(tag_el)
 
     # ---- Description ----

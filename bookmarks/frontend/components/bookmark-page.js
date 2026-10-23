@@ -2,6 +2,7 @@ import { Behavior, registerBehavior } from "./runtime.js";
 import { sanitizeSvgBody } from "../utils/svg.js";
 import { handleBookmarkAction } from "../utils/bookmark-action.js";
 import { getCSRFToken } from "../utils/csrf.js";
+import { initAuthorScroll } from "../utils/author-scroll.js";
 
 // ==========================================
 // 书签列表
@@ -226,6 +227,9 @@ class BookmarkItem extends Behavior {
     // 初始化描述浮窗
     this.initDescriptionToggle();
 
+    // 初始化作者名自动滚动（标题行内固定宽度，超长时左右往复滚动）
+    this._initAuthorScroll();
+
     // 初始化 action 按钮（分享、已读、归档、删除等）
     this._initActionButtons();
   }
@@ -314,6 +318,9 @@ class BookmarkItem extends Behavior {
       case "description":
         this._startEditDescription();
         break;
+      case "author":
+        this._startEditAuthor();
+        break;
       case "notes":
         this._startEditNotes();
         break;
@@ -394,18 +401,27 @@ class BookmarkItem extends Behavior {
     const descriptionText =
       descriptionContainer.querySelector(".description-text");
     const hasTags = Boolean(tagsContainer?.querySelector("a"));
-    const hasDescription = Boolean(descriptionText?.textContent);
-    let separator = descriptionContainer.querySelector(
-      ".description-separator",
-    );
+    const hasDescription = Boolean(descriptionText?.textContent?.trim());
 
-    if (hasTags && hasDescription && !separator) {
-      separator = document.createElement("span");
-      separator.className = "description-separator";
-      separator.textContent = " | ";
-      tagsContainer.insertAdjacentElement("afterend", separator);
-    } else if ((!hasTags || !hasDescription) && separator) {
-      separator.remove();
+    // 移除旧分隔符后，在相邻非空段之间重新插入
+    descriptionContainer
+      .querySelectorAll(".description-separator")
+      .forEach((separator) => separator.remove());
+
+    const segments = [
+      hasTags ? tagsContainer : null,
+      hasDescription ? descriptionText : null,
+    ];
+    let prev = null;
+    for (const segment of segments) {
+      if (!segment) continue;
+      if (prev) {
+        const separator = document.createElement("span");
+        separator.className = "description-separator";
+        separator.textContent = " | ";
+        prev.insertAdjacentElement("afterend", separator);
+      }
+      prev = segment;
     }
   }
 
@@ -569,6 +585,85 @@ class BookmarkItem extends Behavior {
     const savedScrollY = window.scrollY;
     scrollToBookmarkTop(textarea);
     focusEnd(textarea);
+  }
+
+  _initAuthorScroll() {
+    this.element.querySelectorAll(".title .author").forEach((authorEl) => {
+      initAuthorScroll(authorEl);
+    });
+  }
+
+  _startEditAuthor() {
+    const titleContainer = this.element.querySelector(".title");
+    if (!titleContainer) return;
+
+    titleContainer.querySelector(".quick-edit-author-input")?.remove();
+
+    // 无 author 元素时按模板顺序补建（标题链接之后）
+    let authorSpan = titleContainer.querySelector(".author");
+    const currentAuthor = authorSpan?.textContent?.trim() || "";
+    const titleLink = titleContainer.querySelector(".title-link");
+
+    if (!authorSpan) {
+      authorSpan = document.createElement("span");
+      authorSpan.className = "author";
+      if (titleLink) {
+        titleLink.insertAdjacentElement("afterend", authorSpan);
+      } else {
+        titleContainer.appendChild(authorSpan);
+      }
+    }
+
+    authorSpan.style.display = "none";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "quick-edit-author-input";
+    input.value = currentAuthor;
+    authorSpan.insertAdjacentElement("afterend", input);
+
+    const editor = this._activateQuickEditor("author", ({ save }) => {
+      const newAuthor = input.value.trim();
+      input.remove();
+      authorSpan.style.display = "";
+      window.scrollTo(0, savedScrollY);
+
+      if (!save || newAuthor === currentAuthor) {
+        if (!currentAuthor) {
+          authorSpan.remove();
+        }
+        return;
+      }
+
+      patchBookmark(this.bookmarkId, { author: newAuthor })
+        .then(() => {
+          if (newAuthor) {
+            authorSpan.textContent = newAuthor;
+            initAuthorScroll(authorSpan);
+          } else {
+            authorSpan.remove();
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to save author:", error);
+        });
+    });
+
+    input.addEventListener("blur", () => closeEditor(editor));
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        closeEditor(editor);
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        input.value = currentAuthor;
+        closeEditor(editor, { save: false });
+      }
+    });
+
+    const savedScrollY = window.scrollY;
+    scrollToBookmarkTop(input);
+    focusEnd(input);
   }
 
   _startEditNotes() {
@@ -1312,6 +1407,7 @@ const COLLAPSE_KEY_MAP = {
   userSummarySectionState: "summary",
   userSummaryActivityState: "activity",
   tagSectionState: "tags",
+  authorSectionState: "authors",
   domainSectionState: "domains",
   bundleSectionState: "bundles",
 };

@@ -1,0 +1,126 @@
+{
+  "_meta": {
+      "id": "defaults",
+      "name": "defaults",
+      "description": "Built-in system adapter.\n`_builtin` serves as the system-wide baseline, always merged before any domain-specific config.\nDomain configs override `_builtin` fields when present."
+    },
+  "_builtin": {
+      "defaults": {
+        "timeout": 30
+      },
+      "metadata": {
+        "load_full_page": true,
+        "max_content_limit": 5120000,
+        "select_title": [
+          "meta[property=\"og:title\"]",
+          "h1[class*='title']",
+          "h1[class*='Title']",
+          ".article-title",
+          ".post-title",
+          ".entry-title",
+          ".ArticleTitle",
+          ".post__title",
+          "h1",
+          "title",
+          "meta[name=\"twitter:title\"]"
+        ],
+        "select_description": [
+          "meta[property=\"og:description\"]",
+          "meta[name=\"description\"]",
+          "meta[name=\"twitter:description\"]"
+        ],
+        "select_author": [
+          "meta[name=\"author\"]",
+          "meta[property=\"author\"]",
+          "meta[property=\"article:author\"]",
+          "meta[name=\"parsely-author\"]",
+          "meta[name=\"citation_author\"]",
+          "script[type=\"application/ld+json\"]::json(author.name)"
+        ],
+        "select_image": [
+          "meta[property=\"og:image\"]",
+          "meta[name=\"og:image\"]",
+          "meta[name=\"twitter:image\"]",
+          "meta[property=\"twitter:image\"]",
+          "link[rel=\"preload\"][as=\"image\"]"
+        ]
+      },
+      "snapshot": {
+        "process_lazy_images": [
+          "data-src",
+          "data-actualsrc",
+          "data-original",
+          "data-lazy-src",
+          "data-original-src",
+          "data-actual-image",
+          "data-lazy",
+          "data-defer-src"
+        ],
+        "singlefile_args": {
+          "--browser-arg": "--disable-blink-features=AutomationControlled",
+          "--block-fonts": true
+        }
+      },
+      "reader": {
+        "defuddle_args": {
+          "useAsync": false
+        }
+      },
+      "health": {
+        "enabled": true,
+        "http_head_probe": {
+          "enabled": true,
+          "timeout": 3,
+          "accept_status": [
+            200
+          ],
+          "blocked_status": [
+            401,
+            403,
+            407,
+            429
+          ],
+          "blocked_location_patterns": [
+            "/login",
+            "/signin",
+            "/auth",
+            "/passport",
+            "/accounts"
+          ]
+        },
+        "content_check": {
+          "enabled": true,
+          "timeout": 30,
+          "check_selectors": [
+            "title",
+            "body"
+          ],
+          "invalid_patterns": [
+            "404 not found",
+            "page not found",
+            "not found",
+            "页面不存在",
+            "页面已不存在",
+            "内容不存在",
+            "文章不存在",
+            "该页面已被删除",
+            "此页面已删除",
+            "内容已删除",
+            "文章已删除",
+            "已被删除或不存在",
+            "您访问的页面不存在",
+            "你所访问的页面不存在",
+            "页面不存在或已删除"
+          ]
+        },
+        "max_content_limit": 1048576
+      }
+    },
+  // User overrides for the _builtin baseline (merged on top of it).
+  // NOTE: do not set a global User-Agent here — it cannot match the runtime
+  // browser engine / TLS fingerprint and may trigger anti-bot blocks.
+  // Configure a UA per site in the adapter's http/headers instead.
+  "_builtin_overrides": {},
+  "defaults": {},
+  "domains": {}
+}

@@ -65,6 +65,9 @@ class BaseBookmarksFeed(Feed):
     def item_description(self, item: Bookmark):
         return sanitize(item.resolved_description)
 
+    def item_author_name(self, item: Bookmark):
+        return sanitize(item.author)
+
     def item_link(self, item: Bookmark):
         return item.url
 

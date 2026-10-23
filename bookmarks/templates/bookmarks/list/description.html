@@ -6,8 +6,8 @@
           {% for tag in bookmark_item.tags %}<a href="{{ tag.query_string }}">{{ tag.name }}</a>{% endfor %}
         </span>
       {% endif %}
-      {% if bookmark_item.tags and bookmark_item.description %}<span class="description-separator"> | </span>{% endif %}
       {% if bookmark_item.description %}
+        {% if bookmark_item.tags %}<span class="description-separator"> | </span>{% endif %}
         <span class="description-text">{{ bookmark_item.description }}</span>
       {% endif %}
     </div>

@@ -1,0 +1,18 @@
+{
+  "_adapters": [
+    {
+      "id": "woohoodai",
+      "name": "official-standard",
+      "source": "https://raw.githubusercontent.com/WooHooDai/linkding-cn-adapters/refs/heads/main/src/standard/adapters.jsonc",
+      "update_interval": 86400,
+      "enabled": true
+    },
+    {
+      "id": "defaults",
+      "name": "defaults",
+      "source": "./defaults/adapters.jsonc",
+      "update_interval": 86400,
+      "enabled": true
+    }
+  ]
+}

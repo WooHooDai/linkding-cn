@@ -143,6 +143,13 @@
                 <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-edit-description"></use></svg>
               {% else %}{{ quick_edit.label }}{% endif %}
             </button>
+          {% elif quick_edit.key == "author" %}
+            <button type="button" class="btn btn-link btn-sm quick-edit-btn" data-quick-edit="author"
+                    {% if bookmark_list.quick_edit_display_mode == "icon" %}title="{% translate 'Edit author' %}"{% endif %}>
+              {% if bookmark_list.quick_edit_display_mode == "icon" %}
+                <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-edit-author"></use></svg>
+              {% else %}{{ quick_edit.label }}{% endif %}
+            </button>
           {% elif quick_edit.key == "notes" %}
             <button type="button" class="btn btn-link btn-sm quick-edit-btn" data-quick-edit="notes"
                     {% if bookmark_list.quick_edit_display_mode == "icon" %}title="{% translate 'Edit notes' %}"{% endif %}>

@@ -211,20 +211,26 @@ class WebsiteMetadata:
     url: str
     title: str | None
     description: str | None
-    preview_image: str | None
+    preview_image: str | None = None
+    # 注意：author 放在 preview_image 之后，保持旧的 4 位置参数调用
+    # WebsiteMetadata(url, title, description, preview_image) 语义不变
+    author: str | None = None
 
     def to_dict(self):
         return {
             "url": self.url,
             "title": self.title,
             "description": self.description,
+            "author": self.author,
             "preview_image": self.preview_image,
         }
 
 
 
 def _empty_metadata(url: str):
-    return WebsiteMetadata(url=url, title=None, description=None, preview_image=None)
+    return WebsiteMetadata(
+        url=url, title=None, description=None, author=None, preview_image=None
+    )
 
 
 def _apply_metadata_before_result(url: str, config: dict, result) -> None:
@@ -264,6 +270,7 @@ def _normalize_metadata_result(url: str, metadata, source: str):
             url=metadata.get('url') or url,
             title=metadata.get('title'),
             description=metadata.get('description'),
+            author=metadata.get('author'),
             preview_image=metadata.get('image') or metadata.get('preview_image'),
         )
 
@@ -282,7 +289,7 @@ def _metadata_dict_is_empty(result: dict) -> bool:
     """Return True when a replace-hook result carries no extractable fields."""
     return not any(
         result.get(key)
-        for key in ("title", "description", "image", "preview_image")
+        for key in ("title", "description", "author", "image", "preview_image")
     )
 
 
@@ -380,6 +387,7 @@ def _load_with_hooks(url: str, config: dict, scripts: list, username: str = '',
             if isinstance(result, dict):
                 result['title'] = apply_rewrite(result.get('title'), config.get('rewrite_title'))
                 result['description'] = apply_rewrite(result.get('description'), config.get('rewrite_description'))
+                result['author'] = apply_rewrite(result.get('author'), config.get('rewrite_author'))
                 result['image'] = apply_rewrite(result.get('image'), config.get('rewrite_image'))
                 metadata = _normalize_metadata_result(url, result, source=script_path)
             else:
@@ -405,6 +413,7 @@ def _load_with_hooks(url: str, config: dict, scripts: list, username: str = '',
     result_dict = {
         'title': metadata.title,
         'description': metadata.description,
+        'author': metadata.author,
         'image': metadata.preview_image,
         'url': metadata.url,
     }
@@ -432,6 +441,7 @@ def _load_with_hooks(url: str, config: dict, scripts: list, username: str = '',
         url=result_dict.get('url') or url,
         title=result_dict.get('title'),
         description=result_dict.get('description'),
+        author=result_dict.get('author'),
         preview_image=result_dict.get('image'),
     )
 
@@ -461,6 +471,7 @@ def load_website_metadata(url: str, ignore_cache: bool = False, username: str = 
                             url=result.get('url') or url,
                             title=apply_rewrite(result.get('title'), config.get('rewrite_title')),
                             description=apply_rewrite(result.get('description'), config.get('rewrite_description')),
+                            author=apply_rewrite(result.get('author'), config.get('rewrite_author')),
                             preview_image=apply_rewrite(
                                 result.get('preview_image') or result.get('image'),
                                 config.get('rewrite_image'),
@@ -472,6 +483,7 @@ def load_website_metadata(url: str, ignore_cache: bool = False, username: str = 
                     if isinstance(result, dict):
                         result['title'] = apply_rewrite(result.get('title'), config.get('rewrite_title'))
                         result['description'] = apply_rewrite(result.get('description'), config.get('rewrite_description'))
+                        result['author'] = apply_rewrite(result.get('author'), config.get('rewrite_author'))
                         result['image'] = apply_rewrite(result.get('image'), config.get('rewrite_image'))
                     return _normalize_metadata_result(url, result, source=loader_path)
                 return _empty_metadata(url)
@@ -495,12 +507,13 @@ def rewrite_website_metadata(
     title: str | None,
     description: str | None,
     username: str = '',
+    author: str | None = None,
 ) -> WebsiteMetadata:
     """对客户端（浏览器）提供的元数据应用站点配置的 rewrite_* 规则。
 
-    仅应用 rewrite_title / rewrite_description / rewrite_image 与 rewrite_url，
-    不重新抓取网页。用于客户端 bookmarklet 流程：浏览器把捕获的元数据交给
-    服务器，由服务器上的站点规则重写后返回。
+    仅应用 rewrite_title / rewrite_description / rewrite_author / rewrite_image
+    与 rewrite_url，不重新抓取网页。用于客户端 bookmarklet 流程：浏览器把捕获
+    的元数据交给服务器，由服务器上的站点规则重写后返回。
 
     注意：预览图不参与客户端链路，始终由服务器重新抓取网页后按
     select_image / rewrite_image 规则处理。
@@ -510,6 +523,7 @@ def rewrite_website_metadata(
         url=config.get("_rewrite_url") or url,
         title=apply_rewrite(title, config.get("rewrite_title")),
         description=apply_rewrite(description, config.get("rewrite_description")),
+        author=apply_rewrite(author, config.get("rewrite_author")),
         preview_image=None,
     )
 
@@ -651,7 +665,7 @@ def _load_website_metadata(url: str, config: dict = None, username: str = '', in
 
     try:
         start = timezone.now()
-        title, description, preview_image, sources = _parse_metadata_from_content(
+        title, description, preview_image, author, sources = _parse_metadata_from_content(
             page_text, fetch_url, config, include_sources=True
         )
 
@@ -674,7 +688,7 @@ def _load_website_metadata(url: str, config: dict = None, username: str = '', in
                 # 刷新成功后更新 _user_cookie 为新的 cookie 字符串
                 retry_config["_user_cookie"] = after
                 page_text = load_page(fetch_url, retry_config, load_full_page=load_full)
-                title, description, preview_image, sources = _parse_metadata_from_content(
+                title, description, preview_image, author, sources = _parse_metadata_from_content(
                     page_text, fetch_url, retry_config, include_sources=True
                 )
 
@@ -696,12 +710,14 @@ def _load_website_metadata(url: str, config: dict = None, username: str = '', in
     if config:
         title = apply_rewrite(title, config.get('rewrite_title'))
         description = apply_rewrite(description, config.get('rewrite_description'))
+        author = apply_rewrite(author, config.get('rewrite_author'))
         preview_image = apply_rewrite(preview_image, config.get('rewrite_image'))
 
     metadata = WebsiteMetadata(
         url=(config.get("_rewrite_url") if config else None) or url,
         title=title,
         description=description,
+        author=author,
         preview_image=preview_image,
     )
     if include_sources:
@@ -932,6 +948,22 @@ def _extract_json_ld(soup) -> dict:
             desc = item.get("description")
             if desc and isinstance(desc, str):
                 result["description"] = desc.strip()
+            # author（可含 name 字段的对象或字符串/列表，仅随内容型节点携带，
+            # 避免 Person/Organization 这类纯作者节点抢占短路口，破坏
+            # 后续内容节点的 title/description/image 兜底）
+            if result:
+                author = item.get("author")
+                if author:
+                    author_str = None
+                    if isinstance(author, dict):
+                        # 对象型作者（如 Person）优先取 name，避免拿到 profile URL
+                        author_str = _json_value_to_string(author.get("name"))
+                        if not author_str:
+                            author_str = _json_value_to_string(author)
+                    else:
+                        author_str = _json_value_to_string(author)
+                    if author_str:
+                        result["author"] = author_str
             # image
             img = item.get("image") or item.get("thumbnailUrl")
             if img:
@@ -966,7 +998,7 @@ def _selectors_from_config(config: dict | None) -> list[str]:
     if not config:
         return []
     selectors = []
-    for key in ("select_title", "select_description", "select_image"):
+    for key in ("select_title", "select_description", "select_author", "select_image"):
         value = config.get(key)
         if isinstance(value, str):
             value = [value]
@@ -1021,6 +1053,7 @@ def _empty_parse_sources():
     return {
         "title": {"value": None, "selector": None},
         "description": {"value": None, "selector": None},
+        "author": {"value": None, "selector": None},
         "preview_image": {"value": None, "selector": None},
     }
 
@@ -1052,8 +1085,8 @@ def _parse_metadata_from_json(
         data = json.loads(content)
     except (json.JSONDecodeError, ValueError):
         if include_sources:
-            return None, None, None, _empty_parse_sources()
-        return None, None, None
+            return None, None, None, None, _empty_parse_sources()
+        return None, None, None, None
 
     title, source = _extract_with_json_paths(
         data, (config or {}).get("select_title") or []
@@ -1065,6 +1098,11 @@ def _parse_metadata_from_json(
     )
     sources["description"] = {"value": description, "selector": source}
 
+    author, source = _extract_with_json_paths(
+        data, (config or {}).get("select_author") or []
+    )
+    sources["author"] = {"value": author, "selector": source}
+
     preview_image, source = _extract_with_json_paths(
         data, (config or {}).get("select_image") or []
     )
@@ -1073,8 +1111,8 @@ def _parse_metadata_from_json(
     sources["preview_image"] = {"value": preview_image, "selector": source}
 
     if include_sources:
-        return title, description, preview_image, sources
-    return title, description, preview_image
+        return title, description, preview_image, author, sources
+    return title, description, preview_image, author
 
 
 def _parse_metadata_from_xml(
@@ -1088,8 +1126,8 @@ def _parse_metadata_from_xml(
         root = etree.fromstring(_strip_xml_declaration(content))
     except (etree.XMLSyntaxError, ValueError):
         if include_sources:
-            return None, None, None, _empty_parse_sources()
-        return None, None, None
+            return None, None, None, None, _empty_parse_sources()
+        return None, None, None, None
 
     title, source = _extract_with_xpath(
         root, (config or {}).get("select_title") or [], "title", config
@@ -1101,6 +1139,11 @@ def _parse_metadata_from_xml(
     )
     sources["description"] = {"value": description, "selector": source}
 
+    author, source = _extract_with_xpath(
+        root, (config or {}).get("select_author") or [], "author", config
+    )
+    sources["author"] = {"value": author, "selector": source}
+
     preview_image, source = _extract_with_xpath(
         root, (config or {}).get("select_image") or [], "image", config
     )
@@ -1109,8 +1152,8 @@ def _parse_metadata_from_xml(
     sources["preview_image"] = {"value": preview_image, "selector": source}
 
     if include_sources:
-        return title, description, preview_image, sources
-    return title, description, preview_image
+        return title, description, preview_image, author, sources
+    return title, description, preview_image, author
 
 
 def _strip_xml_declaration(content: str) -> str:
@@ -1142,6 +1185,12 @@ def _parse_metadata_from_soup(
     )
     sources["description"] = {"value": description, "selector": source}
 
+    author_selectors = config.get("select_author") if config else None
+    author, source = _extract_with_selector_source(
+        soup, author_selectors or [], url, "author"
+    )
+    sources["author"] = {"value": author, "selector": source}
+
     image_selectors = config.get("select_image") if config else None
     preview_image, source = _extract_with_selector_source(
         soup, image_selectors or [], url, "image"
@@ -1157,6 +1206,10 @@ def _parse_metadata_from_soup(
         description = json_ld.get("description")
         if description:
             sources["description"] = {"value": description, "selector": "json-ld"}
+    if author is None:
+        author = json_ld.get("author")
+        if author:
+            sources["author"] = {"value": author, "selector": "json-ld"}
     if preview_image is None:
         preview_image = json_ld.get("image")
         if preview_image:
@@ -1174,8 +1227,8 @@ def _parse_metadata_from_soup(
     }
 
     if include_sources:
-        return title, description, preview_image, sources
-    return title, description, preview_image
+        return title, description, preview_image, author, sources
+    return title, description, preview_image, author
 
 
 def _extract_with_selector_source(soup, selectors, url: str = "", field: str = ""):
@@ -1396,6 +1449,7 @@ def load_website_metadata_for_test(url: str, username: str = ''):
                 url=result.get('url') or url,
                 title=apply_rewrite(result.get('title'), config.get('rewrite_title')),
                 description=apply_rewrite(result.get('description'), config.get('rewrite_description')),
+                author=apply_rewrite(result.get('author'), config.get('rewrite_author')),
                 preview_image=apply_rewrite(result.get('preview_image'), config.get('rewrite_image')),
             )
         else:

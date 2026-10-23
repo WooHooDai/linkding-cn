@@ -664,6 +664,62 @@ li[ld-bookmark-item] {
     text-overflow: clip;
   }
 
+  /* 作者（标题链接之后）：浅灰弱化文字，最长 10em（短名自然宽度，超长限宽并往复自动滚动），容器内文字右对齐；可点击进入 author 搜索 */
+  & .title .author {
+    flex: none;
+    display: inline-block;
+    color: var(--secondary-text-color);
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+    white-space: nowrap;
+    max-width: 10em;
+    overflow: hidden;
+    text-align: right;
+    text-decoration: none;
+    box-sizing: border-box;
+    cursor: pointer;
+  }
+
+  & .title .author:hover {
+    color: var(--text-color);
+    text-decoration: none;
+  }
+
+  & .title .author .author-inner {
+    display: inline-block;
+    white-space: nowrap;
+    will-change: transform;
+  }
+
+  /* 内容超出固定宽度时启用：在 0 ↔ -overflow 间往复滚动，hover 暂停便于阅读/编辑 */
+  & .title .author.auto-scroll .author-inner {
+    animation: author-marquee var(--author-duration, 6s) ease-in-out infinite alternate;
+  }
+
+  & .title .author.auto-scroll:hover .author-inner {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    & .title .author.auto-scroll .author-inner {
+      animation: none;
+    }
+  }
+
+  & .title .quick-edit-author-input {
+    flex: none;
+    width: auto;
+    min-width: 160px;
+    max-width: 100%;
+    font: inherit;
+    color: inherit;
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    padding: 2px 4px;
+    background: var(--body-color);
+    outline: none;
+  }
+
   & .description .quick-edit-description-textarea {
     width: 100%;
     max-height: 300px;
@@ -1197,6 +1253,76 @@ ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions
     font-weight: bold;
     text-transform: uppercase;
     color: var(--alternative-color-dark);
+  }
+}
+
+.author-cloud {
+  /* count_desc：Bundles 列表每行一个，文字紧贴左缘 */
+
+  & .bundle-menu-item:not([data-folder="true"]) {
+    padding-left: 0;
+  }
+
+  & .bundle-menu-item a {
+    padding-left: 0;
+  }
+
+  /* 选中态：与标签/域名一致（- 前缀 + 红色，无底） */
+  & .bundle-menu-item.selected a,
+  & .bundle-menu-item.selected a:visited,
+  & .bundle-menu-item.selected a:hover {
+    background: transparent;
+    color: var(--error-color);
+
+    & .count {
+      color: var(--secondary-text-color);
+    }
+  }
+
+  /* alphabetical / disabled：标签云式平铺，作者与计数样式与 count_desc 行一致 */
+  & .group {
+    margin-bottom: var(--unit-3);
+
+    & a[data-is-author-item] {
+      padding-top: var(--unit-1);
+      padding-right: var(--unit-2);
+      padding-bottom: var(--unit-1);
+      padding-left: 0;
+      border-radius: var(--border-radius);
+
+      & .count {
+        margin-left: 0.15em;
+      }
+    }
+
+    & a[data-is-author-item].selected {
+      background: transparent;
+      color: var(--error-color);
+
+      & .count {
+        color: var(--secondary-text-color);
+      }
+
+      & .highlight-char {
+        color: var(--error-color);
+      }
+    }
+  }
+
+  & .highlight-char {
+    font-weight: bold;
+    text-transform: uppercase;
+    color: var(--primary-color);
+  }
+
+  & .cjk-group-head {
+    color: var(--primary-color);
+  }
+
+  & .author-selection-prefix {
+    color: var(--error-color);
+    font-weight: 600;
+    margin-right: 0.2em;
   }
 }
 
@@ -2461,6 +2587,7 @@ ul.bookmark-list {
 /* 编辑器元素需要在遮罩之上 */
 @media (hover: none) and (pointer: coarse) {
   .quick-edit-title-input,
+  .quick-edit-author-input,
   .quick-edit-description-textarea,
   .inline-edit-textarea,
   .quick-edit-tags-container {
@@ -2539,6 +2666,13 @@ ul.bookmark-list.view-compact .compact-head .title .title-link {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 紧凑视图：作者常驻显示，靠右对齐（位于标题行右侧，展开按钮左侧，即原标签位） */
+ul.bookmark-list.view-compact .compact-head .title .author {
+  display: inline-block;
+  margin-left: auto;
+  flex: none;
 }
 
 /* 右侧组：标签 + 展开按钮，整体贴右；限制宽度，避免挤压标题 */
@@ -2830,6 +2964,16 @@ ul.bookmark-list li[ld-bookmark-item].group-hidden {
   ul.bookmark-list .group-toggle,
   ul.bookmark-list .group-chevron {
     transition: none;
+  }
+}
+
+/* 作者名往复滚动动画：必须在顶层定义（CSS 嵌套内 @keyframes 不会被浏览器注册） */
+@keyframes author-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-1 * var(--author-overflow)));
   }
 }
 

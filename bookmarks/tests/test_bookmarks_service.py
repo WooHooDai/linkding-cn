@@ -115,6 +115,7 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
             url="https://example.com",
             title="Initial title",
             description="Initial description",
+            author="Initial author",
             preview_image_remote_url="https://example.com/preview.png",
         )
 
@@ -126,6 +127,24 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
         )
 
         self.mock_schedule_metadata_enrichment.assert_not_called()
+
+    def test_create_should_schedule_metadata_enrichment_when_author_missing(self):
+        # 仅空填充策略：author 为空时仍应触发元数据 enrich
+        bookmark_data = Bookmark(
+            url="https://example.com",
+            title="Initial title",
+            description="Initial description",
+            preview_image_remote_url="https://example.com/preview.png",
+        )
+
+        create_bookmark(
+            bookmark_data,
+            "",
+            self.get_or_create_test_user(),
+            schedule_metadata_enrichment=True,
+        )
+
+        self.mock_schedule_metadata_enrichment.assert_called_once()
 
     def test_create_should_update_existing_bookmark_with_same_url(self):
         original_bookmark = self.setup_bookmark(
@@ -1118,6 +1137,51 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
 
             self.assertEqual("", bookmark.title)
             self.assertEqual("", bookmark.description)
+
+    def test_enhance_with_website_metadata_fills_author_only_when_empty(self):
+        bookmark = self.setup_bookmark(url="https://example.com")
+        with patch.object(
+            website_loader, "load_website_metadata"
+        ) as mock_load_website_metadata:
+            mock_load_website_metadata.return_value = website_loader.WebsiteMetadata(
+                url="https://example.com",
+                title="Website title",
+                description="Website description",
+                author="Website author",
+                preview_image=None,
+            )
+
+            # empty author is filled
+            bookmark.title = ""
+            bookmark.description = ""
+            bookmark.author = ""
+            bookmark.save()
+            enhance_with_website_metadata(bookmark)
+            bookmark.refresh_from_db()
+
+            self.assertEqual("Website author", bookmark.author)
+
+            # existing author is not overwritten (仅空填充)
+            bookmark.author = "Initial author"
+            bookmark.save()
+            enhance_with_website_metadata(bookmark)
+            bookmark.refresh_from_db()
+
+            self.assertEqual("Initial author", bookmark.author)
+
+            # metadata returns no author, empty author stays empty
+            mock_load_website_metadata.return_value = website_loader.WebsiteMetadata(
+                url="https://example.com",
+                title="Website title",
+                description="Website description",
+                preview_image=None,
+            )
+            bookmark.author = ""
+            bookmark.save()
+            enhance_with_website_metadata(bookmark)
+            bookmark.refresh_from_db()
+
+            self.assertEqual("", bookmark.author)
 
     def test_refresh_bookmarks_metadata(self):
         bookmark1 = self.setup_bookmark()

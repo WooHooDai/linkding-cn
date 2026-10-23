@@ -1,4 +1,4 @@
-{% load shared %}
+{% load i18n shared %}
 <div class="title">
   <label class="form-checkbox bulk-edit-checkbox">
     <input type="checkbox" name="bookmark_id" value="{{ bookmark_item.id }}">
@@ -12,4 +12,7 @@
   <a href="{{ bookmark_item.url }}" target="{{ bookmark_list.link_target }}" rel="noopener" class="title-link truncate">
     <span>{{ bookmark_item.title }}</span>
   </a>
+  {% if bookmark_item.author %}
+  <a href="?{% add_author_to_query bookmark_item.author %}" class="author" title="{% translate 'Author' %}"><span class="author-inner">{{ bookmark_item.author }}</span></a>
+  {% endif %}
 </div>

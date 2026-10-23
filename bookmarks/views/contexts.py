@@ -264,6 +264,7 @@ class BookmarkItem:
         self.url = bookmark.url
         self.title = bookmark.resolved_title
         self.description = bookmark.resolved_description
+        self.author = bookmark.author
         self.notes = bookmark.notes
         self.tag_names = bookmark.tag_names
         self.tag_names_set = set(bookmark.tag_names)
@@ -2600,6 +2601,148 @@ class TrashedTagCloudContext(TagCloudContext):
                 self.request.user, self.request.user_profile, self.search.q
             )
         )
+
+
+class AuthorItem:
+    """侧边栏作者条目：名称 + 计数 + 点击查询链接（已选中时再次点击取消筛选）"""
+
+    def __init__(self, context: RequestContext, name: str, count: int):
+        self.name = name
+        self.count = count
+
+        params = context.query_params.copy()
+        query = params.get("q", "")
+        parsed = queries.parse_query_string(query)
+        author_terms = parsed.get("field_terms", {}).get("author", [])
+        self.is_selected = name in author_terms
+
+        # 已选中 → 移除该 author 条件（取消筛选）；未选中 → 替换为当前作者
+        next_terms = [] if self.is_selected else [name]
+        params["q"] = queries.replace_field_terms(query, "author", next_terms)
+        params.pop("details", None)
+        params.pop("page", None)
+
+        encoded = utils.clean_query_params(params)
+        self.query_string = f"?{encoded}" if encoded else context.index_url
+
+
+class AuthorGroup:
+    """作者分组：char 为首字母（CJK 为拼音首字母），items 保持计数降序"""
+
+    def __init__(self, char: str, is_cjk: bool = False):
+        self.char = char
+        self.is_cjk = is_cjk
+        self.items = []
+
+    def add_item(self, item: AuthorItem):
+        self.items.append(item)
+
+
+class AuthorCloudContext:
+    """侧边栏作者模块：当前搜索范围下按作者聚合计数；支持按计数/名称排序，按首字母分组或平铺"""
+
+    request_context = RequestContext
+
+    def __init__(self, request: HttpRequest, search: BookmarkSearch) -> None:
+        self.request = request
+        self.search = search
+        self.grouping = request.user_profile.author_grouping
+        self.sort = request.user_profile.author_sort
+        self.mode = UserProfile.author_mode_for(self.grouping, self.sort)
+
+        request_context = self.request_context(request)
+        query_set = request_context.get_bookmark_query_set(search)
+
+        if self.sort == UserProfile.AUTHOR_SORT_NAME:
+            ordering = ("author",)
+        else:
+            ordering = ("-count", "author")
+        author_counts = (
+            query_set.exclude(author__isnull=True)
+            .exclude(author="")
+            .values("author")
+            .annotate(count=Count("id"))
+            .order_by(*ordering)
+        )
+        items = [
+            AuthorItem(request_context, row["author"], row["count"])
+            for row in author_counts
+        ]
+
+        self.authors = items
+        self.groups = self._build_groups(items)
+
+        # 三态互斥显示模式：按计数降序 / 按首字母分组 / 禁用分组
+        self.mode_options = [
+            (
+                UserProfile.AUTHOR_MODE_COUNT_DESC,
+                _("By count desc"),
+                self.mode == UserProfile.AUTHOR_MODE_COUNT_DESC,
+            ),
+            (
+                UserProfile.AUTHOR_MODE_ALPHABETICAL,
+                _("Grouped by first letter"),
+                self.mode == UserProfile.AUTHOR_MODE_ALPHABETICAL,
+            ),
+            (
+                UserProfile.AUTHOR_MODE_DISABLED,
+                _("Disable grouping"),
+                self.mode == UserProfile.AUTHOR_MODE_DISABLED,
+            ),
+        ]
+
+    def _build_groups(self, items: list[AuthorItem]) -> list[AuthorGroup]:
+        if not items:
+            return []
+
+        if self.grouping == UserProfile.AUTHOR_GROUPING_DISABLED:
+            group = AuthorGroup("")
+            for item in items:
+                group.add_item(item)
+            return [group]
+
+        groups: list[AuthorGroup] = []
+
+        def get_group_char(name: str, is_cjk: bool) -> str:
+            if is_cjk:
+                py = pinyin(name[0], style=Style.FIRST_LETTER)
+                if py and py[0] and py[0][0]:
+                    return py[0][0].upper()
+            return name[0].upper()
+
+        for item in items:
+            name = item.name or ""
+            if not name:
+                continue
+            is_cjk = CJK_RE.match(name[0]) is not None
+            char = get_group_char(name, is_cjk)
+            group = next(
+                (g for g in groups if g.char == char and g.is_cjk == is_cjk), None
+            )
+            if group is None:
+                group = AuthorGroup(char, is_cjk)
+                groups.append(group)
+            group.add_item(item)
+
+        # 组排序：英文组按字母在前，CJK 组在后
+        groups.sort(key=lambda g: (1 if g.is_cjk else 0, g.char))
+        return groups
+
+
+class ActiveAuthorCloudContext(AuthorCloudContext):
+    request_context = ActiveBookmarksContext
+
+
+class ArchivedAuthorCloudContext(AuthorCloudContext):
+    request_context = ArchivedBookmarksContext
+
+
+class SharedAuthorCloudContext(AuthorCloudContext):
+    request_context = SharedBookmarksContext
+
+
+class TrashedAuthorCloudContext(AuthorCloudContext):
+    request_context = TrashedBookmarksContext
 
 
 class TrashedDomainsContext(DomainsContext):

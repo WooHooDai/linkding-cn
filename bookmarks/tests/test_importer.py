@@ -518,6 +518,47 @@ class ImporterTestCase(TestCase, BookmarkFactoryMixin, ImportTestMixin):
         self.assertEqual(Bookmark.objects.all()[0].description, "Example description")
         self.assertEqual(Bookmark.objects.all()[0].notes, "Updated notes")
 
+    def test_author(self):
+        # initial author
+        test_html = self.render_html(
+            tags_html="""
+        <DT><A HREF="https://example.com" ADD_DATE="1">Example title</A>
+        <DD>Example description[linkding-author]Example author[/linkding-author][linkding-notes]Example notes[/linkding-notes]
+        """
+        )
+        import_netscape_html(test_html, self.get_or_create_test_user(), ImportOptions())
+
+        self.assertEqual(Bookmark.objects.count(), 1)
+        self.assertEqual(Bookmark.objects.all()[0].description, "Example description")
+        self.assertEqual(Bookmark.objects.all()[0].author, "Example author")
+        self.assertEqual(Bookmark.objects.all()[0].notes, "Example notes")
+
+        # update author
+        test_html = self.render_html(
+            tags_html="""
+        <DT><A HREF="https://example.com" ADD_DATE="1">Example title</A>
+        <DD>Example description[linkding-author]Updated author[/linkding-author]
+        """
+        )
+        import_netscape_html(test_html, self.get_or_create_test_user(), ImportOptions())
+
+        self.assertEqual(Bookmark.objects.count(), 1)
+        self.assertEqual(Bookmark.objects.all()[0].description, "Example description")
+        self.assertEqual(Bookmark.objects.all()[0].author, "Updated author")
+
+        # does not override existing author if empty
+        test_html = self.render_html(
+            tags_html="""
+        <DT><A HREF="https://example.com" ADD_DATE="1">Example title</A>
+        <DD>Example description
+        """
+        )
+        import_netscape_html(test_html, self.get_or_create_test_user(), ImportOptions())
+
+        self.assertEqual(Bookmark.objects.count(), 1)
+        self.assertEqual(Bookmark.objects.all()[0].description, "Example description")
+        self.assertEqual(Bookmark.objects.all()[0].author, "Updated author")
+
     def test_schedule_favicon_loading(self):
         user = self.get_or_create_test_user()
         test_html = self.render_html(tags_html="")

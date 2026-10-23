@@ -21,16 +21,17 @@ def parse_metadata(content: str, url: str, config: dict) -> dict:
         config: Merged config dict (user-facing keys: content_type, select_*, etc.)
 
     Returns:
-        dict with title, description, image, url (any can be None).
+        dict with title, description, author, image, url (any can be None).
     """
     from bookmarks.services.website_loader import _parse_metadata_from_content
 
-    title, description, preview_image, _ = _parse_metadata_from_content(
+    title, description, preview_image, author, _ = _parse_metadata_from_content(
         content, url, config, include_sources=True
     )
     return {
         "title": title,
         "description": description,
+        "author": author,
         "image": preview_image,
         "url": url,
     }

@@ -88,6 +88,7 @@ def read(request: HttpRequest, bookmark_id: int):
         "url": bookmark.url,
         "title": bookmark.resolved_title,
         "description": bookmark.resolved_description,
+        "author": bookmark.author,
         "notes": bookmark.notes,
         "tag_names": bookmark.tag_names,
         "is_archived": bookmark.is_archived,

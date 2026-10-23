@@ -30,6 +30,7 @@ class BookmarkForm(forms.ModelForm):
     # Do not require title and description as they may be empty
     title = forms.CharField(required=False)
     description = forms.CharField(required=False, widget=forms.Textarea())
+    author = forms.CharField(required=False)
     unread = forms.BooleanField(required=False)
     shared = forms.BooleanField(required=False)
     # Hidden field that determines whether to close window/tab after saving the bookmark
@@ -42,6 +43,7 @@ class BookmarkForm(forms.ModelForm):
             "tag_string",
             "title",
             "description",
+            "author",
             "notes",
             "preview_image_remote_url",
             "unread",
@@ -58,6 +60,7 @@ class BookmarkForm(forms.ModelForm):
                 "url": request.GET.get("url"),
                 "title": request.GET.get("title"),
                 "description": request.GET.get("description"),
+                "author": request.GET.get("author"),
                 "notes": request.GET.get("notes"),
                 "tag_string": request.GET.get("tags"),
                 "auto_close": "auto_close" in request.GET,

@@ -4009,3 +4009,46 @@ msgstr "任务未处于暂停状态。"
 #: bookmarks/views/health_check.py:190
 msgid "Unknown action."
 msgstr "未知操作。"
+
+#: bookmarks/templates/bookmarks/list/title.html
+msgid "Author"
+msgstr "作者"
+
+#: bookmarks/templates/bookmarks/list/actions.html
+msgid "Edit author"
+msgstr "编辑作者"
+
+#: bookmarks/templates/bookmarks/list/actions.html
+msgid "Click to edit author"
+msgstr "点击编辑作者"
+
+
+#: bookmarks/models.py:1006 bookmarks/templates/bookmarks/sidebar/modules/authors/index.html:7
+msgid "Authors"
+msgstr "作者"
+
+#: bookmarks/templates/bookmarks/sidebar/modules/authors/index.html:11
+msgid "Authors menu"
+msgstr "作者菜单"
+
+#: bookmarks/views/contexts.py:2095
+msgid "Grouped by first letter"
+msgstr "按首字母分组"
+
+#: bookmarks/views/contexts.py:2099
+msgid "Ungrouped"
+msgstr "不分组"
+
+
+#: bookmarks/models.py:1011 bookmarks/views/contexts.py:2137
+msgid "By count"
+msgstr "按计数"
+
+#: bookmarks/models.py:1012 bookmarks/views/contexts.py:2145
+msgid "By name"
+msgstr "按名称"
+
+
+#: bookmarks/views/contexts.py:2140
+msgid "By count desc"
+msgstr "按计数降序"

@@ -91,6 +91,7 @@ def _build_term_search_condition(term: str, profile: UserProfile) -> Q:
     conditions = (
         Q(title__icontains=term)
         | Q(description__icontains=term)
+        | Q(author__icontains=term)
         | Q(notes__icontains=term)
         | Q(url__icontains=term)
     )
@@ -194,6 +195,8 @@ def _field_term_expression_to_q(field_name: str, term: str) -> Q:
         )
     if field_name == "desc":
         return Q(description__icontains=term)
+    if field_name == "author":
+        return Q(author__icontains=term)
     if field_name == "notes":
         return Q(notes__icontains=term)
     if field_name == "url":
@@ -216,6 +219,8 @@ def _annotation_field_term_expression_to_q(field_name: str, term: str) -> Q:
         )
     if field_name == "desc":
         return Q(bookmark__description__icontains=term)
+    if field_name == "author":
+        return Q(bookmark__author__icontains=term)
     if field_name == "notes":
         return Q(bookmark__notes__icontains=term)
     if field_name == "url":
@@ -632,8 +637,8 @@ def _apply_filters(
 def _apply_field_terms_filters(query_set: QuerySet, field_terms: dict) -> QuerySet:
     """筛选field_term.
 
-    支持的fields: title, desc, notes, url, domain
-    - title/desc/notes/url：包含
+    支持的fields: title, desc, author, notes, url, domain
+    - title/desc/author/notes/url：包含
     - domain：严格匹配http/https的host
     """
     if not field_terms:
@@ -644,6 +649,9 @@ def _apply_field_terms_filters(query_set: QuerySet, field_terms: dict) -> QueryS
 
     for term in field_terms.get("desc", []):
         query_set = query_set.filter(description__icontains=term)
+
+    for term in field_terms.get("author", []):
+        query_set = query_set.filter(author__icontains=term)
 
     for term in field_terms.get("notes", []):
         query_set = query_set.filter(notes__icontains=term)
@@ -1046,7 +1054,7 @@ def _tokenize_query_string(query_string):
             break
 
         # 检查是否为field_term，若是则进行提取
-        field_prefixes = ("title:", "desc:", "notes:", "url:", "domain:")
+        field_prefixes = ("title:", "desc:", "notes:", "url:", "domain:", "author:")
         is_field_term = False
         field_prefix = None
 
@@ -1143,7 +1151,7 @@ def _parse_tokens(tokens):
     """解析tokens为搜索组件."""
     search_terms = []
     tag_names = []
-    field_terms = {"title": [], "desc": [], "notes": [], "url": [], "domain": []}
+    field_terms = {"title": [], "desc": [], "notes": [], "url": [], "domain": [], "author": []}
     untagged = False
     unread = False
 
@@ -1180,7 +1188,7 @@ def _parse_tokens(tokens):
 
 
 # 旧引擎（legacy search）支持的字段前缀，与 _parse_tokens 的 field_terms 键保持一致
-_FIELD_PREFIXES = ("title:", "desc:", "notes:", "url:", "domain:")
+_FIELD_PREFIXES = ("title:", "desc:", "notes:", "url:", "domain:", "author:")
 
 
 def _is_field_term(token):

@@ -79,6 +79,7 @@ class BookmarkSerializer(serializers.ModelSerializer):
             "url",
             "title",
             "description",
+            "author",
             "notes",
             "preview_image_remote_url",
             "web_archive_snapshot_url",

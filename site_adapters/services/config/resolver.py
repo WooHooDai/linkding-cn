@@ -401,12 +401,16 @@ def _build_section_config(full_config: dict, section: str, base_dir: str, userna
             result['select_title'] = section_data['select_title']
         if 'select_description' in section_data:
             result['select_description'] = section_data['select_description']
+        if 'select_author' in section_data:
+            result['select_author'] = section_data['select_author']
         if 'select_image' in section_data:
             result['select_image'] = section_data['select_image']
         if 'rewrite_title' in section_data:
             result['rewrite_title'] = section_data['rewrite_title']
         if 'rewrite_description' in section_data:
             result['rewrite_description'] = section_data['rewrite_description']
+        if 'rewrite_author' in section_data:
+            result['rewrite_author'] = section_data['rewrite_author']
         if 'rewrite_image' in section_data:
             result['rewrite_image'] = section_data['rewrite_image']
         result['scripts'] = section_data.get('scripts')

@@ -51,6 +51,23 @@ def add_tag_to_query(context, tag_name: str):
 
 
 @register.simple_tag(takes_context=True)
+def add_author_to_query(context, author: str):
+    params = context.request.GET.copy()
+
+    # 替换已有的 author 条件（点击另一作者时切换而非叠加），保留其他查询
+    query_string = params.get("q", "")
+    query_string = queries.replace_field_terms(query_string, "author", [author])
+
+    params.setlist("q", [query_string])
+
+    # Remove details ID and page number
+    params.pop("details", None)
+    params.pop("page", None)
+
+    return params.urlencode()
+
+
+@register.simple_tag(takes_context=True)
 def remove_tag_from_query(context, tag_name: str):
     params = context.request.GET.copy()
     if params.__contains__("q"):

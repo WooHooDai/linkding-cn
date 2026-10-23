@@ -460,6 +460,15 @@ export class ReaderSidebar extends LitElement {
       </div>
 
       <div class="info-section">
+        <div class="info-label">${gettext("Author")}</div>
+        <textarea class="info-textarea" .value=${bm.author || ""}
+          placeholder=${gettext("Click to edit author")} rows="1"
+          @input=${(e) => { e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; e.target.classList.toggle("overflows", e.target.scrollHeight > e.target.clientHeight); }}
+          @blur=${(e) => this._saveField("author", e.target.value)}
+          @keydown=${this._escapeBlur}></textarea>
+      </div>
+
+      <div class="info-section">
         <div class="info-label">${gettext("Description")}</div>
         <textarea class="info-textarea" .value=${bm.description || ""}
           placeholder=${gettext("Click to edit description")} rows="1"
@@ -584,6 +593,12 @@ export class ReaderSidebar extends LitElement {
       <div class="info-section">
         ${bm.tag_names?.length ? html`<span class="info-tags">${bm.tag_names.map(t => html`<span class="info-tag">${t}</span>`)}</span>` : html`<span class="info-placeholder">${gettext("No tags")}</span>`}
       </div>
+
+      ${bm.author ? html`
+      <div class="info-section">
+        <div class="info-label">${gettext("Author")}</div>
+        <div class="info-value-readonly">${bm.author}</div>
+      </div>` : html``}
 
       ${bm.description ? html`
       <div class="info-section">

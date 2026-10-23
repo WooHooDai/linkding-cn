@@ -10,6 +10,7 @@ class NetscapeBookmark:
     href: str
     title: str
     description: str
+    author: str
     notes: str
     date_added: str
     date_modified: str
@@ -32,6 +33,7 @@ class BookmarkParser(HTMLParser):
         self.tags = ""
         self.title = ""
         self.description = ""
+        self.author = ""
         self.notes = ""
         self.toread = ""
         self.private = ""
@@ -70,6 +72,7 @@ class BookmarkParser(HTMLParser):
             href=self.href,
             title="",
             description="",
+            author="",
             notes="",
             date_added=self.add_date,
             date_modified=self.last_modified,
@@ -85,14 +88,21 @@ class BookmarkParser(HTMLParser):
 
     def handle_dd_data(self, data):
         desc = data.strip()
+        # 先剥离 notes（导出顺序为 description -> author -> notes，author 提取
+        # 会截断后续内容，必须最后处理）
         if "[linkding-notes]" in desc:
             self.notes = desc.split("[linkding-notes]")[1].split("[/linkding-notes]")[0]
-        self.description = desc.split("[linkding-notes]")[0]
+            desc = desc.split("[linkding-notes]")[0]
+        if "[linkding-author]" in desc:
+            self.author = desc.split("[linkding-author]")[1].split("[/linkding-author]")[0]
+            desc = desc.split("[linkding-author]")[0]
+        self.description = desc
 
     def add_bookmark(self):
         if self.bookmark:
             self.bookmark.title = self.title
             self.bookmark.description = self.description
+            self.bookmark.author = self.author
             self.bookmark.notes = self.notes
             self.bookmarks.append(self.bookmark)
         self.bookmark = None
@@ -102,6 +112,7 @@ class BookmarkParser(HTMLParser):
         self.tags = ""
         self.title = ""
         self.description = ""
+        self.author = ""
         self.notes = ""
         self.toread = ""
         self.private = ""
