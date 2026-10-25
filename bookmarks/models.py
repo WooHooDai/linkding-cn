@@ -158,6 +158,12 @@ class Bookmark(models.Model):
             return self.url
 
     @property
+    def has_placeholder_title(self):
+        """标题为空或以 URL 占位（即 resolved_title 的回退值）。"""
+        title = (self.title or "").strip()
+        return not title or title in (self.url, self.url_normalized)
+
+    @property
     def resolved_description(self):
         return self.description
 

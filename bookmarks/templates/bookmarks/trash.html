@@ -28,7 +28,7 @@
             action="{{ bookmark_list.action_url|safe }}"
             method="post" autocomplete="off">
         {% csrf_token %}
-        {% include 'bookmarks/bulk_edit/bar.html' with disable_actions='bulk_trash,bulk_archive,bulk_unarchive,bulk_read,bulk_unread,bulk_share,bulk_unshare,bulk_tag,bulk_untag,bulk_refresh,bulk_snapshot,bulk_article' default_bulk_action='bulk_restore' %}
+        {% include 'bookmarks/bulk_edit/bar.html' with disable_actions='bulk_trash,bulk_archive,bulk_unarchive,bulk_read,bulk_unread,bulk_share,bulk_unshare,bulk_tag,bulk_untag,bulk_check_health,bulk_enrich_metadata,bulk_refresh_metadata,bulk_snapshot,bulk_article' default_bulk_action='bulk_restore' %}
 
         <div id="bookmark-list-container">
           {% include 'bookmarks/bookmark_list.html' with is_trash_page=True %}

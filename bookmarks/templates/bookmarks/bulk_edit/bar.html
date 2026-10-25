@@ -34,8 +34,11 @@
       {% if not 'bulk_untag' in disable_actions %}
         <option value="bulk_untag">{% translate "Remove tags" %}</option>
       {% endif %}
-      {% if not 'bulk_refresh' in disable_actions %}
-        <option value="bulk_refresh">{% translate "Refresh from website" %}</option>
+      {% if not 'bulk_enrich_metadata' in disable_actions %}
+        <option value="bulk_enrich_metadata">{% translate "Fetch metadata" %}</option>
+      {% endif %}
+      {% if not 'bulk_refresh_metadata' in disable_actions %}
+        <option value="bulk_refresh_metadata">{% translate "Refresh metadata" %}</option>
       {% endif %}
       {% if not 'bulk_refresh_favicon' in disable_actions %}
         <option value="bulk_refresh_favicon">{% translate "Refresh favicon" %}</option>

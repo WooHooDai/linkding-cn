@@ -15,6 +15,19 @@ def get_or_create_tags(tag_names: list[str], user: User):
     return unique(tags, operator.attrgetter("id"))
 
 
+def get_existing_tags(tag_names: list[str], user: User):
+    """查找已存在的标签，不创建新标签（用于移除标签）。"""
+    tags = [
+        tag
+        for tag in (
+            Tag.objects.filter(name__iexact=name, owner=user).first()
+            for name in tag_names
+        )
+        if tag is not None
+    ]
+    return unique(tags, operator.attrgetter("id"))
+
+
 def get_or_create_tag(name: str, user: User):
     try:
         return Tag.objects.get(name__iexact=name, owner=user)

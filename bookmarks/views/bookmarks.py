@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import random as rng
 import time
 import urllib.parse
@@ -49,6 +50,7 @@ from bookmarks.services.bookmarks import (
     create_html_articles,
     create_html_snapshots,
     delete_bookmarks,
+    enrich_bookmarks_metadata,
     mark_bookmarks_as_read,
     mark_bookmarks_as_unread,
     refresh_bookmarks_favicons,
@@ -73,6 +75,8 @@ from bookmarks.views.health_check import (
     get_active_check_job,
     start_ids_job,
 )
+
+logger = logging.getLogger(__name__)
 
 SIDEBAR_MODULE_TEMPLATES = {
     UserProfile.SIDEBAR_MODULE_SUMMARY: "bookmarks/sidebar/modules/summary/index.html",
@@ -1131,10 +1135,10 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
         if bulk_action == "bulk_delete":
             return delete_bookmarks(bookmark_ids, request.user)
         if bulk_action == "bulk_tag":
-            tag_string = convert_tag_string(request.POST["bulk_tag_string"])
+            tag_string = convert_tag_string(request.POST.get("bulk_tag_string", ""))
             return tag_bookmarks(bookmark_ids, tag_string, request.user)
         if bulk_action == "bulk_untag":
-            tag_string = convert_tag_string(request.POST["bulk_tag_string"])
+            tag_string = convert_tag_string(request.POST.get("bulk_tag_string", ""))
             return untag_bookmarks(bookmark_ids, tag_string, request.user)
         if bulk_action == "bulk_read":
             return mark_bookmarks_as_read(bookmark_ids, request.user)
@@ -1144,7 +1148,9 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
             return share_bookmarks(bookmark_ids, request.user)
         if bulk_action == "bulk_unshare":
             return unshare_bookmarks(bookmark_ids, request.user)
-        if bulk_action == "bulk_refresh":
+        if bulk_action == "bulk_enrich_metadata":
+            return enrich_bookmarks_metadata(bookmark_ids, request.user)
+        if bulk_action == "bulk_refresh_metadata":
             return refresh_bookmarks_metadata(bookmark_ids, request.user)
         if bulk_action == "bulk_refresh_favicon":
             return refresh_bookmarks_favicons(bookmark_ids, request.user)
@@ -1175,6 +1181,13 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
             return create_html_articles(bookmark_ids, request.user)
         if bulk_action == "bulk_remove_article":
             return remove_all_html_articles(bookmark_ids, request.user)
+
+        logger.warning(
+            "Ignoring unknown bulk action. action=%s user=%s count=%s",
+            bulk_action,
+            request.user.username,
+            len(bookmark_ids),
+        )
 
 
 @login_required

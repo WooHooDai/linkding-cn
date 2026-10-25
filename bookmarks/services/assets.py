@@ -33,6 +33,12 @@ def _save_bookmark_updates(bookmark: Bookmark, update_fields: list[str]):
     bookmark.save(update_fields=update_fields)
 
 
+def _asset_row_exists(asset: BookmarkAsset) -> bool:
+    """抓取期间资产可能被并发删除（如批量「删除所有快照」），此时应丢弃结果，
+    避免 asset.save() 把已删除的记录重新插入。"""
+    return asset.pk is not None and BookmarkAsset.objects.filter(pk=asset.pk).exists()
+
+
 def _format_asset_timestamp(value) -> str:
     return timezone.localtime(value).strftime("%Y/%m/%d")
 
@@ -97,6 +103,11 @@ def _create_html_snapshot(asset: BookmarkAsset, username: str = ''):
         os.remove(temp_filepath)
 
         timestamp = _format_asset_timestamp(asset.date_created)
+
+        if not _asset_row_exists(asset):
+            logger.info("Snapshot asset deleted during capture, discarding. id=%s", asset.pk)
+            os.remove(filepath)
+            return
 
         asset.status = BookmarkAsset.STATUS_COMPLETE
         asset.content_type = BookmarkAsset.CONTENT_TYPE_HTML
@@ -167,6 +178,11 @@ def _create_pdf_snapshot(asset: BookmarkAsset):
 
         timestamp = _format_asset_timestamp(asset.date_created)
 
+        if not _asset_row_exists(asset):
+            logger.info("Snapshot asset deleted during capture, discarding. id=%s", asset.pk)
+            os.remove(filepath)
+            return
+
         asset.status = BookmarkAsset.STATUS_COMPLETE
         asset.content_type = BookmarkAsset.CONTENT_TYPE_PDF
         asset.display_name = _("PDF download from %(timestamp)s") % {
@@ -215,6 +231,11 @@ def _create_data_snapshot(
 
         timestamp = _format_asset_timestamp(asset.date_created)
         label = "JSON" if content_type == "json" else "XML"
+
+        if not _asset_row_exists(asset):
+            logger.info("Snapshot asset deleted during capture, discarding. id=%s", asset.pk)
+            os.remove(filepath)
+            return
 
         asset.status = BookmarkAsset.STATUS_COMPLETE
         asset.content_type = mime_type

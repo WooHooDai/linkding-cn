@@ -877,10 +877,17 @@ msgstr "添加标签"
 msgid "Remove tags"
 msgstr "移除标签"
 
-#: bookmarks/templates/bookmarks/bulk_edit/bar.html:34
 #: bookmarks/templates/bookmarks/form.html:13
 msgid "Refresh from website"
 msgstr "重新抓取"
+
+#: bookmarks/templates/bookmarks/bulk_edit/bar.html:38
+msgid "Fetch metadata"
+msgstr "抓取元数据"
+
+#: bookmarks/templates/bookmarks/bulk_edit/bar.html:41
+msgid "Refresh metadata"
+msgstr "刷新元数据"
 
 #: bookmarks/templates/bookmarks/bulk_edit/bar.html:37
 msgid "Refresh favicon"

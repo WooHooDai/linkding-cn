@@ -109,6 +109,28 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         # should update bookmark modified date
         bookmark.refresh_from_db()
 
+    def test_create_snapshot_discards_result_when_asset_deleted_during_capture(self):
+        bookmark = self.setup_bookmark(url="https://example.com")
+        asset = assets.create_snapshot_asset(bookmark)
+        asset.save()
+        asset_id = asset.id
+        files_before = set(os.listdir(self.assets_dir))
+
+        def write_and_delete(_url, filepath, **kwargs):
+            with open(filepath, "w", encoding="utf-8") as snapshot_file:
+                snapshot_file.write(self.html_content)
+            # 模拟抓取期间被批量「删除所有快照」并发删除
+            BookmarkAsset.objects.filter(pk=asset_id).delete()
+
+        self.mock_singlefile_create_snapshot.side_effect = write_and_delete
+
+        assets.create_snapshot(asset)
+
+        # 资产不会被 save() 复活
+        self.assertFalse(BookmarkAsset.objects.filter(pk=asset_id).exists())
+        # 抓取产物也不会残留
+        self.assertEqual(set(os.listdir(self.assets_dir)), files_before)
+
     def test_create_snapshot_failure(self):
         bookmark = self.setup_bookmark(url="https://example.com")
         asset = assets.create_snapshot_asset(bookmark)

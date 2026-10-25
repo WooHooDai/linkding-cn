@@ -336,7 +336,8 @@ class BookmarkArchivedViewTestCase(
         values = self._get_bulk_action_values(response)
 
         for v in ["bulk_unarchive", "bulk_delete", "bulk_tag", "bulk_untag",
-                   "bulk_read", "bulk_unread", "bulk_refresh"]:
+                   "bulk_read", "bulk_unread", "bulk_enrich_metadata",
+                   "bulk_refresh_metadata"]:
             self.assertIn(v, values)
         self.assertNotIn("bulk_share", values)
         self.assertNotIn("bulk_unshare", values)

@@ -5,13 +5,8 @@ from django.utils import timezone
 
 from bookmarks.models import Bookmark, BookmarkAsset, User, parse_tag_string
 from bookmarks.services import auto_tagging, tasks, website_loader
-from bookmarks.services.tags import get_or_create_tags
-from bookmarks.utils import (
-    extract_hostname,
-    normalize_url,
-    parse_domain_roots,
-    resolve_favicon_domain,
-)
+from bookmarks.services.tags import get_existing_tags, get_or_create_tags
+from bookmarks.utils import normalize_url
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +122,7 @@ def enhance_with_website_metadata(bookmark: Bookmark):
     metadata = website_loader.load_website_metadata(bookmark.url, username=username)
     update_fields = []
 
-    if not bookmark.title:
+    if bookmark.has_placeholder_title:
         bookmark.title = metadata.title or ""
         update_fields.append("title")
 
@@ -151,7 +146,7 @@ def enhance_with_website_metadata(bookmark: Bookmark):
 
 def _needs_metadata_enrichment(bookmark: Bookmark):
     return (
-        not bookmark.title
+        bookmark.has_placeholder_title
         or not bookmark.description
         or not bookmark.author
         or not bookmark.preview_image_remote_url
@@ -249,7 +244,7 @@ def untag_bookmarks(bookmark_ids: [int | str], tag_string: str, current_user: Us
         owner=current_user, id__in=sanitized_bookmark_ids
     ).values_list("id", flat=True)
     tag_names = parse_tag_string(tag_string)
-    tags = get_or_create_tags(tag_names, current_user)
+    tags = get_existing_tags(tag_names, current_user)
 
     BookmarkToTagRelationShip = Bookmark.tags.through
     for tag in tags:
@@ -295,15 +290,28 @@ def unshare_bookmarks(bookmark_ids: [int | str], current_user: User):
     )
 
 
-def refresh_bookmarks_metadata(bookmark_ids: [int | str], current_user: User):
+def enrich_bookmarks_metadata(bookmark_ids: [int | str], current_user: User):
+    """抓取选中书签的元数据，只填补为空的字段，不覆盖已有内容。"""
     sanitized_bookmark_ids = _sanitize_id_list(bookmark_ids)
     owned_bookmarks = Bookmark.objects.filter(
         owner=current_user, id__in=sanitized_bookmark_ids
     )
 
     for bookmark in owned_bookmarks:
-        tasks.refresh_metadata(bookmark)
-        tasks.refresh_favicon(current_user, bookmark)
+        # 字段齐全的书签无需抓取
+        if _needs_metadata_enrichment(bookmark):
+            tasks.schedule_metadata_enrichment(bookmark)
+
+
+def refresh_bookmarks_metadata(bookmark_ids: [int | str], current_user: User):
+    """重新抓取选中书签的元数据并覆盖已有值（抓不到的字段保留原值）。"""
+    sanitized_bookmark_ids = _sanitize_id_list(bookmark_ids)
+    owned_bookmarks = Bookmark.objects.filter(
+        owner=current_user, id__in=sanitized_bookmark_ids
+    )
+
+    for bookmark in owned_bookmarks:
+        tasks.schedule_metadata_refresh(bookmark)
 
 
 def refresh_bookmarks_favicons(bookmark_ids: list[int | str], current_user: User):
@@ -313,25 +321,7 @@ def refresh_bookmarks_favicons(bookmark_ids: list[int | str], current_user: User
         owner=current_user, id__in=sanitized_bookmark_ids
     )
 
-    domain_config = parse_domain_roots(current_user.profile.custom_domain_root)
-    domains_seen = set()
-    for bookmark in owned_bookmarks:
-        domain = _resolve_favicon_domain(bookmark.url, domain_config)
-        if (
-            domain
-            and domain not in domains_seen
-            and tasks._set_favicon_pending_for_enqueue(domain, force=True)
-        ):
-            domains_seen.add(domain)
-            tasks._enqueue_favicon_task(current_user.id, domain)
-
-
-def _resolve_favicon_domain(url: str, domain_config=None) -> str:
-    """从 URL 提取 hostname 并应用自定义域名归一化。"""
-    hostname = extract_hostname(url)
-    if not hostname:
-        return ""
-    return resolve_favicon_domain(hostname, config=domain_config)
+    tasks.refresh_favicons_for_bookmarks(current_user, owned_bookmarks)
 
 
 def create_html_snapshots(bookmark_ids: list[int | str], current_user: User):
@@ -402,5 +392,11 @@ def _update_bookmark_tags(bookmark: Bookmark, tag_string: str, user: User):
 
 
 def _sanitize_id_list(bookmark_ids: [int | str]) -> [int]:
-    # Convert string ids to int if necessary
-    return [int(bm_id) if isinstance(bm_id, str) else bm_id for bm_id in bookmark_ids]
+    # 非法值（None / 非数字字符串）直接忽略，避免单个脏 id 让整个批量请求 500
+    sanitized = []
+    for bm_id in bookmark_ids:
+        try:
+            sanitized.append(int(bm_id))
+        except (TypeError, ValueError):
+            continue
+    return sanitized

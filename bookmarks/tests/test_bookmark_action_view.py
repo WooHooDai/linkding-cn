@@ -404,6 +404,42 @@ class BookmarkActionViewTestCase(
         self.assertTrue(Bookmark.objects.get(id=bookmark2.id).is_archived)
         self.assertTrue(Bookmark.objects.get(id=bookmark3.id).is_archived)
 
+    def test_bulk_enrich_metadata(self):
+        bookmark1 = self.setup_bookmark()
+        bookmark2 = self.setup_bookmark()
+
+        with patch(
+            "bookmarks.services.bookmarks.tasks.schedule_metadata_enrichment"
+        ) as mock_enrich:
+            self.client.post(
+                reverse("linkding:bookmarks.index.action"),
+                {
+                    "bulk_action": ["bulk_enrich_metadata"],
+                    "bulk_execute": [""],
+                    "bookmark_id": [str(bookmark1.id), str(bookmark2.id)],
+                },
+            )
+
+            self.assertEqual(mock_enrich.call_count, 2)
+
+    def test_bulk_refresh_metadata(self):
+        bookmark1 = self.setup_bookmark()
+        bookmark2 = self.setup_bookmark()
+
+        with patch(
+            "bookmarks.services.bookmarks.tasks.schedule_metadata_refresh"
+        ) as mock_refresh:
+            self.client.post(
+                reverse("linkding:bookmarks.index.action"),
+                {
+                    "bulk_action": ["bulk_refresh_metadata"],
+                    "bulk_execute": [""],
+                    "bookmark_id": [str(bookmark1.id), str(bookmark2.id)],
+                },
+            )
+
+            self.assertEqual(mock_refresh.call_count, 2)
+
     def test_bulk_delete(self):
         bookmark1 = self.setup_bookmark()
         bookmark2 = self.setup_bookmark()

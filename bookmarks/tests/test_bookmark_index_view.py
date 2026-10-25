@@ -428,7 +428,8 @@ class BookmarkIndexViewTestCase(
         values = self._get_bulk_action_values(response)
 
         for v in ["bulk_read", "bulk_unread", "bulk_tag", "bulk_untag",
-                   "bulk_refresh", "bulk_archive", "bulk_trash", "bulk_delete"]:
+                   "bulk_enrich_metadata", "bulk_refresh_metadata",
+                   "bulk_archive", "bulk_trash", "bulk_delete"]:
             self.assertIn(v, values)
         self.assertNotIn("bulk_share", values)
         self.assertNotIn("bulk_unshare", values)

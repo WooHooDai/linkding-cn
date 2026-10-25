@@ -37,6 +37,7 @@ from bookmarks.services import assets, favicon_loader, preview_image_loader
 from bookmarks.services.website_loader import load_website_metadata
 from bookmarks.utils import (
     get_registrable_domain,
+    normalize_url,
     parse_domain_roots,
 )
 
@@ -290,6 +291,26 @@ def refresh_favicon_for_url(user: User, url: str, priority: int | None = None):
     domain = _resolve_domain(url, domain_config)
     if domain and _set_favicon_pending_for_enqueue(domain, force=True):
         _enqueue_favicon_task(user.id, domain, priority=priority)
+
+
+def refresh_favicons_for_bookmarks(user: User, bookmarks) -> int:
+    """批量强制刷新书签所属域名的 favicon，按域名去重。返回入队数量。"""
+    if not is_favicon_feature_active(user):
+        return 0
+
+    domain_config = parse_domain_roots(user.profile.custom_domain_root)
+    domains_seen = set()
+    for bookmark in bookmarks:
+        domain = _resolve_domain(bookmark.url, domain_config)
+        if (
+            domain
+            and domain not in domains_seen
+            and _set_favicon_pending_for_enqueue(domain, force=True)
+        ):
+            domains_seen.add(domain)
+            _enqueue_favicon_task(user.id, domain)
+
+    return len(domains_seen)
 
 
 def load_favicon(
@@ -818,13 +839,13 @@ def _batch_load_preview_images_task(user_id: int):
 
 
 # ---------------------------------------------------------------------------
-# 元数据补全与刷新
+# 元数据补齐与刷新
+#
+# 两个动作语义不同，不可互相替代：
+#   - 补齐（enrich）：只填为空的字段，不覆盖已有内容
+#   - 刷新（refresh）：重新抓取并覆盖，抓不到（None）时保留原值
+# 两者都不生成 HTML 快照。
 # ---------------------------------------------------------------------------
-
-
-def refresh_metadata(bookmark: Bookmark):
-    if not settings.LD_DISABLE_BACKGROUND_TASKS:
-        _refresh_metadata_task(bookmark.id)
 
 
 def schedule_metadata_enrichment(
@@ -840,6 +861,11 @@ def schedule_metadata_enrichment(
             ignore_cache=ignore_cache,
             priority=priority,
         )
+
+
+def schedule_metadata_refresh(bookmark: Bookmark, priority: int | None = None):
+    if not settings.LD_DISABLE_BACKGROUND_TASKS:
+        _refresh_metadata_task(bookmark.id, priority=priority)
 
 
 @task(retries=3, priority=PRIORITY_CORE)
@@ -863,7 +889,7 @@ def _enrich_metadata_task(
     update_fields = []
 
     if (
-        (overwrite or not bookmark.title)
+        (overwrite or bookmark.has_placeholder_title)
         and metadata.title is not None
         and metadata.title != bookmark.title
     ):
@@ -877,6 +903,14 @@ def _enrich_metadata_task(
     ):
         bookmark.description = metadata.description
         update_fields.append("description")
+
+    if (
+        (overwrite or not bookmark.author)
+        and metadata.author
+        and metadata.author != bookmark.author
+    ):
+        bookmark.author = metadata.author
+        update_fields.append("author")
 
     if (
         (overwrite or not bookmark.preview_image_remote_url)
@@ -908,6 +942,7 @@ def _refresh_metadata_task(bookmark_id: int):
         username=_bookmark_username(bookmark),
     )
     update_fields = []
+    preview_image_changed = False
 
     if metadata.title is not None:
         bookmark.title = metadata.title
@@ -915,6 +950,9 @@ def _refresh_metadata_task(bookmark_id: int):
     if metadata.description is not None:
         bookmark.description = metadata.description
         update_fields.append("description")
+    if metadata.author:
+        bookmark.author = metadata.author
+        update_fields.append("author")
     if metadata.preview_image:
         preview_image_changed = (
             metadata.preview_image != bookmark.preview_image_remote_url
@@ -927,25 +965,18 @@ def _refresh_metadata_task(bookmark_id: int):
             update_fields.append("preview_image_file")
     if metadata.url and metadata.url != bookmark.url:
         bookmark.url = metadata.url
-        update_fields.append("url")
-    bookmark.date_modified = timezone.now()
+        bookmark.url_normalized = normalize_url(bookmark.url)
+        update_fields.extend(["url", "url_normalized"])
 
-    bookmark.save(update_fields=update_fields)
-    logger.info("Successfully refreshed metadata for bookmark. url=%s", bookmark.url)
+    if update_fields:
+        bookmark.date_modified = timezone.now()
+        update_fields.append("date_modified")
+        bookmark.save(update_fields=update_fields)
+        logger.info("Successfully refreshed metadata for bookmark. url=%s", bookmark.url)
 
-    # 重新下载本地预览图，确保 remote_url 已提交后再取新图
-    if not settings.LD_DISABLE_BACKGROUND_TASKS:
+    if preview_image_changed and not settings.LD_DISABLE_BACKGROUND_TASKS:
+        # 远程图已换，重新下载本地预览文件
         load_preview_image(bookmark.owner, bookmark, force=True)
-
-    # 若url变动，则按需更新html快照
-    if bookmark.owner.profile.enable_automatic_html_snapshots:
-        pending_assets = BookmarkAsset.objects.filter(
-            bookmark=bookmark, status=BookmarkAsset.STATUS_PENDING
-        )
-        if pending_assets.exists():  # 若有下载中的快照，则移除
-            pending_assets.delete()
-
-        create_html_snapshot(bookmark)
 
 
 # ---------------------------------------------------------------------------
@@ -1156,8 +1187,25 @@ def create_html_snapshots(bookmark_list: list[Bookmark], priority: int | None = 
     if not is_html_snapshot_feature_active():
         return
 
+    bookmarks = list(bookmark_list)
+    if not bookmarks:
+        return
+
+    # 已有排队中的快照则跳过，避免连点造成同一页面重复抓取；
+    # 已有完成快照的仍会新建（"创建快照"的语义就是重新归档当前页面）。
+    pending_bookmark_ids = set(
+        BookmarkAsset.objects.filter(
+            bookmark__in=bookmarks,
+            asset_type=BookmarkAsset.TYPE_SNAPSHOT,
+            status=BookmarkAsset.STATUS_PENDING,
+        ).values_list("bookmark_id", flat=True)
+    )
+
     assets_to_create = []
-    for bookmark in bookmark_list:
+    for bookmark in bookmarks:
+        if bookmark.id in pending_bookmark_ids:
+            logger.debug("Snapshot already pending for url=%s", bookmark.url)
+            continue
         if _is_snapshot_disabled_by_adapter(bookmark.url, username=_get_bookmark_username(bookmark)):
             logger.debug("Snapshot disabled by adapter config for url=%s", bookmark.url)
             continue
