@@ -1876,6 +1876,48 @@ ul.bookmark-list {
     display: inline-flex;
     align-items: center;
   }
+
+  /* 分组头复选框：仅批量模式可见，与条目复选框对齐成一条竖线。
+     Spectre 的 .form-checkbox 自带 1.8rem 左内边距（图标是绝对定位的，用不上它），
+     不清掉会把分组标题推远 24px，与条目的 8px 间距不对称 */
+  & .bulk-group-checkbox {
+    display: none;
+    padding: 0;
+    margin: 0 var(--unit-2) 0 0;
+    min-width: 16px;
+  }
+
+  &.active .bulk-group-checkbox {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* 触屏命中区：16px 的框不可点，用伪元素外扩到 36×44。
+     刻意不改布局占位——一旦放大盒子，图标会贴着盒子上沿、标题被推远 */
+  @media (pointer: coarse) {
+    &.active li[ld-bookmark-item] .form-checkbox.bulk-edit-checkbox,
+    &.active .bulk-group-checkbox {
+      position: relative;
+      -webkit-touch-callout: none;
+      user-select: none;
+
+      &::after {
+        content: "";
+        position: absolute;
+        inset: -10px;
+      }
+    }
+  }
+
+  /* 长按起锚后的方向提示 */
+  & .selection-hint {
+    font-size: 12px;
+    color: var(--secondary-text-color);
+
+    &.is-clearing {
+      color: var(--error-color);
+    }
+  }
 }
 
 .sidebar-user-summary {

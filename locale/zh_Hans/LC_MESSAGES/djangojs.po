@@ -70,6 +70,22 @@ msgstr "标记为已读"
 msgid "Selected(%(count)s)"
 msgstr "已选中 %(count)s 个"
 
+#: bookmarks/frontend/components/selection-view.js
+msgid "Select group"
+msgstr "选中本组"
+
+#: bookmarks/frontend/components/selection-view.js
+msgid "Clear group"
+msgstr "取消本组"
+
+#: bookmarks/frontend/components/selection-view.js
+msgid "Anchor set · tap another bookmark to select the range"
+msgstr "已设起点 · 轻点另一条选中区间"
+
+#: bookmarks/frontend/components/selection-view.js
+msgid "Anchor set · tap another bookmark to clear the range"
+msgstr "已设起点 · 轻点另一条取消选中"
+
 #: bookmarks/frontend/components/confirm-dropdown.js:65
 #: bookmarks/frontend/components/confirm-inline.js:72
 #: bookmarks/frontend/reader/reader-sidebar.js:206

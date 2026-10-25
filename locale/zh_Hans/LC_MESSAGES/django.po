@@ -1706,6 +1706,10 @@ msgstr "书签按添加日期分组显示：今天、昨天、本周、本月、
 msgid "Showing %(start)s-%(end)s of %(total)s"
 msgstr "第 %(start)s-%(end)s 条 / 共 %(total)s 条"
 
+#: bookmarks/templates/bookmarks/bookmark_list.html
+msgid "Select group"
+msgstr "选中本组"
+
 #: bookmarks/templates/bookmarks/index.html
 msgid "Collapse all groups"
 msgstr "折叠全部分组"

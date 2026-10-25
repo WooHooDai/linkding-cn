@@ -12,6 +12,10 @@
         {% if bookmark_list.group_by_date %}
           {% ifchanged bookmark_item.group_key %}
           <li class="group-header" data-group-key="{{ bookmark_item.group_key }}" role="listitem">
+            <label class="form-checkbox bulk-group-checkbox" aria-label="{% translate 'Select group' %}">
+              <input type="checkbox">
+              <i class="form-icon"></i>
+            </label>
             <button type="button" class="group-toggle" aria-expanded="true">
               <svg class="group-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
               <span class="group-title">
