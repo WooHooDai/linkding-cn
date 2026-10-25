@@ -198,14 +198,21 @@ class BookmarkSerializer(serializers.ModelSerializer):
         return saved_bookmark
 
     def update(self, instance: Bookmark, validated_data):
-        tag_names = validated_data.pop("tag_names", instance.tag_names)
-        tag_string = build_tag_string(tag_names)
+        # 请求未提交 tag_names 说明本次不涉及标签，无需读取更无需重写标签关系
+        tags_may_have_changed = "tag_names" in validated_data
+        tag_names = validated_data.pop("tag_names", None)
+        tag_string = build_tag_string(tag_names) if tag_names is not None else ""
 
         for field_name, field in self.fields.items():
             if not field.read_only and field_name in validated_data:
                 setattr(instance, field_name, validated_data[field_name])
 
-        return bookmarks.update_bookmark(instance, tag_string, self.context["user"])
+        return bookmarks.update_bookmark(
+            instance,
+            tag_string,
+            self.context["user"],
+            tags_may_have_changed=tags_may_have_changed,
+        )
 
     def validate_url(self, value):
         value = extract_url(value)

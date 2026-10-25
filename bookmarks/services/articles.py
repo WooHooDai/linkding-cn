@@ -30,8 +30,7 @@ def create_article_asset_pending(bookmark: Bookmark) -> BookmarkAsset:
 
     # Set latest_article so the read() view can detect pending tasks
     bookmark.latest_article = asset
-    bookmark.date_modified = timezone.now()
-    _save_bookmark_updates(bookmark, ["latest_article", "date_modified"])
+    _save_bookmark_updates(bookmark, ["latest_article"])
 
     return asset
 
@@ -58,8 +57,7 @@ def save_article_content(asset: BookmarkAsset, html_content: str, title: str = "
     # Update bookmark's latest_article
     bookmark = asset.bookmark
     bookmark.latest_article = asset
-    bookmark.date_modified = timezone.now()
-    _save_bookmark_updates(bookmark, ["latest_article", "date_modified"])
+    _save_bookmark_updates(bookmark, ["latest_article"])
 
 
 def create_article(bookmark: Bookmark, html_content: str, title: str = "") -> BookmarkAsset:
@@ -82,7 +80,7 @@ def create_article(bookmark: Bookmark, html_content: str, title: str = "") -> Bo
 def remove_article(asset: BookmarkAsset):
     """Delete article asset file. Updates bookmark.latest_article to next most recent."""
     bookmark = asset.bookmark
-    update_fields = ["date_modified"]
+    update_fields = []
 
     if bookmark and bookmark.latest_article == asset:
         latest = (
@@ -99,8 +97,8 @@ def remove_article(asset: BookmarkAsset):
         update_fields.append("latest_article")
 
     asset.delete()
-    bookmark.date_modified = timezone.now()
-    _save_bookmark_updates(bookmark, update_fields)
+    if bookmark and update_fields:
+        _save_bookmark_updates(bookmark, update_fields)
 
 
 def get_article_content(asset: BookmarkAsset) -> str:

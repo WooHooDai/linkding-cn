@@ -119,8 +119,7 @@ def _create_html_snapshot(asset: BookmarkAsset, username: str = ''):
         asset.save()
 
         asset.bookmark.latest_snapshot = asset
-        asset.bookmark.date_modified = timezone.now()
-        _save_bookmark_updates(asset.bookmark, ["latest_snapshot", "date_modified"])
+        _save_bookmark_updates(asset.bookmark, ["latest_snapshot"])
     finally:
         if os.path.exists(temp_filepath):
             os.remove(temp_filepath)
@@ -193,8 +192,7 @@ def _create_pdf_snapshot(asset: BookmarkAsset):
         asset.save()
 
         asset.bookmark.latest_snapshot = asset
-        asset.bookmark.date_modified = timezone.now()
-        _save_bookmark_updates(asset.bookmark, ["latest_snapshot", "date_modified"])
+        _save_bookmark_updates(asset.bookmark, ["latest_snapshot"])
     finally:
         if os.path.exists(temp_filepath):
             os.remove(temp_filepath)
@@ -248,8 +246,7 @@ def _create_data_snapshot(
         asset.save()
 
         asset.bookmark.latest_snapshot = asset
-        asset.bookmark.date_modified = timezone.now()
-        _save_bookmark_updates(asset.bookmark, ["latest_snapshot", "date_modified"])
+        _save_bookmark_updates(asset.bookmark, ["latest_snapshot"])
     finally:
         if os.path.exists(temp_filepath):
             os.remove(temp_filepath)
@@ -276,8 +273,7 @@ def upload_snapshot(bookmark: Bookmark, html: bytes):
     asset.save()
 
     asset.bookmark.latest_snapshot = asset
-    asset.bookmark.date_modified = timezone.now()
-    _save_bookmark_updates(asset.bookmark, ["latest_snapshot", "date_modified"])
+    _save_bookmark_updates(asset.bookmark, ["latest_snapshot"])
 
     return asset
 
@@ -318,9 +314,6 @@ def upload_asset(bookmark: Bookmark, upload_file: UploadedFile):
 
         asset.save()
 
-        asset.bookmark.date_modified = timezone.now()
-        _save_bookmark_updates(asset.bookmark, ["date_modified"])
-
         logger.info(
             "Successfully uploaded asset file. bookmark=%s file=%s",
             bookmark, upload_file.name,
@@ -338,7 +331,7 @@ def upload_asset(bookmark: Bookmark, upload_file: UploadedFile):
 def remove_asset(asset: BookmarkAsset):
     # If this asset is the latest_snapshot for a bookmark, try to find the next most recent snapshot
     bookmark = asset.bookmark
-    update_fields = ["date_modified"]
+    update_fields = []
     if bookmark and bookmark.latest_snapshot == asset:
         latest = (
             BookmarkAsset.objects.filter(
@@ -355,8 +348,8 @@ def remove_asset(asset: BookmarkAsset):
         update_fields.append("latest_snapshot")
 
     asset.delete()
-    bookmark.date_modified = timezone.now()
-    _save_bookmark_updates(bookmark, update_fields)
+    if bookmark and update_fields:
+        _save_bookmark_updates(bookmark, update_fields)
 
 
 def rename_asset(asset: BookmarkAsset, new_display_name: str):
@@ -364,9 +357,6 @@ def rename_asset(asset: BookmarkAsset, new_display_name: str):
         return
     asset.display_name = new_display_name.strip()
     asset.save()
-
-    asset.bookmark.date_modified = timezone.now()
-    _save_bookmark_updates(asset.bookmark, ["date_modified"])
 
     logger.info(
         "Successfully renamed asset. asset_id=%s new_name=%s",

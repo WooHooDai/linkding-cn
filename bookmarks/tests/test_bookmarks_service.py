@@ -345,6 +345,75 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(bookmark.date_added, custom_date_added)
         self.assertEqual(bookmark.date_modified, custom_date_modified)
 
+    def test_update_should_not_change_date_modified_for_state_only_change(self):
+        bookmark = self.setup_bookmark()
+        original_modified = bookmark.date_modified
+        bookmark.unread = True
+        bookmark.shared = True
+
+        update_bookmark(bookmark, "", self.user)
+
+        bookmark.refresh_from_db()
+        self.assertTrue(bookmark.unread)
+        self.assertTrue(bookmark.shared)
+        self.assertEqual(bookmark.date_modified, original_modified)
+
+    def test_update_should_change_date_modified_for_content_change(self):
+        bookmark = self.setup_bookmark()
+        original_modified = bookmark.date_modified
+        bookmark.title = "Updated title"
+
+        update_bookmark(bookmark, "", self.user)
+
+        bookmark.refresh_from_db()
+        self.assertEqual(bookmark.title, "Updated title")
+        self.assertGreater(bookmark.date_modified, original_modified)
+
+    def test_update_should_change_date_modified_for_notes_change(self):
+        bookmark = self.setup_bookmark()
+        original_modified = bookmark.date_modified
+        bookmark.notes = "Updated notes"
+
+        update_bookmark(bookmark, "", self.user)
+
+        bookmark.refresh_from_db()
+        self.assertGreater(bookmark.date_modified, original_modified)
+
+    def test_update_should_change_date_modified_for_tag_change(self):
+        bookmark = self.setup_bookmark()
+        original_modified = bookmark.date_modified
+
+        update_bookmark(bookmark, "new-tag", self.user)
+
+        bookmark.refresh_from_db()
+        self.assertEqual(list(bookmark.tag_names), ["new-tag"])
+        self.assertGreater(bookmark.date_modified, original_modified)
+
+    def test_update_should_not_change_date_modified_when_tags_unchanged(self):
+        tag = self.setup_tag()
+        bookmark = self.setup_bookmark(tags=[tag])
+        original_modified = bookmark.date_modified
+
+        update_bookmark(bookmark, tag.name, self.user)
+
+        bookmark.refresh_from_db()
+        self.assertEqual(bookmark.date_modified, original_modified)
+
+    def test_update_should_skip_tags_when_caller_reports_no_tag_change(self):
+        tag = self.setup_tag()
+        bookmark = self.setup_bookmark(tags=[tag])
+        original_modified = bookmark.date_modified
+        bookmark.unread = True
+
+        update_bookmark(
+            bookmark, "ignored-tag", self.user, tags_may_have_changed=False
+        )
+
+        bookmark.refresh_from_db()
+        self.assertTrue(bookmark.unread)
+        self.assertEqual(list(bookmark.tag_names), [tag.name])
+        self.assertEqual(bookmark.date_modified, original_modified)
+
     def test_update_should_create_web_archive_snapshot_if_url_did_change(self):
         with patch.object(
             tasks, "create_web_archive_snapshot"
@@ -713,6 +782,28 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
         self.assertCountEqual(bookmark3.tags.all(), [tag1, tag2])
         self.assertEqual(6, BookmarkToTagRelationShip.objects.count())
 
+    def test_tag_bookmarks_should_not_update_date_modified_when_relationship_exists(
+        self,
+    ):
+        tag = self.setup_tag()
+        bookmark = self.setup_bookmark(tags=[tag])
+        old_date_modified = bookmark.date_modified
+
+        tag_bookmarks([bookmark.id], tag.name, self.get_or_create_test_user())
+
+        bookmark.refresh_from_db()
+        self.assertEqual(bookmark.date_modified, old_date_modified)
+
+    def test_tag_bookmarks_should_update_date_modified_when_tagging(self):
+        tag = self.setup_tag()
+        bookmark = self.setup_bookmark()
+        old_date_modified = bookmark.date_modified
+
+        tag_bookmarks([bookmark.id], tag.name, self.get_or_create_test_user())
+
+        bookmark.refresh_from_db()
+        self.assertGreater(bookmark.date_modified, old_date_modified)
+
     def test_untag_bookmarks_should_not_create_tags(self):
         bookmark = self.setup_bookmark()
 
@@ -725,6 +816,28 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
                 owner=self.get_or_create_test_user(), name="does-not-exist"
             ).exists()
         )
+
+    def test_untag_bookmarks_should_not_update_date_modified_when_nothing_removed(
+        self,
+    ):
+        tag = self.setup_tag()
+        bookmark = self.setup_bookmark()
+        old_date_modified = bookmark.date_modified
+
+        untag_bookmarks([bookmark.id], tag.name, self.get_or_create_test_user())
+
+        bookmark.refresh_from_db()
+        self.assertEqual(bookmark.date_modified, old_date_modified)
+
+    def test_untag_bookmarks_should_update_date_modified_when_removing(self):
+        tag = self.setup_tag()
+        bookmark = self.setup_bookmark(tags=[tag])
+        old_date_modified = bookmark.date_modified
+
+        untag_bookmarks([bookmark.id], tag.name, self.get_or_create_test_user())
+
+        bookmark.refresh_from_db()
+        self.assertGreater(bookmark.date_modified, old_date_modified)
 
     def test_tag_bookmarks_should_only_tag_specified_bookmarks(self):
         bookmark1 = self.setup_bookmark()

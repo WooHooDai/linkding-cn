@@ -81,17 +81,47 @@ def create_bookmark(
     return bookmark
 
 
-def update_bookmark(bookmark: Bookmark, tag_string, current_user: User):
+def update_bookmark(
+    bookmark: Bookmark,
+    tag_string,
+    current_user: User,
+    tags_may_have_changed: bool = True,
+):
     # Detect URL change
     original_bookmark = Bookmark.objects.get(id=bookmark.id)
     has_url_changed = original_bookmark.url != bookmark.url
     has_preview_image_changed = (
         original_bookmark.preview_image_remote_url != bookmark.preview_image_remote_url
     )
-    # Update tag list
-    _update_bookmark_tags(bookmark, tag_string, current_user)
+    # 只有内容字段变化才算修改；仅切换已读/分享等状态不改修改时间
+    has_content_changed = (
+        has_url_changed
+        or has_preview_image_changed
+        or original_bookmark.title != bookmark.title
+        or original_bookmark.description != bookmark.description
+        or original_bookmark.author != bookmark.author
+        or original_bookmark.notes != bookmark.notes
+    )
+    # 调用方未提交标签时无需处理标签，也就不必比较标签集合
+    has_tags_changed = False
+    if tags_may_have_changed:
+        # 内容变化时必然要更新修改时间，无需比较标签
+        original_tag_names = (
+            None
+            if has_content_changed
+            else set(original_bookmark.tags.values_list("name", flat=True))
+        )
+        # Update tag list
+        _update_bookmark_tags(bookmark, tag_string, current_user)
+        has_tags_changed = original_tag_names is not None and (
+            set(bookmark.tags.values_list("name", flat=True)) != original_tag_names
+        )
     # Update dates
-    bookmark.date_modified = timezone.now()
+    bookmark.date_modified = (
+        timezone.now()
+        if has_content_changed or has_tags_changed
+        else original_bookmark.date_modified
+    )
     if has_preview_image_changed:
         # 让新远程图先展示，本地文件由下载任务完成后写回
         bookmark.preview_image_file = ""
@@ -155,7 +185,6 @@ def _needs_metadata_enrichment(bookmark: Bookmark):
 
 def archive_bookmark(bookmark: Bookmark):
     bookmark.is_archived = True
-    bookmark.date_modified = timezone.now()
     bookmark.save()
     return bookmark
 
@@ -164,13 +193,12 @@ def archive_bookmarks(bookmark_ids: [int | str], current_user: User):
     sanitized_bookmark_ids = _sanitize_id_list(bookmark_ids)
 
     Bookmark.objects.filter(owner=current_user, id__in=sanitized_bookmark_ids).update(
-        is_archived=True, date_modified=timezone.now()
+        is_archived=True
     )
 
 
 def unarchive_bookmark(bookmark: Bookmark):
     bookmark.is_archived = False
-    bookmark.date_modified = timezone.now()
     bookmark.save()
     return bookmark
 
@@ -179,7 +207,7 @@ def unarchive_bookmarks(bookmark_ids: [int | str], current_user: User):
     sanitized_bookmark_ids = _sanitize_id_list(bookmark_ids)
 
     Bookmark.objects.filter(owner=current_user, id__in=sanitized_bookmark_ids).update(
-        is_archived=False, date_modified=timezone.now()
+        is_archived=False
     )
 
 
@@ -217,19 +245,34 @@ def restore_bookmarks(bookmark_ids: [int | str], current_user: User):
 
 def tag_bookmarks(bookmark_ids: [int | str], tag_string: str, current_user: User):
     sanitized_bookmark_ids = _sanitize_id_list(bookmark_ids)
-    owned_bookmark_ids = Bookmark.objects.filter(
-        owner=current_user, id__in=sanitized_bookmark_ids
-    ).values_list("id", flat=True)
+    owned_bookmark_ids = list(
+        Bookmark.objects.filter(
+            owner=current_user, id__in=sanitized_bookmark_ids
+        ).values_list("id", flat=True)
+    )
     tag_names = parse_tag_string(tag_string)
+    if not owned_bookmark_ids or not tag_names:
+        return
+
     tags = get_or_create_tags(tag_names, current_user)
+    if not tags:
+        return
 
     BookmarkToTagRelationShip = Bookmark.tags.through
-    relationships = []
-    for tag in tags:
-        for bookmark_id in owned_bookmark_ids:
-            relationships.append(
-                BookmarkToTagRelationShip(bookmark_id=bookmark_id, tag=tag)
-            )
+    existing = set(
+        BookmarkToTagRelationShip.objects.filter(
+            bookmark_id__in=owned_bookmark_ids, tag__in=tags
+        ).values_list("bookmark_id", "tag_id")
+    )
+    relationships = [
+        BookmarkToTagRelationShip(bookmark_id=bookmark_id, tag=tag)
+        for tag in tags
+        for bookmark_id in owned_bookmark_ids
+        if (bookmark_id, tag.id) not in existing
+    ]
+    if not relationships:
+        # 关联已全部存在，不算修改
+        return
 
     # Insert all bookmark -> tag associations at once, should ignore errors if association already exists
     BookmarkToTagRelationShip.objects.bulk_create(relationships, ignore_conflicts=True)
@@ -240,18 +283,32 @@ def tag_bookmarks(bookmark_ids: [int | str], tag_string: str, current_user: User
 
 def untag_bookmarks(bookmark_ids: [int | str], tag_string: str, current_user: User):
     sanitized_bookmark_ids = _sanitize_id_list(bookmark_ids)
-    owned_bookmark_ids = Bookmark.objects.filter(
-        owner=current_user, id__in=sanitized_bookmark_ids
-    ).values_list("id", flat=True)
+    owned_bookmark_ids = list(
+        Bookmark.objects.filter(
+            owner=current_user, id__in=sanitized_bookmark_ids
+        ).values_list("id", flat=True)
+    )
     tag_names = parse_tag_string(tag_string)
+    if not owned_bookmark_ids or not tag_names:
+        return
+
+    # 移除标签不应创建标签：只处理确实存在的标签
     tags = get_existing_tags(tag_names, current_user)
+    if not tags:
+        return
 
     BookmarkToTagRelationShip = Bookmark.tags.through
+    removed = 0
     for tag in tags:
         # Remove all bookmark -> tag associations for the owned bookmarks and the current tag
-        BookmarkToTagRelationShip.objects.filter(
+        deleted, _ = BookmarkToTagRelationShip.objects.filter(
             bookmark_id__in=owned_bookmark_ids, tag=tag
         ).delete()
+        removed += deleted
+
+    if not removed:
+        # 没有任何关联被移除，不算修改
+        return
 
     Bookmark.objects.filter(id__in=owned_bookmark_ids).update(
         date_modified=timezone.now()
@@ -262,7 +319,7 @@ def mark_bookmarks_as_read(bookmark_ids: [int | str], current_user: User):
     sanitized_bookmark_ids = _sanitize_id_list(bookmark_ids)
 
     Bookmark.objects.filter(owner=current_user, id__in=sanitized_bookmark_ids).update(
-        unread=False, date_modified=timezone.now()
+        unread=False
     )
 
 
@@ -270,7 +327,7 @@ def mark_bookmarks_as_unread(bookmark_ids: [int | str], current_user: User):
     sanitized_bookmark_ids = _sanitize_id_list(bookmark_ids)
 
     Bookmark.objects.filter(owner=current_user, id__in=sanitized_bookmark_ids).update(
-        unread=True, date_modified=timezone.now()
+        unread=True
     )
 
 
@@ -278,7 +335,7 @@ def share_bookmarks(bookmark_ids: [int | str], current_user: User):
     sanitized_bookmark_ids = _sanitize_id_list(bookmark_ids)
 
     Bookmark.objects.filter(owner=current_user, id__in=sanitized_bookmark_ids).update(
-        shared=True, date_modified=timezone.now()
+        shared=True
     )
 
 
@@ -286,7 +343,7 @@ def unshare_bookmarks(bookmark_ids: [int | str], current_user: User):
     sanitized_bookmark_ids = _sanitize_id_list(bookmark_ids)
 
     Bookmark.objects.filter(owner=current_user, id__in=sanitized_bookmark_ids).update(
-        shared=False, date_modified=timezone.now()
+        shared=False
     )
 
 

@@ -4,7 +4,9 @@ import urllib.parse
 from unittest.mock import ANY, patch
 
 from django.contrib.auth.models import User
+from django.db import connection
 from django.test import override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -963,6 +965,54 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
         bookmark.refresh_from_db()
         tag_names = [tag.name for tag in bookmark.tags.all()]
         self.assertListEqual(tag_names, ["updated-tag-1", "updated-tag-2"])
+
+    def test_patch_state_only_does_not_change_date_modified(self):
+        self.authenticate()
+        bookmark = self.setup_bookmark()
+        original_modified = bookmark.date_modified
+        url = reverse("linkding:bookmark-detail", args=[bookmark.id])
+
+        self.patch(url, {"unread": True}, expected_status_code=status.HTTP_200_OK)
+        self.patch(url, {"shared": True}, expected_status_code=status.HTTP_200_OK)
+
+        bookmark.refresh_from_db()
+        self.assertTrue(bookmark.unread)
+        self.assertTrue(bookmark.shared)
+        self.assertEqual(bookmark.date_modified, original_modified)
+
+    def test_patch_content_changes_date_modified(self):
+        self.authenticate()
+        bookmark = self.setup_bookmark()
+        original_modified = bookmark.date_modified
+        url = reverse("linkding:bookmark-detail", args=[bookmark.id])
+
+        self.patch(
+            url, {"title": "Updated title"}, expected_status_code=status.HTTP_200_OK
+        )
+
+        bookmark.refresh_from_db()
+        self.assertEqual(bookmark.title, "Updated title")
+        self.assertGreater(bookmark.date_modified, original_modified)
+
+    def test_patch_state_only_does_not_write_tags(self):
+        self.authenticate()
+        tag = self.setup_tag()
+        bookmark = self.setup_bookmark(tags=[tag])
+        url = reverse("linkding:bookmark-detail", args=[bookmark.id])
+
+        with CaptureQueriesContext(connection) as ctx:
+            self.patch(url, {"unread": True}, expected_status_code=status.HTTP_200_OK)
+
+        tag_writes = [
+            query["sql"]
+            for query in ctx.captured_queries
+            if "bookmarks_bookmark_tags" in query["sql"]
+            and query["sql"].lstrip().upper().startswith(("INSERT", "DELETE"))
+        ]
+        self.assertEqual(tag_writes, [])
+        bookmark.refresh_from_db()
+        self.assertTrue(bookmark.unread)
+        self.assertEqual(list(bookmark.tag_names), [tag.name])
 
     def test_patch_ignores_readonly_fields(self):
         self.authenticate()

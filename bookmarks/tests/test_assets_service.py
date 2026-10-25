@@ -384,9 +384,9 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(asset.file, saved_file_name)
         self.assertTrue(asset.gzip)
 
-        # should update bookmark modified date
+        # 快照/资产操作不改动书签的修改时间
         bookmark.refresh_from_db()
-        self.assertGreater(bookmark.date_modified, initial_modified)
+        self.assertEqual(bookmark.date_modified, initial_modified)
 
     def test_upload_snapshot_failure(self):
         bookmark = self.setup_bookmark(url="https://example.com")
@@ -465,9 +465,9 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(asset.file_size, self.get_asset_filesize(asset))
         self.assertTrue(asset.gzip)
 
-        # should update bookmark modified date
+        # 快照/资产操作不改动书签的修改时间
         bookmark.refresh_from_db()
-        self.assertGreater(bookmark.date_modified, initial_modified)
+        self.assertEqual(bookmark.date_modified, initial_modified)
 
     @disable_logging
     def test_upload_gzip_asset(self):
@@ -502,9 +502,9 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(asset.file_size, len(file_content))
         self.assertFalse(asset.gzip)
 
-        # should update bookmark modified date
+        # 快照/资产操作不改动书签的修改时间
         bookmark.refresh_from_db()
-        self.assertGreater(bookmark.date_modified, initial_modified)
+        self.assertEqual(bookmark.date_modified, initial_modified)
 
     @disable_logging
     def test_upload_asset_truncates_asset_file_name(self):
@@ -739,9 +739,9 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         # Verify file is removed from disk
         self.assertFalse(os.path.exists(asset_filepath))
 
-        # Verify bookmark modified date is updated
+        # 删除资产不改动书签的修改时间
         bookmark.refresh_from_db()
-        self.assertGreater(bookmark.date_modified, initial_modified)
+        self.assertEqual(bookmark.date_modified, initial_modified)
 
     def test_rename_asset(self):
         bookmark = self.setup_bookmark()
@@ -754,7 +754,7 @@ class AssetServiceTestCase(TestCase, BookmarkFactoryMixin):
         bookmark.refresh_from_db()
 
         self.assertEqual(asset.display_name, "new_name.txt")
-        self.assertGreater(bookmark.date_modified, old_modified)
+        self.assertEqual(bookmark.date_modified, old_modified)
 
         # 空字符串不应修改
         assets.rename_asset(asset, "   ")
