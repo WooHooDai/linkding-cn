@@ -687,6 +687,7 @@ li[ld-bookmark-item] {
 
   & .title .author .author-inner {
     display: inline-block;
+    padding-inline: 0.15em;
     white-space: nowrap;
     will-change: transform;
   }
