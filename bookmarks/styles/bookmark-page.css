@@ -2886,7 +2886,6 @@ ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .actions {
   ul.bookmark-list.view-compact .description.inline .tags {
     display: inline-block;
     max-width: 55%;
-    max-height: 1.4em;
     white-space: nowrap;
     overflow-x: auto;
     overflow-y: hidden;
