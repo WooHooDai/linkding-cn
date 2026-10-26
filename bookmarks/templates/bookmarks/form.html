@@ -7,11 +7,11 @@
   {{ form.auto_close }}
   <!-- 标题 -->
   <div class="form-group">
-    <div class="d-flex justify-between align-baseline">
+    <div class="field-header">
       <label for="{{ form.title.id_for_label }}" class="form-label">{% translate "Title" %}</label>
       <div class="flex">
         <button id="refresh-button" class="btn btn-link suffix-button" type="button">{% translate "Refresh from website" %}</button>
-        <ld-clear-button data-for="{{ form.title.id_for_label }}">
+        <ld-clear-button class="clear-button" data-for="{{ form.title.id_for_label }}">
           <button class="ml-2 btn btn-link suffix-button" type="button">{% translate "Clear" %}</button>
         </ld-clear-button>
       </div>
@@ -60,13 +60,13 @@
   </div>
   <!-- 作者（常驻单行输入，与 URL 同高） -->
   <div class="form-group {% if form.author.errors %}has-error{% endif %}">
-    <label for="{{ form.author.id_for_label }}" class="form-label">{% translate "Author" %}</label>
-    <div class="has-icon-right">
-      {% formfield form.author class="form-input" autocomplete="off" %}
+    <div class="field-header">
+      <label for="{{ form.author.id_for_label }}" class="form-label">{% translate "Author" %}</label>
       <ld-clear-button class="clear-button" data-for="{{ form.author.id_for_label }}">
         <button class="btn btn-link suffix-button" type="button">{% translate "Clear" %}</button>
       </ld-clear-button>
     </div>
+    {% formfield form.author class="form-input" autocomplete="off" %}
     {% if form.author.errors %}
       <div class="form-input-hint">
         {{ form.author.errors }}

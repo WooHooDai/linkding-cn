@@ -6,6 +6,12 @@
 }
 
 .bookmarks-form {
+  & .field-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
   & .has-icon-right > input,
   & .has-icon-right > textarea {
     padding-right: 30px;
@@ -48,15 +54,9 @@
     box-sizing: border-box;
   }
 
-  & details.description summary {
-    position: relative;
-  }
-
+  /* summary 必须保留原生折叠三角（list-item），故不能改成 flex 容器 */
   & details.description summary .clear-button {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    float: right;
   }
 
   & details.preview-image-container {
