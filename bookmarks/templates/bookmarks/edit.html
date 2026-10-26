@@ -13,6 +13,7 @@
     <main aria-labelledby="main-heading">
       <div class="section-header">
         <h1 id="main-heading">{% translate "Edit bookmark" %}</h1>
+        {% include 'bookmarks/form_header_actions.html' %}
       </div>
       <ld-form data-submit-on-ctrl-enter>
         <form action="{% url 'linkding:bookmarks.edit' bookmark_id %}?return_url={{ return_url|urlencode }}" method="post"

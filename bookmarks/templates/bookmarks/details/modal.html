@@ -20,6 +20,12 @@
       <textarea class="bookmark-title-input" rows="1"
                 placeholder="{% translate 'Click to edit title' %}"
                 {% if not details.is_editable %}disabled{% endif %}>{{ details.bookmark.resolved_title }}</textarea>
+      {% if details.is_editable %}
+        <button type="button" class="info-file-action-btn" data-undo-field="title"
+                title="{% translate 'Undo metadata refresh' %}" style="display: none">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4l4-4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg>
+        </button>
+      {% endif %}
       <button class="btn btn-noborder close" aria-label="{% translate 'Close dialog' %}" data-close-modal>
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
              stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -42,14 +48,13 @@
               <button type="button" class="info-file-action-btn" id="edit-url-btn" title="{% translate 'Edit URL' %}">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-edit"></use></svg>
               </button>
+              <button type="button" class="info-file-action-btn" data-undo-field="url"
+                      title="{% translate 'Undo URL change' %}" style="display: none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4l4-4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg>
+              </button>
             </div>
             <div class="detail-url-edit">
               <input type="text" class="detail-url-input" value="{{ details.bookmark.url }}" />
-              <button type="button" class="info-file-action-btn" id="refresh-metadata-btn" title="{% translate 'Refresh metadata from URL' %}">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
-              </button>
-              <button type="button" class="btn btn-sm btn-primary" id="url-save-btn">{% translate "Save" %}</button>
-              <button type="button" class="btn btn-sm" id="url-cancel-btn">{% translate "Cancel" %}</button>
             </div>
           </div>
         {% else %}
@@ -247,6 +252,8 @@
           <div class="detail-label-row">
             <span class="detail-label">{% translate "Author" %}</span>
             {% if details.is_editable %}
+              <button type="button" class="btn btn-link btn-sm" data-undo-field="author"
+                      title="{% translate 'Undo metadata refresh' %}" style="display: none">{% translate "Undo" %}</button>
               <button class="btn btn-link btn-sm detail-clear-btn" data-clear-field="author">{% translate "Clear" %}</button>
             {% endif %}
           </div>
@@ -266,6 +273,8 @@
           <div class="detail-label-row">
             <span class="detail-label">{% translate "Description" %}</span>
             {% if details.is_editable %}
+              <button type="button" class="btn btn-link btn-sm" data-undo-field="description"
+                      title="{% translate 'Undo metadata refresh' %}" style="display: none">{% translate "Undo" %}</button>
               <button class="btn btn-link btn-sm detail-clear-btn" data-clear-field="description">{% translate "Clear" %}</button>
             {% endif %}
           </div>
@@ -303,7 +312,11 @@
         {% if details.preview_image_enabled %}
           {% if details.bookmark.preview_image_file or details.bookmark.preview_image_remote_url %}
             <div class="detail-section" data-preview-section>
-              <div class="detail-label">{% translate "Preview image" %}</div>
+              <div class="detail-label-row">
+                <span class="detail-label">{% translate "Preview image" %}</span>
+                <button type="button" class="btn btn-link btn-sm" data-undo-field="preview_image_remote_url"
+                        title="{% translate 'Undo metadata refresh' %}" style="display: none">{% translate "Undo" %}</button>
+              </div>
               {% if details.bookmark.preview_image_file %}
                 <img class="info-preview-image" src="{% static details.bookmark.preview_image_file %}" alt=""/>
               {% elif details.bookmark.preview_image_remote_url %}
@@ -325,6 +338,12 @@
           <a class="detail-action-btn" href="{% url 'linkding:bookmarks.edit' details.bookmark.id %}?return_url={{ details.edit_return_url|urlencode }}" title="{% translate 'Edit' %}">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><use xlink:href="#ld-icon-edit"></use></svg>
           </a>
+          <button class="detail-action-btn" type="button" id="refresh-metadata-btn" title="{% translate 'Refresh metadata from URL' %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><use xlink:href="#ld-icon-refresh"></use></svg>
+          </button>
+          <button class="detail-action-btn" type="button" id="undo-metadata-btn" title="{% translate 'Undo metadata refresh' %}" style="display: none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4l4-4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg>
+          </button>
           <span class="detail-action-spacer"></span>
           {# 右侧：根据 is_deleted 显示不同按钮 #}
           {% if details.bookmark.is_deleted %}

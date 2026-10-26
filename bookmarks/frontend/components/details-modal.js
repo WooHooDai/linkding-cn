@@ -4,6 +4,7 @@ import { getCSRFToken } from "../utils/csrf.js";
 import { Modal } from "./modal.js";
 import { attachHealthPopover } from "./health.js";
 import { initAuthorScroll } from "../utils/author-scroll.js";
+import { showToast } from "./toast.js";
 
 function gettext(s) {
   return window.gettext ? window.gettext(s) : s;
@@ -27,9 +28,9 @@ class DetailsModal extends Modal {
         .split(" ")
         .filter(Boolean),
     };
-    this._pendingMetadata = null;
+    this._refreshSnapshot = null;
+    this._refreshing = false;
     this._urlEditing = false;
-    this._refreshShouldRetryPreview = false;
 
     // 不自动聚焦
     requestAnimationFrame(() => {
@@ -112,18 +113,25 @@ class DetailsModal extends Modal {
     this.querySelector("#edit-url-btn")?.addEventListener("click", () =>
       this._startEditUrl(),
     );
-    this.querySelector("#url-save-btn")?.addEventListener("click", () =>
-      this._saveUrl(),
-    );
-    this.querySelector("#url-cancel-btn")?.addEventListener("click", () =>
-      this._cancelEditUrl(),
-    );
-    // Save/Refresh 按钮阻止 input 失焦
-    this.querySelector("#url-save-btn")?.addEventListener("mousedown", (e) => e.preventDefault());
-    this.querySelector("#refresh-metadata-btn")?.addEventListener("mousedown", (e) => e.preventDefault());
-    this.querySelector("#refresh-metadata-btn")?.addEventListener("click", () =>
-      this._refreshMetadata(),
-    );
+    // ---- 元数据动作（底部操作栏，不依赖 URL 编辑态） ----
+    const refreshBtn = this.querySelector("#refresh-metadata-btn");
+    const undoBtn = this.querySelector("#undo-metadata-btn");
+    // 阻止失焦：URL 编辑态由点击处理里先落定，抓取会整体覆盖字段
+    refreshBtn?.addEventListener("mousedown", (e) => e.preventDefault());
+    refreshBtn?.addEventListener("click", () => {
+      this._commitEditUrl().then(() => this._refreshMetadata(refreshBtn));
+    });
+    undoBtn?.addEventListener("mousedown", (e) => e.preventDefault());
+    undoBtn?.addEventListener("click", () => this._undoRefresh(undoBtn));
+
+    // ---- 字段级撤销（抓取覆盖的字段行内，事件委托以兼容动态创建的预览图区块） ----
+    this.addEventListener("mousedown", (e) => {
+      if (e.target.closest("[data-undo-field]")) e.preventDefault();
+    });
+    this.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-undo-field]");
+      if (btn && this.contains(btn)) this._undoField(btn.dataset.undoField, btn);
+    });
 
     // ---- 健康检查（单条） ----
     const healthBtn = this.querySelector("[data-health-check]");
@@ -397,61 +405,54 @@ class DetailsModal extends Modal {
     input.focus();
     input.setSelectionRange(input.value.length, input.value.length);
 
-    // Enter 保存，Escape 取消
     const onKey = (e) => {
-      if (e.key === "Enter") { e.preventDefault(); this._saveUrl(); }
+      if (e.key === "Enter") { e.preventDefault(); input.blur(); }
       if (e.key === "Escape") { this._cancelEditUrl(); }
     };
     input.addEventListener("keydown", onKey);
     input._onKey = onKey;
 
-    // 失焦 → 取消编辑（不保存），Save/Refresh 按钮的 mousedown preventDefault 会阻止失焦
+    // 失焦即生效：URL 有变化就保存并重新抓取元数据
     const onBlur = () => {
-      setTimeout(() => {
-        if (wrapper.classList.contains("editing")) {
-          this._cancelEditUrl();
-        }
-      }, 150);
       input.removeEventListener("blur", onBlur);
+      input.removeEventListener("keydown", input._onKey);
+      this._commitEditUrl().then((changed) => {
+        if (changed) {
+          this._refreshMetadata(this.querySelector("#refresh-metadata-btn"));
+        }
+      });
     };
     input.addEventListener("blur", onBlur);
-    input._onBlur = onBlur;
   }
 
-  async _saveUrl() {
+  // 退出 URL 编辑态；有变化时保存。返回是否发生了变化。
+  async _commitEditUrl() {
     const wrapper = this.querySelector(".detail-url-wrapper");
     const input = wrapper?.querySelector(".detail-url-input");
-    if (!wrapper || !input) return;
+    if (!wrapper || !input || !this._urlEditing) return false;
 
     const newUrl = input.value.trim();
     wrapper.classList.remove("editing");
     this._urlEditing = false;
-    input.removeEventListener("keydown", input._onKey);
-    input.removeEventListener("blur", input._onBlur);
 
-    // 只有点击保存时才真正把刷新得到的元数据写入数据库
-    const { previewChanged } = await this._applyPendingMetadata();
+    if (!newUrl || newUrl === this._data.url) return false;
 
-    let urlChanged = false;
-    if (newUrl && newUrl !== this._data.url) {
-      urlChanged = true;
-      await this._patchBookmark("url", newUrl);
-    }
-
-    // 若重新抓取后远程图未变化且本地文件仍缺失，PATCH 不会发出，
-    // 因此显式触发一次本地预览图重试。
-    const shouldRetryPreview = this._refreshShouldRetryPreview && !previewChanged;
-    if (shouldRetryPreview) {
-      await this._retryPreviewImage();
-    }
-
-    if (
-      (previewChanged || urlChanged || shouldRetryPreview) &&
-      !this._data.preview_image_url
-    ) {
+    const previousUrl = this._data.url;
+    await this._patchBookmark("url", newUrl);
+    if (!this._data.preview_image_url) {
       await this._waitForPreviewImage();
     }
-    this._refreshShouldRetryPreview = false;
+
+    // URL 修改也可撤销；连续修改保留最早一份快照
+    this._refreshSnapshot = this._refreshSnapshot || {};
+    const entry = this._refreshSnapshot.url;
+    if (entry) {
+      entry.applied = newUrl;
+    } else {
+      this._refreshSnapshot.url = { before: previousUrl, applied: newUrl };
+    }
+    this._syncRefreshUI();
+    return true;
   }
 
   _cancelEditUrl() {
@@ -459,57 +460,124 @@ class DetailsModal extends Modal {
     const input = wrapper?.querySelector(".detail-url-input");
     if (!wrapper || !input) return;
 
+    input.removeEventListener("keydown", input._onKey);
+    // 还原为当前值并退出编辑态（不触发保存）
+    input.value = this._data.url;
     wrapper.classList.remove("editing");
     this._urlEditing = false;
-    input.removeEventListener("keydown", input._onKey);
-    input.removeEventListener("blur", input._onBlur);
-
-    this._revertPendingMetadata();
   }
 
-  async _applyPendingMetadata() {
-    if (!this._pendingMetadata) return { previewChanged: false };
-    const pending = this._pendingMetadata;
-    this._pendingMetadata = null;
+  // ---- 元数据抓取状态：即写库 + 可撤销，与其它字段"失焦即保存"保持一致 ----
 
-    const patches = [];
-    let previewChanged = false;
-    const fields = ["title", "description", "author", "preview_image_remote_url"];
-    for (const field of fields) {
-      if (
-        Object.prototype.hasOwnProperty.call(pending, field) &&
-        pending[field] !== this._data[field]
-      ) {
-        if (field === "preview_image_remote_url") previewChanged = true;
-        patches.push(this._patchBookmark(field, pending[field]));
+  _fieldElement(field) {
+    if (field === "title") return this.querySelector(".bookmark-title-input");
+    if (field === "preview_image_remote_url") return null;
+    return this.querySelector(`.detail-textarea[data-field="${field}"]`);
+  }
+
+  _fieldValue(field) {
+    const el = this._fieldElement(field);
+    return el ? el.value : this._data[field] || "";
+  }
+
+  _renderFieldValues(values) {
+    for (const [field, value] of Object.entries(values)) {
+      const el = this._fieldElement(field);
+      if (!el) continue;
+      el.value = value;
+      this._autoResize(el);
+    }
+  }
+
+  async _patchFields(fields) {
+    if (fields.url) this._data._prevUrl = this._data.url;
+    const r = await fetch(`${this.apiBase}bookmarks/${this.bookmarkId}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
+      body: JSON.stringify(fields),
+    });
+    if (!r.ok) throw new Error(`PATCH failed: ${r.status}`);
+
+    const data = await r.json();
+    this._data = { ...this._data, ...data };
+    for (const field of Object.keys(fields)) {
+      if (field !== "preview_image_remote_url") {
+        this._syncListItemField(field, fields[field]);
       }
     }
-    await Promise.all(patches);
-    return { previewChanged };
+    return data;
   }
 
-  _revertPendingMetadata() {
-    this._refreshShouldRetryPreview = false;
-    if (!this._pendingMetadata) return;
-    this._pendingMetadata = null;
+  _syncRefreshUI() {
+    const btn = this.querySelector("#undo-metadata-btn");
+    if (btn) btn.style.display = this._refreshSnapshot ? "" : "none";
+    // 字段级撤销按钮：该字段存在快照才出现
+    this.querySelectorAll("[data-undo-field]").forEach((el) => {
+      el.style.display = this._refreshSnapshot?.[el.dataset.undoField] ? "" : "none";
+    });
+    for (const field of Object.keys(this._refreshSnapshot || {})) {
+      this._fieldElement(field)?.classList.add("is-metadata-modified");
+    }
+  }
 
-    // 恢复为数据库中已保存的值
-    const titleEl = this.querySelector(".bookmark-title-input");
-    if (titleEl) {
-      titleEl.value = this._data.title;
-      this._autoResize(titleEl);
+  // 单字段撤销：期间被手动改过就只作废快照，不覆盖用户新内容
+  async _undoField(field, btn) {
+    const entry = this._refreshSnapshot?.[field];
+    if (!entry || this._refreshing) return;
+
+    btn?.setAttribute("disabled", "");
+    try {
+      if (this._fieldValue(field) === entry.applied) {
+        const restore = { [field]: entry.before };
+        this._renderFieldValues(restore);
+        await this._patchFields(restore);
+
+        if (field === "preview_image_remote_url") {
+          const src = entry.before;
+          this._setModalPreviewImage(src);
+          if (src) {
+            this._syncPreviewImage(src);
+            this._waitForPreviewImage();
+          }
+        }
+        if (field === "url" && !this._data.preview_image_url) {
+          this._waitForPreviewImage();
+        }
+      }
+
+      delete this._refreshSnapshot[field];
+      this._fieldElement(field)?.classList.remove("is-metadata-modified");
+      if (!Object.keys(this._refreshSnapshot).length) {
+        this._refreshSnapshot = null;
+      }
+      this._syncRefreshUI();
+    } catch (err) {
+      console.error("Undo metadata refresh failed:", err);
+      showToast(gettext("Could not undo the last metadata refresh"), { tone: "error" });
+    } finally {
+      btn?.removeAttribute("disabled");
     }
-    const descEl = this.querySelector('.detail-textarea[data-field="description"]');
-    if (descEl) {
-      descEl.value = this._data.description;
-      this._autoResize(descEl);
+  }
+
+  _clearRefreshState() {
+    this._refreshSnapshot = null;
+    this.querySelectorAll(".is-metadata-modified").forEach((el) =>
+      el.classList.remove("is-metadata-modified"),
+    );
+    this._syncRefreshUI();
+  }
+
+  // 用户手动改过某字段后作废其快照，撤销不再覆盖他的新内容
+  _dropRefreshSnapshotField(field, value) {
+    const entry = this._refreshSnapshot?.[field];
+    if (!entry || entry.applied === value) return;
+
+    delete this._refreshSnapshot[field];
+    this._fieldElement(field)?.classList.remove("is-metadata-modified");
+    if (!Object.keys(this._refreshSnapshot).length) {
+      this._refreshSnapshot = null;
     }
-    const authorEl = this.querySelector('.detail-textarea[data-field="author"]');
-    if (authorEl) {
-      authorEl.value = this._data.author;
-      this._autoResize(authorEl);
-    }
-    this._setModalPreviewImage(this._data.preview_image_remote_url);
+    this._syncRefreshUI();
   }
 
   _syncPreviewImage(src) {
@@ -588,10 +656,21 @@ class DetailsModal extends Modal {
         section = document.createElement("div");
         section.className = "detail-section";
         section.dataset.previewSection = "";
-        const label = document.createElement("div");
+        const labelRow = document.createElement("div");
+        labelRow.className = "detail-label-row";
+        const label = document.createElement("span");
         label.className = "detail-label";
         label.textContent = gettext("Preview image");
-        section.appendChild(label);
+        labelRow.appendChild(label);
+        const undoBtn = document.createElement("button");
+        undoBtn.type = "button";
+        undoBtn.className = "btn btn-link btn-sm";
+        undoBtn.dataset.undoField = "preview_image_remote_url";
+        undoBtn.title = gettext("Undo metadata refresh");
+        undoBtn.style.display = "none";
+        undoBtn.textContent = gettext("Undo");
+        labelRow.appendChild(undoBtn);
+        section.appendChild(labelRow);
         const ref = this.querySelector(".detail-dates");
         if (ref) {
           ref.after(section);
@@ -613,8 +692,6 @@ class DetailsModal extends Modal {
     const section = img.closest(".detail-section");
     if (section) section.style.display = src ? "" : "none";
   }
-
-  // ---- 重新抓取元数据（条件性更新，与编辑页面逻辑一致） ----
 
   async _runHealthCheck(btn) {
     const url = btn.dataset.checkUrl;
@@ -670,66 +747,113 @@ class DetailsModal extends Modal {
   }
 
 
-  async _refreshMetadata() {
-    const urlInput = this.querySelector(".detail-url-input");
-    const url = urlInput?.value?.trim() || this._data.url;
-    if (!url) return;
+  // ---- 重新抓取元数据：抓到的非空值覆盖并写库，失败可见，可撤销 ----
 
-    this._refreshShouldRetryPreview = false;
+  async _refreshMetadata(btn) {
+    const url = this._data.url;
+    if (!url || this._refreshing) return;
+
+    this._refreshing = true;
+    btn?.setAttribute("disabled", "");
+    btn?.classList.add("is-loading");
     try {
+      // 等内联编辑的保存在途请求落定，避免两条 PATCH 乱序
+      await this._inflightPatch?.catch(() => {});
+
       const apiUrl = `${this.apiBase}bookmarks/check?url=${encodeURIComponent(url)}&ignore_cache=true`;
       const r = await fetch(apiUrl);
-      if (!r.ok) return;
-      const data = await r.json();
-      const metadata = data.metadata;
-      const existingBookmark = data.bookmark;
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const { metadata } = await r.json();
 
-      this._refreshShouldRetryPreview =
-        existingBookmark &&
-        String(existingBookmark.id) === String(this.bookmarkId) &&
-        !!existingBookmark.preview_image_remote_url &&
-        !existingBookmark.preview_image_url;
-
-      // 只更新 UI 并暂存，真正写库要等点击“保存”
-      const pending = {};
-
-      // (1) 标题：获取到的标题非空 → 替换
-      if (metadata.title && metadata.title !== this._data.title) {
-        pending.title = metadata.title;
-        const el = this.querySelector(".bookmark-title-input");
-        if (el) { el.value = metadata.title; this._autoResize(el); }
+      const candidates = {
+        title: metadata.title,
+        description: metadata.description,
+        author: metadata.author,
+        preview_image_remote_url: metadata.preview_image,
+      };
+      const applied = {};
+      for (const [field, value] of Object.entries(candidates)) {
+        // 抓不到就保留原值（与批量「刷新元数据」一致），预览图也不清空
+        if (!value || value === this._fieldValue(field)) continue;
+        applied[field] = value;
       }
 
-      // (2) 描述：获取到的描述非空，且与现有描述不同 → 覆盖
-      if (metadata.description && metadata.description !== this._data.description) {
-        pending.description = metadata.description;
-        const el = this.querySelector('.detail-textarea[data-field="description"]');
-        if (el) { el.value = metadata.description; this._autoResize(el); }
+      if (!Object.keys(applied).length) {
+        // 站点数据与当前一致；预览图本地文件缺失时补一次重试
+        if (metadata.preview_image && !this._data.preview_image_url) {
+          if (this._isModalPreviewBroken()) {
+            this._setModalPreviewImage(metadata.preview_image);
+          }
+          await this._retryPreviewImage();
+        }
+        this._clearRefreshState();
+        return;
       }
 
-      // (3) 预览图：获取到的预览图非空，且与现有 remote_url 不同 → 替换
-      if (metadata.preview_image) {
-        const currentRemote = this._data.preview_image_remote_url || "";
-        if (metadata.preview_image !== currentRemote) {
-          pending.preview_image_remote_url = metadata.preview_image;
-          this._setModalPreviewImage(metadata.preview_image);
-        } else if (this._isModalPreviewBroken()) {
-          // 远程图未变化，但当前展示的本地预览图已损坏（文件缺失/404）。
-          // 先展示远程图；保存时 _refreshShouldRetryPreview 会触发强制重下本地文件。
-          this._setModalPreviewImage(metadata.preview_image);
+      // 连续抓取只保留最早一份快照，撤销回到最初的内容
+      this._refreshSnapshot = this._refreshSnapshot || {};
+      for (const [field, value] of Object.entries(applied)) {
+        const entry = this._refreshSnapshot[field];
+        if (entry) {
+          entry.applied = value;
+        } else {
+          this._refreshSnapshot[field] = { before: this._fieldValue(field), applied: value };
         }
       }
 
-      // (4) 作者：获取到的作者非空，且与现有作者不同 → 覆盖
-      if (metadata.author && metadata.author !== this._data.author) {
-        pending.author = metadata.author;
-        const el = this.querySelector('.detail-textarea[data-field="author"]');
-        if (el) { el.value = metadata.author; this._autoResize(el); }
-      }
+      this._renderFieldValues(applied);
+      await this._patchFields(applied);
+      this._syncRefreshUI();
 
-      this._pendingMetadata = Object.keys(pending).length ? pending : null;
+      if (applied.preview_image_remote_url) {
+        this._setModalPreviewImage(applied.preview_image_remote_url);
+        this._syncPreviewImage(applied.preview_image_remote_url);
+        // 本地文件由后台任务重下，完成后切回本地图
+        this._waitForPreviewImage();
+      }
     } catch (err) {
       console.error("Refresh metadata failed:", err);
+      showToast(gettext("Could not refresh metadata from the website"), { tone: "error" });
+    } finally {
+      this._refreshing = false;
+      btn?.classList.remove("is-loading");
+      btn?.removeAttribute("disabled");
+    }
+  }
+
+  async _undoRefresh(btn) {
+    const snapshot = this._refreshSnapshot;
+    if (!snapshot || this._refreshing) return;
+
+    btn?.setAttribute("disabled", "");
+    try {
+      const restore = {};
+      for (const [field, entry] of Object.entries(snapshot)) {
+        // 期间被手动改过的字段不回滚，避免覆盖用户的新输入
+        if (this._fieldValue(field) !== entry.applied) continue;
+        restore[field] = entry.before;
+      }
+
+      if (Object.keys(restore).length) {
+        this._renderFieldValues(restore);
+        await this._patchFields(restore);
+      }
+
+      if ("preview_image_remote_url" in restore) {
+        const src = restore.preview_image_remote_url;
+        this._setModalPreviewImage(src);
+        if (src) {
+          this._syncPreviewImage(src);
+          this._waitForPreviewImage();
+        }
+      }
+
+      this._clearRefreshState();
+    } catch (err) {
+      console.error("Undo metadata refresh failed:", err);
+      showToast(gettext("Could not undo the last metadata refresh"), { tone: "error" });
+    } finally {
+      btn?.removeAttribute("disabled");
     }
   }
 
@@ -753,15 +877,19 @@ class DetailsModal extends Modal {
     this._data[field] = newValue;
 
     try {
-      const r = await fetch(`${this.apiBase}bookmarks/${this.bookmarkId}/`, {
+      const request = fetch(`${this.apiBase}bookmarks/${this.bookmarkId}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "X-CSRFToken": getCSRFToken() },
         body: JSON.stringify({ [field]: newValue }),
       });
+      // 抓取前要等它落定，否则两条 PATCH 可能乱序
+      this._inflightPatch = request;
+      const r = await request;
       if (r.ok) {
         const data = await r.json();
         this._data = { ...this._data, ...data };
         this._syncListItemField(field, newValue);
+        this._dropRefreshSnapshotField(field, newValue);
         if (data.preview_image_url) {
           this._syncPreviewImage(data.preview_image_url);
         }

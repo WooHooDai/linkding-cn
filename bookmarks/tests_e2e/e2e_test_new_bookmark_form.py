@@ -232,32 +232,21 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             description_field.fill("")
             expect(description_clear_button).to_be_hidden()
 
-    def test_refresh_button_only_shown_for_existing_bookmarks(self):
-        existing_bookmark = self.setup_bookmark(
-            title="Existing title", description="Existing description"
-        )
-
+    def test_refresh_button_shown_once_url_is_entered(self):
         with sync_playwright() as p:
             page = self.open(reverse("linkding:bookmarks.new"), p)
+            url_field = page.get_by_label("URL")
             refresh_button = page.locator("#refresh-button")
 
-            # Initially, refresh button should be hidden
+            # 没有 URL 时没有可抓取的对象，按钮不出现
             expect(refresh_button).to_be_hidden()
 
-            # Enter a URL that is not bookmarked yet
-            page.get_by_label("URL").fill("https://example.com/not-bookmarked")
-            page.wait_for_timeout(timeout=1000)
-
-            expect(refresh_button).to_be_hidden()
-
-            # Enter a URL that is already bookmarked
-            page.get_by_label("URL").fill(existing_bookmark.url)
-
+            # 未收藏的新 URL 也能重抓（自动预填失败或想强制刷新时的手动入口）
+            url_field.fill("https://example.com/not-bookmarked")
             expect(refresh_button).to_be_visible()
 
-            # Change back to non-bookmarked URL
-            page.get_by_label("URL").fill("https://example.com/another-not-bookmarked")
-
+            # 清空 URL 后回到隐藏
+            url_field.fill("")
             expect(refresh_button).to_be_hidden()
 
     def test_refresh_from_website_button_updates_title_and_description(self):
@@ -352,6 +341,240 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             # Verify that the fields are NOT visually marked as modified
             expect(title_field).to_have_class("form-input")
             expect(description_field).to_have_class("form-input")
+
+    def test_refresh_from_website_button_keeps_preview_image_when_metadata_has_none(
+        self,
+    ):
+        existing_bookmark = self.setup_bookmark(
+            title="Existing title", description="Existing description"
+        )
+        existing_bookmark.preview_image_remote_url = "https://example.com/original.png"
+        existing_bookmark.save(update_fields=["preview_image_remote_url"])
+        self.get_or_create_test_user().profile.enable_preview_images = True
+        self.get_or_create_test_user().profile.save()
+
+        with sync_playwright() as p:
+            page = self.open(reverse("linkding:bookmarks.new"), p)
+            url_field = page.get_by_label("URL")
+            preview_image_field = page.locator("#id_preview_image_remote_url")
+            refresh_button = page.locator("#refresh-button")
+
+            url_field.fill(existing_bookmark.url)
+            expect(refresh_button).to_be_visible()
+            expect(preview_image_field).to_have_value(
+                "https://example.com/original.png"
+            )
+
+            self.website_loader_mock.reset_mock()
+            self.website_loader_mock.return_value = website_loader.WebsiteMetadata(
+                url=existing_bookmark.url,
+                title="Existing title",
+                description="Existing description",
+                preview_image=None,
+            )
+
+            refresh_button.click()
+            page.wait_for_timeout(timeout=1000)
+
+            # 抓不到预览图时保留旧图，不清空
+            expect(preview_image_field).to_have_value(
+                "https://example.com/original.png"
+            )
+
+    def test_refresh_from_website_button_allows_undoing_overwritten_field(self):
+        existing_bookmark = self.setup_bookmark(
+            title="Existing title", description="Existing description"
+        )
+
+        with sync_playwright() as p:
+            page = self.open(reverse("linkding:bookmarks.new"), p)
+            url_field = page.get_by_label("URL")
+            title_field = page.get_by_label("Title")
+            refresh_button = page.locator("#refresh-button")
+            undo_button = page.locator('[data-restore-for="id_title"]')
+
+            url_field.fill(existing_bookmark.url)
+            expect(refresh_button).to_be_visible()
+            expect(undo_button).to_be_hidden()
+
+            title_field.fill("Manually typed title")
+            expect(undo_button).to_be_hidden()
+
+            self.website_loader_mock.reset_mock()
+            self.website_loader_mock.return_value = website_loader.WebsiteMetadata(
+                url=existing_bookmark.url,
+                title="Site title",
+                description="Site description",
+                preview_image=None,
+            )
+
+            refresh_button.click()
+            expect(title_field).to_have_value("Site title")
+            expect(undo_button).to_be_visible()
+
+            undo_button.click()
+            expect(title_field).to_have_value("Manually typed title")
+            expect(undo_button).to_be_hidden()
+            # 撤销后不再是被抓取内容覆盖的状态
+            expect(title_field).to_have_class("form-input")
+
+            # 撤销后再次手改，按钮不应重新出现（快照已失效）
+            title_field.fill("Another manual title")
+            expect(undo_button).to_be_hidden()
+
+    def test_refresh_from_website_button_allows_undoing_overwritten_description(self):
+        existing_bookmark = self.setup_bookmark(
+            title="Existing title", description="Existing description"
+        )
+
+        with sync_playwright() as p:
+            page = self.open(reverse("linkding:bookmarks.new"), p)
+            url_field = page.get_by_label("URL")
+            description_field = page.locator("#id_description")
+            description_details = page.locator("details.description")
+            refresh_button = page.locator("#refresh-button")
+            undo_button = page.locator('[data-restore-for="id_description"]')
+
+            url_field.fill(existing_bookmark.url)
+            expect(refresh_button).to_be_visible()
+            expect(description_details).to_have_js_property("open", True)
+
+            description_field.fill("Manually typed description")
+
+            self.website_loader_mock.reset_mock()
+            self.website_loader_mock.return_value = website_loader.WebsiteMetadata(
+                url=existing_bookmark.url,
+                title="Existing title",
+                description="Site description",
+                preview_image=None,
+            )
+
+            refresh_button.click()
+            expect(description_field).to_have_value("Site description")
+            expect(undo_button).to_be_visible()
+
+            # 撤销按钮在 summary 里，点击不应顺带折叠描述区块
+            undo_button.click()
+            expect(description_field).to_have_value("Manually typed description")
+            expect(undo_button).to_be_hidden()
+            expect(description_details).to_have_js_property("open", True)
+
+    def test_refresh_actions_are_placed_in_page_header(self):
+        with sync_playwright() as p:
+            page = self.open(reverse("linkding:bookmarks.new"), p)
+
+            # 抓取覆盖多个字段，动作放在页头；字段行里只保留字段级撤销
+            expect(page.locator(".section-header #refresh-button")).to_have_count(1)
+            expect(page.locator(".section-header #undo-refresh-button")).to_have_count(1)
+            expect(page.locator(".form-group #refresh-button")).to_have_count(0)
+
+    def test_undo_refresh_button_reverts_all_overwritten_fields(self):
+        existing_bookmark = self.setup_bookmark(
+            title="Existing title", description="Existing description"
+        )
+
+        with sync_playwright() as p:
+            page = self.open(reverse("linkding:bookmarks.new"), p)
+            url_field = page.get_by_label("URL")
+            title_field = page.get_by_label("Title")
+            description_field = page.locator("#id_description")
+            refresh_button = page.locator("#refresh-button")
+            undo_refresh_button = page.locator("#undo-refresh-button")
+
+            url_field.fill(existing_bookmark.url)
+            expect(refresh_button).to_be_visible()
+            expect(undo_refresh_button).to_be_hidden()
+
+            title_field.fill("Manually typed title")
+            description_field.fill("Manually typed description")
+
+            self.website_loader_mock.reset_mock()
+            self.website_loader_mock.return_value = website_loader.WebsiteMetadata(
+                url=existing_bookmark.url,
+                title="Site title",
+                description="Site description",
+                preview_image=None,
+            )
+
+            refresh_button.click()
+            expect(title_field).to_have_value("Site title")
+            expect(description_field).to_have_value("Site description")
+            expect(undo_refresh_button).to_be_visible()
+
+            undo_refresh_button.click()
+            expect(title_field).to_have_value("Manually typed title")
+            expect(description_field).to_have_value("Manually typed description")
+            expect(undo_refresh_button).to_be_hidden()
+            expect(page.locator('[data-restore-for="id_title"]')).to_be_hidden()
+            expect(page.locator('[data-restore-for="id_description"]')).to_be_hidden()
+
+    def test_undo_refresh_button_hides_when_undoing_single_field(self):
+        existing_bookmark = self.setup_bookmark(
+            title="Existing title", description="Existing description"
+        )
+
+        with sync_playwright() as p:
+            page = self.open(reverse("linkding:bookmarks.new"), p)
+            url_field = page.get_by_label("URL")
+            title_field = page.get_by_label("Title")
+            refresh_button = page.locator("#refresh-button")
+            undo_refresh_button = page.locator("#undo-refresh-button")
+
+            url_field.fill(existing_bookmark.url)
+            expect(refresh_button).to_be_visible()
+            # 等自动预填落定，否则抓取会在标题还空着时先跑，撤销回去的是空串
+            expect(title_field).to_have_value("Existing title")
+
+            self.website_loader_mock.reset_mock()
+            # URL 用站点检查后输入框里的值，避免抓取顺带改写 URL 又产生一份快照
+            self.website_loader_mock.return_value = website_loader.WebsiteMetadata(
+                url="https://example.com",
+                title="Site title",
+                description="Existing description",
+                preview_image=None,
+            )
+
+            refresh_button.click()
+            expect(title_field).to_have_value("Site title")
+            expect(undo_refresh_button).to_be_visible()
+
+            # 只有标题被覆盖，字段级撤销后页头按钮随之消失
+            page.locator('[data-restore-for="id_title"]').click()
+            expect(title_field).to_have_value("Existing title")
+            expect(undo_refresh_button).to_be_hidden()
+
+    def test_refresh_from_website_button_compares_against_form_values(
+        self,
+    ):
+        existing_bookmark = self.setup_bookmark(
+            title="Existing title", description="Existing description"
+        )
+
+        with sync_playwright() as p:
+            page = self.open(reverse("linkding:bookmarks.new"), p)
+            url_field = page.get_by_label("URL")
+            title_field = page.get_by_label("Title")
+            refresh_button = page.locator("#refresh-button")
+
+            url_field.fill(existing_bookmark.url)
+            expect(refresh_button).to_be_visible()
+            expect(title_field).to_have_value("Existing title")
+
+            # 用户手改标题后，站点值虽与库中一致，也应恢复为站点值
+            title_field.fill("Manually edited")
+
+            self.website_loader_mock.reset_mock()
+            self.website_loader_mock.return_value = website_loader.WebsiteMetadata(
+                url=existing_bookmark.url,
+                title="Existing title",
+                description="Existing description",
+                preview_image=None,
+            )
+
+            refresh_button.click()
+            page.wait_for_timeout(timeout=1000)
+
+            expect(title_field).to_have_value("Existing title")
 
     def test_ctrl_enter_submits_form_from_description(self):
         with sync_playwright() as p:

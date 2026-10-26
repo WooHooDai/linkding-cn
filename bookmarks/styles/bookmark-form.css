@@ -3,6 +3,13 @@
     max-width: 550px;
     margin: 0 auto;
   }
+
+  & .section-header .form-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--unit-2);
+    margin-left: auto;
+  }
 }
 
 .bookmarks-form {
@@ -28,8 +35,7 @@
     font-size: var(--font-size-sm);
   }
 
-  & .form-group .clear-button,
-  & .form-group #refresh-button {
+  & .form-group .clear-button {
     display: none;
   }
 
@@ -55,7 +61,7 @@
   }
 
   /* summary 必须保留原生折叠三角（list-item），故不能改成 flex 容器 */
-  & details.description summary .clear-button {
+  & details summary .summary-actions {
     float: right;
   }
 

@@ -1,0 +1,6 @@
+{% load i18n %}
+{# 页面级元数据动作：抓取覆盖的是多个字段，所以放在页头而不是某个字段行里 #}
+<div class="form-actions">
+  <button id="refresh-button" class="btn btn-link btn-sm" type="button" style="display: none">{% translate "Refresh from website" %}</button>
+  <button id="undo-refresh-button" class="btn btn-link btn-sm" type="button" title="{% translate 'Undo everything applied by the last refresh' %}" style="display: none">{% translate "Undo" %}</button>
+</div>

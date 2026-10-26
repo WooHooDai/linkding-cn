@@ -706,6 +706,14 @@ msgstr "确认删除此凭据？"
 msgid "Failed to reload credentials"
 msgstr "重新加载凭据失败"
 
+#: bookmarks/frontend/components/details-modal.js:1
+msgid "Could not refresh metadata from the website"
+msgstr "无法从网站抓取元数据"
+
+#: bookmarks/frontend/components/details-modal.js:1
+msgid "Could not undo the last metadata refresh"
+msgstr "撤销失败，请重试"
+
 #: site_adapters/frontend/adapters.js:248
 msgid "No matching results."
 msgstr "没有匹配的结果。"

@@ -10,7 +10,7 @@
     <div class="field-header">
       <label for="{{ form.title.id_for_label }}" class="form-label">{% translate "Title" %}</label>
       <div class="flex">
-        <button id="refresh-button" class="btn btn-link suffix-button" type="button">{% translate "Refresh from website" %}</button>
+        <button class="btn btn-link suffix-button" type="button" data-restore-for="{{ form.title.id_for_label }}" title="{% translate 'Undo the value applied by the last refresh' %}" style="display: none">{% translate "Undo" %}</button>
         <ld-clear-button class="clear-button" data-for="{{ form.title.id_for_label }}">
           <button class="ml-2 btn btn-link suffix-button" type="button">{% translate "Clear" %}</button>
         </ld-clear-button>
@@ -62,6 +62,7 @@
   <div class="form-group {% if form.author.errors %}has-error{% endif %}">
     <div class="field-header">
       <label for="{{ form.author.id_for_label }}" class="form-label">{% translate "Author" %}</label>
+      <button class="ml-2 btn btn-link suffix-button" type="button" data-restore-for="{{ form.author.id_for_label }}" title="{% translate 'Undo the value applied by the last refresh' %}" style="display: none">{% translate "Undo" %}</button>
       <ld-clear-button class="clear-button" data-for="{{ form.author.id_for_label }}">
         <button class="btn btn-link suffix-button" type="button">{% translate "Clear" %}</button>
       </ld-clear-button>
@@ -78,9 +79,12 @@
     <details class="description"{% if form.description.value %} open{% endif %}>
       <summary>
         <span class="form-label d-inline-block">{% translate "Description" %}</span>
-        <ld-clear-button class="clear-button" data-for="{{ form.description.id_for_label }}">
-          <button class="btn btn-link suffix-button" type="button">{% translate "Clear" %}</button>
-        </ld-clear-button>
+        <span class="summary-actions">
+          <button class="ml-2 btn btn-link suffix-button" type="button" data-restore-for="{{ form.description.id_for_label }}" title="{% translate 'Undo the value applied by the last refresh' %}" style="display: none">{% translate "Undo" %}</button>
+          <ld-clear-button class="clear-button" data-for="{{ form.description.id_for_label }}">
+            <button class="btn btn-link suffix-button" type="button">{% translate "Clear" %}</button>
+          </ld-clear-button>
+        </span>
       </summary>
       {% formfield form.description class="form-input" rows="3" %}
       {{ form.description.errors }}
@@ -105,6 +109,9 @@
       <details class="preview-image"{% if form.preview_image_remote_url.value %} open{% endif %}>
         <summary>
           <span class="form-label d-inline-block">{% translate "Preview image" %}</span>
+          <span class="summary-actions">
+            <button class="ml-2 btn btn-link suffix-button" type="button" data-restore-for="{{ form.preview_image_remote_url.id_for_label }}" title="{% translate 'Undo the value applied by the last refresh' %}" style="display: none">{% translate "Undo" %}</button>
+          </span>
         </summary>
         <div class="preview-image-container">
           {% if preview_image_file %}
@@ -236,6 +243,12 @@
       const unreadCheckbox = document.getElementById('{{ form.unread.id_for_label }}');
       const sharedCheckbox = document.getElementById('{{ form.shared.id_for_label }}');
       const refreshButton = document.getElementById('refresh-button');
+      const undoRefreshButton = document.getElementById('undo-refresh-button');
+      const setRefreshVisible = (visible) => {
+        if (refreshButton) {
+          refreshButton.style['display'] = visible ? 'inline-block' : 'none';
+        }
+      };
       const bookmarkExistsHint = document.querySelector('.form-input-hint.bookmark-exists');
       const bookmarkExistsDeletedHint = document.querySelector('.form-input-hint.bookmark-exists-deleted');
       const editedBookmarkId = {{ form.instance.id|default:0 }};
@@ -291,6 +304,87 @@
       let checkUrlTimer = null;
       let checkUrlRequestId = 0;
 
+      // ---- 抓取覆盖后的字段级还原 ----
+      // 每个字段各记一份“抓取前”快照：撤销是精确的，不会连带回滚没被覆盖的字段。
+      const restoreButtons = Array.from(
+        document.querySelectorAll("[data-restore-for]")
+      );
+      const restoreSnapshots = new Map();
+
+      function restoreButtonFor(input) {
+        return restoreButtons.find((btn) => btn.dataset.restoreFor === input.id);
+      }
+
+      function updateUndoRefresh() {
+        if (!undoRefreshButton) {
+          return;
+        }
+        undoRefreshButton.style.display = restoreSnapshots.size
+          ? "inline-block"
+          : "none";
+      }
+
+      function hideRestore(input) {
+        if (!input) {
+          return;
+        }
+        restoreSnapshots.delete(input.id);
+        const btn = restoreButtonFor(input);
+        if (btn) {
+          btn.style.display = "none";
+        }
+        updateUndoRefresh();
+      }
+
+      function applyRefreshedValue(input, value, markModified = true) {
+        if (!input || !value || value === input.value) {
+          return false;
+        }
+        const snapshot = {
+          value: input.value,
+          modified: input.classList.contains("modified"),
+        };
+        updateInput(input, value);
+        // 连续抓取只保留最早那份快照，撤销直接回到人工填写的内容
+        if (!restoreSnapshots.has(input.id)) {
+          restoreSnapshots.set(input.id, snapshot);
+        }
+        if (markModified) {
+          input.classList.add("modified");
+        }
+        const btn = restoreButtonFor(input);
+        if (btn) {
+          btn.style.display = "inline";
+        }
+        updateUndoRefresh();
+        return true;
+      }
+
+      function restoreField(input) {
+        const snapshot = input && restoreSnapshots.get(input.id);
+        if (!snapshot) {
+          return;
+        }
+        restoreSnapshots.delete(input.id);
+        updateInput(input, snapshot.value);
+        input.classList.toggle("modified", snapshot.modified);
+        if (input === previewImageRemoteUrlInput) {
+          updatePreviewImageDisplay();
+        }
+        const btn = restoreButtonFor(input);
+        if (btn) {
+          btn.style.display = "none";
+        }
+        updateUndoRefresh();
+      }
+
+      function undoRefresh() {
+        // 键在 restoreField 里被逐个删除，先取快照副本再遍历
+        Array.from(restoreSnapshots.keys()).forEach((id) => {
+          restoreField(document.getElementById(id));
+        });
+      }
+
       function checkUrl(sendClientMetadata) {
         if (!urlInput.value) {
           return;
@@ -332,7 +426,7 @@
             const existingBookmark = data.bookmark;
             bookmarkExistsHint.style['display'] = 'none';
             bookmarkExistsDeletedHint.style['display'] = 'none';
-            refreshButton.style['display'] = existingBookmark ? 'inline-block' : 'none';
+            setRefreshVisible(true);
 
             // Prefill form with existing bookmark data
             if (existingBookmark) {
@@ -412,6 +506,10 @@
           return;
         }
 
+        // 手动重抓优先于在途/待触发的自动预填：不拦住的话，迟到的那份响应会把结果盖回去
+        clearTimeout(checkUrlTimer);
+        checkUrlRequestId++;
+
         toggleLoadingIcon(urlInput, true);
 
         const websiteUrl = encodeURIComponent(urlInput.value);
@@ -421,35 +519,53 @@
           .then(response => response.json())
           .then(data => {
             const metadata = data.metadata;
-            const existingBookmark = data.bookmark;
             toggleLoadingIcon(urlInput, false);
-            if (metadata.url && metadata.url !== existingBookmark?.url) {
-              urlInput.value = metadata.url;
+            // 与表单当前值比较：点按钮即以站点为准，只跳过与输入框完全相同的字段
+            applyRefreshedValue(urlInput, metadata.url, false);
+            applyRefreshedValue(titleInput, metadata.title);
+            if (applyRefreshedValue(descriptionInput, metadata.description)) {
+              document.querySelector('details.description').open = true;
             }
-            if (metadata.title && metadata.title !== existingBookmark?.title) {
-              titleInput.value = metadata.title;
-              titleInput.classList.add("modified");
+            applyRefreshedValue(authorInput, metadata.author);
+            // 抓不到预览图时保留旧图，不清空
+            if (
+              applyRefreshedValue(
+                previewImageRemoteUrlInput,
+                metadata.preview_image,
+                false
+              )
+            ) {
+              updatePreviewImageDisplay();
             }
-            if (metadata.description && metadata.description !== existingBookmark?.description) {
-              descriptionInput.value = metadata.description;
-              descriptionInput.classList.add("modified");
-              document.querySelector('details.description').open = !!metadata.description;
-            }
-            if (metadata.author && metadata.author !== existingBookmark?.author) {
-              authorInput.value = metadata.author;
-              authorInput.classList.add("modified");
-            }
-            // 更新预览图：如果有预览图则设置，如果没有则清空
-            if (metadata.preview_image && metadata.preview_image !== existingBookmark?.preview_image_remote_url) {
-              updateInput(previewImageRemoteUrlInput, metadata.preview_image);
-            } else if (!metadata.preview_image) {
-              updateInput(previewImageRemoteUrlInput, '');
-            }
-            updatePreviewImageDisplay();
           });
       }
 
-      refreshButton.addEventListener('click', refreshMetadata);
+      restoreButtons.forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          // 按钮在 <summary> 里，阻止点击顺带折叠/展开所属区块
+          e.preventDefault();
+          restoreField(document.getElementById(btn.dataset.restoreFor));
+        });
+      });
+
+      undoRefreshButton?.addEventListener("click", () => undoRefresh());
+
+      [
+        urlInput,
+        titleInput,
+        descriptionInput,
+        authorInput,
+        previewImageRemoteUrlInput,
+      ].forEach((input) => {
+        if (!input) {
+          return;
+        }
+        // 用户一改动，快照即失效，避免“撤销”把内容拉回很久以前的抓取结果
+        input.addEventListener("input", () => hideRestore(input));
+        input.addEventListener("value-changed", () => hideRestore(input));
+      });
+
+      refreshButton?.addEventListener('click', refreshMetadata);
 
       // Extract URL from pasted text
       urlInput.addEventListener('paste', function(e) {
@@ -467,6 +583,8 @@
       if (!editedBookmarkId) {
         checkUrl(fromClientBookmarklet);
         urlInput.addEventListener('input', function() {
+          // 有 URL 就能重抓（不依赖是否已存在书签），空值时不显示死按钮
+          setRefreshVisible(!!urlInput.value.trim());
           clearTimeout(checkUrlTimer);
           checkUrlTimer = setTimeout(() => checkUrl(false), 300);
         });
@@ -480,7 +598,7 @@
           isAuthorModified = true;
         });
       } else {
-        refreshButton.style['display'] = 'inline-block';
+        setRefreshVisible(true);
       }
     })();
 

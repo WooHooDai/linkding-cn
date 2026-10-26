@@ -161,6 +161,30 @@
   visibility: visible;
 }
 
+/* 抓取撤销按钮靠右 */
+.detail-label-row [data-undo-field] {
+  margin-left: auto;
+}
+
+/* 有撤销按钮的行：清空按钮隐藏时不能占位，否则会把撤销顶离右缘 */
+.detail-section:has([data-undo-field]) .detail-clear-btn {
+  display: none;
+}
+
+.detail-section:has([data-undo-field]):focus-within .detail-clear-btn {
+  display: inline-block;
+  visibility: visible;
+}
+
+/* 抓取覆盖过的字段：轻微底色提示，可用底部「撤销」回滚 */
+.bookmark-title-input.is-metadata-modified,
+.detail-textarea.is-metadata-modified {
+  background: var(--primary-color-shade);
+  border-radius: var(--border-radius);
+  padding-inline: var(--unit-2);
+  margin-inline: calc(-1 * var(--unit-2));
+}
+
 /* ---- Textarea (looks like plain text until focused, max 10 lines) ---- */
 .detail-textarea {
   width: 100%;
@@ -632,6 +656,22 @@
 .detail-action-btn svg {
   width: 20px;
   height: 20px;
+}
+
+.detail-action-btn[disabled] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* 抓取进行中：图标旋转，让用户知道在工作 */
+.detail-action-btn.is-loading svg {
+  animation: ld-action-spin 0.8s linear infinite;
+}
+
+@keyframes ld-action-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .detail-action-delete:hover {

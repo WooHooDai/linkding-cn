@@ -881,6 +881,25 @@ msgstr "移除标签"
 msgid "Refresh from website"
 msgstr "重新抓取"
 
+#: bookmarks/templates/bookmarks/form.html:14
+#: bookmarks/templates/bookmarks/form.html:66
+#: bookmarks/templates/bookmarks/form.html:83
+#: bookmarks/templates/bookmarks/form.html:111
+#: bookmarks/templates/bookmarks/form_header_actions.html:5
+msgid "Undo"
+msgstr "撤销"
+
+#: bookmarks/templates/bookmarks/form_header_actions.html:4
+msgid "Undo everything applied by the last refresh"
+msgstr "撤销本次抓取的全部修改"
+
+#: bookmarks/templates/bookmarks/form.html:14
+#: bookmarks/templates/bookmarks/form.html:66
+#: bookmarks/templates/bookmarks/form.html:83
+#: bookmarks/templates/bookmarks/form.html:111
+msgid "Undo the value applied by the last refresh"
+msgstr "撤销本次抓取对该字段的修改"
+
 #: bookmarks/templates/bookmarks/bulk_edit/bar.html:38
 msgid "Fetch metadata"
 msgstr "抓取元数据"
@@ -1132,6 +1151,14 @@ msgstr "编辑网址"
 #: bookmarks/templates/bookmarks/details/modal.html:46
 msgid "Refresh metadata from URL"
 msgstr "从网址重新抓取元数据"
+
+#: bookmarks/templates/bookmarks/details/modal.html:325
+msgid "Undo metadata refresh"
+msgstr "撤销本次元数据抓取"
+
+#: bookmarks/templates/bookmarks/details/modal.html:1
+msgid "Undo URL change"
+msgstr "撤销网址修改"
 
 #: bookmarks/templates/bookmarks/details/modal.html:49
 #: bookmarks/templates/bookmarks/form.html:143

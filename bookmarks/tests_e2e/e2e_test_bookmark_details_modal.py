@@ -1,10 +1,12 @@
 import re
+from unittest.mock import patch
 
 from django.test import override_settings
 from django.urls import reverse
 from playwright.sync_api import expect, sync_playwright
 
 from bookmarks.models import Bookmark
+from bookmarks.services import website_loader
 from bookmarks.tests_e2e.helpers import LinkdingE2ETestCase
 
 
@@ -180,3 +182,152 @@ class BookmarkDetailsModalE2ETestCase(LinkdingE2ETestCase):
             # Snapshot is removed
             expect(snapshot).not_to_be_visible()
             self.assertReloads(0)
+
+    def test_refresh_metadata_applies_and_can_be_undone(self):
+        bookmark = self.setup_bookmark(
+            title="Old title", description="Old description"
+        )
+        refreshed = website_loader.WebsiteMetadata(
+            url=bookmark.url,
+            title="Site title",
+            description="Site description",
+            author=None,
+            preview_image=None,
+        )
+
+        with patch.object(
+            website_loader, "load_website_metadata", return_value=refreshed
+        ):
+            with sync_playwright() as p:
+                self.open(reverse("linkding:bookmarks.index"), p)
+                modal = self.open_details_modal(bookmark)
+                refresh_btn = modal.locator("#refresh-metadata-btn")
+                undo_btn = modal.locator("#undo-metadata-btn")
+                title = modal.locator(".bookmark-title-input")
+                description = modal.locator('.detail-textarea[data-field="description"]')
+
+                # 动作常驻底部操作栏，不再依赖 URL 编辑态
+                expect(refresh_btn).to_be_visible()
+                expect(undo_btn).to_be_hidden()
+                expect(modal.locator(".detail-url-edit #refresh-metadata-btn")).to_have_count(0)
+
+                refresh_btn.click()
+
+                expect(title).to_have_value("Site title")
+                expect(description).to_have_value("Site description")
+                expect(undo_btn).to_be_visible()
+                expect(title).to_have_class(re.compile(r"is-metadata-modified"))
+                # 字段行内出现各自的撤销按钮
+                expect(modal.locator('[data-undo-field="title"]')).to_be_visible()
+                expect(modal.locator('[data-undo-field="description"]')).to_be_visible()
+                # 列表项就地同步，不整页刷新
+                expect(self.locate_bookmark("Site title")).to_be_visible()
+                self.assertReloads(0)
+
+                # 字段级撤销：只回滚标题，描述保持站点值
+                modal.locator('[data-undo-field="title"]').click()
+                expect(title).to_have_value("Old title")
+                expect(description).to_have_value("Site description")
+                expect(undo_btn).to_be_visible()
+                expect(title).not_to_have_class(re.compile(r"is-metadata-modified"))
+
+                # 整体撤销：剩余字段全部还原
+                undo_btn.click()
+                expect(description).to_have_value("Old description")
+                expect(undo_btn).to_be_hidden()
+                expect(modal.locator('[data-undo-field="description"]')).to_be_hidden()
+
+        bookmark.refresh_from_db()
+        self.assertEqual(bookmark.title, "Old title")
+        self.assertEqual(bookmark.description, "Old description")
+
+    def test_refresh_metadata_writes_to_database(self):
+        bookmark = self.setup_bookmark(title="Old title", description="Old description")
+        refreshed = website_loader.WebsiteMetadata(
+            url=bookmark.url,
+            title="Site title",
+            description="Site description",
+            author=None,
+            preview_image=None,
+        )
+
+        with patch.object(
+            website_loader, "load_website_metadata", return_value=refreshed
+        ):
+            with sync_playwright() as p:
+                self.open(reverse("linkding:bookmarks.index"), p)
+                modal = self.open_details_modal(bookmark)
+                modal.locator("#refresh-metadata-btn").click()
+                expect(modal.locator(".bookmark-title-input")).to_have_value(
+                    "Site title"
+                )
+
+        bookmark.refresh_from_db()
+        self.assertEqual(bookmark.title, "Site title")
+        self.assertEqual(bookmark.description, "Site description")
+
+    def test_refresh_metadata_failure_shows_error_toast(self):
+        bookmark = self.setup_bookmark(title="Old title")
+
+        with patch.object(
+            website_loader,
+            "load_website_metadata",
+            side_effect=website_loader.NonRetryableMetadataError("boom"),
+        ):
+            with sync_playwright() as p:
+                self.open(reverse("linkding:bookmarks.index"), p)
+                modal = self.open_details_modal(bookmark)
+                modal.locator("#refresh-metadata-btn").click()
+                expect(self.page.locator(".toast-stack .toast-error")).to_be_visible()
+                expect(modal.locator("#undo-metadata-btn")).to_be_hidden()
+
+        bookmark.refresh_from_db()
+        self.assertEqual(bookmark.title, "Old title")
+
+    def test_edit_url_saves_on_blur_and_refreshes_metadata(self):
+        bookmark = self.setup_bookmark(title="Old title", url="https://example.com/old")
+        refreshed = website_loader.WebsiteMetadata(
+            url="https://example.com/new",
+            title="Site title",
+            description="Site description",
+            author=None,
+            preview_image=None,
+        )
+
+        with patch.object(
+            website_loader, "load_website_metadata", return_value=refreshed
+        ):
+            with sync_playwright() as p:
+                self.open(reverse("linkding:bookmarks.index"), p)
+                modal = self.open_details_modal(bookmark)
+
+                modal.locator("#edit-url-btn").click()
+                url_input = modal.locator(".detail-url-input")
+                expect(url_input).to_be_visible()
+                # 旧交互的保存/取消按钮已移除
+                expect(modal.locator("#url-save-btn")).to_have_count(0)
+
+                url_input.fill("https://example.com/new")
+                url_input.blur()
+
+                # URL 就地更新，且变化触发了重新抓取
+                expect(modal.locator(".detail-url-link")).to_have_text(
+                    "https://example.com/new"
+                )
+                expect(modal.locator(".bookmark-title-input")).to_have_value(
+                    "Site title"
+                )
+                expect(modal.locator("#undo-metadata-btn")).to_be_visible()
+
+                # URL 修改本身也可撤销
+                url_undo = modal.locator('[data-undo-field="url"]')
+                expect(url_undo).to_be_visible()
+                url_undo.click()
+                expect(modal.locator(".detail-url-link")).to_have_text(
+                    "https://example.com/old"
+                )
+                expect(url_undo).to_be_hidden()
+
+        bookmark.refresh_from_db()
+        self.assertEqual(bookmark.url, "https://example.com/old")
+        self.assertEqual(bookmark.title, "Site title")
