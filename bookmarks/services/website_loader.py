@@ -410,13 +410,11 @@ def _load_with_hooks(url: str, config: dict, scripts: list, username: str = '',
                 return _empty_metadata(url)
             break  # Only one replace allowed
     else:
-        # Built-in engine: load page + parse
-        if ignore_cache:
-            metadata = _load_website_metadata(url, config, username=username)
-        else:
-            metadata = _load_website_metadata_config_cached(
-                url, _metadata_config_cache_key(config), username=username
-            )
+        # Built-in engine: load page + parse. 直接传入 config（绕过
+        # _load_website_metadata_config_cached 的深拷贝）：引擎中途刷新出的
+        # cookie 会写回 config，后续 after 钩子必须拿到刷新后的凭据，
+        # 否则钩子侧的 API 调用会一直带着失效 token。
+        metadata = _load_website_metadata(url, config, username=username)
 
     # 3. Run after hooks
     if metadata is None:
@@ -700,9 +698,9 @@ def _load_website_metadata(url: str, config: dict = None, username: str = '', in
                                        domain_key=domain_key, verify_context=verify_context,
                                        username=username, scope=config.get('_effective_cookie_scope', ''))
             if after and after != before:
+                # 写回 config：钩子（及调用方）要看到引擎实际使用的最新凭据
+                config["_user_cookie"] = after
                 retry_config = dict(config)
-                # 刷新成功后更新 _user_cookie 为新的 cookie 字符串
-                retry_config["_user_cookie"] = after
                 page_text = load_page(fetch_url, retry_config, load_full_page=load_full)
                 title, description, preview_image, author, sources = _parse_metadata_from_content(
                     page_text, fetch_url, retry_config, include_sources=True
