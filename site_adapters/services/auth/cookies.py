@@ -375,8 +375,11 @@ def _verify_cookie_l1_probe(verify_config: dict, url: str,
     invalid_location = [_l1_re.compile(p, _l1_re.IGNORECASE) for p in raw_patterns]
     check_set_cookie = probe_cfg.get('set_cookie_cleared', True)
     probe_timeout = probe_cfg.get('timeout', timeout)
-    # verify.http_head_probe.url：覆盖探针 URL（探轻量端点代替重型正文页）
+    # verify.http_head_probe.url：覆盖探针 URL（探轻量端点代替重型正文页）。
+    # method：HEAD（默认，405 时结果不可信交由 L2）；GET（探测页面本身不鉴权、
+    # 而 API 端点才校验 token 的站点——HEAD 对这类端点通常是 405）。
     probe_url = probe_cfg.get('url') or url
+    probe_method = str(probe_cfg.get('method') or 'HEAD').upper()
 
     if not invalid_status and not invalid_location and not check_set_cookie:
         return {"valid": True, "reason": "no_http_head_probe_checks"}
@@ -395,7 +398,7 @@ def _verify_cookie_l1_probe(verify_config: dict, url: str,
             cookies=None,
             proxies=None,
             config=http_config,
-            method="HEAD",
+            method=probe_method,
         )
     except Exception as e:
         logger.debug("L1 http_head_probe network error for %s: %s", domain_key, e)

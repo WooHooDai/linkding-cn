@@ -519,8 +519,14 @@ AUTH_COOKIE_FIELDS = {
     },
     "verify.http_head_probe.url": {
         "type": "str",
-        "en": "Override probe URL. Defaults to bookmark URL.",
-        "zh": "覆盖探测 URL。默认使用书签 URL。",
+        "en": "Override probe URL. Defaults to bookmark URL. Pair with method=GET to probe an auth-checking API endpoint (may point at a non-existent resource when the site validates the token before looking up the resource).",
+        "zh": "覆盖探测 URL。默认使用书签 URL。可与 method=GET 搭配探测鉴权型 API 端点；若站点先校验 token 再查找资源，端点可指向一个不存在的资源。",
+    },
+    "verify.http_head_probe.method": {
+        "type": '"HEAD" | "GET"',
+        "en": 'Probe HTTP method. Defaults to HEAD; use GET for sites whose pages are reachable without a valid token but APIs are not (HEAD on such APIs is usually 405 and inconclusive).',
+        "zh": '探针请求方法。默认 HEAD；页面不校验 token 而 API 才校验的站点用 GET（这类 API 的 HEAD 通常是 405，结果不可信）。',
+        "example": "GET",
     },
     "verify.http_head_probe.timeout": {
         "type": "int",

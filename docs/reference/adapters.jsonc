@@ -1,6 +1,6 @@
 // ==========================================================================
 //  Site Adapters — Complete Field Reference
-//  Auto-generated from fields.py (single source of truth)  |  2026-10-07 16:54:19
+//  Auto-generated from fields.py (single source of truth)  |  2026-10-26 22:57:21
 //
 //  Re-generate: python scripts/generate-adapters-reference.py
 //  Guide:       docs/site-adapters.md
@@ -86,7 +86,8 @@
           "verify": {
             "http_head_probe": {
               "enabled": true,                             // Enable L1 HTTP HEAD probe. Defaults to true.
-              "url": "",                                   // Override probe URL. Defaults to bookmark URL.
+              "url": "",                                   // Override probe URL. Defaults to bookmark URL. Pair with method=GET to probe an auth-checking API endpoint (may point at a non-existent resource when the site validates the token before looking up the resource).
+              "method": "GET",                             // Probe HTTP method. Defaults to HEAD; use GET for sites whose pages are reachable without a valid token but APIs are not (HEAD on such APIs is usually 405 and inconclusive).
               "timeout": 5,                                // Probe timeout in seconds. Defaults to 5.
               "invalid_status": [401, 403],                // HTTP status codes that mean invalid. Defaults to [401, 403].
               "invalid_location_patterns": ["login", "signin"], // Flat array of regex strings matched against redirect Location. Any match means invalid.
@@ -161,9 +162,11 @@
         "xmlns": {"atom": "http://www.w3.org/2005/Atom"},  // Optional namespace prefixes for XML XPath expressions. Atom/RSS use automatic aliases atom/rss; prefixes declared anywhere in the document are auto-registered; unprefixed element names bind to the document default namespace; this overrides or adds custom prefixes.
         "select_title": [],                                // Selectors for the title, tried in order. HTML uses standard CSS, including the ::json(path) pseudo-element extension to extract fields from JSON-LD script tags (e.g. 'script[type="application/ld+json"]::json(description)') and the ::attr(name) pseudo-element extension to read an explicit HTML attribute (e.g. 'img::attr(data-src)'); XML uses standard XPath; JSON uses standard JSONPath.
         "select_description": [],                          // Selectors for the description, tried in order. HTML uses standard CSS, including the ::json(path) pseudo-element extension to extract fields from JSON-LD script tags (e.g. 'script[type="application/ld+json"]::json(description)') and the ::attr(name) pseudo-element extension to read an explicit HTML attribute (e.g. 'img::attr(data-src)'); XML uses standard XPath; JSON uses standard JSONPath.
+        "select_author": [],                               // Selectors for the author, tried in order. HTML uses standard CSS, including the ::json(path) pseudo-element extension to extract fields from JSON-LD script tags (e.g. 'script[type="application/ld+json"]::json(author.name)') and the ::attr(name) pseudo-element extension to read an explicit HTML attribute; XML uses standard XPath; JSON uses standard JSONPath. Dict/list JSON values (e.g. {"name": "..."}) are flattened to a string via the name/title/content keys.
         "select_image": [],                                // Selectors for the preview image, tried in order. HTML uses standard CSS, including the ::json(path) pseudo-element extension to extract fields from JSON-LD script tags (e.g. 'script[type="application/ld+json"]::json(image.url)') and the ::attr(name) pseudo-element extension to read an explicit HTML attribute (e.g. 'img::attr(data-src)'); values that are blob:/empty/about:/# or base64 data URIs are skipped so later selectors are tried. XML uses standard XPath; JSON uses standard JSONPath.
         "rewrite_title": ["\\s*- Example$", ""],           // Regex rewrite. Accepts ["pattern", "replacement"] for one rule, or [["pattern", "replacement"], ...] for multiple rules applied in order. Applied to the extracted title.
         "rewrite_description": ["\\[read more\\]", ""],    // Regex rewrite. Accepts ["pattern", "replacement"] for one rule, or [["pattern", "replacement"], ...] for multiple rules applied in order. Applied to the extracted description.
+        "rewrite_author": ["^由", ""],                      // Regex rewrite. Accepts ["pattern", "replacement"] for one rule, or [["pattern", "replacement"], ...] for multiple rules applied in order. Applied to the extracted author.
         "rewrite_image": ["^http://", "https://"],         // Regex rewrite. Accepts ["pattern", "replacement"] for one rule, or [["pattern", "replacement"], ...] for multiple rules applied in order. Applied to the extracted image URL.
         "load_full_page": true,                            // Whether to load the full page content. Defaults to true.
         "max_content_limit": 5120000,                      // Maximum content size in bytes to load. Defaults to 5120000 (5 MB).

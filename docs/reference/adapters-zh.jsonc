@@ -1,6 +1,6 @@
 // ==========================================================================
 //  Site Adapters — 完整字段参考
-//  由 fields.py 自动生成（单一信源）  |  2026-10-07 16:54:20
+//  由 fields.py 自动生成（单一信源）  |  2026-10-26 22:57:21
 //
 //  Re-generate: python scripts/generate-adapters-reference.py
 //  Guide:       docs/site-adapters.md
@@ -86,7 +86,8 @@
           "verify": {
             "http_head_probe": {
               "enabled": true,                             // 是否启用 L1 HTTP HEAD 探针。默认为 true。
-              "url": "",                                   // 覆盖探测 URL。默认使用书签 URL。
+              "url": "",                                   // 覆盖探测 URL。默认使用书签 URL。可与 method=GET 搭配探测鉴权型 API 端点；若站点先校验 token 再查找资源，端点可指向一个不存在的资源。
+              "method": "GET",                             // 探针请求方法。默认 HEAD；页面不校验 token 而 API 才校验的站点用 GET（这类 API 的 HEAD 通常是 405，结果不可信）。
               "timeout": 5,                                // 探针超时（秒）。默认为 5。
               "invalid_status": [401, 403],                // 判定失效的 HTTP 状态码。默认为 [401, 403]。
               "invalid_location_patterns": ["login", "signin"], // 字符串正则数组，用于匹配重定向 Location；任一匹配即判定失效。
@@ -161,9 +162,11 @@
         "xmlns": {"atom": "http://www.w3.org/2005/Atom"},  // 可选的 XML XPath namespace 前缀映射。Atom/RSS 自动提供 atom/rss 前缀；文档任意层级声明的前缀会自动注册；无前缀元素名自动绑定文档默认 namespace；此字段用于覆盖或补充自定义前缀。
         "select_title": [],                                // 标题选择器，按顺序尝试，取第一个非空结果。HTML 使用标准 CSS，支持 ::json(path) 伪元素扩展以从 JSON-LD script 标签提取字段（如 'script[type="application/ld+json"]::json(description)'），也支持 ::attr(name) 伪元素扩展读取指定 HTML 属性（如 'img::attr(data-src)'）；XML 使用标准 XPath；JSON 使用标准 JSONPath。
         "select_description": [],                          // 描述选择器，按顺序尝试。HTML 使用标准 CSS，支持 ::json(path) 伪元素扩展以从 JSON-LD script 标签提取字段（如 'script[type="application/ld+json"]::json(description)'），也支持 ::attr(name) 伪元素扩展读取指定 HTML 属性（如 'img::attr(data-src)'）；XML 使用标准 XPath；JSON 使用标准 JSONPath。
+        "select_author": [],                               // 作者选择器，按顺序尝试。HTML 使用标准 CSS，支持 ::json(path) 伪元素扩展以从 JSON-LD script 标签提取字段（如 'script[type="application/ld+json"]::json(author.name)'），也支持 ::attr(name) 伪元素扩展读取指定 HTML 属性；XML 使用标准 XPath；JSON 使用标准 JSONPath。JSON 中的字典/数组值（如 {"name": "..."}）会通过 name/title/content 键扁平化为字符串。
         "select_image": [],                                // 预览图选择器，按顺序尝试。HTML 使用标准 CSS，支持 ::json(path) 伪元素扩展以从 JSON-LD script 标签提取字段（如 'script[type="application/ld+json"]::json(image.url)'），也支持 ::attr(name) 伪元素扩展读取指定 HTML 属性（如 'img::attr(data-src)'）；blob:/空值/about:/#/base64 data URI 会被跳过并继续尝试后续选择器。XML 使用标准 XPath；JSON 使用标准 JSONPath。
         "rewrite_title": ["\\s*- Example$", ""],           // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。应用于提取到的标题。
         "rewrite_description": ["\\[read more\\]", ""],    // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。应用于提取到的描述。
+        "rewrite_author": ["^由", ""],                      // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。应用于提取到的作者。
         "rewrite_image": ["^http://", "https://"],         // 正则重写。单个规则使用 ["pattern", "replacement"]；多个规则使用 [["pattern", "replacement"], ...]，按顺序应用。应用于提取到的预览图 URL。
         "load_full_page": true,                            // 是否加载完整页面内容。默认为 true。
         "max_content_limit": 5120000,                      // 最大加载字节数。默认为 5120000（5 MB）。
