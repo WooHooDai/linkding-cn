@@ -892,6 +892,11 @@
     &[aria-expanded="true"] svg {
       transform: rotate(90deg);
     }
+
+    /* display: inline-grid 会盖掉 UA 的 [hidden] */
+    &[hidden] {
+      display: none;
+    }
   }
 
   .settings-about-table {

@@ -1202,6 +1202,7 @@ reddit.com/r/Music music reddit</pre>
                             data-settings-panel-collapsed-label="{% translate 'Expand' %}"
                             aria-controls="settings-bookmark-quick-tags-panel"
                             aria-label="{% translate 'Expand' %}"
+                            {% if not profile_quick_form.bookmark_quick_tag_items %}hidden{% endif %}
                             aria-expanded="false">
                       <span class="text-assistive" data-settings-panel-toggle-label>
                         {% translate "Expand" %}

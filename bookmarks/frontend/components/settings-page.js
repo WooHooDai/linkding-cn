@@ -316,11 +316,12 @@ this.directoryLinks = Array.from(
       }
     });
 
-    this.initializeQuickTags();
     this.initializeHelpPopovers();
     this.initializeLanguageControls();
     this.initializeDirectoryLinks();
     this.initializePanelToggles();
+    // 依赖 initializePanelToggles 恢复的折叠状态，必须排在其后
+    this.initializeQuickTags();
     this.initializeDraftForms();
     this.initializeCopyFormatPreview();
     this.applyDependentState();
@@ -1653,7 +1654,13 @@ this.directoryLinks = Array.from(
       .filter(Boolean);
     const tag_name = tagNames.join(" ");
     const labelEl = row.querySelector(".settings-qt-label-view");
-    const label = labelEl ? labelEl.textContent.trim() : tag_name;
+    // is-empty 时显示的是占位文案（"名称"），不能当真实名称存下来
+    let label = tag_name;
+    if (labelEl) {
+      label = labelEl.classList.contains("is-empty")
+        ? ""
+        : labelEl.textContent.trim();
+    }
     const iconBtn = row.querySelector("[data-qt-icon]");
     const icon_name = iconBtn ? (iconBtn.dataset.qtIcon || "") : "";
     const posBtn = row.querySelector('[data-qt-field="display_position"]');
@@ -1700,13 +1707,85 @@ this.directoryLinks = Array.from(
         if (!list) return;
         const row = this._createQuickTagRow(list.children.length);
         list.appendChild(row);
+        this._setQuickTagPanelExpanded(form, true);
         this.syncBookmarkQuickTags(form);
+        // 新行没有名称，直接把光标放进名称输入框
+        this._startQuickTagLabelEdit(row);
         this.queueSubmit(form);
       });
     });
 
     this._onQuickTagClick = this._onQuickTagClick.bind(this);
     this.element.addEventListener("click", this._onQuickTagClick);
+
+    // 空列表没有可折叠的内容，展开按钮不该留在标题行
+    this.element
+      .querySelectorAll("[data-toolbar-config-panel='quick_tags']")
+      .forEach((panel) => this._setQuickTagPanelExpanded(panel.closest("form")));
+  }
+
+  // 快捷标签面板：条目数为 0 时隐藏展开按钮并收起面板；expanded 为 null 时沿用当前状态。
+  // 折叠状态存在 localStorage 里，新增条目必须显式展开，否则新行看不见。
+  _setQuickTagPanelExpanded(form, expanded = null) {
+    const panel = form?.querySelector("[data-toolbar-config-panel='quick_tags']");
+    if (!panel) return;
+
+    const list = panel.querySelector("[data-bookmark-quick-tags-list]");
+    const toggle = panel.querySelector("[data-settings-panel-toggle]");
+    const body = panel.querySelector("[data-settings-panel-body]");
+    const hasItems = Boolean(list && list.children.length > 0);
+    const currentOpen = toggle?.getAttribute("aria-expanded") === "true";
+    const open = hasItems && (expanded === null ? currentOpen : expanded);
+
+    if (toggle) {
+      toggle.hidden = !hasItems;
+      this.syncPanelToggle(toggle, open);
+      const panelId = toggle.getAttribute("aria-controls");
+      if (panelId) {
+        this.setStoredPanelExpanded(panelId, open);
+      }
+    }
+    if (body) {
+      body.hidden = !open;
+    }
+    this.queueAdaptiveControlLayoutsUpdate();
+  }
+
+  // 名称从只读文本切成输入框；Esc 回到编辑前的值，空名称保持 is-empty（不写入占位文案）
+  _startQuickTagLabelEdit(row) {
+    const labelView = row.querySelector(".settings-qt-label-view");
+    const input = row.querySelector(".settings-qt-label-input");
+    if (!labelView || !input) return;
+
+    const original = labelView.classList.contains("is-empty")
+      ? ""
+      : labelView.textContent.trim();
+
+    row.classList.add("is-label-editing");
+    input.focus();
+    input.select();
+
+    const commit = () => {
+      const val = input.value.trim();
+      labelView.textContent = val || gettext("Name");
+      labelView.classList.toggle("is-empty", !val);
+      row.classList.remove("is-label-editing");
+      const form = row.closest("form");
+      this.syncBookmarkQuickTags(form);
+      this.queueSubmit(form);
+    };
+    input.onblur = commit;
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        input.blur();
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        input.value = original;
+        input.blur();
+      }
+    };
   }
 
   _onQuickTagClick(event) {
@@ -1795,25 +1874,9 @@ this.directoryLinks = Array.from(
     if (labelView) {
       event.preventDefault();
       const row = labelView.closest(".settings-qt-row");
-      const input = row.querySelector(".settings-qt-label-input");
-      if (!input) return;
-      row.classList.add("is-label-editing");
-      input.focus();
-      input.select();
-      const commit = () => {
-        const val = input.value.trim();
-        labelView.textContent = val || gettext("Name");
-        labelView.classList.toggle("is-empty", !val);
-        row.classList.remove("is-label-editing");
-        const form = row.closest("form");
-        this.syncBookmarkQuickTags(form);
-        this.queueSubmit(form);
-      };
-      input.onblur = commit;
-      input.onkeydown = (e) => {
-        if (e.key === "Enter") { e.preventDefault(); input.blur(); }
-        if (e.key === "Escape") { e.preventDefault(); input.value = labelView.textContent; input.blur(); }
-      };
+      if (row) {
+        this._startQuickTagLabelEdit(row);
+      }
       return;
     }
 
@@ -1849,6 +1912,7 @@ this.directoryLinks = Array.from(
       popup._button = deleteBtn;
       popup._onConfirm = () => {
         row.remove();
+        this._setQuickTagPanelExpanded(form);
         this.syncBookmarkQuickTags(form);
         this.queueSubmit(form);
       };
