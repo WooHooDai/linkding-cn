@@ -206,6 +206,14 @@ class NonRetryableMetadataError(Exception):
         self.status_code = status_code
 
 
+def _clean_text(value):
+    """空串与纯空白等同于未抓到：抓取链路里“空”只保留 None 一种表示。"""
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    return cleaned or None
+
+
 @dataclass
 class WebsiteMetadata:
     url: str
@@ -215,6 +223,14 @@ class WebsiteMetadata:
     # 注意：author 放在 preview_image 之后，保持旧的 4 位置参数调用
     # WebsiteMetadata(url, title, description, preview_image) 语义不变
     author: str | None = None
+
+    def __post_init__(self):
+        # 在构造处归一：解析器、loader 脚本、before/after hook 都绕不过这里，
+        # 于是写入侧可以放心用 `is not None` 判断“抓到了”
+        self.title = _clean_text(self.title)
+        self.description = _clean_text(self.description)
+        self.author = _clean_text(self.author)
+        self.preview_image = _clean_text(self.preview_image)
 
     def to_dict(self):
         return {
