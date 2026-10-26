@@ -26,8 +26,9 @@ class BookmarkHeaderMenuViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             ["bulk-edit", "random-sort"],
         )
 
-        # 分隔线之后才是显示偏好
-        self.assertIsNotNone(panel.select_one(".header-menu-divider"))
+        # 分隔线之后才是显示偏好（只取面板直属的那一条，别撞上偏好组内部的分隔线）
+        self.assertIsNotNone(panel.select_one(":scope > .header-menu-divider"))
+        self.assertIsNotNone(panel.select_one('select[name="theme"]'))
         self.assertIsNotNone(panel.select_one('select[name="bookmark_view_mode"]'))
         self.assertIsNotNone(panel.select_one('input[name="items_per_page"]'))
         self.assertIsNotNone(
@@ -66,6 +67,127 @@ class BookmarkHeaderMenuViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertIsNotNone(
             popover.select_one('input[name="sticky_pagination"]')
         )
+
+    def test_random_rows_follow_random_button_and_mode(self):
+        soup = self.render_index()
+        panel = soup.select_one(".header-layout .header-more-panel")
+        self.assertIsNotNone(panel.select_one('select[name="random_mode"]'))
+        # 列表模式下随机目标无意义，行用 hidden 收起（切换模式时由 JS 直接改，不重载）
+        self.assertTrue(
+            panel.select_one('[data-pref-row="random_target"]').has_attr("hidden")
+        )
+
+        self.user.profile.random_mode = UserProfile.RANDOM_MODE_SINGLE
+        self.user.profile.save()
+        panel = self.render_index().select_one(".header-layout .header-more-panel")
+        self.assertFalse(
+            panel.select_one('[data-pref-row="random_target"]').has_attr("hidden")
+        )
+
+        self.user.profile.enable_random_button = False
+        self.user.profile.save()
+        panel = self.render_index().select_one(".header-layout .header-more-panel")
+        self.assertIsNone(panel.select_one('select[name="random_mode"]'))
+        self.assertIsNone(panel.select_one('select[name="random_target"]'))
+
+    def test_random_control_renders_both_modes_for_instant_switch(self):
+        soup = self.render_index()
+        self.assertIsNotNone(soup.select_one("form[data-random-control]:not([hidden])"))
+        self.assertTrue(soup.select_one("[ld-random-single]").has_attr("hidden"))
+
+        self.user.profile.random_mode = UserProfile.RANDOM_MODE_SINGLE
+        self.user.profile.save()
+        soup = self.render_index()
+        self.assertIsNotNone(soup.select_one("[ld-random-single]:not([hidden])"))
+        self.assertTrue(
+            soup.select_one("form[data-random-control]").has_attr("hidden")
+        )
+
+    def test_collapse_action_only_when_grouped(self):
+        soup = self.render_index()
+        panel = soup.select_one(".header-layout .header-more-panel")
+        self.assertIsNotNone(panel.select_one(".group-toggle-all"))
+
+        self.user.profile.group_by_date = False
+        self.user.profile.save()
+        panel = self.render_index().select_one(".header-layout .header-more-panel")
+        self.assertIsNone(panel.select_one(".group-toggle-all"))
+
+    def test_items_per_page_input_keeps_custom_value(self):
+        self.user.profile.items_per_page = 40
+        self.user.profile.save()
+
+        soup = self.render_index()
+        field = soup.select_one(
+            '.header-layout .header-more-panel input[name="items_per_page"]'
+        )
+        self.assertIsNotNone(field)
+        self.assertEqual(field.get("value"), "40")
+        # 非法值走字段错误容器，原地提示
+        self.assertIsNotNone(
+            soup.select_one(
+                '.header-layout [data-field-error-for="items_per_page"]'
+            )
+        )
+
+    def test_preview_and_toolbar_rows_hidden_in_compact_view(self):
+        soup = self.render_index()
+        panel = soup.select_one(".header-layout .header-more-panel")
+        self.assertIsNotNone(panel.select_one('input[name="enable_preview_images"]'))
+        self.assertIsNotNone(
+            panel.select_one('input[name="bookmark_toolbar_auto_hide"]')
+        )
+
+        self.user.profile.bookmark_view_mode = UserProfile.BOOKMARK_VIEW_MODE_COMPACT
+        self.user.profile.save()
+        panel = self.render_index().select_one(".header-layout .header-more-panel")
+        self.assertIsNone(panel.select_one('input[name="enable_preview_images"]'))
+        self.assertIsNone(panel.select_one('input[name="bookmark_toolbar_auto_hide"]'))
+
+    def test_more_menu_hides_random_action_when_disabled(self):
+        self.user.profile.enable_random_button = False
+        self.user.profile.save()
+
+        soup = self.render_index()
+        actions = [
+            action.get("data-menu-action")
+            for action in soup.select(".header-more .header-menu-action")
+        ]
+        self.assertEqual(actions, ["bulk-edit"])
+        # 偏好里的随机按钮开关仍在，只是子项收起
+        panel = soup.select_one(".header-more .header-more-panel")
+        self.assertIsNotNone(panel.select_one('input[name="enable_random_button"]'))
+        self.assertIsNone(panel.select_one('select[name="random_mode"]'))
+
+        # 共享页没有批量编辑，随机也关掉后不能留下孤立的分隔线
+        soup = self.make_soup(
+            self.client.get(reverse("linkding:bookmarks.shared")).content.decode()
+        )
+        panel = soup.select_one(".header-more .header-more-panel")
+        self.assertIsNone(panel.select_one(".header-menu-action"))
+        # 只剩偏好组之间的两条分隔线
+        self.assertEqual(len(panel.select(".header-menu-divider")), 2)
+
+    def test_switches_reflect_profile(self):
+        self.user.profile.show_sidebar = False
+        self.user.profile.enable_preview_images = True
+        self.user.profile.bookmark_toolbar_auto_hide = True
+        self.user.profile.theme = UserProfile.THEME_DARK
+        self.user.profile.save()
+
+        soup = self.render_index()
+        panel = soup.select_one(".header-layout .header-more-panel")
+        self.assertFalse(panel.select_one('input[name="show_sidebar"]').has_attr("checked"))
+        self.assertTrue(
+            panel.select_one('input[name="enable_preview_images"]').has_attr("checked")
+        )
+        self.assertTrue(
+            panel.select_one('input[name="bookmark_toolbar_auto_hide"]').has_attr(
+                "checked"
+            )
+        )
+        theme = panel.select_one('select[name="theme"] option[selected]')
+        self.assertEqual(theme.get("value"), "dark")
 
     def test_save_view_mode_through_quick_endpoint(self):
         response = self.client.post(

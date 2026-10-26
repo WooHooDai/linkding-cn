@@ -49,7 +49,8 @@ class RandomSingleButton extends Behavior {
         document.body.appendChild(a);
         a.click();
         a.remove();
-      } else if (target === "url" && btn.dataset.linkTarget === "_blank") {
+      } else if (btn.dataset.linkTarget === "_blank") {
+        // url / reader / snapshot 都是链接式目标，跟随「打开方式」设置；details 是弹窗，不适用
         window.open(data.url, "_blank");
       } else {
         window.location.href = data.url;

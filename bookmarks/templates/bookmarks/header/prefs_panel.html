@@ -1,10 +1,31 @@
 {% load i18n %}
-{# 显示偏好：视图 / 每页书签数 / 两个跟随开关。宽屏布局弹层与窄屏更多菜单共用。 #}
+{# 列表页显示偏好：宽屏「布局」弹层与窄屏「更多」菜单共用同一份面板。 #}
+{# 分三组：外观 / 列表结构 / 侧边栏与随机。 #}
+{# data-pref 汇总到保存端点；data-pref-reload 表示该字段参与服务端渲染，改完必须重载页面。 #}
 <div class="header-prefs-group">
   <div class="header-pref-row">
+    <span class="header-pref-label">{% translate 'Theme' %}</span>
+    <select class="form-select input-sm header-pref-control"
+            name="theme" data-pref="theme" data-pref-reload>
+      <option value="auto"
+              {% if request.user_profile.theme == 'auto' %}selected{% endif %}>
+        {% translate 'Auto' %}
+      </option>
+      <option value="light"
+              {% if request.user_profile.theme == 'light' %}selected{% endif %}>
+        {% translate 'Light' %}
+      </option>
+      <option value="dark"
+              {% if request.user_profile.theme == 'dark' %}selected{% endif %}>
+        {% translate 'Dark' %}
+      </option>
+    </select>
+  </div>
+
+  <div class="header-pref-row">
     <span class="header-pref-label">{% translate 'List view' %}</span>
-    <select class="form-select input-sm header-pref-control" name="bookmark_view_mode"
-            data-pref="bookmark_view_mode">
+    <select class="form-select input-sm header-pref-control"
+            name="bookmark_view_mode" data-pref="bookmark_view_mode" data-pref-reload>
       <option value="list"
               {% if request.user_profile.bookmark_view_mode == 'list' %}selected{% endif %}>
         {% translate 'Default' %}
@@ -15,12 +36,16 @@
       </option>
     </select>
   </div>
+</div>
 
+<div class="header-menu-divider"></div>
+
+<div class="header-prefs-group">
   <div class="header-pref-row">
     <span class="header-pref-label">{% translate 'Group by date' %}</span>
     <label class="form-switch header-pref-switch">
       <input type="checkbox" name="group_by_date"
-             data-pref="group_by_date"
+             data-pref="group_by_date" data-pref-reload
              {% if request.user_profile.group_by_date %}checked{% endif %}>
       <i class="form-icon"></i>
     </label>
@@ -45,11 +70,103 @@
 
   <div class="header-pref-row">
     <span class="header-pref-label">{% translate 'Bookmarks per page' %}</span>
-    <input type="number" class="form-input input-sm header-pref-control header-items-per-page"
-           name="items_per_page" min="10"
-           data-pref="items_per_page"
+    <input type="number" min="10" inputmode="numeric"
+           class="form-input input-sm header-pref-control header-items-per-page"
+           name="items_per_page" data-pref="items_per_page" data-pref-reload
            value="{{ request.user_profile.items_per_page }}">
+    {# 非法值由服务端返回字段错误，原地红字提示，不打断菜单 #}
+    <div class="field-errors" data-field-error-for="items_per_page"></div>
   </div>
+
+  {% if request.user_profile.bookmark_view_mode != 'compact' %}
+  {# 紧凑视图不显示预览图，开关在此模式下没有意义 #}
+  <div class="header-pref-row">
+    <span class="header-pref-label">{% translate 'Display preview images' %}</span>
+    <label class="form-switch header-pref-switch">
+      <input type="checkbox" name="enable_preview_images"
+             data-pref="enable_preview_images" data-pref-reload
+             {% if request.user_profile.enable_preview_images %}checked{% endif %}>
+      <i class="form-icon"></i>
+    </label>
+  </div>
+
+  {# 紧凑视图的工具栏本就常隐、hover/点按才展开，等价于强制自动隐藏 #}
+  <div class="header-pref-row">
+    <span class="header-pref-label">{% translate 'Auto-hide toolbar' %}</span>
+    <label class="form-switch header-pref-switch">
+      <input type="checkbox" name="bookmark_toolbar_auto_hide"
+             data-pref="bookmark_toolbar_auto_hide"
+             {% if request.user_profile.bookmark_toolbar_auto_hide %}checked{% endif %}>
+      <i class="form-icon"></i>
+    </label>
+  </div>
+  {% endif %}
+</div>
+
+<div class="header-menu-divider"></div>
+
+<div class="header-prefs-group">
+  <div class="header-pref-row">
+    <span class="header-pref-label">{% translate 'Show sidebar' %}</span>
+    <label class="form-switch header-pref-switch">
+      <input type="checkbox" name="show_sidebar"
+             data-pref="show_sidebar" data-pref-reload
+             {% if request.user_profile.show_sidebar %}checked{% endif %}>
+      <i class="form-icon"></i>
+    </label>
+  </div>
+
+  <div class="header-pref-row">
+    <span class="header-pref-label">{% translate 'Random button' %}</span>
+    <label class="form-switch header-pref-switch">
+      <input type="checkbox" name="enable_random_button"
+             data-pref="enable_random_button" data-pref-reload
+             {% if request.user_profile.enable_random_button %}checked{% endif %}>
+      <i class="form-icon"></i>
+    </label>
+  </div>
+
+  {% if request.user_profile.enable_random_button %}
+  <div class="header-pref-row">
+    <span class="header-pref-label">{% translate 'Random mode' %}</span>
+    <select class="form-select input-sm header-pref-control"
+            name="random_mode" data-pref="random_mode">
+      <option value="list"
+              {% if request.user_profile.random_mode == 'list' %}selected{% endif %}>
+        {% translate 'List' %}
+      </option>
+      <option value="single"
+              {% if request.user_profile.random_mode == 'single' %}selected{% endif %}>
+        {% translate 'Single' %}
+      </option>
+    </select>
+  </div>
+
+  {# 随机目标只在单条目模式下有意义：列表模式整页乱序，没有「打开哪个」可选 #}
+  <div class="header-pref-row" data-pref-row="random_target"
+       {% if request.user_profile.random_mode != 'single' %}hidden{% endif %}>
+    <span class="header-pref-label">{% translate 'Random target' %}</span>
+    <select class="form-select input-sm header-pref-control"
+            name="random_target" data-pref="random_target">
+      <option value="url"
+              {% if request.user_profile.random_target == 'url' %}selected{% endif %}>
+        {% translate 'URL' %}
+      </option>
+      <option value="reader"
+              {% if request.user_profile.random_target == 'reader' %}selected{% endif %}>
+        {% translate 'Reader' %}
+      </option>
+      <option value="snapshot"
+              {% if request.user_profile.random_target == 'snapshot' %}selected{% endif %}>
+        {% translate 'Snapshot' %}
+      </option>
+      <option value="details"
+              {% if request.user_profile.random_target == 'details' %}selected{% endif %}>
+        {% translate 'Details' %}
+      </option>
+    </select>
+  </div>
+  {% endif %}
 
   <div class="header-pref-row">
     <span class="header-pref-label">{% translate 'Search bar follows' %}</span>

@@ -144,7 +144,7 @@
               </div>
               <div id="settings-custom-css-panel" data-settings-panel-body hidden>
                 {% formfield custom_css_form.custom_css class="form-input settings-textarea monospace" rows="8" data_settings_draft_input="" %}
-                <div class="settings-field-errors" data-field-error-for="custom_css"></div>
+                <div class="field-errors" data-field-error-for="custom_css"></div>
                 <div class="settings-panel-footer">
                   <button type="button"
                           class="btn settings-draft-button"
@@ -178,7 +178,7 @@
               </div>
               <div class="settings-control">
                 {% formfield profile_quick_form.bookmark_view_mode class="form-select settings-select-input" %}
-                <div class="settings-field-errors" data-field-error-for="bookmark_view_mode"></div>
+                <div class="field-errors" data-field-error-for="bookmark_view_mode"></div>
               </div>
             </div>
             <div class="settings-row">
@@ -202,7 +202,7 @@
               </div>
               <div class="settings-control">
                 {% formfield profile_quick_form.items_per_page class="form-input settings-number-input settings-number-input-compact" min="10" %}
-                <div class="settings-field-errors" data-field-error-for="items_per_page"></div>
+                <div class="field-errors" data-field-error-for="items_per_page"></div>
               </div>
             </div>
             <div class="settings-row">
@@ -378,7 +378,7 @@
                       </li>
                     {% endfor %}
                   </ul>
-                  <div class="settings-field-errors" data-field-error-for="sidebar_modules"></div>
+                  <div class="field-errors" data-field-error-for="sidebar_modules"></div>
                 </div>
               </div>
             </div>
@@ -463,7 +463,7 @@ reddit.com/r/Music music reddit</pre>
               </div>
               <div id="settings-auto-tagging-panel" data-settings-panel-body hidden>
                 {% formfield auto_tagging_rules_form.auto_tagging_rules class="form-input settings-textarea monospace" rows="8" data_settings_draft_input="" %}
-                <div class="settings-field-errors" data-field-error-for="auto_tagging_rules"></div>
+                <div class="field-errors" data-field-error-for="auto_tagging_rules"></div>
                 <div class="settings-panel-footer">
                   <button type="button"
                           class="btn settings-draft-button"
@@ -522,7 +522,7 @@ reddit.com/r/Music music reddit</pre>
               </div>
               <div id="settings-custom-domain-panel" data-settings-panel-body hidden>
                 {% formfield custom_domain_root_form.custom_domain_root class="form-input settings-textarea monospace" rows="8" data_settings_draft_input="" %}
-                <div class="settings-field-errors" data-field-error-for="custom_domain_root"></div>
+                <div class="field-errors" data-field-error-for="custom_domain_root"></div>
                 <div class="settings-panel-footer">
                   <button type="button"
                           class="btn settings-draft-button"
@@ -591,7 +591,7 @@ reddit.com/r/Music music reddit</pre>
               </div>
               <div class="settings-control">
                 {% formfield profile_quick_form.bookmark_description_max_lines class="form-input settings-number-input" min="1" %}
-                <div class="settings-field-errors" data-field-error-for="bookmark_description_max_lines"></div>
+                <div class="field-errors" data-field-error-for="bookmark_description_max_lines"></div>
               </div>
             </div>
 
@@ -1016,7 +1016,7 @@ reddit.com/r/Music music reddit</pre>
                       </li>
                     {% endfor %}
                   </ul>
-                  <div class="settings-field-errors" data-field-error-for="bookmark_actions"></div>
+                  <div class="field-errors" data-field-error-for="bookmark_actions"></div>
                 </div>
               </div>
             </div>
@@ -1091,7 +1091,7 @@ reddit.com/r/Music music reddit</pre>
                       </li>
                     {% endfor %}
                   </ul>
-                  <div class="settings-field-errors" data-field-error-for="bookmark_quick_edits"></div>
+                  <div class="field-errors" data-field-error-for="bookmark_quick_edits"></div>
                 </div>
               </div>
             </div>
@@ -1167,7 +1167,7 @@ reddit.com/r/Music music reddit</pre>
                       </li>
                     {% endfor %}
                   </ul>
-                  <div class="settings-field-errors" data-field-error-for="bookmark_statuses"></div>
+                  <div class="field-errors" data-field-error-for="bookmark_statuses"></div>
                 </div>
               </div>
             </div>
@@ -1261,7 +1261,7 @@ reddit.com/r/Music music reddit</pre>
                       </li>
                     {% endfor %}
                   </ul>
-                  <div class="settings-field-errors" data-field-error-for="bookmark_quick_tags"></div>
+                  <div class="field-errors" data-field-error-for="bookmark_quick_tags"></div>
                 </div>
               </div>
             </div>
@@ -1294,7 +1294,7 @@ reddit.com/r/Music music reddit</pre>
               </div>
               <div class="settings-control">
                 {% formfield health_form.health_max_age_days class="form-input settings-number-input" min="0" placeholder=health_defaults.max_age_days %}
-                <div class="settings-field-errors" data-field-error-for="health_max_age_days"></div>
+                <div class="field-errors" data-field-error-for="health_max_age_days"></div>
               </div>
             </div>
             <div class="settings-row">
@@ -1310,7 +1310,7 @@ reddit.com/r/Music music reddit</pre>
               </div>
               <div class="settings-control">
                 {% formfield health_form.health_check_workers class="form-input settings-number-input" min="1" placeholder=health_defaults.workers %}
-                <div class="settings-field-errors" data-field-error-for="health_check_workers"></div>
+                <div class="field-errors" data-field-error-for="health_check_workers"></div>
               </div>
             </div>
             <div class="settings-row">
@@ -1326,7 +1326,7 @@ reddit.com/r/Music music reddit</pre>
               </div>
               <div class="settings-control">
                 {% formfield health_form.health_domain_interval class="form-input settings-number-input" min="0" step="0.5" placeholder=health_defaults.domain_interval %}
-                <div class="settings-field-errors" data-field-error-for="health_domain_interval"></div>
+                <div class="field-errors" data-field-error-for="health_domain_interval"></div>
               </div>
             </div>
           </form>
@@ -1398,7 +1398,7 @@ reddit.com/r/Music music reddit</pre>
               </div>
               <div class="settings-control">
                 {% formfield profile_quick_form.highlights_per_page class="form-input settings-number-input settings-number-input-compact" min="1" %}
-                <div class="settings-field-errors" data-field-error-for="highlights_per_page"></div>
+                <div class="field-errors" data-field-error-for="highlights_per_page"></div>
               </div>
             </div>
             <div class="settings-row">
@@ -1502,7 +1502,7 @@ reddit.com/r/Music music reddit</pre>
                       </li>
                     {% endfor %}
                   </ul>
-                  <div class="settings-field-errors" data-field-error-for="highlights_sidebar_modules"></div>
+                  <div class="field-errors" data-field-error-for="highlights_sidebar_modules"></div>
                 </div>
               </div>
             </div>
@@ -1562,7 +1562,7 @@ reddit.com/r/Music music reddit</pre>
               </div>
               <div id="settings-hl-item-format-panel" data-settings-panel-body hidden>
                 {% formfield highlight_copy_format_form.item_format class="form-input settings-textarea monospace" rows="4" data_settings_draft_input="" data_hl_copy_preview_input="" %}
-                <div class="settings-field-errors" data-field-error-for="item_format"></div>
+                <div class="field-errors" data-field-error-for="item_format"></div>
                 <div class="settings-panel-footer">
                   <button type="button"
                           class="btn settings-draft-button"
@@ -1630,7 +1630,7 @@ reddit.com/r/Music music reddit</pre>
               </div>
               <div id="settings-hl-separator-panel" data-settings-panel-body hidden>
                 {% formfield highlight_copy_format_form.separator class="form-input settings-textarea monospace" rows="3" data_settings_draft_input="" data_hl_sep_preview_input="" %}
-                <div class="settings-field-errors" data-field-error-for="separator"></div>
+                <div class="field-errors" data-field-error-for="separator"></div>
                 <div class="settings-panel-footer">
                   <button type="button"
                           class="btn settings-draft-button"

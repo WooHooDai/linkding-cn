@@ -1,22 +1,10 @@
 {% load i18n %}
 {% if profile and not profile.enable_random_button %}
   {# 随机按钮已禁用 #}
-{% elif profile and profile.random_mode == 'single' %}
-  {# 单条目随机模式：配置通过 data 属性传递给 ld-random-single Behavior #}
-  <button type="button" class="btn"
-          ld-random-single
-          data-csrf-token="{{ csrf_token }}"
-          data-random-target="{{ profile.random_target }}"
-          data-link-target="{{ profile.bookmark_link_target }}"
-          {% for key, value in filtered_params.items %}
-            data-param-{{ key|force_escape }}="{{ value|force_escape }}"
-          {% endfor %}
-          title="{% translate 'Random bookmark' %}">
-    <svg width="20" height="20"><use href="#ld-icon-shuffle"></use></svg>
-  </button>
 {% else %}
-  {# 列表随机模式（默认，现有行为） #}
-  <form action="" method="post" style="display: inline;">
+  {# 两种模式各渲染一份、用 hidden 切换：偏好变更时不必重载页面 #}
+  <form action="" method="post" class="random-sort-form" data-random-control
+        {% if profile.random_mode == 'single' %}hidden{% endif %}>
     {% csrf_token %}
     <input type="hidden" name="sort" value="random">
     {% for key, value in filtered_params.items %}
@@ -33,4 +21,18 @@
       </svg>
     </button>
   </form>
+
+  {# 单条目随机模式：配置通过 data 属性传递给 ld-random-single Behavior #}
+  <button type="button" class="btn"
+          ld-random-single data-random-control
+          data-csrf-token="{{ csrf_token }}"
+          data-random-target="{{ profile.random_target }}"
+          data-link-target="{{ profile.bookmark_link_target }}"
+          {% for key, value in filtered_params.items %}
+            data-param-{{ key|force_escape }}="{{ value|force_escape }}"
+          {% endfor %}
+          {% if profile.random_mode != 'single' %}hidden{% endif %}
+          title="{% translate 'Random bookmark' %}">
+    <svg width="20" height="20"><use href="#ld-icon-shuffle"></use></svg>
+  </button>
 {% endif %}

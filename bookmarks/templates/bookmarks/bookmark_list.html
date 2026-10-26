@@ -168,38 +168,6 @@
       })();
     </script>
     {% endif %}
-    {% if bookmark_list.toolbar_auto_hide %}
-    <script>
-    (function() {
-      'use strict';
-      if (window.__ldToolbarAutoHideBound) return;
-      window.__ldToolbarAutoHideBound = true;
-      // Use document-level delegation so the handler survives Turbo DOM swaps
-      document.addEventListener('click', function(e) {
-        var item = e.target.closest('ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item]');
-        if (!item) {
-          // Click outside any bookmark item — close all open toolbars
-          document.querySelectorAll('li[ld-bookmark-item].toolbar-visible').forEach(function(el) {
-            el.classList.remove('toolbar-visible');
-          });
-          return;
-        }
-
-        // Let interactive elements (links, buttons, inputs, textarea, labels) through
-        // 健康状态指示器自带点击弹窗交互，不应触发工具栏展开/收起
-        if (e.target.closest('a, button, input, textarea, label, ld-health-indicator')) return;
-
-        // Hide all other items' toolbars
-        document.querySelectorAll('li[ld-bookmark-item].toolbar-visible').forEach(function(other) {
-          if (other !== item) other.classList.remove('toolbar-visible');
-        });
-
-        // Toggle toolbar visibility on this item
-        item.classList.toggle('toolbar-visible');
-      });
-    })();
-    </script>
-    {% endif %}
     {% if bookmark_list.view_mode == 'compact' %}
     <script>
     (function() {

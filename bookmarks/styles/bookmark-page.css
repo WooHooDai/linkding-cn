@@ -318,8 +318,12 @@
 
 .menu.header-more-panel {
   display: none;
-  width: 260px;
-  min-width: 260px;
+  width: 320px;
+  min-width: 320px;
+  /* 分组多了以后整份面板会超过一屏，窄屏上必须能滚 */
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--unit-2) 0;
   flex-direction: column;
 }
@@ -329,9 +333,26 @@
 }
 
 .header-menu-divider {
+  /* 面板是 flex column：不加 flex:none 时 1px 会被压成 0，只剩视觉上的空行 */
+  flex: none;
   height: 1px;
   background: var(--menu-border-color);
   margin: var(--unit-2) var(--unit-4);
+}
+
+.header-pref-row .field-errors {
+  /* 提示要独占整行，落在输入框正下方 */
+  grid-column: 1 / -1;
+}
+
+/* 行本身是 grid，[hidden] 的 UA display:none 会被它盖掉，需显式声明 */
+.header-pref-row[hidden] {
+  display: none;
+}
+
+/* 随机控件按模式二选一显隐；.btn / form 自身的 display 会盖掉 [hidden] */
+[data-random-control][hidden] {
+  display: none;
 }
 
 .header-prefs-group {
@@ -2809,10 +2830,10 @@ ul.bookmark-list.view-compact .actions .action-icon {
   height: 16px;
 }
 
-/* 默认收起：隐藏描述、动作按钮与健康指示器（含日期/快捷标签菜单）；
+/* 默认收起：描述与整条动作栏都不占位（只隐藏动作栏的子项会留下分隔符与 22px 高度）；
    笔记仅在已打开（.show-notes）时保留。 */
 ul.bookmark-list.view-compact .description,
-ul.bookmark-list.view-compact .actions :is(a, button, .toolbar-date, .quick-tag-menu-wrapper, ld-health-indicator) {
+ul.bookmark-list.view-compact li[ld-bookmark-item] .actions {
   display: none;
 }
 
@@ -2831,8 +2852,14 @@ ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .content {
 }
 
 ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .description,
-ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .actions :is(a, button, .toolbar-date, .quick-tag-menu-wrapper, ld-health-indicator) {
+ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .actions {
   display: revert;
+}
+
+/* .actions 的 display:flex 来自 li[ld-bookmark-item]，revert 会退回 UA 的 block，
+   展开态要显式写回 flex */
+ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .actions {
+  display: flex;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -2844,9 +2871,12 @@ ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .actions :is(
     display: block;
   }
 
-  ul.bookmark-list.view-compact li[ld-bookmark-item]:hover .description,
-  ul.bookmark-list.view-compact li[ld-bookmark-item]:hover .actions :is(a, button, .toolbar-date, .quick-tag-menu-wrapper, ld-health-indicator) {
+  ul.bookmark-list.view-compact li[ld-bookmark-item]:hover .description {
     display: revert;
+  }
+
+  ul.bookmark-list.view-compact li[ld-bookmark-item]:hover .actions {
+    display: flex;
   }
 }
 

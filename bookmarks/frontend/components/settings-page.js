@@ -809,7 +809,7 @@ this.directoryLinks = Array.from(
 
   clearErrors(form) {
     form
-      .querySelectorAll(".settings-field-errors.is-visible")
+      .querySelectorAll(".field-errors.is-visible")
       .forEach((element) => {
         element.textContent = "";
         element.classList.remove("is-visible");

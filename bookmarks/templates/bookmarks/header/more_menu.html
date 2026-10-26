@@ -29,12 +29,12 @@
         </button>
       </div>
     {% endif %}
-    {% if show_random %}
+    {% if show_random and request.user_profile.enable_random_button %}
       <div class="header-pref-row header-action-row">
-        <span class="header-pref-label">{% translate 'Random sort' %}</span>
+        <span class="header-pref-label">{% translate 'Random' %}</span>
         <button type="button" class="btn header-action-btn header-menu-action"
                 data-menu-action="random-sort"
-                title="{% translate 'Random sort' %}">
+                title="{% translate 'Random' %}">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
@@ -47,7 +47,9 @@
       </div>
     {% endif %}
 
+    {% if show_bulk or show_random and request.user_profile.enable_random_button %}
     <div class="header-menu-divider"></div>
+    {% endif %}
 
     {% include 'bookmarks/header/prefs_panel.html' %}
   </div>

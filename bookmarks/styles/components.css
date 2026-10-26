@@ -182,3 +182,19 @@ ld-confirm-popup {
     }
   }
 }
+
+/* 表单字段的行内错误提示：设置页与列表页布局菜单共用 */
+.field-errors {
+  display: none;
+  color: var(--error-color);
+  font-size: var(--font-size-sm);
+  /* 独占一行，位于输入框正下方（右对齐贴近控件列） */
+  flex-basis: 100%;
+  max-width: 100%;
+  text-align: right;
+  margin-top: var(--unit-3);
+
+  &.is-visible {
+    display: block;
+  }
+}
