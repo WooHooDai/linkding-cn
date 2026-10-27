@@ -292,6 +292,12 @@ class BookmarkItem extends Behavior {
     if (this.onToggleDescription) {
       const target = this._descriptionToggleTarget || this.descriptionContainer;
       target.removeEventListener("click", this.onToggleDescription);
+      if (this.element) {
+        this.element.removeEventListener(
+          "mouseenter",
+          this.onRefreshDescriptionHint,
+        );
+      }
     }
   }
 
@@ -470,11 +476,8 @@ class BookmarkItem extends Behavior {
           if (titleText) titleText.textContent = displayTitle;
 
           const titleElement = this.element.querySelector(".title");
-          if (titleElement?.dataset.tooltip) {
-            titleElement.dataset.tooltip = displayTitle;
-            const tooltipEl = titleElement.querySelector(".float-tooltip");
-            if (tooltipEl) tooltipEl.textContent = displayTitle;
-          }
+          const tooltipEl = titleElement?.querySelector(".float-tooltip");
+          if (tooltipEl) tooltipEl.textContent = displayTitle;
         })
         .catch((error) => {
           console.error("Failed to save title:", error);
@@ -1179,8 +1182,10 @@ class BookmarkItem extends Behavior {
     }
   }
 
-  showFloatTooltip(targetEl) {
-    if (!targetEl || !targetEl.dataset.tooltip) return;
+  showFloatTooltip(targetEl, text) {
+    if (!targetEl) return;
+    const content = text != null ? text : targetEl.dataset.tooltip;
+    if (!content) return;
 
     let tooltip = targetEl.querySelector(".float-tooltip");
     if (tooltip) {
@@ -1191,7 +1196,7 @@ class BookmarkItem extends Behavior {
 
     tooltip = document.createElement("div");
     tooltip.className = "float-tooltip";
-    tooltip.textContent = targetEl.dataset.tooltip;
+    tooltip.textContent = content;
     targetEl.appendChild(tooltip);
   }
 
@@ -1200,21 +1205,34 @@ class BookmarkItem extends Behavior {
     if (tooltip) tooltip.style.display = "none";
   }
 
+  /**
+   * 当前标题是否被截断（文本自然宽度超出链接可见宽度）。
+   * 在 hover/focus 触发时实时测量，避免窗口缩放、布局变化后旧的截断状态残留。
+   */
+  _isTitleTruncated() {
+    const link = this.titleElement?.querySelector("a.title-link");
+    const span = link?.querySelector("span");
+    if (!link || !span) return false;
+    if (!span.textContent.trim()) return false;
+
+    const range = document.createRange();
+    range.selectNodeContents(span);
+    const naturalWidth = range.getBoundingClientRect().width;
+    return naturalWidth > link.clientWidth + 0.5;
+  }
+
   initTitleTooltip() {
     this.titleElement = this.element.querySelector(".title");
     if (!this.titleElement) return;
 
-    const titleSpan = this.titleElement.querySelector("span");
-    if (titleSpan) {
-      requestAnimationFrame(() => {
-        const availableWidth = this.titleElement.offsetWidth - 24; // 16px favicon + 8px gap
-        if (titleSpan.offsetWidth > availableWidth) {
-          this.titleElement.dataset.tooltip = titleSpan.textContent;
-        }
-      });
-    }
-
-    this.showTitleTooltip = () => this.showFloatTooltip(this.titleElement);
+    this.showTitleTooltip = () => {
+      // 仅在当前真实截断时才弹出浮层；标题已完整显示则不重复提示
+      if (!this._isTitleTruncated()) return;
+      const text =
+        this.titleElement.querySelector("a.title-link span")?.textContent ||
+        "";
+      this.showFloatTooltip(this.titleElement, text);
+    };
     this.hideTitleTooltip = () => this.hideFloatTooltip(this.titleElement);
 
     const isTouch = window.matchMedia("(pointer: coarse)").matches;
@@ -1245,6 +1263,47 @@ class BookmarkItem extends Behavior {
     }
   }
 
+  /**
+   * 当前描述是否被截断（按当前布局实时测量，供点击 / hover 时判断）。
+   * 同行模式比较文本自然宽度与 tags 占用后的剩余宽度；分行模式比较内容高度与裁剪高度。
+   */
+  _isDescriptionTruncated() {
+    if (!this._descriptionText) return false;
+
+    if (this._descriptionIsInline) {
+      const tagsElement = this.descriptionContainer.querySelector(".tags");
+      let availableWidth = this.descriptionContainer.clientWidth - 7;
+      if (tagsElement) availableWidth -= tagsElement.offsetWidth;
+      const range = document.createRange();
+      range.selectNodeContents(this._descriptionText);
+      const naturalWidth = range.getBoundingClientRect().width;
+      return naturalWidth > availableWidth + 0.5;
+    }
+
+    return (
+      this.descriptionContainer.scrollHeight >
+      this.descriptionContainer.clientHeight + 0.5
+    );
+  }
+
+  /** 当前描述是否处于展开态（折叠操作不做截断拦截）。 */
+  _isDescriptionExpanded() {
+    return this._descriptionIsInline
+      ? this._descriptionText?.classList.contains("expanded")
+      : this.descriptionElement?.classList.contains("expanded");
+  }
+
+  /** 按当前是否可展开刷新 cursor 提示类（布局变化后随 hover 重新校正，避免残留）。 */
+  _refreshDescriptionHint() {
+    if (!this.descriptionContainer) return;
+    const expandable = this._isDescriptionExpanded() || this._isDescriptionTruncated();
+    if (this._descriptionIsInline) {
+      this._descriptionText?.classList.toggle("is-expandable", expandable);
+    } else {
+      this.descriptionContainer.classList.toggle("is-expandable", expandable);
+    }
+  }
+
   initDescriptionToggle() {
     this.descriptionContainer = this.element.querySelector(
       ".description-container",
@@ -1254,63 +1313,56 @@ class BookmarkItem extends Behavior {
     this.descriptionElement = this.element.querySelector(".description");
     if (!this.descriptionElement) return;
 
-    // 检测描述是否被截断，绑定点击展开
-    requestAnimationFrame(() => {
-      const descriptionText =
-        this.descriptionContainer.querySelector(".description-text");
-      if (!descriptionText) return;
+    this._descriptionText =
+      this.descriptionContainer.querySelector(".description-text");
+    this._descriptionIsInline =
+      this.descriptionElement.classList.contains("inline");
 
-      const isInline = this.descriptionElement.classList.contains("inline");
+    const target = this._descriptionIsInline
+      ? this._descriptionText
+      : this.descriptionContainer;
+    if (!target) return;
 
-      if (isInline) {
-        // 同行模式：检测文字是否溢出
-        const tagsElement = this.descriptionContainer.querySelector(".tags");
-        let availableWidth = this.descriptionContainer.offsetWidth - 7;
-        if (tagsElement) availableWidth -= tagsElement.offsetWidth;
-        if (descriptionText.offsetWidth <= availableWidth) return;
+    this._descriptionToggleTarget = target;
+    this.onToggleDescription = (event) => {
+      event.stopPropagation();
+      // 拖选描述文本松手会触发 click，此时不折叠
+      if (this._hasTextSelection()) return;
+      // 未展开且当前并未截断：不响应点击
+      if (!this._isDescriptionExpanded() && !this._isDescriptionTruncated())
+        return;
 
-        descriptionText.classList.add("is-expandable");
-        this._descriptionToggleTarget = descriptionText;
-        this.onToggleDescription = (event) => {
-          event.stopPropagation();
-          // 拖选描述文本松手会触发 click，此时不折叠
-          if (this._hasTextSelection()) return;
-          const expanded = !descriptionText.classList.contains("expanded");
-          descriptionText.classList.toggle("expanded", expanded);
-          this.descriptionContainer.classList.toggle("expanded", expanded);
-        };
-        descriptionText.addEventListener("click", this.onToggleDescription);
+      if (this._descriptionIsInline) {
+        const expanded = !this._descriptionText.classList.contains("expanded");
+        this._descriptionText.classList.toggle("expanded", expanded);
+        this.descriptionContainer.classList.toggle("expanded", expanded);
       } else {
-        // 分行模式：检测内容是否超出显示区域
-        if (
-          this.descriptionContainer.scrollHeight <=
-          this.descriptionContainer.clientHeight
-        )
-          return;
-
-        this.descriptionContainer.classList.add("is-expandable");
-        this.onToggleDescription = (event) => {
-          event.stopPropagation();
-          // 拖选描述文本松手会触发 click，此时不折叠
-          if (this._hasTextSelection()) return;
-          const expanding =
-            !this.descriptionElement.classList.contains("expanded");
-          if (!expanding) {
-            this._descriptionScrollTop =
-              this.descriptionContainer.scrollTop || 0;
-          }
-          this.descriptionElement.classList.toggle("expanded", expanding);
-          if (expanding) {
-            this.descriptionContainer.scrollTop =
-              this._descriptionScrollTop || 0;
-          }
-        };
-        this.descriptionContainer.addEventListener(
-          "click",
-          this.onToggleDescription,
-        );
+        const expanding =
+          !this.descriptionElement.classList.contains("expanded");
+        if (!expanding) {
+          this._descriptionScrollTop =
+            this.descriptionContainer.scrollTop || 0;
+        }
+        this.descriptionElement.classList.toggle("expanded", expanding);
+        if (expanding) {
+          this.descriptionContainer.scrollTop =
+            this._descriptionScrollTop || 0;
+        }
       }
-    });
+      this._refreshDescriptionHint();
+    };
+    target.addEventListener("click", this.onToggleDescription);
+
+    // 鼠标进入整行即按当前布局刷新可点击光标提示：紧凑视图下描述随行 hover 才显示，
+    // 悬停标题区时也要能校正；用实例闭包持有 this，避免回调丢失 Behavior 实例上下文
+    this.onRefreshDescriptionHint = () => this._refreshDescriptionHint();
+    this.element.addEventListener(
+      "mouseenter",
+      this.onRefreshDescriptionHint,
+      { passive: true },
+    );
+
+    this._refreshDescriptionHint();
   }
 
   /**
@@ -1335,6 +1387,10 @@ class BookmarkItem extends Behavior {
     if (this.onToggleDescription) {
       const target = this._descriptionToggleTarget || this.descriptionContainer;
       target.removeEventListener("click", this.onToggleDescription);
+      this.element?.removeEventListener(
+        "mouseenter",
+        this.onRefreshDescriptionHint,
+      );
       this.onToggleDescription = null;
       this._descriptionToggleTarget = null;
     }
