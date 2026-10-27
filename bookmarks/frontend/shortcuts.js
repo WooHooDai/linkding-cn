@@ -2,10 +2,14 @@
 let _lastMouseX = 0;
 let _lastMouseY = 0;
 
-document.addEventListener("mousemove", (e) => {
-  _lastMouseX = e.clientX;
-  _lastMouseY = e.clientY;
-}, { passive: true });
+document.addEventListener(
+  "mousemove",
+  (e) => {
+    _lastMouseX = e.clientX;
+    _lastMouseY = e.clientY;
+  },
+  { passive: true },
+);
 
 document.addEventListener("keydown", (event) => {
   const targetNodeName = event.target.nodeName;
@@ -43,6 +47,13 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "e") {
     const list = document.querySelector(".bookmark-list");
     if (!list) return;
+
+    // 紧凑视图：笔记常驻会撑破单行，e 切换「hover 行时显示笔记」
+    if (list.classList.contains("view-compact")) {
+      list.classList.toggle("notes-hover");
+      return;
+    }
+
     const current = list.dataset.notesGlobal === "true";
     const next = !current;
     list.dataset.notesGlobal = String(next);
@@ -67,10 +78,35 @@ document.addEventListener("keydown", (event) => {
     const li = target.closest("li[ld-bookmark-item]");
     if (!li) return;
 
+    // 表格视图：就地编辑所在单元格（标签走详情弹窗，需要补全菜单）
+    const table = target.closest("ul.bookmark-list.view-table");
+    if (table) {
+      const field = target.closest(".cell-title, .title-link")
+        ? "title"
+        : target.closest(".cell-tags")
+          ? "tags"
+          : target.closest(".cell-desc")
+            ? "description"
+            : target.closest(".cell-notes")
+              ? "notes"
+              : target.closest(".cell-author")
+                ? "author"
+                : null;
+      const behavior = table.__behaviors?.find(
+        (b) => typeof b.editCell === "function",
+      );
+      if (field && behavior) {
+        event.preventDefault();
+        behavior.editCell(li, field);
+      }
+      return;
+    }
+
     let fieldType;
     if (target.closest(".inline-edit-notes, .toggle-notes")) {
       fieldType = "notes";
     } else if (target.closest(".tags")) {
+      // 内联描述里的标签也属于 .description-container，必须先判标签
       fieldType = "tags";
     } else if (target.closest(".author")) {
       fieldType = "author";
@@ -101,8 +137,7 @@ document.addEventListener("keydown", (event) => {
     if (!list) return;
 
     const activeElement = document.activeElement;
-    let li =
-      activeElement?.closest?.("li[ld-bookmark-item]") || null;
+    let li = activeElement?.closest?.("li[ld-bookmark-item]") || null;
     if (!li) {
       const target = document.elementFromPoint(_lastMouseX, _lastMouseY);
       li = target?.closest?.("li[ld-bookmark-item]") || null;

@@ -238,19 +238,19 @@ msgstr "搜索参数"
 
 #: bookmarks/models.py:745
 msgid "Added ↑"
-msgstr "添加时间 ↑"
+msgstr "添加日期 ↑"
 
 #: bookmarks/models.py:746
 msgid "Added ↓"
-msgstr "添加时间 ↓"
+msgstr "添加日期 ↓"
 
 #: bookmarks/models.py:747 bookmarks/views/highlights.py:28
 msgid "Modified ↑"
-msgstr "修改时间 ↑"
+msgstr "修改日期 ↑"
 
 #: bookmarks/models.py:748 bookmarks/views/highlights.py:27
 msgid "Modified ↓"
-msgstr "修改时间 ↓"
+msgstr "修改日期 ↓"
 
 #: bookmarks/models.py:749
 msgid "Title ↑"
@@ -561,6 +561,9 @@ msgstr "标题"
 msgid "Description"
 msgstr "描述"
 
+msgid "Date"
+msgstr "日期"
+
 #: bookmarks/models.py:1036
 #: bookmarks/templates/bookmarks/bookmark_list.html:262
 #: bookmarks/templates/bookmarks/details/form.html:113
@@ -582,13 +585,17 @@ msgstr "图标"
 msgid "List"
 msgstr "列表"
 
-#: bookmarks/models.py:1009
+#: bookmarks/models.py:1025
 msgid "Default"
 msgstr "默认"
 
-#: bookmarks/models.py:1010
+#: bookmarks/models.py:1026
 msgid "Compact"
 msgstr "紧凑"
+
+#: bookmarks/models.py:1027
+msgid "Table"
+msgstr "表格"
 
 #: bookmarks/templates/settings/general.html
 msgid "List view"
@@ -4090,3 +4097,24 @@ msgstr "按名称"
 #: bookmarks/views/contexts.py:2140
 msgid "By count desc"
 msgstr "按计数降序"
+
+msgid "Click to sort"
+msgstr "点击排序"
+
+msgid "Drag to resize column"
+msgstr "拖拽调整列宽"
+
+msgid "Drag to reorder columns"
+msgstr "拖拽调整列顺序"
+
+msgid "Highlights ↑"
+msgstr "高亮 ↑"
+
+msgid "Highlights ↓"
+msgstr "高亮 ↓"
+
+msgid "Annotations ↑"
+msgstr "批注 ↑"
+
+msgid "Annotations ↓"
+msgstr "批注 ↓"

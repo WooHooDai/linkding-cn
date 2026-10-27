@@ -1,12 +1,11 @@
 /**
- * 书签条目工具栏的「自动隐藏」模式。
+ * 书签条目工具栏的「自动隐藏」模式（列表/紧凑视图）。
  *
- * 开关既可能来自页面加载（偏好已开启），也可能来自布局菜单的实时切换，
- * 因此绑定逻辑集中在这里，模板不再内联脚本。
+ * 表格视图（ul.view-table）不参与：它由 bookmark-table.js 提供行尾入口按钮。
  * 事件委托挂在 document 上，Turbo 换 DOM 后依然有效，只需绑定一次。
  */
 
-const LIST_SELECTOR = "ul.bookmark-list.toolbar-auto-hide";
+const LIST_SELECTOR = "ul.bookmark-list.toolbar-auto-hide:not(.view-table)";
 const ITEM_SELECTOR = `${LIST_SELECTOR} li[ld-bookmark-item]`;
 const INTERACTIVE_SELECTOR =
   "a, button, input, textarea, label, ld-health-indicator";
@@ -20,6 +19,8 @@ function hideAllToolbars(keep) {
 }
 
 function onClick(event) {
+  // 表格视图的操作栏由 bookmark-table.js 自己管理
+  if (event.target.closest("ul.view-table")) return;
   const item = event.target.closest(ITEM_SELECTOR);
   if (!item) {
     hideAllToolbars(null);

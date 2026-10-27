@@ -1,0 +1,36 @@
+{% load i18n %}
+{# 日期渲染：按 date_route 决定是否可点、指向哪里。列表工具栏（actions.html）与表格视图的日期列共用。 #}
+{% if bookmark_list.date_route == "disabled" %}
+  <span>{{ bookmark_item.display_date }}</span>
+{% elif bookmark_list.date_route == "snapshot" %}
+  {% if bookmark_item.has_snapshot %}
+    <a href="{{ bookmark_item.snapshot_url }}"
+       class="date-link date-link-exists"
+       title="{% translate 'View latest snapshot' %}"
+       target="{{ bookmark_list.link_target }}"
+       data-turbo="false"
+       rel="noopener">{{ bookmark_item.display_date }}</a>
+  {% else %}
+    <span class="date-link"
+          title="{% translate 'No snapshot available' %}"
+      >{{ bookmark_item.display_date }}</span>
+  {% endif %}
+{% elif bookmark_list.date_route == "reader" %}
+  <a href="{{ bookmark_item.reader_url }}"
+     class="date-link{% if bookmark_item.has_article %} date-link-exists{% endif %}"
+     title="{% translate 'Reader mode' %}"
+     target="{{ bookmark_list.link_target }}"
+     >{{ bookmark_item.display_date }}</a>
+{% elif bookmark_list.date_route == "web_archive" %}
+  <a href="{{ bookmark_item.web_archive_fallback_url }}"
+     class="date-link{% if bookmark_item.web_archive_url %} date-link-exists{% endif %}"
+     title="{% translate 'View snapshot on the Internet Archive Wayback Machine' %}"
+     target="{{ bookmark_list.link_target }}"
+     rel="noopener">{{ bookmark_item.display_date }}</a>
+{% elif bookmark_list.date_route == "highlights" %}
+  <a href="{% url 'linkding:bookmarks.highlights' %}?bookmark_id={{ bookmark_item.id }}&group_by=bookmark"
+     class="date-link{% if bookmark_item.has_highlights %} date-link-exists{% endif %}"
+     title="{% translate 'View highlights & annotations' %}"
+     target="{{ bookmark_list.link_target }}"
+     >{{ bookmark_item.display_date }}</a>
+{% endif %}

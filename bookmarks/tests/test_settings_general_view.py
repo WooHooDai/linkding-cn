@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 
 import requests
 from bs4 import BeautifulSoup
+from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from requests import RequestException
@@ -238,6 +239,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
             [
                 UserProfile.BOOKMARK_VIEW_MODE_LIST,
                 UserProfile.BOOKMARK_VIEW_MODE_COMPACT,
+                UserProfile.BOOKMARK_VIEW_MODE_TABLE,
             ],
         )
         selected = [
@@ -900,3 +902,45 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         with patch.object(requests, "get", return_value=latest_version_response_mock):
             version_info = get_version_info(random.random())
             self.assertEqual(version_info, app_version)
+
+class BookmarkTableColumnsCleanTest(TestCase):
+    """列配置清洗：已下架的键静默丢弃，而不是整包 422。"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="cols_clean", password="x")
+        self.client.force_login(self.user)
+
+    def _save(self, config):
+        return self.client.post(
+            reverse("linkding:settings.save"),
+            {
+                "form_id": "profile_quick",
+                "form_fields": "bookmark_table_columns",
+                "bookmark_table_columns": json.dumps(config),
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+    def test_stale_keys_are_dropped(self):
+        """旧版本存下的配置含已移除的 entry 键，保存应清洗而非拒绝。"""
+        stale = [
+            {"key": "title", "w": 3.68, "on": True},
+            {"key": "entry", "w": 2.36, "on": True},
+            {"key": "domain", "w": 1.8, "on": False},
+        ]
+        response = self._save(stale)
+        self.assertEqual(response.status_code, 200)
+        profile = self.user.profile
+        profile.refresh_from_db()
+        self.assertEqual(
+            [c["key"] for c in profile.bookmark_table_columns],
+            ["title", "domain"],
+        )
+
+    def test_oversized_payload_rejected(self):
+        response = self._save([{"key": "title"}] * 100)
+        self.assertEqual(response.status_code, 422)
+
+    def test_non_list_rejected(self):
+        response = self._save("not-a-list")
+        self.assertEqual(response.status_code, 422)

@@ -34,8 +34,13 @@
               {% if request.user_profile.bookmark_view_mode == 'compact' %}selected{% endif %}>
         {% translate 'Compact' %}
       </option>
+      <option value="table"
+              {% if request.user_profile.bookmark_view_mode == 'table' %}selected{% endif %}>
+        {% translate 'Table' %}
+      </option>
     </select>
   </div>
+  {# 表格列配置在表格视图的工具条上（bookmark_list.html），不放菜单 #}
 </div>
 
 <div class="header-menu-divider"></div>
@@ -78,8 +83,8 @@
     <div class="field-errors" data-field-error-for="items_per_page"></div>
   </div>
 
-  {% if request.user_profile.bookmark_view_mode != 'compact' %}
-  {# 紧凑视图不显示预览图，开关在此模式下没有意义 #}
+  {# 紧凑/表格视图不显示预览图，开关在此模式下没有意义 #}
+  {% if request.user_profile.bookmark_view_mode != 'compact' and request.user_profile.bookmark_view_mode != 'table' %}
   <div class="header-pref-row">
     <span class="header-pref-label">{% translate 'Display preview images' %}</span>
     <label class="form-switch header-pref-switch">

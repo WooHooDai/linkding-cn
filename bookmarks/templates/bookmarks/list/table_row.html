@@ -1,0 +1,83 @@
+{% load i18n shared %}
+{% comment %}
+  表格行：格子平铺为 li 的网格项，每个 cell 显式指定轨道（absolute 的浮层/按钮
+  会消耗 auto-placement 游标导致错轨，故不依赖默认放置）。
+{% endcomment %}
+<div class="cell cell-check" style="grid-column: 1">
+  <label class="form-checkbox bulk-edit-checkbox">
+    <input type="checkbox" name="bookmark_id" value="{{ bookmark_item.id }}">
+    <i class="form-icon"></i>
+  </label>
+</div>
+  {% for col in bookmark_list.table_columns %}
+    {% if col.key == 'title' %}
+    <div class="cell cell-title" style="grid-column: {{ forloop.counter|add:'1' }}">
+      {% if bookmark_list.show_favicons %}
+      <a href="?q=domain:&quot;{{ bookmark_item.url|extract_domain:request.user_profile }}&quot;"
+         class="favicon-link" title="{% translate 'Filter by this domain' %}">
+        <img class="favicon" src="{% url 'linkding:favicon_image' domain=bookmark_item.favicon_domain %}" alt="" loading="lazy">
+      </a>
+      {% endif %}
+      <a href="{{ bookmark_item.url }}" target="{{ bookmark_list.link_target }}" rel="noopener"
+         class="title-link truncate" title="{{ bookmark_item.title }}">
+        <span>{{ bookmark_item.title }}</span>
+      </a>
+    </div>
+    {% elif col.key == 'notes' %}
+    <div class="cell cell-notes" style="grid-column: {{ forloop.counter|add:'1' }}">
+      <div class="note inline" title="{{ bookmark_item.notes|striptags }}">
+        <div class="note-container truncate">
+          {% if bookmark_item.notes %}<span class="note-text">{{ bookmark_item.notes|striptags }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% elif col.key == 'domain' %}
+    <div class="cell cell-domain" style="grid-column: {{ forloop.counter|add:'1' }}">
+      <a href="?q=domain:&quot;{{ bookmark_item.url|extract_domain:request.user_profile }}&quot;"
+         class="domain-link truncate" title="{{ bookmark_item.favicon_domain }}">{{ bookmark_item.favicon_domain }}</a>
+    </div>
+    {% elif col.key == 'tags' %}
+    <div class="cell cell-tags" style="grid-column: {{ forloop.counter|add:'1' }}" title="{% for tag in bookmark_item.tags %}#{{ tag.name }}{% if not forloop.last %} {% endif %}{% endfor %}">
+      <span class="tags">{% for tag in bookmark_item.tags %}<a href="{{ tag.query_string }}">{{ tag.name }}</a>{% endfor %}</span>
+    </div>
+    {% elif col.key == 'desc' %}
+    <div class="cell cell-desc" style="grid-column: {{ forloop.counter|add:'1' }}">
+      <div class="description inline" title="{{ bookmark_item.description }}">
+        <div class="description-container truncate">
+          {% if bookmark_item.description %}<span class="description-text">{{ bookmark_item.description }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% elif col.key == 'date' %}
+    <div class="cell cell-date" style="grid-column: {{ forloop.counter|add:'1' }}" title="{{ bookmark_item.display_date }}">{% include 'bookmarks/list/date_link.html' %}</div>
+    {% elif col.key == 'status' %}
+    {# 状态列：与书签工具栏同一批按钮、同一顺序（profile 的状态排序） #}
+    <div class="cell cell-status" style="grid-column: {{ forloop.counter|add:'1' }}">
+      {% if not bookmark_list.is_preview %}
+      <div class="status-buttons">{% include 'bookmarks/list/statuses.html' with hide_notes=True %}</div>
+      {% endif %}
+    </div>
+    {% elif col.key == 'highlights' %}
+    <div class="cell cell-highlights" style="grid-column: {{ forloop.counter|add:'1' }}"
+         title="{% translate 'Highlights' %}">
+      {% if bookmark_item.highlight_count %}<span class="count">{{ bookmark_item.highlight_count }}</span>{% endif %}
+    </div>
+    {% elif col.key == 'annotations' %}
+    <div class="cell cell-annotations" style="grid-column: {{ forloop.counter|add:'1' }}"
+         title="{% translate 'Annotations' %}">
+      {% if bookmark_item.annotation_note_count %}<span class="count">{{ bookmark_item.annotation_note_count }}</span>{% endif %}
+    </div>
+    {% elif col.key == 'author' %}
+    <div class="cell cell-author" style="grid-column: {{ forloop.counter|add:'1' }}">
+      {% if bookmark_item.author %}
+        <a href="?{% add_author_to_query bookmark_item.author %}" class="author"><span class="author-inner truncate">{{ bookmark_item.author }}</span></a>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endfor %}
+{% include 'bookmarks/list/actions.html' %}
+{# 固定操作入口：不占列、无边框、图标恒定（不随展开/固定旋转） #}
+<button type="button" class="row-ops-btn" aria-expanded="false"
+        title="{% translate 'Show actions' %}">
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="19" r="1.7" fill="currentColor"/></svg>
+</button>

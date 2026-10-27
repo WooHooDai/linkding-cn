@@ -3,6 +3,7 @@ import { getCSRFToken } from "../utils/csrf.js";
 import { gettext } from "../utils/i18n.js";
 import { showToast } from "./toast.js";
 import { applyToolbarAutoHide } from "./toolbar-auto-hide.js";
+import { saveColumnsFromPanel } from "./bookmark-table.js";
 
 async function savePref(url, field, value, { appendEmpty = true } = {}) {
   const body = new FormData();
@@ -145,6 +146,15 @@ class HeaderMoreMenu extends Behavior {
   }
 
   async onPrefChange(event) {
+    // 表格列显隐：整组勾选打包成一个 JSON 字段保存，不走单字段通道。
+    // 只收集触发变化的面板——宽屏布局菜单与窄屏更多菜单各渲染一份，跨面板合并会用旧状态顶回去。
+    const tableCol = event.target.closest("[data-table-col]");
+    if (tableCol) {
+      if (!event.target.disabled) {
+        saveColumnsFromPanel(tableCol.closest("[data-table-columns]"));
+      }
+      return;
+    }
     const input = event.target.closest("[data-pref]");
     if (!input) return;
     const field = input.dataset.pref;

@@ -326,6 +326,8 @@
   overscroll-behavior: contain;
   padding: var(--unit-2) 0;
   flex-direction: column;
+  /* 高于行内编辑元素/遮罩（--zindex-4）：笔记展开或编辑时布局菜单不能被盖住 */
+  z-index: calc(var(--zindex-4) + 10);
 }
 
 .dropdown.active .menu.header-more-panel {
@@ -383,6 +385,45 @@
   padding-block: 0;
   line-height: var(--control-size-sm);
   justify-self: end;
+}
+
+/* 表格视图列配置 */
+.header-table-col-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--unit-1) var(--unit-3);
+  padding: var(--unit-1) var(--unit-4) var(--unit-2);
+}
+
+.header-table-col {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--unit-1);
+  font-size: var(--font-size-sm);
+  color: var(--text-color);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.header-table-col input {
+  margin: 0;
+  accent-color: var(--primary-color);
+}
+
+.header-table-col input:disabled {
+  cursor: default;
+}
+
+.header-table-col input:disabled ~ span {
+  color: var(--tertiary-text-color);
+}
+
+.header-table-hint {
+  margin: 0;
+  padding: 0 var(--unit-4);
+  font-size: 11px;
+  color: var(--tertiary-text-color);
+  line-height: 1.5;
 }
 
 .header-action-btn {
@@ -468,10 +509,6 @@ ul.bookmark-list {
 
   /* Increase line-height for better separation within / between items */
   line-height: 1.1rem;
-}
-
-#bookmark-list-container {
-  margin-top: var(--unit-4);
 }
 
 @keyframes appear {
@@ -576,11 +613,18 @@ li[ld-bookmark-item] {
     font: inherit;
     font-weight: var(--bookmark-title-weight);
     color: inherit;
-    border: 1px solid var(--primary-color);
+    border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     padding: 2px 4px;
     background: var(--body-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     outline: none;
+  }
+
+  & .title .quick-edit-title-input:focus {
+    border-color: var(--primary-color);
+    outline: var(--focus-outline);
+    outline-offset: calc(var(--focus-outline-offset) * -1);
   }
 
   & .title .favicon-link {
@@ -735,11 +779,18 @@ li[ld-bookmark-item] {
     max-width: 100%;
     font: inherit;
     color: inherit;
-    border: 1px solid var(--primary-color);
+    border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     padding: 2px 4px;
     background: var(--body-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     outline: none;
+  }
+
+  & .title .quick-edit-author-input:focus {
+    border-color: var(--primary-color);
+    outline: var(--focus-outline);
+    outline-offset: calc(var(--focus-outline-offset) * -1);
   }
 
   & .description .quick-edit-description-textarea {
@@ -747,9 +798,10 @@ li[ld-bookmark-item] {
     max-height: 300px;
     padding: var(--unit-1) var(--unit-2);
     margin: 0;
-    border: 1px solid var(--primary-color);
+    border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     background: var(--body-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     color: inherit;
     font-family: inherit;
     font-size: inherit;
@@ -776,6 +828,13 @@ li[ld-bookmark-item] {
     &:focus::-webkit-scrollbar-thumb {
       background: var(--secondary-border-color);
     }
+  }
+
+  /* 聚焦态与标签输入框一致 */
+  & .description .quick-edit-description-textarea:focus {
+    border-color: var(--primary-color);
+    outline: var(--focus-outline);
+    outline-offset: calc(var(--focus-outline-offset) * -1);
   }
 
   & .description .separate{
@@ -1076,8 +1135,7 @@ ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-statu
   }
 }
 
-/* Mobile + desktop: reveal when JS toggles .toolbar-visible */
-ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > *:not(.toolbar-date):not(.health-status) {
+/* Mobile + desktop: reveal when JS toggles .toolbar-visible */ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > *:not(.toolbar-date):not(.health-status) {
   max-height: none;
   overflow: visible;
   opacity: 1;
@@ -1784,6 +1842,12 @@ ul.bookmark-list {
     &:focus::-webkit-scrollbar-thumb {
       background: var(--secondary-border-color);
     }
+  }
+
+  & .inline-edit .inline-edit-textarea:focus {
+    border-color: var(--primary-color);
+    outline: var(--focus-outline);
+    outline-offset: calc(var(--focus-outline-offset) * -1);
   }
 
   & li.show-notes .inline-edit {
@@ -2841,6 +2905,12 @@ ul.bookmark-list.view-compact li:not(.show-notes) .inline-edit-notes {
   display: none;
 }
 
+/* e 键切换：笔记只在 hover 行时显示（常驻会撑破紧凑单行） */
+ul.bookmark-list.view-compact.notes-hover li[ld-bookmark-item]:hover .inline-edit-notes,
+ul.bookmark-list.view-compact.notes-hover li[ld-bookmark-item].toolbar-visible .inline-edit-notes {
+  display: block;
+}
+
 /* 桌面 hover 或触屏点行展开：描述与动作按 list 原生样式显示，
    笔记仍由 .show-notes 控制，不强制展开。 */
 ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible {
@@ -2878,6 +2948,40 @@ ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .actions {
   ul.bookmark-list.view-compact li[ld-bookmark-item]:hover .actions {
     display: flex;
   }
+}
+
+/* 编辑态：鼠标移开也要保持展开，否则描述/动作被 display:none 收起，
+   编辑器随之隐藏并触发 blur，编辑会被强行中断 */
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.description.is-editing-description),
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-tags-container),
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-title-input),
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-author-input),
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.inline-edit-notes[style*="block"]) {
+  align-items: flex-start;
+}
+
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.description.is-editing-description) .content,
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-tags-container) .content,
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-title-input) .content,
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-author-input) .content {
+  display: block;
+}
+
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.description.is-editing-description) .description,
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.description.is-editing-description) .actions,
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-tags-container) .description,
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-tags-container) .actions,
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-title-input) .description,
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-title-input) .actions,
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-author-input) .description,
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-author-input) .actions {
+  display: revert;
+}
+
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-tags-container) .actions,
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-title-input) .actions,
+ul.bookmark-list.view-compact li[ld-bookmark-item]:has(.quick-edit-author-input) .actions {
+  display: flex;
 }
 
 /* 窄屏紧凑展开态：保持“同行”单行，不改容器结构（避免破坏描述点击展开测量

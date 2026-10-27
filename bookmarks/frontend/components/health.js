@@ -42,7 +42,8 @@ export function attachHealthPopover(host) {
     } else {
       popover.style.left = "";
     }
-    popover.style.top = overflowBottom > 0 ? `${-(rect.bottom - (vh - margin))}px` : "";
+    popover.style.top =
+      overflowBottom > 0 ? `${-(rect.bottom - (vh - margin))}px` : "";
   };
 
   const close = () => {
@@ -130,14 +131,6 @@ export function attachHealthRefresh(host) {
     return { destroy() {} };
   }
 
-  const setRow = (selector, value) => {
-    const row = popover.querySelector(selector);
-    if (row) {
-      row.textContent = value;
-      row.hidden = !value;
-    }
-  };
-
   const onClick = async (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -158,37 +151,12 @@ export function attachHealthRefresh(host) {
         throw new Error(`check failed: ${response.status}`);
       }
       const data = await response.json();
-
-      // ok 也显示指示器：重检后不再隐藏宿主，统一走就地更新
-      // skipped（L1+L2 关）→ status 为 null，按未检查派生 unknown 显示
-      const status = data.status || "unknown";
-      const statusDisplay = data.status_display || "Unknown";
-
-      // dot 状态色（重检后结果总是新鲜的，先移除旧状态/stale class 再添加新状态）
-      if (dot) {
-        dot.classList.remove(
-          ...Array.from(dot.classList).filter((c) => c.startsWith("health-dot--")),
-        );
-        dot.classList.add(`health-dot--${status}`);
-      }
-      // 状态文字
-      if (text) {
-        text.textContent = statusDisplay;
-      }
-      // popover 详情
-      const statusEl = popover.querySelector(".health-popover-status");
-      if (statusEl) {
-        statusEl.textContent = statusDisplay;
-      }
-      // 移除过期区块（重检后结果总是新鲜的）
-      popover.querySelectorAll(
-        ".health-popover-divider, .health-popover-section-title, .health-popover-row-status",
-      ).forEach((el) => el.remove());
-      setRow(".health-popover-row-http", data.http_status ? `HTTP ${data.http_status}` : "");
-      setRow(".health-popover-reason", data.reason ?? "");
-      setRow(
-        ".health-popover-checked",
-        data.checked_at_display ? `${data.checked_at_label ?? ""} ${data.checked_at_display}` : "",
+      applyHealthResult(host, data);
+      // 同一条书签在别处还有指示器（状态列 / 工具栏），统一广播结果
+      document.dispatchEvent(
+        new CustomEvent(HEALTH_CHECKED_EVENT, {
+          detail: { bookmarkId: bookmarkIdOf(host), data, origin: host },
+        }),
       );
     } catch (error) {
       // 保留按钮原样，避免图标消失
@@ -208,6 +176,62 @@ export function attachHealthRefresh(host) {
   };
 }
 
+/** 一次健康检查的结果需要在同一书签的所有指示器之间共享 */
+const HEALTH_CHECKED_EVENT = "ld:health-checked";
+
+function bookmarkIdOf(host) {
+  return host.closest("li[data-bookmark-id]")?.dataset.bookmarkId || null;
+}
+
+/**
+ * 把一次检查结果写进指示器：圆点状态、文字、popover 明细。
+ * 刷新与广播（另一处指示器同步）共用这一段。
+ */
+export function applyHealthResult(host, data) {
+  const popover = host.querySelector(".health-popover");
+  const dot = host.querySelector(".health-dot");
+  const text = host.querySelector(".health-text");
+  if (!popover) return;
+
+  // 重检后结果总是新鲜的；skipped（L1+L2 关）→ status 为 null，按未检查显示
+  const status = data.status || "unknown";
+  const statusDisplay = data.status_display || "Unknown";
+
+  if (dot) {
+    dot.classList.remove(
+      ...Array.from(dot.classList).filter((c) => c.startsWith("health-dot--")),
+    );
+    dot.classList.add(`health-dot--${status}`);
+  }
+  if (text) text.textContent = statusDisplay;
+
+  const statusEl = popover.querySelector(".health-popover-status");
+  if (statusEl) statusEl.textContent = statusDisplay;
+
+  popover
+    .querySelectorAll(
+      ".health-popover-divider, .health-popover-section-title, .health-popover-row-status",
+    )
+    .forEach((el) => el.remove());
+
+  const setRow = (selector, value) => {
+    const row = popover.querySelector(selector);
+    if (!row) return;
+    row.textContent = value;
+    row.hidden = !value;
+  };
+  setRow(
+    ".health-popover-row-http",
+    data.http_status ? `HTTP ${data.http_status}` : "",
+  );
+  setRow(".health-popover-reason", data.reason ?? "");
+  setRow(
+    ".health-popover-checked",
+    data.checked_at_display
+      ? `${data.checked_at_label ?? ""} ${data.checked_at_display}`
+      : "",
+  );
+}
 
 /**
  * 书签列表工具栏的健康状态指示器。
@@ -216,9 +240,22 @@ class HealthIndicator extends HeadlessElement {
   init() {
     this._popoverCleanup = attachHealthPopover(this);
     this._refreshCleanup = attachHealthRefresh(this);
+
+    // 另一处指示器重检完成后同步过来（同一书签）
+    this._onHealthChecked = (event) => {
+      const { bookmarkId, data, origin } = event.detail || {};
+      if (origin === this || !bookmarkId) return;
+      if (bookmarkIdOf(this) !== bookmarkId) return;
+      applyHealthResult(this, data);
+    };
+    document.addEventListener(HEALTH_CHECKED_EVENT, this._onHealthChecked);
   }
 
   disconnectedCallback() {
+    if (this._onHealthChecked) {
+      document.removeEventListener(HEALTH_CHECKED_EVENT, this._onHealthChecked);
+      this._onHealthChecked = null;
+    }
     if (this._popoverCleanup) {
       this._popoverCleanup.destroy();
       this._popoverCleanup = null;
@@ -250,7 +287,9 @@ class HealthFilterBehavior extends Behavior {
     this.statusCheckboxes = form
       ? form.querySelectorAll('input[name="health_status"]:not([value="all"])')
       : [];
-    this.allCheckbox = this.element.querySelector('input[name="health_status"][value="all"]');
+    this.allCheckbox = this.element.querySelector(
+      'input[name="health_status"][value="all"]',
+    );
 
     if (this.allCheckbox) {
       this.allCheckbox.addEventListener("change", this.onAllChange);

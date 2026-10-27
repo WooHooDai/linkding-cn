@@ -3,15 +3,54 @@
   {% include 'bookmarks/empty_bookmarks.html' %}
 {% else %}
   <section aria-label="{% translate 'Bookmark list' %}">
-    <ul class="bookmark-list{% if bookmark_list.toolbar_auto_hide %} toolbar-auto-hide{% endif %}{% if bookmark_list.view_mode == 'compact' %} view-compact{% endif %}"
+    {% if bookmark_list.view_mode == 'table' %}
+    {# 表格工具条：列显隐 + 编辑模式开关。data-header-prefs 复用面板保存行为（局部提交 bookmark_table_columns）。 #}
+    <div class="table-toolbar" data-header-prefs data-save-url="{% url 'linkding:settings.save' %}">
+      <div class="header-table-col-list" data-table-columns>
+        {% for choice in request.user_profile.get_bookmark_table_column_choices %}
+        <label class="header-table-col">
+          <input type="checkbox" data-table-col="{{ choice.key }}"
+                 {% if choice.on %}checked{% endif %} {% if choice.fixed %}disabled{% endif %}>
+          <span>{{ choice.label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <div class="field-errors" data-field-error-for="bookmark_table_columns"></div>
+    </div>
+    {% endif %}
+    <ul class="bookmark-list{% if bookmark_list.toolbar_auto_hide %} toolbar-auto-hide{% endif %}{% if bookmark_list.view_mode == 'compact' %} view-compact{% endif %}{% if bookmark_list.view_mode == 'table' %} view-table{% endif %}"
         role="list" tabindex="-1"
-        style="--ld-bookmark-description-max-lines:{{ bookmark_list.description_max_lines }};"
+        {% if bookmark_list.view_mode == 'table' %}ld-bookmark-table data-table-config="{{ bookmark_list.table_config }}"{% endif %}
+        style="{% if bookmark_list.view_mode == 'table' %}--ld-table-cols: {% for c in bookmark_list.table_columns %}minmax(0, {{ c.w }}fr){% if not forloop.last %} {% endif %}{% endfor %};{% endif %}--ld-bookmark-description-max-lines:{{ bookmark_list.description_max_lines }};"
         data-bookmarks-total="{{ bookmark_list.bookmarks_total }}"
         data-notes-global="{{ bookmark_list.show_notes|yesno:'true,false,false' }}">
       {% for bookmark_item in bookmark_list.items %}
+        {% if bookmark_list.view_mode == 'table' and forloop.first %}
+        <li class="table-header" role="row">
+          <div class="cell cell-check"></div>
+          {% for col in bookmark_list.table_columns %}
+          <div class="cell th{% if col.sortable %} sortable{% endif %}" data-key="{{ col.key }}" draggable="true"
+               title="{% translate 'Drag to reorder columns' %}">
+            {% if col.sortable %}
+            <a class="th-link" href="?{{ col.sort_url }}" data-turbo-action="replace" draggable="false"
+               title="{% translate 'Click to sort' %}">
+              <span class="th-label">{{ col.label }}</span>
+              <svg class="sort-arrow{% if col.sort_dir %} active{% endif %}{% if col.sort_dir == 'asc' %} asc{% endif %}"
+                   xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24"
+                   fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                   aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </a>
+            {% else %}
+            <span class="th-label">{{ col.label }}</span>
+            {% endif %}
+            <span class="col-rz" data-col="{{ col.key }}" title="{% translate 'Drag to resize column' %}"></span>
+          </div>
+          {% endfor %}
+        </li>
+        {% endif %}
         {% if bookmark_list.group_by_date %}
           {% ifchanged bookmark_item.group_key %}
-          <li class="group-header" data-group-key="{{ bookmark_item.group_key }}" role="listitem">
+          <li class="group-header{% if bookmark_list.view_mode == 'table' %} table-group-header{% endif %}" data-group-key="{{ bookmark_item.group_key }}" role="listitem">
             <label class="form-checkbox bulk-group-checkbox" aria-label="{% translate 'Select group' %}">
               <input type="checkbox">
               <i class="form-icon"></i>
@@ -36,7 +75,9 @@
         <li ld-bookmark-item data-bookmark-id="{{ bookmark_item.id }}" role="listitem"
             data-notes-enabled="{{ bookmark_list.show_notes|yesno:'true,false,false' }}"
             class="{% if bookmark_item.css_classes %}{{ bookmark_item.css_classes }}{% endif %}{% if bookmark_list.show_notes %} show-notes{% endif %}">
-          {% if bookmark_list.view_mode == 'compact' %}
+          {% if bookmark_list.view_mode == 'table' %}
+            {% include 'bookmarks/list/table_row.html' %}
+          {% elif bookmark_list.view_mode == 'compact' %}
             {% include 'bookmarks/list/compact_row.html' %}
           {% else %}
           <div class="content">

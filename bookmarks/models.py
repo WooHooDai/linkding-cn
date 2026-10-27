@@ -441,6 +441,10 @@ class BookmarkSearch:
     SORT_MODIFIED_DESC = "modified_desc"
     SORT_TITLE_ASC = "title_asc"
     SORT_TITLE_DESC = "title_desc"
+    SORT_HIGHLIGHTS_ASC = "highlights_asc"
+    SORT_HIGHLIGHTS_DESC = "highlights_desc"
+    SORT_ANNOTATIONS_ASC = "annotations_asc"
+    SORT_ANNOTATIONS_DESC = "annotations_desc"
     SORT_RANDOM = "random"
     SORT_DELETED_ASC = "deleted_asc"
     SORT_DELETED_DESC = "deleted_desc"
@@ -833,6 +837,10 @@ class BookmarkSearchForm(forms.Form):
         (BookmarkSearch.SORT_MODIFIED_DESC, _("Modified ↓")),
         (BookmarkSearch.SORT_TITLE_ASC, _("Title ↑")),
         (BookmarkSearch.SORT_TITLE_DESC, _("Title ↓")),
+        (BookmarkSearch.SORT_HIGHLIGHTS_DESC, _("Highlights ↓")),
+        (BookmarkSearch.SORT_HIGHLIGHTS_ASC, _("Highlights ↑")),
+        (BookmarkSearch.SORT_ANNOTATIONS_DESC, _("Annotations ↓")),
+        (BookmarkSearch.SORT_ANNOTATIONS_ASC, _("Annotations ↑")),
         (BookmarkSearch.SORT_RANDOM, _("Random")),
     ]
     FILTER_SHARED_CHOICES = [
@@ -1012,9 +1020,35 @@ class UserProfile(models.Model):
     ]
     BOOKMARK_VIEW_MODE_LIST = "list"
     BOOKMARK_VIEW_MODE_COMPACT = "compact"
+    BOOKMARK_VIEW_MODE_TABLE = "table"
     BOOKMARK_VIEW_MODE_CHOICES = [
         (BOOKMARK_VIEW_MODE_LIST, _("Default")),
         (BOOKMARK_VIEW_MODE_COMPACT, _("Compact")),
+        (BOOKMARK_VIEW_MODE_TABLE, _("Table")),
+    ]
+    # 表格视图可用列。status 聚合书签工具栏的三个状态按钮（顺序跟随工具栏配置），
+    # 默认不展示；覆盖率高的 title/domain/tags/desc/date 构成默认列。
+    BOOKMARK_TABLE_COLUMN_KEYS = (
+        "title",
+        "author",
+        "date",
+        "tags",
+        "desc",
+        "notes",
+        "status",
+        "domain",
+        "highlights",
+        "annotations",
+    )
+    # 默认展示（顺序与上面一致，只是不含 domain）
+    BOOKMARK_TABLE_DEFAULT_COLUMNS = [
+        {"key": "title", "w": 2.4},
+        {"key": "author", "w": 1.1},
+        {"key": "date", "w": 0.9},
+        {"key": "tags", "w": 1.2},
+        {"key": "desc", "w": 2.2},
+        {"key": "notes", "w": 1.6},
+        {"key": "status", "w": 1.1},
     ]
     BOOKMARK_LINK_TARGET_BLANK = "_blank"
     BOOKMARK_LINK_TARGET_SELF = "_self"
@@ -1240,6 +1274,9 @@ class UserProfile(models.Model):
         blank=False,
         default=BOOKMARK_VIEW_MODE_LIST,
     )
+    # 表格视图列配置：[{"key": "title", "w": 2.4}, ...]，数组序即列序。
+    # w 存 fr 比例而非 px——窄屏等比压缩不溢出；空列表 = 使用默认列。显示/隐藏与顺序共用同一数组。
+    bookmark_table_columns = models.JSONField(default=list, blank=True)
     # 按日期分组显示（今天 / 昨天 / 本周 / 更早），与视图模式正交可叠加
     group_by_date = models.BooleanField(default=True, null=False)
     bookmark_link_target = models.CharField(
@@ -1566,6 +1603,97 @@ class UserProfile(models.Model):
             self.sidebar_modules,
             bundles_enabled=not self.hide_bundles,
         )
+
+    BOOKMARK_TABLE_COLUMN_LABELS = {
+        "title": _("Title"),
+        "author": _("Author"),
+        "tags": _("Tags"),
+        "desc": _("Description"),
+        "notes": _("Notes"),
+        "date": _("Date"),
+        "status": _("Status"),
+        "domain": _("Domain"),
+        "highlights": _("Highlights"),
+        "annotations": _("Annotations"),
+
+    }
+
+    def get_bookmark_table_columns(self) -> list[dict]:
+        """把列配置解析成模板可直接消费的结构。
+        配置里 on=False 的列保留在存储中但不渲染；服务端重新校验脏数据
+        （profile 可能经 API 写入）；title 列是行选择与悬停操作的锚点，强制渲染。"""
+        raw = self.bookmark_table_columns or self.BOOKMARK_TABLE_DEFAULT_COLUMNS
+        columns, seen = [], set()
+        for entry in raw:
+            key = entry.get("key") if isinstance(entry, dict) else None
+            if key not in self.BOOKMARK_TABLE_COLUMN_KEYS or key in seen:
+                continue
+            seen.add(key)
+            if entry.get("on", True) is False:
+                continue
+            try:
+                w = max(0.35, min(8.0, float(entry.get("w", 1))))
+            except (TypeError, ValueError):
+                w = 1.0
+            columns.append(
+                {
+                    "key": key,
+                    "label": str(self.BOOKMARK_TABLE_COLUMN_LABELS[key]),
+                    "w": round(w, 2),
+                    "sortable": key in ("title", "date", "highlights", "annotations"),
+                }
+            )
+        if "title" not in [c["key"] for c in columns]:
+            columns.insert(
+                0,
+                {
+                    "key": "title",
+                    "label": str(self.BOOKMARK_TABLE_COLUMN_LABELS["title"]),
+                    "w": self.BOOKMARK_TABLE_DEFAULT_COLUMNS[0]["w"],
+                    "sortable": True,
+                },
+            )
+        return columns
+
+    def get_bookmark_table_column_choices(self) -> list[dict]:
+        """偏好面板用：全部列 + 当前是否展示（title 恒为 on）。"""
+        visible = {c["key"] for c in self.get_bookmark_table_columns()}
+        return [
+            {
+                "key": key,
+                "label": str(self.BOOKMARK_TABLE_COLUMN_LABELS[key]),
+                "on": key in visible or key == "title",
+                "fixed": key == "title",
+            }
+            for key in self.BOOKMARK_TABLE_COLUMN_KEYS
+        ]
+
+    def get_bookmark_table_config(self) -> list[dict]:
+        """前端往返用的完整配置：全部列带 on 标志，可见列按展示序在前。
+        on 语义由 get_bookmark_table_columns 消费，缺省视为展示。"""
+        config, seen = [], set()
+        for entry in self.bookmark_table_columns or []:
+            key = entry.get("key") if isinstance(entry, dict) else None
+            if key not in self.BOOKMARK_TABLE_COLUMN_KEYS or key in seen:
+                continue
+            seen.add(key)
+            try:
+                w = max(0.35, min(8.0, float(entry.get("w", 1))))
+            except (TypeError, ValueError):
+                w = 1.0
+            config.append({"key": key, "w": round(w, 2), "on": entry.get("on", True) is not False})
+        for key in self.BOOKMARK_TABLE_DEFAULT_COLUMNS:
+            if key["key"] not in seen:
+                seen.add(key["key"])
+                config.append({"key": key["key"], "w": key["w"], "on": True})
+        for key in self.BOOKMARK_TABLE_COLUMN_KEYS:
+            if key not in seen:
+                config.append({"key": key, "w": 1.0, "on": False})
+        if not any(c["key"] == "title" and c["on"] for c in config):
+            config.insert(0, {"key": "title", "w": self.BOOKMARK_TABLE_DEFAULT_COLUMNS[0]["w"], "on": True})
+        return config
+
+
 
     def get_sidebar_module_items(self) -> list[dict]:
         return [
@@ -1907,6 +2035,42 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
     bookmark_quick_tags = forms.CharField(required=False)
     bookmark_toolbar_modules = forms.CharField()
 
+    bookmark_table_columns = forms.JSONField(required=False)
+
+    def clean_bookmark_table_columns(self):
+        value = self.cleaned_data.get("bookmark_table_columns")
+        if value in (None, "", []):
+            return []
+        # 硬上限只防滥用；列池里已下架的键（如被移除的列）在此静默丢弃，
+        # 否则旧版本存下的配置会让之后所有列设置保存 422
+        if not isinstance(value, list) or len(value) > 64:
+            raise forms.ValidationError(_("Invalid table column configuration."))
+        cleaned = []
+        seen = set()
+        for entry in value:
+            if not isinstance(entry, dict) or entry.get("key") not in UserProfile.BOOKMARK_TABLE_COLUMN_KEYS:
+                continue
+            if entry["key"] in seen:
+                continue
+            seen.add(entry["key"])
+            try:
+                w = max(0.35, min(8.0, float(entry.get("w", 1))))
+            except (TypeError, ValueError):
+                w = 1.0
+            cleaned.append(
+                {
+                    "key": entry["key"],
+                    "w": round(w, 2),
+                    "on": entry.get("on", True) is not False
+                    or entry["key"] == "actions",
+                }
+            )
+        if not any(c["key"] == "title" for c in cleaned):
+            # 标题列是行选择与悬停操作的锚点，不可移除
+            cleaned.insert(0, {"key": "title", "w": UserProfile.BOOKMARK_TABLE_DEFAULT_COLUMNS[0]["w"]})
+        return cleaned
+
+
     class Meta:
         model = UserProfile
         fields = [
@@ -1934,6 +2098,7 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
             "enable_preview_images",
             "enable_preview_image_placeholders",
             "enable_automatic_html_snapshots",
+            "bookmark_table_columns",
             "items_per_page",
             "highlights_per_page",
             "highlights_sticky_header_controls",

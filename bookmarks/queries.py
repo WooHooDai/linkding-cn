@@ -747,6 +747,32 @@ def _base_bookmarks_query(
             query_set = query_set.order_by("date_added")
         elif search.sort == BookmarkSearch.SORT_ADDED_DESC:
             query_set = query_set.order_by("-date_added")
+        elif search.sort in (
+            BookmarkSearch.SORT_HIGHLIGHTS_ASC,
+            BookmarkSearch.SORT_HIGHLIGHTS_DESC,
+        ):
+            query_set = query_set.annotate(
+                _highlight_count=Count("annotations", distinct=True)
+            ).order_by(
+                "_highlight_count"
+                if search.sort == BookmarkSearch.SORT_HIGHLIGHTS_ASC
+                else "-_highlight_count"
+            )
+        elif search.sort in (
+            BookmarkSearch.SORT_ANNOTATIONS_ASC,
+            BookmarkSearch.SORT_ANNOTATIONS_DESC,
+        ):
+            query_set = query_set.annotate(
+                _annotation_count=Count(
+                    "annotations",
+                    filter=~Q(annotations__note_content=""),
+                    distinct=True,
+                )
+            ).order_by(
+                "_annotation_count"
+                if search.sort == BookmarkSearch.SORT_ANNOTATIONS_ASC
+                else "-_annotation_count"
+            )
         elif search.sort == BookmarkSearch.SORT_MODIFIED_ASC:
             query_set = query_set.order_by("date_modified")
         elif search.sort == BookmarkSearch.SORT_MODIFIED_DESC:

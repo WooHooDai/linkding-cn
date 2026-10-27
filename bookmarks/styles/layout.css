@@ -14,6 +14,18 @@ header {
   margin-top: 20px;
   margin-bottom: var(--unit-9);
 
+  /* 顶部导航贴近视口右缘，下拉一律右对齐展开，避免向右溢出屏幕 */
+  .dropdown .menu {
+    left: auto;
+    right: 0;
+  }
+
+  /* 隐藏的菜单项（版本更新占位）不得让后继项吃到 .menu-item + .menu-item 的 margin-top，
+     否则设置菜单首项比书签菜单首项多 4px 顶距 */
+  .menu .menu-item[style*="display:none"] + .menu-item {
+    margin-top: 0;
+  }
+
   a.app-link:hover {
     text-decoration: none;
   }

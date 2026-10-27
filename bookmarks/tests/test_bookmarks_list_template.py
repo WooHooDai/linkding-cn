@@ -1583,3 +1583,126 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
                 datetime.datetime.combine(month_first, datetime.time.min)
             )
             self.assertEqual(_bookmark_group_key(month_first_dt), "this_month")
+
+
+class BookmarkTableViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
+    # 复用列表模板的渲染辅助，但不继承其测试用例（那些断言的是 list/compact 标记）
+    render_template = BookmarkListTemplateTest.render_template
+
+    def setUp(self):
+        profile = self.get_or_create_test_user().profile
+        profile.bookmark_view_mode = UserProfile.BOOKMARK_VIEW_MODE_TABLE
+        profile.save()
+
+    def test_table_view_renders_header_and_rows(self):
+        bookmark = self.setup_bookmark(
+            description="Some description", tags=[self.setup_tag()]
+        )
+        html = self.render_template()
+        soup = self.make_soup(html)
+
+        ul = soup.select_one("ul.bookmark-list.view-table")
+        self.assertIsNotNone(ul)
+        self.assertIn("view-table", ul.get("class", []))
+
+        header = ul.select_one("li.table-header")
+        self.assertIsNotNone(header)
+        labels = [
+            el.get_text(strip=True) for el in header.select(".th .th-label")
+        ]
+        self.assertEqual(
+            labels,
+            ["Title", "Author", "Date", "Tags", "Description", "Notes", "Status"],
+        )
+
+        row = ul.select_one("li[ld-bookmark-item]")
+        self.assertIsNotNone(row)
+        self.assertIn(bookmark.resolved_title, row.select_one(".cell-title").text)
+        self.assertIsNotNone(row.select_one(".cell-tags .tags a"))
+        self.assertIn("Some description", row.select_one(".cell-desc").text)
+        # state/health 不在默认列配置中
+        self.assertIsNone(row.select_one(".cell-state"))
+        self.assertIsNone(row.select_one(".cell-health"))
+
+    def test_table_view_date_grouping(self):
+        profile = self.get_or_create_test_user().profile
+        profile.group_by_date = True
+        profile.save()
+        self.setup_bookmark()
+        html = self.render_template()
+        soup = self.make_soup(html)
+        # 组头在表格内跨全行渲染，不再强制关闭
+        header = soup.select_one("ul.view-table li.group-header.table-group-header")
+        self.assertIsNotNone(header)
+
+    def test_table_view_sort_links(self):
+        self.setup_bookmark()
+        html = self.render_template(url="/bookmarks?sort=added_desc")
+        soup = self.make_soup(html)
+
+        # 当前按 added_desc 排序：date 列点击切到 asc，title 列默认 asc
+        date_link = soup.select_one('li.table-header .th[data-key="date"] a')
+        self.assertIn("sort=added_asc", date_link["href"])
+        title_link = soup.select_one('li.table-header .th[data-key="title"] a')
+        self.assertIn("sort=title_asc", title_link["href"])
+
+        html = self.render_template(url="/bookmarks?sort=title_asc")
+        soup = self.make_soup(html)
+        title_link = soup.select_one('li.table-header .th[data-key="title"] a')
+        self.assertIn("sort=title_desc", title_link["href"])
+
+    def test_table_view_sort_resets_page(self):
+        self.setup_bookmark()
+        html = self.render_template(url="/bookmarks?page=3")
+        soup = self.make_soup(html)
+        date_link = soup.select_one('li.table-header .th[data-key="date"] a')
+        self.assertNotIn("page=3", date_link["href"])
+
+    def test_table_view_column_config(self):
+        profile = self.get_or_create_test_user().profile
+        profile.bookmark_table_columns = [
+            {"key": "date", "w": 1},
+            {"key": "domain", "w": 1},
+            {"key": "bogus", "w": 1},
+        ]
+        profile.save()
+        self.setup_bookmark()
+
+        html = self.render_template()
+        soup = self.make_soup(html)
+        labels = [
+            el.get_text(strip=True)
+            for el in soup.select("li.table-header .th .th-label")
+        ]
+        # 非法 key 被丢弃；title 列被强制保留并排在最前
+        self.assertEqual(labels, ["Title", "Date", "Domain"])
+
+
+class BookmarkTableStatusColumnTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
+    """状态列：直接复用书签工具栏的状态按钮。"""
+
+    render_template = BookmarkListTemplateTest.render_template
+
+    def setUp(self):
+        profile = self.get_or_create_test_user().profile
+        profile.bookmark_view_mode = UserProfile.BOOKMARK_VIEW_MODE_TABLE
+        profile.bookmark_table_columns = [
+            {"key": "title", "w": 2.4, "on": True},
+            {"key": "status", "w": 1.4, "on": True},
+        ]
+        profile.save()
+
+    def test_status_cell_renders_toolbar_buttons(self):
+        self.setup_bookmark(unread=True)
+        soup = self.make_soup(self.render_template())
+        cell = soup.select_one("li[ld-bookmark-item] .cell-status")
+        self.assertIsNotNone(cell)
+        # 未读书签：工具栏的「标记为已读」按钮出现在状态列里
+        self.assertIsNotNone(cell.select_one('[data-action="mark_as_read"]'))
+
+    def test_read_bookmark_shows_mark_unread_button(self):
+        self.setup_bookmark(unread=False)
+        soup = self.make_soup(self.render_template())
+        cell = soup.select_one("li[ld-bookmark-item] .cell-status")
+        self.assertIsNotNone(cell)
+        self.assertIsNotNone(cell.select_one('[data-action="mark_as_unread"]'))

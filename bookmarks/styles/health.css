@@ -115,6 +115,51 @@
   word-break: break-word;
 }
 
+/* 鼠标从指示器移向弹层时，中间那段空白必须继续算作 hover 命中区，
+   否则还没碰到弹层就先断了 hover。只在悬浮/展开状态下存在，不会挡住别的点击。 */
+.health-status:hover::before,
+.health-status:focus::before,
+.health-status.health-popover-open::before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: -300px;
+  right: -300px;
+  height: 12px;
+}
+
+.health-status:hover::after,
+.health-status:focus::after,
+.health-status.health-popover-open::after {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: -300px;
+  right: -300px;
+  height: 12px;
+}
+
+/* 指示器与弹层之间留了 6px 视觉间隙，但那段空白也得算命中区，
+   否则鼠标移向弹层的一瞬间 hover 断开、弹层就收起来了 */
+.health-popover::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 10px;
+}
+
+/* 弹层向上展开时，间隙在下方 */
+.health-popover::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 10px;
+}
+
 .health-status:hover .health-popover,
 .health-status:focus .health-popover,
 .health-status.health-popover-open .health-popover {

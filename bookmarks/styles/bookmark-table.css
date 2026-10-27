@@ -1,0 +1,750 @@
+/* 表格视图：绑 ul.bookmark-list.view-table，样式不外溢。
+   列宽由 ul 上的两个变量驱动：
+   --ld-check-col  选择框列（批量模式 28px，平时 0）
+   --ld-table-cols 数据列（minmax(0, Nfr)…），JS 拖拽/拖序只改这一个变量。 */
+
+ul.bookmark-list.view-table {
+  --ld-check-col: 0px;
+  --ld-ops-col: 26px;
+  display: block;
+  border: 1px solid var(--secondary-border-color);
+  border-radius: var(--border-radius-lg, 8px);
+  /* clip 而非 hidden：hidden 会把 ul 变成滚动容器，粘性表头将按 ul 顶边 + top 偏移定位 */
+  overflow: clip;
+}
+
+.bookmarks-page.active ul.bookmark-list.view-table {
+  --ld-check-col: 28px;
+}
+
+/* ── 行骨架 ─────────────────────────────── */
+ul.bookmark-list.view-table > li.table-header,
+ul.bookmark-list.view-table > li[ld-bookmark-item],
+ul.bookmark-list.view-table > li.group-header.table-group-header {
+  display: grid;
+  grid-template-columns: var(--ld-check-col) var(--ld-table-cols);
+  grid-template-rows: minmax(0, 1fr);
+  /* 列表行的 flex gap 会泄漏进 grid，撑出列间 8px 缝、表头/数据错位 */
+  gap: 0;
+  align-items: center;
+  /* 右侧留出固定操作入口的槽位，避免覆盖最后一列内容 */
+  padding-right: var(--ld-ops-col);
+  height: 34px;
+  border-bottom: 1px solid var(--secondary-border-color);
+  position: relative;
+  margin: 0;
+}
+
+/* 日期分组头：横跨全部列 */
+ul.bookmark-list.view-table > li.group-header.table-group-header {
+  display: flex;
+  grid-column: 1 / -1;
+  height: 30px;
+  padding-right: 0;
+  background: var(--body-color-contrast);
+  font-size: 12px;
+  z-index: 11;
+}
+
+/* 组折叠（与列表视图共用 .group-hidden 机制） */
+ul.bookmark-list.view-table > li.group-hidden {
+  display: none;
+}
+
+ul.bookmark-list.view-table > li.group-header.table-group-header .group-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--unit-2);
+  width: 100%;
+  height: 100%;
+  padding: 0 var(--unit-4);
+  border: none;
+  background: none;
+  color: var(--secondary-text-color);
+  text-align: left;
+}
+
+ul.bookmark-list.view-table > li.group-header.table-group-header .group-title {
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+ul.bookmark-list.view-table > li:last-child {
+  border-bottom: 0;
+}
+
+/* 描述/笔记展开、标签换行时允许行随内容增高 */
+ul.bookmark-list.view-table > li[ld-bookmark-item]:has(.description-text.expanded),
+ul.bookmark-list.view-table > li[ld-bookmark-item]:has(.cell-tags.wrap),
+ul.bookmark-list.view-table > li[ld-bookmark-item]:has(.note-text.expanded) {
+  height: auto;
+  min-height: 34px;
+}
+
+/* ── 表头 ───────────────────────────────── */
+ul.bookmark-list.view-table > li.table-header {
+  position: sticky;
+  top: var(--ld-table-top, 0);
+  z-index: 10;
+  background: var(--body-color);
+  height: 32px;
+  grid-template-rows: 32px;
+  font-size: 12px;
+  color: var(--tertiary-text-color);
+}
+
+ul.bookmark-list.view-table .th {
+  display: flex;
+  align-items: center;
+  /* 表头与单元格统一靠左 */
+  justify-content: flex-start;
+  gap: var(--unit-1);
+  position: relative;
+  height: 100%;
+  min-width: 0;
+  cursor: grab;
+}
+
+ul.bookmark-list.view-table .th.dragging {
+  opacity: 0.45;
+}
+
+ul.bookmark-list.view-table .th.drag-over {
+  box-shadow: inset 2px 0 0 var(--primary-color);
+}
+
+ul.bookmark-list.view-table .th-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--unit-1);
+  color: inherit;
+  min-width: 0;
+  overflow: hidden;
+}
+
+ul.bookmark-list.view-table .th-link:hover {
+  color: var(--text-color);
+}
+
+ul.bookmark-list.view-table .th-link .th-label,
+ul.bookmark-list.view-table .th-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 可排序列常驻图标示意；排序生效时高亮 */
+ul.bookmark-list.view-table .sort-arrow {
+  flex: none;
+  opacity: 0.35;
+  color: var(--tertiary-text-color);
+  transform: rotate(180deg); /* 默认箭头朝上 = asc */
+}
+
+ul.bookmark-list.view-table .sort-arrow.active {
+  opacity: 1;
+  color: var(--primary-color);
+}
+
+ul.bookmark-list.view-table .sort-arrow.asc {
+  transform: rotate(0deg);
+}
+
+/* 列宽拖拽手柄：右边缘 7px 命中区；常驻 1px 竖线提示可拖宽 */
+ul.bookmark-list.view-table .col-rz {
+  position: absolute;
+  right: -3px;
+  top: 0;
+  width: 7px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 2;
+  touch-action: none;
+}
+
+ul.bookmark-list.view-table .col-rz::after {
+  content: "";
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  left: 3px;
+  width: 1px;
+  background: var(--secondary-border-color);
+}
+
+/* 最后一列的右缘紧邻操作入口槽，命中区收进列内，避免和按钮抢指针 */
+ul.bookmark-list.view-table .th:last-of-type .col-rz {
+  right: 0;
+  width: 5px;
+}
+
+ul.bookmark-list.view-table .th:last-of-type .col-rz::after {
+  left: 1px;
+}
+
+ul.bookmark-list.view-table .col-rz:hover::after,
+ul.bookmark-list.view-table .col-rz.dragging::after {
+  background: var(--primary-color);
+  width: 2px;
+  left: 2.5px;
+}
+
+/* 悬停/展开的整行要盖住后续行：否则操作栏里的健康弹层会被下一行单元格压住，
+   看起来像“透明底” */
+ul.bookmark-list.view-table > li[ld-bookmark-item]:hover,
+ul.bookmark-list.view-table > li[ld-bookmark-item].toolbar-visible,
+ul.bookmark-list.view-table > li[ld-bookmark-item]:has(.health-popover-open) {
+  z-index: 4;
+}
+
+/* ── 行悬停：主题适配的轻聚焦色 ── */
+ul.bookmark-list.view-table li[ld-bookmark-item]:hover {
+  /* 兜底：不支持 color-mix 的内核用主题对比色 */
+  background: var(--body-color-contrast);
+  /* 主色 7% 混入当前背景，明暗主题都成立 */
+  background: color-mix(in srgb, var(--primary-color) 7%, var(--body-color));
+}
+
+/* ── 单元格统一骨架 ──
+   flex + 垂直居中：行内元素前的模板缩进空白不再把内容推右，各列对齐由这里统一控制 */
+ul.bookmark-list.view-table .cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--unit-4);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: inherit;
+}
+
+ul.bookmark-list.view-table .cell > * {
+  min-width: 0;
+}
+
+/* 可交互格：撑满行高——align-items:center 会把无内容格压成 0 高导致整格不可点 */
+ul.bookmark-list.view-table .cell-tags,
+ul.bookmark-list.view-table .cell-desc,
+ul.bookmark-list.view-table .cell-notes,
+ul.bookmark-list.view-table .cell-status,
+ul.bookmark-list.view-table .cell-title,
+ul.bookmark-list.view-table .cell-author {
+  align-self: stretch;
+}
+
+ul.bookmark-list.view-table .cell-check {
+  /* 列宽只有 28px：16px 内边距 + 16px 复选框会被裁掉右侧，改为居中 */
+  justify-content: center;
+  padding: 0;
+}
+
+ul.bookmark-list.view-table .bulk-edit-checkbox input {
+  margin: 0;
+}
+
+/* ── 标题列 ─────────────────────────────── */
+ul.bookmark-list.view-table .cell-title {
+  gap: var(--unit-2);
+}
+
+ul.bookmark-list.view-table .cell-title .favicon-link {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+
+ul.bookmark-list.view-table .cell-title .favicon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+ul.bookmark-list.view-table .cell-title .title-link {
+  color: var(--text-color);
+  flex: 1;
+  min-width: 0;
+}
+
+ul.bookmark-list.view-table li[ld-bookmark-item]:hover .cell-title .title-link {
+  color: var(--link-color);
+}
+
+/* 未读：与列表视图一致的斜体表达 */
+ul.bookmark-list.view-table li.unread .cell-title .title-link {
+  font-style: italic;
+}
+
+/* ── 其他列 ─────────────────────────────── */
+ul.bookmark-list.view-table .cell-domain .domain-link,
+ul.bookmark-list.view-table .cell-date,
+ul.bookmark-list.view-table .cell-author .author {
+  color: var(--secondary-text-color);
+  font-size: 12.5px;
+}
+
+ul.bookmark-list.view-table .cell-domain .domain-link,
+ul.bookmark-list.view-table .cell-author .author {
+  flex: 1;
+}
+
+/* 域名链接在列表/域名菜单里自带内边距，表格里要去掉才能与表头左缘对齐 */
+ul.bookmark-list.view-table .cell-domain .domain-link {
+  padding: 0;
+}
+
+ul.bookmark-list.view-table .cell-date a.date-link-exists {
+  color: var(--success-color);
+}
+
+/* ── 高亮数 / 批注数：只显示数字，0 保持空白 ── */
+ul.bookmark-list.view-table .cell-highlights .count,
+ul.bookmark-list.view-table .cell-annotations .count {
+  color: var(--secondary-text-color);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 状态列：书签工具栏的三个状态按钮 ── */
+ul.bookmark-list.view-table .cell-status {
+  /* 列太窄时按钮裁在列内，不覆盖行尾操作按钮 */
+  overflow: hidden;
+}
+
+/* 表格里的健康弹层宽度按内容自适应（默认 12rem 下限太宽） */
+ul.bookmark-list.view-table .health-popover {
+  min-width: 0;
+}
+
+/* 健康弹层打开期间临时解除裁切（弹层已由 JS 收在表格范围内） */
+ul.bookmark-list.view-table .cell-status:has(.health-popover-open),
+ul.bookmark-list.view-table .cell-status:has(.health-status:hover),
+ul.bookmark-list.view-table .cell-status:has(.health-status:focus) {
+  overflow: visible;
+}
+
+/* 状态列在最右侧，弹层改为向左展开，避免右溢出被 ul 裁切 */
+ul.bookmark-list.view-table .cell-status .health-popover {
+  left: auto;
+  right: 0;
+}
+
+ul.bookmark-list.view-table .cell-status .status-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--unit-2);
+}
+
+ul.bookmark-list.view-table .cell-status .btn {
+  padding: 0;
+  margin: 0;
+  height: 20px;
+  min-width: 20px;
+  line-height: 20px;
+  color: var(--bookmark-actions-color);
+  --btn-icon-color: var(--bookmark-actions-color);
+  white-space: nowrap;
+}
+
+ul.bookmark-list.view-table .cell-status .btn:hover {
+  color: var(--bookmark-actions-color);
+  opacity: 0.75;
+}
+
+/* ── 笔记/描述 ── */
+ul.bookmark-list.view-table .cell-notes .note,
+ul.bookmark-list.view-table .cell-desc .description {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+ul.bookmark-list.view-table .cell-notes .note-container,
+ul.bookmark-list.view-table .cell-desc .description-container {
+  min-width: 0;
+}
+
+/* 展开态：换行展示完整内容（truncate 容器的 nowrap 由内层 span 覆盖） */
+ul.bookmark-list.view-table .cell-notes .note-text.expanded,
+ul.bookmark-list.view-table .cell-desc .description-text.expanded {
+  /* pre-wrap：既换行又保留原文换行符 */
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 同行已有展开项时，其余可截断列直接完整展示——行高已足够，无需二次点击 */
+ul.bookmark-list.view-table > li:has(.description-text.expanded) .note-text,
+ul.bookmark-list.view-table > li:has(.description-text.expanded) .tags,
+ul.bookmark-list.view-table > li:has(.note-text.expanded) .description-text,
+ul.bookmark-list.view-table > li:has(.note-text.expanded) .tags {
+  white-space: normal;
+}
+
+/* ── 标签 ── */
+ul.bookmark-list.view-table .cell-tags .tags {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+}
+
+/* 截断态右缘渐隐，提示后面还有标签（点击即展开） */
+ul.bookmark-list.view-table .cell-tags:not(.wrap) .tags {
+  mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent);
+}
+
+ul.bookmark-list.view-table .cell-tags.wrap {
+  white-space: normal;
+}
+
+ul.bookmark-list.view-table .cell-tags.wrap .tags {
+  overflow: visible;
+  mask-image: none;
+  white-space: normal;
+}
+
+ul.bookmark-list.view-table .cell-tags.wrap .tags a {
+  white-space: nowrap;
+  margin-bottom: var(--unit-1);
+}
+
+ul.bookmark-list.view-table .cell-tags .tags a {
+  display: inline-block;
+  /* 高度随内容：固定高度 + 行盒 1.1rem 会被 overflow:hidden 裁掉下半 */
+  line-height: 15px;
+  padding: 1px var(--unit-2);
+  margin-right: var(--unit-1);
+  border: 1px solid var(--secondary-border-color);
+  border-radius: 4px;
+  background: var(--body-color);
+  color: var(--secondary-text-color);
+  font-size: 11px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+ul.bookmark-list.view-table .cell-tags .tags a:hover {
+  color: var(--link-color);
+  border-color: var(--primary-color);
+}
+
+/* ── 单元格内编辑器 ──
+   绝对定位覆盖所在单元格：不参与 grid 轨道计算，行高不会塌陷/爆炸；
+   多行编辑器向下溢出，因此编辑时放开格子的 overflow */
+ul.bookmark-list.view-table .cell.is-editing {
+  overflow: visible;
+  z-index: 20;
+}
+
+ul.bookmark-list.view-table .cell.is-editing > *:not(.table-cell-editor) {
+  visibility: hidden;
+}
+
+ul.bookmark-list.view-table .table-cell-editor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  box-sizing: border-box;
+  width: auto;
+  min-height: 26px;
+  margin: 0;
+  /* 与标签编辑器一致：1px 边框 + 轻阴影、同样的内边距，聚焦时边框转主色 */
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--body-color);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  color: inherit;
+  font: inherit;
+  outline: none;
+  z-index: 21;
+}
+
+/* 聚焦态与标签输入框一致：1px 主色边框 + 2px 内描边（--focus-outline） */
+ul.bookmark-list.view-table .table-cell-editor:focus {
+  border-color: var(--primary-color);
+  outline: var(--focus-outline);
+  outline-offset: calc(var(--focus-outline-offset) * -1);
+}
+
+/* 单行编辑器正好占满行高（标题/作者） */
+ul.bookmark-list.view-table .cell-title .table-cell-editor,
+ul.bookmark-list.view-table .cell-author .table-cell-editor {
+  bottom: 0;
+  height: auto;
+}
+
+ul.bookmark-list.view-table textarea.table-cell-editor {
+  min-height: 34px;
+  max-height: 240px;
+  overflow-y: auto;
+  resize: none;
+  white-space: pre-wrap;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  scrollbar-color: transparent transparent;
+}
+
+ul.bookmark-list.view-table textarea.table-cell-editor::-webkit-scrollbar {
+  width: 8px;
+}
+
+ul.bookmark-list.view-table textarea.table-cell-editor::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+}
+
+ul.bookmark-list.view-table textarea.table-cell-editor:hover,
+ul.bookmark-list.view-table textarea.table-cell-editor:focus {
+  scrollbar-color: var(--secondary-text-color) transparent;
+}
+
+ul.bookmark-list.view-table textarea.table-cell-editor:hover::-webkit-scrollbar-thumb,
+ul.bookmark-list.view-table textarea.table-cell-editor:focus::-webkit-scrollbar-thumb {
+  background: var(--secondary-border-color);
+}
+
+/* 标签编辑器在表格行内：补全菜单需要溢出显示 */
+ul.bookmark-list.view-table .cell-tags:has(.quick-edit-tags-container) {
+  overflow: visible;
+  z-index: 20;
+}
+
+ul.bookmark-list.view-table .cell-tags .quick-edit-tags-container {
+  display: block;
+  /* 不受标签列宽限制：屏幕够宽时给足编辑空间（flex 子项不许被压缩） */
+  flex: none;
+  width: min(420px, calc(100vw - 48px));
+  max-width: none;
+}
+
+ul.bookmark-list.view-table .cell-tags .quick-edit-tags-container .form-autocomplete,
+ul.bookmark-list.view-table .cell-tags .quick-edit-tags-container .form-autocomplete-input {
+  width: 100%;
+}
+
+/* ── 悬停操作栏：复用 actions.html，覆盖为行内浮层 ── */
+ul.bookmark-list.view-table li[ld-bookmark-item] .actions {
+  position: absolute;
+  /* 停在操作入口左侧：既不遮挡入口，hover 也不会因浮层盖住按钮而抖动 */
+  right: calc(var(--ld-ops-col) + var(--unit-1));
+  top: 50%;
+  transform: translateY(-50%);
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: var(--unit-2);
+  margin: 0;
+  padding: 0 var(--unit-3);
+  opacity: 0;
+  visibility: hidden;
+  /* 实心面板：不再用透明渐变，避免下面的行内容透出来 */
+  background: var(--body-color);
+  border: 1px solid var(--secondary-border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+/* 右侧间隙（浮层与按钮之间）也算浮层命中区，鼠标从按钮移向浮层时不会中断 */
+ul.bookmark-list.view-table li[ld-bookmark-item] .actions::after {
+  content: "";
+  position: absolute;
+  left: 100%;
+  top: 0;
+  bottom: 0;
+  width: calc(var(--ld-ops-col) + var(--unit-2));
+}
+
+/* 显隐由行尾操作入口驱动（悬浮/点击），与「自动隐藏工具栏」偏好无关。
+   浮层自身接收指针：鼠标在操作栏范围内移动保持显示，离开才消失 */
+ul.bookmark-list.view-table li[ld-bookmark-item]:has(.row-ops-btn:hover) .actions,
+ul.bookmark-list.view-table li[ld-bookmark-item] .actions:hover,
+ul.bookmark-list.view-table li[ld-bookmark-item].toolbar-visible .actions {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 「自动隐藏工具栏」的塌缩规则不得作用于表格浮层 */
+ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > *:not(.toolbar-date):not(.health-status) {
+  max-height: none;
+  opacity: 1;
+  pointer-events: auto;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* 日期已是独立列，工具栏里的日期项及其分隔线在表格视图中是重复信息 */
+ul.bookmark-list.view-table .actions .toolbar-date,
+ul.bookmark-list.view-table .actions .toolbar-date + .toolbar-sep {
+  display: none;
+}
+
+/* 触屏：无 hover，点行展开操作栏（与 compact 视图同款交互） */
+@media (hover: none) and (pointer: coarse) {
+  ul.bookmark-list.view-table li[ld-bookmark-item] .actions {
+    display: none;
+  }
+
+  ul.bookmark-list.view-table li[ld-bookmark-item].toolbar-visible .actions {
+    display: flex;
+  }
+
+  ul.bookmark-list.view-table li[ld-bookmark-item]:has(.row-ops-btn:hover) .actions {
+    display: flex;
+  }
+}
+
+/* ── 行尾固定操作入口：无边框、图标恒定 ── */
+ul.bookmark-list.view-table li[ld-bookmark-item] .row-ops-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  /* 只需盖住行内内容；浮层已在左侧，按钮不必高于表头 */
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ld-ops-col);
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--tertiary-text-color);
+  cursor: pointer;
+}
+
+ul.bookmark-list.view-table li[ld-bookmark-item] .row-ops-btn:hover,
+ul.bookmark-list.view-table li[ld-bookmark-item].toolbar-visible .row-ops-btn {
+  color: var(--link-color);
+}
+
+/* ── 宽度优先级：表格视图主区占满弹性空间，侧边栏退为固定宽栏 ── */
+@media (min-width: 841px) {
+  body:has(ul.view-table) .container {
+    /* 宽屏留白上限：再宽眼睛也扫不过来；窄屏仍由 100% 撑满 */
+    max-width: min(100%, var(--ld-table-page-max, 1520px));
+    /* 撑满区间也要与视口两侧留出呼吸空隙 */
+    padding-inline: 20px;
+  }
+
+  body:has(ul.view-table) .bookmarks-page.grid {
+    grid-template-columns: minmax(0, 1fr) 280px;
+  }
+
+  body:has(ul.view-table) .bookmarks-page.grid main {
+    grid-column: 1;
+  }
+
+  body:has(ul.view-table) .bookmarks-page.grid .sidebar {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  /* 侧边栏关闭（含 overlay 模式）：单轨满宽 */
+  body:has(ul.view-table) .bookmarks-page.grid.sidebar-closed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── 可用宽度不足时横向滚动（由 JS 按列数判定后加 .ld-table-hscroll） ── */
+#bookmark-list-container.ld-table-hscroll {
+  /* 只裁切、不成为滚动容器：否则表头/分页器的 sticky 全部失效。
+     横向位移由 ul 的 translateX 完成，滚动条是下方那条常驻视口的自定义条 */
+  overflow: clip;
+}
+
+#bookmark-list-container.ld-table-hscroll ul.bookmark-list.view-table {
+  transform: translateX(var(--ld-hscroll-x, 0px));
+}
+
+/* 自定义横向滚动条：sticky 在视口底部，样式与其他滚动条一致 */
+.ld-hscroll-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 25;
+  height: 14px;
+  background: var(--body-color);
+}
+
+.ld-hscroll-bar[hidden] {
+  display: none;
+}
+
+/* 自绘滑块：macOS 原生滚动条是 overlay（不占位、不滚动就不显示），自绘才能常显 */
+.ld-hscroll-thumb {
+  position: absolute;
+  top: 4px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--secondary-border-color);
+  cursor: grab;
+  transition: background 0.15s ease;
+}
+
+.ld-hscroll-thumb:hover {
+  background: var(--secondary-text-color);
+}
+
+.ld-hscroll-thumb.dragging {
+  background: var(--text-color);
+  cursor: grabbing;
+}
+
+/* 表格视图不需要容器上间距（工具条自带），其它视图保留首条上方的呼吸位 */
+body:not(:has(ul.view-table)):not(:has(ul.view-compact)) #bookmark-list-container {
+  margin-top: var(--unit-4);
+}
+
+/* 批量编辑栏与表格工具条相邻，底部留白是多余的（只影响表格视图） */
+.bookmarks-page.active:has(ul.view-table) .bulk-edit-bar {
+  margin-bottom: 0;
+}
+
+/* ── 表格工具条：列显隐 ── */
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--unit-3);
+  margin: 0 0 var(--unit-2);
+  padding: var(--unit-1) 0;
+  border-bottom: 1px solid var(--secondary-border-color);
+  flex-wrap: wrap;
+}
+
+.table-toolbar-label {
+  font-size: var(--font-size-sm);
+  color: var(--tertiary-text-color);
+  flex: none;
+}
+
+.table-toolbar .header-table-col-list {
+  padding: 0;
+  flex: 1 1 auto;
+}
+
+.table-toolbar .table-edit-toggle.active {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: var(--primary-color-shade);
+}
+
+/* 工具条与上方标题之间不要双重间距 */
+.section-header:has(~ form .table-toolbar) {
+  margin-bottom: var(--unit-2);
+}
+
+/* 分页器压过表格内一切浮层/操作入口（sticky 态的 z-index 10 不够，会被行内 z12 盖住） */
+#bookmark-list-container:has(ul.view-table) .bookmark-pagination {
+  z-index: 20;
+}
+
+#bookmark-list-container:has(ul.view-table) .bookmark-pagination:not([data-sticky-on="true"]) {
+  position: relative;
+}
+
+/* 标签编辑框聚焦时与其它行内编辑器一样转主色，保持视觉一致 */
+ul.bookmark-list.view-table .cell-tags .form-autocomplete .form-autocomplete-input.is-focused {
+  border-color: var(--primary-color);
+}

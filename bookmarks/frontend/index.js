@@ -4,6 +4,7 @@ import "iconify-icon";
 import "./components/runtime.js";
 import "./components/toast.js";
 import "./components/bookmark-page.js";
+import "./components/bookmark-table.js";
 import "./components/bulk-edit.js";
 import "./components/asset-rename.js";
 import "./components/sidebar-user-summary.js";

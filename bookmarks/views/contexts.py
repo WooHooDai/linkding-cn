@@ -20,6 +20,7 @@ from django.utils.translation import ngettext
 from pypinyin import Style, pinyin
 
 from bookmarks import queries, utils
+from bookmarks.type_defs import HttpRequest
 from bookmarks.services.icon_loader import load_quick_tags_icon
 from bookmarks.models import (
     HEALTH_STATUS_CHOICES,
@@ -93,6 +94,15 @@ def _health_status_display(health_status) -> str:
     return dict(HEALTH_STATUS_CHOICES).get(health_status, health_status)
 
 
+def _table_sort_query(request: HttpRequest, sort_value: str) -> str:
+    """表格表头排序链接的 querystring：复用当前筛选，重置翻页。"""
+    params = request.GET.copy()
+    params.pop("page", None)
+    params.pop("details", None)
+    params["sort"] = sort_value
+    return params.urlencode()
+
+
 def _bookmark_group_key(date_added) -> str:
     """按收藏日期（本地时区）计算分组键：
     today / yesterday / this_week（本周一至昨天）/ this_month（本月非本周）/
@@ -110,7 +120,8 @@ def _bookmark_group_key(date_added) -> str:
     if d.year == today.year and d.month == today.month:
         return "this_month"
     return d.strftime("%Y-%m")
-from bookmarks.type_defs import HttpRequest
+
+
 from bookmarks.views import access
 
 CJK_RE = re.compile(r"[\u4e00-\u9fff]+")
@@ -320,7 +331,9 @@ class BookmarkItem:
         )
         self.health_display_status_display = _health_status_display(self.health_display_status)
         self.details_url = context.details(bookmark.id)
-        self.has_highlights = getattr(bookmark, "annotation_count", 0) > 0
+        self.highlight_count = getattr(bookmark, "annotation_count", 0)
+        self.annotation_note_count = getattr(bookmark, "annotation_note_count", 0)
+        self.has_highlights = self.highlight_count > 0
 
         css_classes = []
         if bookmark.unread:
@@ -1383,27 +1396,40 @@ class BookmarkListContext:
         # Prefetch related objects, this avoids n+1 queries when accessing fields in templates
         models.prefetch_related_objects(bookmarks_page.object_list, "owner", "tags")
 
-        # 仅当日期路由为高亮时，才计算当前页面书签的高亮计数
-        if (
+        # 高亮/批注计数：高亮路由需要 has_highlights，表格视图的「高亮数/批注数」列也需要
+        needs_annotation_counts = (
             user_profile.bookmark_date_route
             == UserProfile.BOOKMARK_DATE_ROUTE_HIGHLIGHTS
-            and bookmarks_page.object_list
-        ):
-            from django.db.models import Count
+            or user_profile.bookmark_view_mode == UserProfile.BOOKMARK_VIEW_MODE_TABLE
+        )
+        if needs_annotation_counts and bookmarks_page.object_list:
+            from django.db.models import Count, Q
 
             bookmark_ids = [b.id for b in bookmarks_page.object_list]
-            annotation_counts = dict(
-                Bookmark.objects.filter(id__in=bookmark_ids)
-                .annotate(cnt=Count("annotations", distinct=True))
-                .values_list("id", "cnt")
-            )
+            counts = {
+                row[0]: (row[1], row[2])
+                for row in Bookmark.objects.filter(id__in=bookmark_ids)
+                .annotate(
+                    cnt=Count("annotations", distinct=True),
+                    note_cnt=Count(
+                        "annotations",
+                        filter=~Q(annotations__note_content=""),
+                        distinct=True,
+                    ),
+                )
+                .values_list("id", "cnt", "note_cnt")
+            }
             for bookmark in bookmarks_page.object_list:
-                bookmark.annotation_count = annotation_counts.get(bookmark.id, 0)
+                total, with_note = counts.get(bookmark.id, (0, 0))
+                bookmark.annotation_count = total
+                bookmark.annotation_note_count = with_note
 
         self.items = [
             BookmarkItem(request_context, bookmark, user, user_profile)
             for bookmark in bookmarks_page
         ]
+        # 表格视图下日期是列，分组头与它抢同一层语义 → 自动关闭
+        # 日期分组在表格视图同样生效：组头行跨全行渲染
         self.group_by_date = user_profile.group_by_date
         # 组计数：总数统计自完整结果集（跨页），本页数量用于判断是否需要翻页引导
         if self.group_by_date:
@@ -1448,10 +1474,41 @@ class BookmarkListContext:
             in (
                 UserProfile.BOOKMARK_VIEW_MODE_LIST,
                 UserProfile.BOOKMARK_VIEW_MODE_COMPACT,
+                UserProfile.BOOKMARK_VIEW_MODE_TABLE,
             )
             else UserProfile.BOOKMARK_VIEW_MODE_LIST
         )
         self.description_max_lines = user_profile.bookmark_description_max_lines
+        if self.view_mode == UserProfile.BOOKMARK_VIEW_MODE_TABLE:
+            self.table_columns = user_profile.get_bookmark_table_columns()
+            # data-table-config 供前端往返：escapejs 会把 repr 的单引号转成 \u0027，
+            # JSON.parse 解不了——这里显式给 JSON 字符串，靠模板自动转义写入属性。
+            self.table_config = json.dumps(user_profile.get_bookmark_table_config())
+        else:
+            self.table_columns = []
+            self.table_config = ""
+        # 表头排序走服务端 ?sort=（分页是服务端的，前端排序只会重排当前页）。
+        # date 列映射到 added_asc/desc；翻页参数随排序重置。
+        if self.table_columns:
+            col_sort = {
+                "title": ("title_asc", "title_desc"),
+                "date": ("added_asc", "added_desc"),
+                "highlights": ("highlights_asc", "highlights_desc"),
+                "annotations": ("annotations_asc", "annotations_desc"),
+            }
+            current_sort = self.search.sort
+            for column in self.table_columns:
+                pair = col_sort.get(column["key"])
+                if not pair:
+                    continue
+                asc_key, desc_key = pair
+                if current_sort == asc_key:
+                    column["sort_dir"], column["sort_url"] = "asc", _table_sort_query(self.request, desc_key)
+                elif current_sort == desc_key:
+                    column["sort_dir"], column["sort_url"] = "desc", _table_sort_query(self.request, asc_key)
+                else:
+                    column["sort_dir"] = None
+                    column["sort_url"] = _table_sort_query(self.request, asc_key if column["key"] == "title" else desc_key)
         self.show_url = user_profile.display_url
         self.action_list = [
             {
@@ -1464,6 +1521,12 @@ class BookmarkListContext:
         self.action_display_mode = user_profile.bookmark_action_display_mode
         self.status_display_mode = user_profile.bookmark_status_display_mode
         self.quick_edit_display_mode = user_profile.bookmark_quick_edit_display_mode
+        if self.view_mode == UserProfile.BOOKMARK_VIEW_MODE_TABLE:
+            # 表格行高 34px，文字按钮会把悬停操作栏撑到 400px 宽、盖住末列内容；
+            # 表格上下文强制图标模式
+            self.action_display_mode = UserProfile.ACTION_DISPLAY_MODE_ICON
+            self.status_display_mode = UserProfile.ACTION_DISPLAY_MODE_ICON
+            self.quick_edit_display_mode = UserProfile.ACTION_DISPLAY_MODE_ICON
         self.has_visible_actions = any(item["enabled"] for item in self.action_list)
         self.status_list = [
             {
