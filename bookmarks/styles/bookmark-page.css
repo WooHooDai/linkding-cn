@@ -1955,7 +1955,17 @@ ul.bookmark-list {
   & li[ld-bookmark-item] .form-checkbox.bulk-edit-checkbox {
     display: none;
     padding: 0;
-    min-width: 16px;
+    margin: 0;
+    min-width: var(--control-icon-size);
+    min-height: 0;
+    height: var(--control-icon-size);
+    line-height: 1;
+
+    /* 图标与输入框默认按 24px 控件居中（top: 4px），16px 紧凑框内归零对齐 */
+    input,
+    .form-icon {
+      top: 0;
+    }
   }
 
   &.active li[ld-bookmark-item] .form-checkbox.bulk-edit-checkbox {
