@@ -146,12 +146,16 @@ ul.bookmark-list.view-table {
 /* ── 行骨架 ─────────────────────────────── */
 ul.bookmark-list.view-table > li.table-header,
 ul.bookmark-list.view-table > li[ld-bookmark-item],
+/* 分组头复选框与条目复选框同槽对齐 */
+ul.bookmark-list.view-table > li.table-header,
+ul.bookmark-list.view-table > li[ld-bookmark-item],
 ul.bookmark-list.view-table > li.group-header.table-group-header {
   display: grid;
   grid-template-columns:
     var(--ld-check-col) var(--ld-table-cols)
     var(--ld-ops-col);
-  grid-template-rows: minmax(34px, auto);
+  /* 轨道贴合行内容盒（34px 里含 1px 下边框），格子才不会盖住框线 */
+  grid-template-rows: minmax(0, 1fr);
   /* 隐式行压成 0：否则 Chrome 会多算一条自动行，展开行时把行高撑到上千像素 */
   grid-auto-rows: 0;
   /* 列表行的 flex gap 会漏进 grid，撑出列间缝 */
@@ -176,6 +180,23 @@ ul.bookmark-list.view-table > li.group-header.table-group-header {
   background: var(--body-color-contrast);
   font-size: 12px;
   z-index: 11;
+}
+
+/* 分组头复选框与条目复选框同一条竖线（复选框是绝对定位，只能挪整个 label） */
+ul.bookmark-list.view-table > li.group-header.table-group-header {
+  --ld-group-indent: max(0px, calc((var(--ld-check-col) - 16px) / 2));
+}
+
+ul.bookmark-list.view-table > li.group-header.table-group-header .bulk-group-checkbox {
+  flex: none;
+  width: 16px;
+  min-width: 0;
+  margin: 0 0 0 var(--ld-group-indent);
+  padding: 0;
+}
+
+ul.bookmark-list.view-table > li.group-header.table-group-header .group-toggle {
+  padding-left: calc(var(--unit-4) + var(--ld-group-indent));
 }
 
 /* 组折叠（与列表视图共用 .group-hidden 机制） */
@@ -207,10 +228,8 @@ ul.bookmark-list.view-table > li.group-header.table-group-header .group-title {
   border-bottom: 0;
 }
 
-/* 描述/笔记展开、标签换行时允许行随内容增高 */
-ul.bookmark-list.view-table > li[ld-bookmark-item]:has(.description-text.expanded),
-ul.bookmark-list.view-table > li[ld-bookmark-item]:has(.cell-tags.wrap),
-ul.bookmark-list.view-table > li[ld-bookmark-item]:has(.note-text.expanded) {
+/* 行展开：任一可展开的单元格被点击，整行一起展开（行随内容长高） */
+ul.bookmark-list.view-table > li[ld-bookmark-item].is-expanded {
   height: auto;
   min-height: 34px;
 }
@@ -396,6 +415,18 @@ ul.bookmark-list.view-table .bulk-edit-checkbox input {
   margin: 0;
 }
 
+/* 标题/作者右缘（省略号所在处）是展开开关；文字本身仍是链接 */
+ul.bookmark-list.view-table .cell-title::after,
+ul.bookmark-list.view-table .cell-author::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--unit-5);
+  cursor: pointer;
+}
+
 /* ── 标题列 ─────────────────────────────── */
 ul.bookmark-list.view-table .cell-title {
   gap: var(--unit-2);
@@ -517,20 +548,33 @@ ul.bookmark-list.view-table .cell-desc .description-container {
   min-width: 0;
 }
 
-/* 展开态：换行展示完整内容（truncate 容器的 nowrap 由内层 span 覆盖） */
-ul.bookmark-list.view-table .cell-notes .note-text.expanded,
-ul.bookmark-list.view-table .cell-desc .description-text.expanded {
-  /* pre-wrap：既换行又保留原文换行符 */
+/* 行展开后的文本：换行显示完整内容，超过 15 行在格内滚动（与列表视图同口径） */
+ul.bookmark-list.view-table > li.is-expanded .cell-desc .description-text,
+ul.bookmark-list.view-table > li.is-expanded .cell-notes .note-text,
+ul.bookmark-list.view-table > li.is-expanded .cell-author .author-inner,
+ul.bookmark-list.view-table > li.is-expanded .cell-title .title-link > span {
+  display: block;
   white-space: pre-wrap;
   word-break: break-word;
+  max-height: calc(15 * 1.1rem);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
 
-/* 同行已有展开项时，其余可截断列直接完整展示——行高已足够，无需二次点击 */
-ul.bookmark-list.view-table > li:has(.description-text.expanded) .note-text,
-ul.bookmark-list.view-table > li:has(.description-text.expanded) .tags,
-ul.bookmark-list.view-table > li:has(.note-text.expanded) .description-text,
-ul.bookmark-list.view-table > li:has(.note-text.expanded) .tags {
+ul.bookmark-list.view-table > li.is-expanded .cell-desc .description-text:hover,
+ul.bookmark-list.view-table > li.is-expanded .cell-notes .note-text:hover,
+ul.bookmark-list.view-table > li.is-expanded .cell-author .author-inner:hover,
+ul.bookmark-list.view-table > li.is-expanded .cell-title .title-link > span:hover {
+  scrollbar-color: var(--secondary-border-color) transparent;
+}
+
+/* 标题/作者的链接本身解除单行截断（外层保持 normal，模板缩进才不会被保留） */
+ul.bookmark-list.view-table > li.is-expanded .cell-title .title-link,
+ul.bookmark-list.view-table > li.is-expanded .cell-author .author {
+  display: block;
   white-space: normal;
+  overflow: visible;
 }
 
 /* ── 标签 ── */
@@ -541,22 +585,22 @@ ul.bookmark-list.view-table .cell-tags .tags {
   overflow: hidden;
 }
 
-/* 截断态右缘渐隐，提示后面还有标签（点击即展开） */
-ul.bookmark-list.view-table .cell-tags:not(.wrap) .tags {
+/* 截断态右缘渐隐，提示后面还有标签（点击展开整行） */
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-tags .tags {
   mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent);
 }
 
-ul.bookmark-list.view-table .cell-tags.wrap {
+ul.bookmark-list.view-table > li.is-expanded .cell-tags {
   white-space: normal;
 }
 
-ul.bookmark-list.view-table .cell-tags.wrap .tags {
+ul.bookmark-list.view-table > li.is-expanded .cell-tags .tags {
   overflow: visible;
   mask-image: none;
   white-space: normal;
 }
 
-ul.bookmark-list.view-table .cell-tags.wrap .tags a {
+ul.bookmark-list.view-table > li.is-expanded .cell-tags .tags a {
   white-space: nowrap;
   margin-bottom: var(--unit-1);
 }
@@ -599,7 +643,9 @@ ul.bookmark-list.view-table .table-cell-editor {
   position: absolute;
   left: 0;
   right: 0;
-  top: 0;
+  /* 行被撑高时也保持自身高度、在行内垂直居中 */
+  top: 50%;
+  transform: translateY(-50%);
   box-sizing: border-box;
   width: auto;
   min-height: 26px;
@@ -621,13 +667,6 @@ ul.bookmark-list.view-table .table-cell-editor:focus {
   border-color: var(--primary-color);
   outline: var(--focus-outline);
   outline-offset: calc(var(--focus-outline-offset) * -1);
-}
-
-/* 单行编辑器正好占满行高（标题/作者） */
-ul.bookmark-list.view-table .cell-title .table-cell-editor,
-ul.bookmark-list.view-table .cell-author .table-cell-editor {
-  bottom: 0;
-  height: auto;
 }
 
 ul.bookmark-list.view-table textarea.table-cell-editor {
@@ -667,6 +706,10 @@ ul.bookmark-list.view-table .cell-tags:has(.quick-edit-tags-container) {
 }
 
 ul.bookmark-list.view-table .cell-tags .quick-edit-tags-container {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 25;
   display: block;
   /* 不受标签列宽限制：屏幕够宽时给足编辑空间（flex 子项不许被压缩） */
   flex: none;
@@ -682,22 +725,27 @@ ul.bookmark-list.view-table .cell-tags .quick-edit-tags-container .form-autocomp
 /* ── 悬停操作栏：挂在操作列上，整行高、无边框圆角阴影、底色跟行 ── */
 ul.bookmark-list.view-table li[ld-bookmark-item] .actions {
   position: absolute;
-  /* 挂在操作列左缘，随列一起吸附 */
+  /* 挂在操作列左缘，随列一起吸附；以行中心为轴，放不下就折行（宽度上限由 JS 写入） */
   right: 100%;
-  top: 0;
-  bottom: 0;
+  top: 50%;
+  transform: translateY(-50%);
   width: max-content;
-  height: auto;
+  max-width: var(--ld-actions-max-w, 420px);
+  /* 不做滚动/裁切：健康检查浮窗挂在面板内，overflow 会把它困在里面 */
+  overflow: visible;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--unit-2);
   margin: 0;
-  padding: 0 var(--unit-3) 0 var(--unit-5);
+  padding: 4px var(--unit-3);
   opacity: 0;
   visibility: hidden;
-  background: inherit;
-  /* 左缘渐隐，避免硬切竖边 */
-  mask-image: linear-gradient(90deg, transparent 0, #000 var(--unit-6));
+  /* 封闭实心面板：主题底色 + 边框阴影，不跟行聚焦色、不做渐变 */
+  background: var(--body-color);
+  border: 1px solid var(--secondary-border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 /* 显隐由行尾操作入口驱动（悬浮/点击），与「自动隐藏工具栏」偏好无关。
@@ -707,6 +755,12 @@ ul.bookmark-list.view-table li[ld-bookmark-item] .actions:hover,
 ul.bookmark-list.view-table li[ld-bookmark-item].toolbar-visible .actions {
   opacity: 1;
   visibility: visible;
+}
+
+/* 点按钮收起后，指针还停在行内时不要再被 :hover 顶出来（需压过上面的 :has 规则） */
+ul.bookmark-list.view-table li[ld-bookmark-item].toolbar-suppressed .actions {
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
 
 /* 「自动隐藏工具栏」的塌缩规则不得作用于表格浮层 */
@@ -758,7 +812,7 @@ ul.bookmark-list.view-table li[ld-bookmark-item].toolbar-visible .row-ops-btn {
   color: var(--link-color);
 }
 
-/* ── 宽度优先级：表格视图主区占满弹性空间，侧边栏退为固定宽栏 ── */
+/* ── 宽度优先级：表格视图主区占满弹性空间 ── */
 @media (min-width: 841px) {
   body:has(ul.view-table) .container {
     /* 宽屏留白上限：再宽眼睛也扫不过来；窄屏仍由 100% 撑满 */
@@ -767,22 +821,18 @@ ul.bookmark-list.view-table li[ld-bookmark-item].toolbar-visible .row-ops-btn {
     padding-inline: 20px;
   }
 
-  body:has(ul.view-table) .bookmarks-page.grid {
+  /* 只有「显示侧边栏」开启（推挤模式）才给它固定列；overlay 模式是浮层，不占位 */
+  body:has(ul.view-table) .bookmarks-page.grid[data-sidebar-default="1"] {
     grid-template-columns: minmax(0, 1fr) 280px;
   }
 
-  body:has(ul.view-table) .bookmarks-page.grid main {
+  body:has(ul.view-table) .bookmarks-page.grid[data-sidebar-default="1"] main {
     grid-column: 1;
   }
 
-  body:has(ul.view-table) .bookmarks-page.grid .sidebar {
+  body:has(ul.view-table) .bookmarks-page.grid[data-sidebar-default="1"] .sidebar {
     grid-column: 2;
     grid-row: 1;
-  }
-
-  /* 侧边栏关闭（含 overlay 模式）：单轨满宽 */
-  body:has(ul.view-table) .bookmarks-page.grid.sidebar-closed {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 

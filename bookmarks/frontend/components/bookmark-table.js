@@ -5,8 +5,10 @@ import { gettext } from "../utils/i18n.js";
 import { showToast } from "./toast.js";
 import { patchBookmark } from "./bookmark-page.js";
 
-/** 拖拽的硬下限：再窄就看不出内容了 */
+// 拖拽的硬下限：再窄就看不出内容了
 const MIN_COL_PX = 60;
+// 单击展开的延迟：留出双击判定窗口，双击改为编辑
+const EXPAND_DELAY = 200;
 /** 服务端没给基准宽时的兜底（正常配置不会走到） */
 const DEFAULT_BASE_PX = 120;
 
@@ -145,12 +147,6 @@ export function saveColumnsFromPanel(panel) {
   });
 }
 
-/** 单行省略文本是否真的被截断（未截断的格点击不响应） */
-function isTruncated(el) {
-  const box = el.closest(".truncate") || el;
-  return box.scrollWidth > box.clientWidth + 1;
-}
-
 class BookmarkTable extends Behavior {
   constructor(element) {
     super(element);
@@ -284,6 +280,11 @@ class BookmarkTable extends Behavior {
     this.footerList?.style.setProperty("--ld-check-col", `${check}px`);
 
     this._contentWidth = total;
+    // 操作栏宽度上限按可视宽给，放不下就折行（否则会被表格左缘裁掉）
+    this.element.style.setProperty(
+      "--ld-actions-max-w",
+      `${Math.max(240, this.bodyScroll.clientWidth - ops - 8)}px`,
+    );
     this.syncOverflowState();
   }
 
@@ -675,9 +676,6 @@ class BookmarkTable extends Behavior {
     const editor = li?.querySelector(".quick-edit-tags-container");
     const cell = editor?.closest(".cell-tags");
     if (!editor || !cell) return;
-    editor.style.position = "absolute";
-    editor.style.top = "0";
-    editor.style.zIndex = "25";
     this.placeEditor(editor, cell, "tags");
   }
 
@@ -702,67 +700,115 @@ class BookmarkTable extends Behavior {
     const opsBtn = event.target.closest(".row-ops-btn");
     if (opsBtn) {
       const li = opsBtn.closest("li[ld-bookmark-item]");
+      const open = li.classList.contains("toolbar-visible");
       hideAllToolbarFloats(li);
-      li.classList.toggle("toolbar-visible");
-      opsBtn.setAttribute(
-        "aria-expanded",
-        li.classList.contains("toolbar-visible") ? "true" : "false",
-      );
+      li.classList.toggle("toolbar-visible", !open);
+      // 收起后指针还在行内：临时压掉「悬停即显示」，否则会立刻被 :hover 顶回来
+      li.classList.toggle("toolbar-suppressed", open);
+      if (open) {
+        li.addEventListener(
+          "pointerleave",
+          () => li.classList.remove("toolbar-suppressed"),
+          { once: true },
+        );
+      }
+      opsBtn.setAttribute("aria-expanded", open ? "false" : "true");
       return;
     }
 
-    // 描述/笔记：整格点击切换展开（截断才展开）；点链接不参与
-    const expandCell = event.target.closest(".cell-desc, .cell-notes");
-    if (expandCell && !event.target.closest("a")) {
-      const text = expandCell.querySelector(".description-text, .note-text");
-      if (text) {
-        if (text.classList.contains("expanded")) {
-          text.classList.remove("expanded");
-        } else if (isTruncated(text) || text.textContent.includes("\n")) {
-          // 有换行的内容即使一行放得下也值得展开（阅读体验更好）
-          text.classList.add("expanded");
-        }
-        return;
-      }
-    }
-
-    const tagsCell = event.target.closest(".cell-tags");
-    if (tagsCell) {
-      const chip = event.target.closest("a");
-      if (chip) {
-        const cellRight = tagsCell.getBoundingClientRect().right;
-        if (chip.getBoundingClientRect().right > cellRight - 8) {
-          event.preventDefault();
-          tagsCell.classList.add("wrap");
-          return;
-        }
-      } else if (isTruncated(tagsCell.querySelector(".tags"))) {
-        tagsCell.classList.add("wrap");
-        return;
-      } else if (tagsCell.classList.contains("wrap")) {
-        tagsCell.classList.remove("wrap");
-      }
-    }
-  }
-
-  onDblClick(event) {
-    if (event.target.closest(".table-cell-editor")) return;
     const li = event.target.closest("li[ld-bookmark-item]");
     if (!li) return;
     const cell = event.target.closest(
-      ".cell-title, .cell-desc, .cell-notes, .cell-author",
+      ".cell-title, .cell-author, .cell-desc, .cell-notes, .cell-tags",
     );
     if (!cell) return;
-    const field = cell.classList.contains("cell-title")
-      ? "title"
-      : cell.classList.contains("cell-desc")
-        ? "description"
-        : cell.classList.contains("cell-notes")
-          ? "notes"
-          : "author";
-    event.preventDefault();
-    this.editCell(li, field);
+    const link = event.target.closest("a");
+
+    // 双击（detail≥2）：快速连点当「编辑」，间隔超过切换延迟的说明切换已生效、不再动作
+    const now = Date.now();
+    const interval = now - (this._lastClickAt ?? 0);
+    this._lastClickAt = now;
+    if (event.detail >= 2) {
+      this.cancelPendingToggle();
+      if (interval < EXPAND_DELAY) {
+        if (link) event.preventDefault();
+        this.editCell(li, FIELD_OF_CELL(cell));
+      }
+      return;
+    }
+
+    // 标签列：芯片被右缘裁掉时先展开整行，否则点芯片照常筛标签
+    if (cell.classList.contains("cell-tags")) {
+      if (link) {
+        const right = cell.getBoundingClientRect().right;
+        if (link.getBoundingClientRect().right <= right - 8) return;
+        event.preventDefault();
+      }
+      this.toggleRow(li);
+      return;
+    }
+
+    // 标题列：点文字/图标打开书签，点省略号或空白处展开整行
+    if (cell.classList.contains("cell-title")) {
+      if (link) return;
+      this.toggleRow(li);
+      return;
+    }
+
+    // 作者列：被截断时整格都是开关，未截断时点文字仍筛作者
+    if (cell.classList.contains("cell-author")) {
+      if (link && !this.isAuthorTruncated(li)) return;
+      if (link) event.preventDefault();
+      this.toggleRow(li);
+      return;
+    }
+
+    // 描述/笔记：整格点击
+    if (link) return;
+    this.toggleRow(li);
   }
+
+  /** 整行展开/折叠：切换都延迟 EXPAND_DELAY，快速双击时取消切换改为编辑 */
+  toggleRow(li) {
+    this.cancelPendingToggle();
+    const next = !li.classList.contains("is-expanded");
+    this._pendingToggle = {
+      li,
+      timer: setTimeout(() => {
+        this._pendingToggle = null;
+        li.classList.toggle("is-expanded", next);
+      }, EXPAND_DELAY),
+    };
+  }
+
+  cancelPendingToggle() {
+    if (!this._pendingToggle) return;
+    clearTimeout(this._pendingToggle.timer);
+    this._pendingToggle = null;
+  }
+
+  /** 作者列是否被截断（.author 是 flex 项，能反映内部文本溢出） */
+  isAuthorTruncated(li) {
+    const link = li.querySelector(".cell-author .author");
+    return !!link && link.scrollWidth > link.clientWidth + 1;
+  }
+
+  onDblClick(event) {
+    // 编辑已在 click 里按 detail 处理；这里只挡掉双击的默认行为（选词等）
+    if (event.target.closest(".table-cell-editor")) return;
+    if (event.target.closest(".cell-title, .cell-author, .cell-desc, .cell-notes, .cell-tags")) {
+      event.preventDefault();
+    }
+  }
+}
+
+/** 单元格 → 可就地编辑的字段 */
+function FIELD_OF_CELL(cell) {
+  if (cell.classList.contains("cell-title")) return "title";
+  if (cell.classList.contains("cell-tags")) return "tags";
+  if (cell.classList.contains("cell-desc")) return "description";
+  if (cell.classList.contains("cell-notes")) return "notes";
+  return "author";
 }
 
 function hideAllToolbarFloats(keep) {

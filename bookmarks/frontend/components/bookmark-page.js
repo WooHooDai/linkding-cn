@@ -1306,6 +1306,9 @@ class BookmarkItem extends Behavior {
   }
 
   initDescriptionToggle() {
+    // 表格视图的展开/折叠是整行行为、由表格接管：这里再挂钩会把点击吞掉
+    // （stopPropagation + 按列表语义切 .expanded），行高就不会跟着变
+    if (this.element.closest("ul.view-table")) return;
     this.descriptionContainer = this.element.querySelector(
       ".description-container",
     );
