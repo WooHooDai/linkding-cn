@@ -1,3 +1,5 @@
+import { queryBookmarkList } from "./utils/bookmark-list.js";
+
 // Track mouse position for elementFromPoint lookups
 let _lastMouseX = 0;
 let _lastMouseY = 0;
@@ -45,7 +47,7 @@ document.addEventListener("keydown", (event) => {
   }
 
   if (event.key === "e") {
-    const list = document.querySelector(".bookmark-list");
+    const list = queryBookmarkList();
     if (!list) return;
 
     // 紧凑视图：笔记常驻会撑破单行，e 切换「hover 行时显示笔记」
@@ -129,27 +131,5 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key === "n") {
     window.location.assign("/bookmarks/new");
-  }
-
-  // 专键 a：直接进入当前书签的作者编辑（键盘导航以焦点项为准，鼠标操作回退 hover 项）
-  if (event.key === "a") {
-    const list = document.querySelector(".bookmark-list");
-    if (!list) return;
-
-    const activeElement = document.activeElement;
-    let li = activeElement?.closest?.("li[ld-bookmark-item]") || null;
-    if (!li) {
-      const target = document.elementFromPoint(_lastMouseX, _lastMouseY);
-      li = target?.closest?.("li[ld-bookmark-item]") || null;
-    }
-    if (!li) return;
-
-    const item = li.__behaviors?.find(
-      (b) => typeof b.startQuickEdit === "function",
-    );
-    if (item) {
-      event.preventDefault();
-      item.startQuickEdit("author");
-    }
   }
 });

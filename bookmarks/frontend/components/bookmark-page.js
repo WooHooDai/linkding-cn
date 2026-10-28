@@ -1,5 +1,6 @@
 import { Behavior, registerBehavior } from "./runtime.js";
 import { sanitizeSvgBody } from "../utils/svg.js";
+import { queryBookmarkList } from "../utils/bookmark-list.js";
 import { handleBookmarkAction } from "../utils/bookmark-action.js";
 
 /** 状态动作的逆动作：回滚时用它把整行按钮恢复回去 */
@@ -1989,7 +1990,7 @@ registerBehavior("ld-tag-tree", TagTreeBehavior);
 
 function restoreBookmarkListScrollPosition() {
   const scroller = document.scrollingElement;
-  if (scroller && document.querySelector(".bookmark-list")) {
+  if (scroller && queryBookmarkList()) {
     let data = null;
     try {
       data = JSON.parse(localStorage.getItem("ld:bookmark-list:scroll"));

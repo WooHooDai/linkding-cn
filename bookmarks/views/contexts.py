@@ -1481,11 +1481,16 @@ class BookmarkListContext:
         self.description_max_lines = user_profile.bookmark_description_max_lines
         if self.view_mode == UserProfile.BOOKMARK_VIEW_MODE_TABLE:
             self.table_columns = user_profile.get_bookmark_table_columns()
+            # 首帧即按「基准宽 + 权重」渲染，与前端同源，避免加载后列宽跳变
+            self.table_columns_grid = " ".join(
+                f"minmax({c['base']}px, {c['w']}fr)" for c in self.table_columns
+            )
             # data-table-config 供前端往返：escapejs 会把 repr 的单引号转成 \u0027，
             # JSON.parse 解不了——这里显式给 JSON 字符串，靠模板自动转义写入属性。
             self.table_config = json.dumps(user_profile.get_bookmark_table_config())
         else:
             self.table_columns = []
+            self.table_columns_grid = ""
             self.table_config = ""
         # 表头排序走服务端 ?sort=（分页是服务端的，前端排序只会重排当前页）。
         # date 列映射到 added_asc/desc；翻页参数随排序重置。

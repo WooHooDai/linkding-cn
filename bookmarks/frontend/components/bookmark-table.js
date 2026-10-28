@@ -5,10 +5,10 @@ import { gettext } from "../utils/i18n.js";
 import { showToast } from "./toast.js";
 import { patchBookmark } from "./bookmark-page.js";
 
-const MIN_FR = 0.35;
-const MAX_FR = 8.0;
-/** 每列「可读」的最小像素宽度：低于它就切横向滚动，而不是继续压缩 */
-const MIN_COL_PX = 120;
+/** 拖拽的硬下限：再窄就看不出内容了 */
+const MIN_COL_PX = 60;
+/** 服务端没给基准宽时的兜底（正常配置不会走到） */
+const DEFAULT_BASE_PX = 120;
 
 /** 列 key → 单元格 class 后缀 */
 const CELL_CLASS = {
@@ -47,20 +47,35 @@ function parseConfig(ul) {
   }
 }
 
-function clampW(value) {
-  if (!Number.isFinite(value)) return 1;
-  return Math.min(MAX_FR, Math.max(MIN_FR, Math.round(value * 100) / 100));
-}
-
 function visibleColumns(config) {
   return config.filter((c) => c.on !== false);
 }
 
-function applyGrid(ul, visible) {
-  ul.style.setProperty(
-    "--ld-table-cols",
-    visible.map((c) => `minmax(0, ${c.w}fr)`).join(" "),
-  );
+/** 各列像素宽：未拖过的列以基准宽为底、按 w 分余量（收不下就停在基准宽转横滚）；
+ *  拖过的列用保存的 px、不参与余量分配。逐列取整误差用累计余量吃掉。 */
+function columnWidths(columns, available) {
+  const base = columns.map((c) => c.px ?? c.base ?? DEFAULT_BASE_PX);
+  const surplus = available - base.reduce((sum, w) => sum + w, 0);
+  if (surplus <= 0) return base;
+
+  const weightSum = columns.reduce((sum, c) => sum + (c.px ? 0 : c.w || 1), 0);
+  if (!weightSum) return base;
+
+  let rest = 0;
+  return columns.map((c, i) => {
+    if (c.px) return base[i];
+    rest += (surplus * (c.w || 1)) / weightSum;
+    const extra = Math.round(rest);
+    rest -= extra;
+    return base[i] + extra;
+  });
+}
+
+/** 三轨共用一份列宽：像素宽度 + 行最小宽度（行宽不足时行底色/底线会被截断）。 */
+function applyWidths(list, grid, minWidth) {
+  if (!list) return;
+  list.style.setProperty("--ld-table-cols", grid);
+  list.style.minWidth = minWidth;
 }
 
 function saveUrl() {
@@ -113,7 +128,7 @@ export function saveColumnsFromPanel(panel) {
   const checked = new Set(
     [...checkboxes].filter((el) => el.checked).map((el) => el.dataset.tableCol),
   );
-  const ul = document.querySelector("ul.bookmark-list.view-table");
+  const ul = document.querySelector("ul.bookmark-list.view-table[ld-bookmark-table]");
   const config = parseConfig(ul).map((c) => ({
     ...c,
     on: checked.has(c.key) || c.key === "title",
@@ -143,8 +158,12 @@ class BookmarkTable extends Behavior {
     this.onClick = this.onClick.bind(this);
     this.onDblClick = this.onDblClick.bind(this);
     this.onToolbarEdit = this.onToolbarEdit.bind(this);
+    this.syncColumnWidth = this.syncColumnWidth.bind(this);
     this.syncStickyTop = this.syncStickyTop.bind(this);
-    this.syncScrollMode = this.syncScrollMode.bind(this);
+    this.onBodyScroll = this.onBodyScroll.bind(this);
+    this.onHeaderScroll = this.onHeaderScroll.bind(this);
+    this.onFooterScroll = this.onFooterScroll.bind(this);
+    this.onResize = this.onResize.bind(this);
     this.init();
   }
 
@@ -175,152 +194,175 @@ class BookmarkTable extends Behavior {
         requestAnimationFrame(() => this.positionHealthPopover(indicator));
       }
     });
+    // 三横向轨道：主体轨道承载数据行，表头轨道独立在 sticky 外层内，底部轨道为常驻可见横滚条
+    this.bodyScroll = ul.closest(".table-body-scroll");
+    this.headerSticky = document.querySelector(".table-header-sticky");
+    this.headerScroll = this.headerSticky?.querySelector(".table-header-scroll");
+    this.headerList = this.headerSticky?.querySelector("ul.table-header-list");
+    this.headerRow = this.headerSticky?.querySelector(".table-header");
+    this.footerScroll = document.querySelector(".table-footer-scroll");
+    this.footerList = this.footerScroll?.querySelector("ul.table-footer-list");
+
+    this.syncColumnWidth();
+
+    // 列宽手柄位于独立表头轨道（主体 ul 的兄弟），需在表头行同样捕获 pointerdown
+    this.headerRow?.addEventListener("pointerdown", this.onPointerDown);
+
+    window.addEventListener("resize", this.onResize, { passive: true });
+    window.addEventListener("orientationchange", this.onResize, {
+      passive: true,
+    });
+
+    // 三条轨道 scrollLeft 双向同步；标志位阻断事件回环
+    this._syncingScroll = false;
+    this.bodyScroll?.addEventListener("scroll", this.onBodyScroll, { passive: true });
+    this.headerScroll?.addEventListener("scroll", this.onHeaderScroll, { passive: true });
+    this.footerScroll?.addEventListener("scroll", this.onFooterScroll, { passive: true });
+
+    // 表头吸顶顶部：搜索栏吸顶时紧贴其下方，未吸顶/未启用时 top:0
     this.syncStickyTop();
-    this.syncScrollMode();
-    window.addEventListener("resize", this.syncStickyTop);
-    window.addEventListener("resize", this.syncScrollMode);
-    // 侧边栏开合等布局变化不一定触发 window.resize，用 ResizeObserver 兜住
-    const container = ul.closest("#bookmark-list-container");
-    if (container && "ResizeObserver" in window) {
-      this.resizeObserver = new ResizeObserver(this.syncScrollMode);
-      this.resizeObserver.observe(container);
-    }
-    // 搜索栏跟随开关切换会改 section-header 的吸顶状态，跟着重算垫高
+    // 底部悬浮横滚条避让吸底分页器
+    this.syncStickyPager();
+
+    // 搜索栏吸顶开关切换属性时，兜底重算一次避让高度
     const sectionHeader = document.querySelector(".section-header");
     if (sectionHeader) {
-      new MutationObserver(this.syncStickyTop).observe(sectionHeader, {
+      this.stickyObserver = new MutationObserver(this.syncStickyTop);
+      this.stickyObserver.observe(sectionHeader, {
         attributes: true,
-        attributeFilter: ["data-sticky-on"],
+        attributeFilter: ["data-sticky-on", "class"],
       });
     }
+
+    // 工具条换行、批量栏折叠展开、侧边栏开合、分页器高度变化等不一定触发 window.resize，
+    // 由 ResizeObserver 兜住重算列宽、表头避让高度与底部横滚条避让高度。
+    const observed = [
+      document.querySelector(".section-header"),
+      document.querySelector(".bulk-edit-bar"),
+      document.querySelector(".table-toolbar"),
+      document.querySelector(".bookmark-pagination"),
+    ];
+    if ("ResizeObserver" in window) {
+      this.geometryObserver = new ResizeObserver(() => {
+        this.syncColumnWidth();
+        this.syncStickyTop();
+        this.syncStickyPager();
+      });
+      observed.forEach((el) => el && this.geometryObserver.observe(el));
+    }
+
     this.initColumnSortable();
   }
 
   destroy() {
-    window.removeEventListener("resize", this.syncStickyTop);
-    window.removeEventListener("resize", this.syncScrollMode);
-    this.resizeObserver?.disconnect();
+    window.removeEventListener("resize", this.onResize);
+    window.removeEventListener("orientationchange", this.onResize);
+    this.headerRow?.removeEventListener("pointerdown", this.onPointerDown);
+    this.bodyScroll?.removeEventListener("scroll", this.onBodyScroll);
+    this.headerScroll?.removeEventListener("scroll", this.onHeaderScroll);
+    this.footerScroll?.removeEventListener("scroll", this.onFooterScroll);
+    this.geometryObserver?.disconnect();
+    this.stickyObserver?.disconnect();
     delete this.element.dataset.ldTableBound;
   }
 
-  /* 表头吸顶：跟随 section-header（吸顶时垫在其下，高度动态测得） */
-  syncStickyTop() {
-    const stickyHeader = document.querySelector(
-      '.section-header[data-sticky-on="true"]',
-    );
-    const top = stickyHeader ? stickyHeader.offsetHeight : 0;
-    this.element.style.setProperty("--ld-table-top", `${top}px`);
+  /* 列宽只在这里算一次，三条轨道共用；底部轨道再同步选择框列宽以对齐 thumb 比例。 */
+  syncColumnWidth() {
+    const visible = visibleColumns(parseConfig(this.element));
+    if (!visible.length || !this.bodyScroll) return;
+
+    const { check, ops } = this.trackExtras();
+    const available = Math.max(0, this.bodyScroll.clientWidth - check - ops);
+    const widths = columnWidths(visible, available);
+    const grid = widths.map((w) => `${w}px`).join(" ");
+    const total = widths.reduce((sum, w) => sum + w, 0) + check + ops;
+    const minWidth = `${total}px`;
+
+    applyWidths(this.element, grid, minWidth);
+    applyWidths(this.headerList, grid, minWidth);
+    applyWidths(this.footerList, grid, minWidth);
+    this.footerList?.style.setProperty("--ld-check-col", `${check}px`);
+
+    this._contentWidth = total;
+    this.syncOverflowState();
   }
 
-  /* 可用宽度不足（含桌面窄窗口）时切横向滚动：按列数算最小可读宽度，
-     够放就不出滚动条（表头粘性保留），放不下才让容器可横向拖动 */
-  syncScrollMode() {
-    const ul = this.element;
-    const container = ul.closest("#bookmark-list-container");
-    if (!container) return;
-    const cols = ul.querySelectorAll(".table-header .th").length;
-    if (!cols) return;
-    const minWidth = cols * MIN_COL_PX + 26;
-    const need = minWidth > container.clientWidth;
-    container.classList.toggle("ld-table-hscroll", need);
-    ul.style.minWidth = need ? `${minWidth}px` : "";
-    const bar = this.ensureHScrollBar(container);
-    bar.hidden = !need;
-    this.hscrollWidth = need ? minWidth : container.clientWidth;
-    if (!need) this.hscrollX = 0;
-    this.element.style.setProperty(
-      "--ld-hscroll-x",
-      `${-(this.hscrollX || 0)}px`,
-    );
-    this.updateHScrollThumb();
+  /* 选择框列（批量编辑模式下才出现）与操作列的宽度由 CSS 变量决定 */
+  trackExtras() {
+    const cs = getComputedStyle(this.element);
+    return {
+      check: parseFloat(cs.getPropertyValue("--ld-check-col")) || 0,
+      ops: parseFloat(cs.getPropertyValue("--ld-ops-col")) || 0,
+    };
   }
 
-  /* 常驻视口底部的横向滚动条（自绘滑块）：
-     拖动滑块等于平移表格，容器本身保持 clip 不滚动，sticky 才不受影响 */
-  ensureHScrollBar(container) {
-    if (!this.hbar) {
-      const bar = document.createElement("div");
-      bar.className = "ld-hscroll-bar";
-      bar.hidden = true;
-      bar.innerHTML = '<div class="ld-hscroll-thumb"></div>';
-      container.insertAdjacentElement("afterend", bar);
-      this.hbar = bar;
-      this.hthumb = bar.firstElementChild;
-      this.bindHScrollBar(bar, this.hthumb);
+  /* 用算出的内容宽度判断溢出，不读 scrollWidth（省一次布局读取）；结果决定底栏是否放出。 */
+  syncOverflowState() {
+    if (!this.bodyScroll) return;
+    const overflowing = (this._contentWidth ?? 0) > this.bodyScroll.clientWidth;
+    [this.bodyScroll, this.headerScroll, this.footerScroll].forEach((el) =>
+      el?.classList.toggle("is-overflowing", overflowing),
+    );
+    // 放得下时把残留的横滚位置归零：否则刚改成放得下（如收窄列宽）会停在偏移态
+    if (!overflowing) {
+      [this.bodyScroll, this.headerScroll, this.footerScroll].forEach((el) => {
+        if (el && el.scrollLeft) el.scrollLeft = 0;
+      });
     }
-    return this.hbar;
   }
 
-  bindHScrollBar(bar, thumb) {
-    const ratio = () => {
-      const overflow = this.hscrollWidth - bar.clientWidth;
-      const travel = bar.clientWidth - thumb.offsetWidth;
-      return { overflow, travel };
-    };
-
-    const onMove = (event) => {
-      const { overflow, travel } = ratio();
-      if (overflow <= 0 || travel <= 0) return;
-      const startLeft =
-        this._dragStartLeft + (event.clientX - this._dragStartX);
-      const left = Math.max(0, Math.min(travel, startLeft));
-      this.setScrollX((left / travel) * overflow);
-    };
-    const onUp = () => {
-      thumb.classList.remove("dragging");
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    };
-
-    thumb.addEventListener("pointerdown", (event) => {
-      event.preventDefault();
-      this._dragStartX = event.clientX;
-      this._dragStartLeft = thumb.offsetLeft;
-      thumb.classList.add("dragging");
-      window.addEventListener("pointermove", onMove);
-      window.addEventListener("pointerup", onUp);
-    });
-
-    // 点轨道空白处：滑块中心跳到点击位置
-    bar.addEventListener("pointerdown", (event) => {
-      if (event.target === thumb) return;
-      const { overflow, travel } = ratio();
-      if (overflow <= 0 || travel <= 0) return;
-      const left = Math.max(
-        0,
-        Math.min(
-          travel,
-          event.clientX -
-            bar.getBoundingClientRect().left -
-            thumb.offsetWidth / 2,
-        ),
-      );
-      this.setScrollX((left / travel) * overflow);
-    });
-  }
-
-  setScrollX(x) {
-    const clamped = Math.max(
-      0,
-      Math.min(this.hscrollWidth - this.hbar.clientWidth, x),
+  /* 底部悬浮横滚条避让吸底分页器：分页器处于跟随吸底态时取其实际高度，
+     横滚条 bottom 贴在分页器上方；未开启跟随或不可见时回到 0。 */
+  syncStickyPager() {
+    if (!this.footerScroll) return;
+    const pager = document.querySelector(
+      ".bookmark-pagination[data-sticky-on='true']",
     );
-    this.hscrollX = clamped;
-    this.element.style.setProperty("--ld-hscroll-x", `${-clamped}px`);
-    this.updateHScrollThumb();
+    const h = pager ? Math.round(pager.offsetHeight) : 0;
+    this.footerScroll.style.setProperty("--ld-pager-h", `${h}px`);
   }
 
-  updateHScrollThumb() {
-    const bar = this.hbar;
-    const thumb = this.hthumb;
-    if (!bar || !thumb || bar.hidden) return;
-    const trackW = bar.clientWidth;
-    const overflow = this.hscrollWidth - trackW;
-    const ratio = trackW / this.hscrollWidth;
-    const width = Math.max(40, Math.round(trackW * ratio));
-    const travel = trackW - width;
-    const left = overflow > 0 ? (this.hscrollX / overflow) * travel : 0;
-    thumb.style.width = `${width}px`;
-    thumb.style.left = `${Math.max(0, Math.min(travel, Math.round(left)))}px`;
+  /* 窗口尺寸变化：列宽、表头避让高度、底部横滚条避让高度一并重算 */
+  onResize() {
+    this.syncColumnWidth();
+    this.syncStickyTop();
+    this.syncStickyPager();
+  }
+
+  /* 表头吸顶顶部避让：搜索栏处于吸顶态时取其实际高度，表头紧贴其下；否则回到 top:0 */
+  syncStickyTop() {
+    if (!this.headerSticky) return;
+    const headerBar = document.querySelector(
+      ".section-header[data-sticky-on='true']",
+    );
+    const top = headerBar ? Math.round(headerBar.offsetHeight) : 0;
+    this.headerSticky.style.setProperty("--ld-table-top", `${top}px`);
+  }
+
+  /* 主体轨道横滚 → 同步表头轨道与底部悬浮轨道；行尾操作槽的补偿偏移跟着更新 */
+  onBodyScroll() {
+    if (this._syncingScroll || !this.bodyScroll) return;
+    this._syncingScroll = true;
+    const left = this.bodyScroll.scrollLeft;
+    if (this.headerScroll) this.headerScroll.scrollLeft = left;
+    if (this.footerScroll) this.footerScroll.scrollLeft = left;
+    this._syncingScroll = false;
+  }
+
+  /* 表头轨道横滚 → 同步主体轨道（双向同步，允许直接拖表头轨道） */
+  onHeaderScroll() {
+    if (this._syncingScroll || !this.bodyScroll) return;
+    this._syncingScroll = true;
+    this.bodyScroll.scrollLeft = this.headerScroll.scrollLeft;
+    this._syncingScroll = false;
+  }
+
+  /* 底部悬浮轨道横滚 → 回写主体轨道（主体滚动事件再连带同步表头轨道） */
+  onFooterScroll() {
+    if (this._syncingScroll || !this.bodyScroll) return;
+    this._syncingScroll = true;
+    this.bodyScroll.scrollLeft = this.footerScroll.scrollLeft;
+    this._syncingScroll = false;
   }
 
   /* ── 列宽拖拽：实时改 CSS 变量，松手静默保存（不重载） ── */
@@ -332,7 +374,7 @@ class BookmarkTable extends Behavior {
     const ul = this.element;
     const fullConfig = parseConfig(ul);
     const visible = visibleColumns(fullConfig);
-    const headerCells = ul.querySelectorAll(".table-header .th");
+    const headerCells = this.headerRow?.querySelectorAll(".th") || [];
     const index = [...headerCells].findIndex((th) => th.contains(handle));
     if (index < 0 || !visible[index]) return;
 
@@ -340,16 +382,18 @@ class BookmarkTable extends Behavior {
     handle.setPointerCapture(event.pointerId);
     const startX = event.clientX;
     const startPx = headerCells[index].getBoundingClientRect().width;
-    const startFr = visible[index].w;
     let dirty = false;
     let finished = false;
 
     const onMove = (moveEvent) => {
-      const px = Math.max(40, startPx + moveEvent.clientX - startX);
-      const nextW = clampW((startFr * px) / startPx);
-      if (nextW === visible[index].w) return;
-      visible[index].w = nextW;
-      applyGrid(ul, visible);
+      const px = Math.round(
+        Math.max(MIN_COL_PX, startPx + moveEvent.clientX - startX),
+      );
+      if (visible[index].px === px) return;
+      // 拖过就转成显式像素宽；配置要回写 dataset，syncColumnWidth 每次从那里解析
+      visible[index].px = px;
+      ul.dataset.tableConfig = JSON.stringify(fullConfig);
+      this.syncColumnWidth();
       dirty = true;
     };
     const onUp = () => {
@@ -373,7 +417,7 @@ class BookmarkTable extends Behavior {
 
   /* ── 表头拖拽排序：就地重排 DOM + 静默保存，不刷新页面 ── */
   initColumnSortable() {
-    const headerRow = this.element.querySelector(".table-header");
+    const headerRow = this.headerRow;
     if (!headerRow) return;
     Sortable.create(headerRow, {
       draggable: ".th",
@@ -392,9 +436,9 @@ class BookmarkTable extends Behavior {
         const reordered = order.map((key) => byKey[key]).filter(Boolean);
         const hidden = config.filter((c) => c.on === false);
         const next = [...reordered, ...hidden];
-        applyGrid(this.element, reordered);
         this.element.dataset.tableConfig = JSON.stringify(next);
         this.applyColumnOrder(reordered.map((c) => c.key));
+        this.syncColumnWidth();
         saveQuiet(next);
       },
     });
@@ -418,18 +462,20 @@ class BookmarkTable extends Behavior {
     });
   }
 
-  /** 健康弹层定位：表格会裁切内容，宽高与展开方向都按「表格可视区 ∩ 视口」算 */
+  /** 健康弹层定位：表格视口会裁切内容，宽高与展开方向都按「视口可视区 ∩ 窗口」算 */
   positionHealthPopover(indicator) {
     const popover = indicator.querySelector(".health-popover");
     if (!popover) return;
     const rect = indicator.getBoundingClientRect();
-    const ulRect = this.element.getBoundingClientRect();
+    const viewportRect = (this.bodyScroll || this.element).getBoundingClientRect();
     const GAP = 8;
 
-    const boundsLeft = Math.max(ulRect.left, 0);
-    const boundsRight = Math.min(ulRect.right, window.innerWidth);
-    const boundsTop = Math.max(ulRect.top, 0);
-    const boundsBottom = Math.min(ulRect.bottom, window.innerHeight);
+    const boundsLeft = Math.max(viewportRect.left, 0);
+    const boundsRight = Math.min(viewportRect.right, window.innerWidth);
+    // 上界扣掉吸顶表头，否则弹层会被表头盖住
+    const headerBottom = this.headerSticky?.getBoundingClientRect().bottom ?? 0;
+    const boundsTop = Math.max(viewportRect.top, headerBottom, 0);
+    const boundsBottom = Math.min(viewportRect.bottom, window.innerHeight);
 
     const spaceRight = boundsRight - rect.left - GAP;
     const spaceLeft = rect.right - boundsLeft - GAP;
@@ -587,12 +633,12 @@ class BookmarkTable extends Behavior {
 
   /** 编辑器统一尺寸：至少与标签编辑器同宽（420px），右侧放不下就向左展开 */
   placeEditor(editor, cell, field) {
-    const ulRect = this.element.getBoundingClientRect();
+    const viewportRect = (this.bodyScroll || this.element).getBoundingClientRect();
     const cellRect = cell.getBoundingClientRect();
     const PREFERRED = 420;
     const GAP = 12;
-    const availRight = ulRect.right - cellRect.left - GAP;
-    const availLeft = cellRect.right - ulRect.left - GAP;
+    const availRight = viewportRect.right - cellRect.left - GAP;
+    const availLeft = cellRect.right - viewportRect.left - GAP;
     const maxWidth = Math.max(availRight, availLeft, 160);
     let width = Math.min(maxWidth, Math.max(PREFERRED, cellRect.width));
 

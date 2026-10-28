@@ -75,9 +75,10 @@
     </div>
   {% endif %}
 {% endfor %}
-{% include 'bookmarks/list/actions.html' %}
-{# 固定操作入口：不占列、无边框、图标恒定（不随展开/固定旋转） #}
-<button type="button" class="row-ops-btn" aria-expanded="false"
-        title="{% translate 'Show actions' %}">
-  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="19" r="1.7" fill="currentColor"/></svg>
-</button>
+<div class="cell cell-ops" style="grid-column: {{ bookmark_list.table_columns|length|add:'2' }}">
+  {% include 'bookmarks/list/actions.html' %}
+  <button type="button" class="row-ops-btn" aria-expanded="false"
+          title="{% translate 'Show actions' %}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="19" r="1.7" fill="currentColor"/></svg>
+  </button>
+</div>

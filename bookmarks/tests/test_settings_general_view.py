@@ -941,6 +941,32 @@ class BookmarkTableColumnsCleanTest(TestCase):
         response = self._save([{"key": "title"}] * 100)
         self.assertEqual(response.status_code, 422)
 
+    def test_explicit_column_width_round_trips(self):
+        """手动拖拽产生的显式列宽（px）要保留下来，并夹到合法区间。"""
+        response = self._save(
+            [
+                {"key": "title", "w": 2.4, "px": 512, "on": True},
+                {"key": "date", "w": 0.9, "px": 5, "on": True},
+            ]
+        )
+        self.assertEqual(response.status_code, 200)
+        profile = self.user.profile
+        profile.refresh_from_db()
+        by_key = {c["key"]: c for c in profile.bookmark_table_columns}
+        self.assertEqual(by_key["title"]["px"], 512)
+        # 下限 60px：过小的值被夹住而不是原样存下
+        self.assertEqual(by_key["date"]["px"], UserProfile.BOOKMARK_TABLE_COLUMN_MIN_PX)
+
+        # 渲染时以 px 为准，基准宽与权重一并带出（前端还需要它们分配余量）
+        columns = {c["key"]: c for c in profile.get_bookmark_table_columns()}
+        self.assertEqual(columns["title"]["px"], 512)
+        self.assertEqual(
+            columns["title"]["base"],
+            UserProfile.BOOKMARK_TABLE_COLUMN_BASE_PX["title"],
+        )
+        # 没拖过的列没有 px
+        self.assertIsNone(columns["domain"]["px"] if "domain" in columns else None)
+
     def test_non_list_rejected(self):
         response = self._save("not-a-list")
         self.assertEqual(response.status_code, 422)

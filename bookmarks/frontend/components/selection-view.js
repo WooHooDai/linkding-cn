@@ -1,5 +1,6 @@
 import { gettext, interpolate } from "../utils/i18n.js";
 import { sliceRange } from "../utils/selection.js";
+import { queryBookmarkList } from "../utils/bookmark-list.js";
 
 // Binds bulk-selection state to the bookmark list DOM: renders the state onto
 // the checkboxes (items, groups, page header, "All pages") and translates
@@ -48,7 +49,7 @@ export class SelectionView {
   // Display order and group membership come from the rendered list only, so
   // grouping never has to be mirrored in JS state.
   readLayout() {
-    const list = this.root.querySelector("ul.bookmark-list");
+    const list = queryBookmarkList(this.root);
     this.list = list;
     this.order = [];
     this.items = new Map();

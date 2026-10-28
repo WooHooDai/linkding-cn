@@ -1420,6 +1420,11 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         ul = soup.select_one("ul.bookmark-list")
         self.assertIn("view-compact", ul.get("class", []))
 
+        # 非表格视图不包裹表格横向轨道
+        self.assertIsNone(soup.select_one(".table-body-scroll"))
+        self.assertIsNone(soup.select_one(".table-header-sticky"))
+        self.assertIsNone(soup.select_one(".table-footer-scroll"))
+
         # 紧凑分支：不渲染 URL 行与预览图；描述/笔记/动作留在 DOM 中由 CSS 收起
         self.assertIsNone(soup.select_one(".url-path"))
         self.assertIsNone(soup.select_one(".preview-image"))
@@ -1454,6 +1459,9 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
 
         ul = soup.select_one("ul.bookmark-list")
         self.assertNotIn("view-compact", ul.get("class", []))
+        self.assertIsNone(soup.select_one(".table-body-scroll"))
+        self.assertIsNone(soup.select_one(".table-header-sticky"))
+        self.assertIsNone(soup.select_one(".table-footer-scroll"))
         self.assertIsNotNone(soup.select_one(".content"))
         self.assertIsNotNone(soup.select_one(".description"))
 
@@ -1601,11 +1609,16 @@ class BookmarkTableViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         html = self.render_template()
         soup = self.make_soup(html)
 
-        ul = soup.select_one("ul.bookmark-list.view-table")
-        self.assertIsNotNone(ul)
-        self.assertIn("view-table", ul.get("class", []))
+        # Django 的 {# #} 注释不支持换行，写多行会原样渲染成文本（曾把注释打进表头）
+        self.assertNotIn("{#", html)
 
-        header = ul.select_one("li.table-header")
+        headerList = soup.select_one("ul.table-header-list")
+        bodyUl = soup.select_one(".table-body-scroll ul.bookmark-list.view-table")
+        self.assertIsNotNone(headerList)
+        self.assertIsNotNone(bodyUl)
+        self.assertIn("view-table", bodyUl.get("class", []))
+
+        header = headerList.select_one("li.table-header")
         self.assertIsNotNone(header)
         labels = [
             el.get_text(strip=True) for el in header.select(".th .th-label")
@@ -1615,7 +1628,7 @@ class BookmarkTableViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             ["Title", "Author", "Date", "Tags", "Description", "Notes", "Status"],
         )
 
-        row = ul.select_one("li[ld-bookmark-item]")
+        row = bodyUl.select_one("li[ld-bookmark-item]")
         self.assertIsNotNone(row)
         self.assertIn(bookmark.resolved_title, row.select_one(".cell-title").text)
         self.assertIsNotNone(row.select_one(".cell-tags .tags a"))
@@ -1623,6 +1636,63 @@ class BookmarkTableViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         # state/health 不在默认列配置中
         self.assertIsNone(row.select_one(".cell-state"))
         self.assertIsNone(row.select_one(".cell-health"))
+
+        # 表格视图：表头独立 sticky 轨道，主体数据由横向轨道 .table-body-scroll 包裹，
+        # 底部常驻横滚条轨道 .table-footer-scroll 位于主体轨道之后，分页器留在三条轨道之外
+        sticky = soup.select_one(".table-header-sticky")
+        bodyScroll = soup.select_one(".table-body-scroll")
+        footerScroll = soup.select_one(".table-footer-scroll")
+        self.assertIsNotNone(sticky)
+        self.assertIsNotNone(bodyScroll)
+        self.assertIsNotNone(footerScroll)
+        self.assertIsNotNone(sticky.select_one("ul.table-header-list"))
+        self.assertIsNotNone(bodyScroll.select_one("ul.bookmark-list.view-table"))
+        self.assertIsNotNone(footerScroll.select_one("ul.table-footer-list"))
+        self.assertIsNone(bodyScroll.select_one(".bookmark-pagination"))
+
+    def test_table_view_keeps_single_data_list(self):
+        """两条轨道带各自的标记类，前端靠它们排除，取数据列表只能命中一个。"""
+        self.setup_bookmark()
+        soup = self.make_soup(self.render_template())
+
+        data_lists = soup.select(
+            "ul.bookmark-list:not(.table-header-list):not(.table-footer-list)"
+        )
+        self.assertEqual(len(data_lists), 1)
+        self.assertIn("view-table", data_lists[0].get("class", []))
+        self.assertIn("table-header-list", soup.select_one(".table-header-sticky ul").get("class", []))
+        self.assertIn("table-footer-list", soup.select_one(".table-footer-scroll ul").get("class", []))
+
+    def test_table_view_row_has_ops_slot(self):
+        """行尾操作列是行内最后一条网格轨道（吸附靠 sticky），悬停操作栏挂在它上面。"""
+        self.setup_bookmark()
+        soup = self.make_soup(self.render_template())
+
+        row = soup.select_one(".table-body-scroll li[ld-bookmark-item]")
+        cells = row.select(":scope > .cell")
+        ops = row.select_one(":scope > .cell-ops")
+        self.assertIsNotNone(ops)
+        # 轨道号 = 选择框列 + 可见列 + 操作列，即最后一个
+        self.assertEqual(
+            (ops.get("style") or "").strip(),
+            f"grid-column: {len(cells)}",
+        )
+        self.assertIsNotNone(ops.select_one(".row-ops-btn"))
+        self.assertIsNotNone(ops.select_one(".actions"))
+
+    def test_table_view_column_grid_uses_server_side_widths(self):
+        """首帧列宽由服务端渲染，与前端 resize 口径同源。"""
+        self.setup_bookmark()
+        soup = self.make_soup(self.render_template())
+
+        for selector in (
+            ".table-header-sticky ul",
+            ".table-body-scroll ul",
+            ".table-footer-scroll ul",
+        ):
+            style = soup.select_one(selector).get("style", "")
+            self.assertIn("minmax(", style)
+            self.assertNotIn("minmax(0,", style)
 
     def test_table_view_date_grouping(self):
         profile = self.get_or_create_test_user().profile

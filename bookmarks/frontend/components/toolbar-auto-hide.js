@@ -5,6 +5,8 @@
  * 事件委托挂在 document 上，Turbo 换 DOM 后依然有效，只需绑定一次。
  */
 
+import { queryBookmarkLists } from "../utils/bookmark-list.js";
+
 const LIST_SELECTOR = "ul.bookmark-list.toolbar-auto-hide:not(.view-table)";
 const ITEM_SELECTOR = `${LIST_SELECTOR} li[ld-bookmark-item]`;
 const INTERACTIVE_SELECTOR =
@@ -40,9 +42,9 @@ export function bindToolbarAutoHide() {
 }
 
 export function applyToolbarAutoHide(enabled) {
-  document
-    .querySelectorAll("ul.bookmark-list")
-    .forEach((el) => el.classList.toggle("toolbar-auto-hide", enabled));
+  queryBookmarkLists().forEach((el) =>
+    el.classList.toggle("toolbar-auto-hide", enabled),
+  );
 
   if (enabled) {
     bindToolbarAutoHide();

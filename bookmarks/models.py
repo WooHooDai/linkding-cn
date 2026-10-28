@@ -1040,6 +1040,21 @@ class UserProfile(models.Model):
         "highlights",
         "annotations",
     )
+    # 各列「可读」基准宽度（px）：视口富余时按 w 权重加宽，收窄到基准总宽以下转横向滚动。
+    BOOKMARK_TABLE_COLUMN_BASE_PX = {
+        "title": 220,
+        "author": 110,
+        "date": 96,
+        "tags": 130,
+        "desc": 200,
+        "notes": 150,
+        "status": 110,
+        "domain": 120,
+        "highlights": 80,
+        "annotations": 80,
+    }
+    BOOKMARK_TABLE_COLUMN_MIN_PX = 60
+    BOOKMARK_TABLE_COLUMN_MAX_PX = 2000
     # 默认展示（顺序与上面一致，只是不含 domain）
     BOOKMARK_TABLE_DEFAULT_COLUMNS = [
         {"key": "title", "w": 2.4},
@@ -1618,6 +1633,37 @@ class UserProfile(models.Model):
 
     }
 
+    @classmethod
+    def build_bookmark_table_column(cls, key: str, entry: dict) -> dict:
+        """单列的渲染结构：w 为余量权重，px 为手动拖过的像素宽（有则不参与分配），base 为基准宽。"""
+        defaults = {c["key"]: c["w"] for c in cls.BOOKMARK_TABLE_DEFAULT_COLUMNS}
+        try:
+            w = max(0.35, min(8.0, float(entry.get("w", defaults.get(key, 1)))))
+        except (TypeError, ValueError):
+            w = defaults.get(key, 1.0)
+        return {
+            "key": key,
+            "label": str(cls.BOOKMARK_TABLE_COLUMN_LABELS[key]),
+            "w": round(w, 2),
+            "base": cls.BOOKMARK_TABLE_COLUMN_BASE_PX[key],
+            "px": cls.parse_bookmark_table_column_px(entry.get("px")),
+            "sortable": key in ("title", "date", "highlights", "annotations"),
+        }
+
+    @classmethod
+    def parse_bookmark_table_column_px(cls, value):
+        """显式列宽（px）；非法值视为未设置。"""
+        if value in (None, ""):
+            return None
+        try:
+            px = int(round(float(value)))
+        except (TypeError, ValueError):
+            return None
+        return max(
+            cls.BOOKMARK_TABLE_COLUMN_MIN_PX,
+            min(cls.BOOKMARK_TABLE_COLUMN_MAX_PX, px),
+        )
+
     def get_bookmark_table_columns(self) -> list[dict]:
         """把列配置解析成模板可直接消费的结构。
         配置里 on=False 的列保留在存储中但不渲染；服务端重新校验脏数据
@@ -1631,28 +1677,9 @@ class UserProfile(models.Model):
             seen.add(key)
             if entry.get("on", True) is False:
                 continue
-            try:
-                w = max(0.35, min(8.0, float(entry.get("w", 1))))
-            except (TypeError, ValueError):
-                w = 1.0
-            columns.append(
-                {
-                    "key": key,
-                    "label": str(self.BOOKMARK_TABLE_COLUMN_LABELS[key]),
-                    "w": round(w, 2),
-                    "sortable": key in ("title", "date", "highlights", "annotations"),
-                }
-            )
+            columns.append(self.build_bookmark_table_column(key, entry))
         if "title" not in [c["key"] for c in columns]:
-            columns.insert(
-                0,
-                {
-                    "key": "title",
-                    "label": str(self.BOOKMARK_TABLE_COLUMN_LABELS["title"]),
-                    "w": self.BOOKMARK_TABLE_DEFAULT_COLUMNS[0]["w"],
-                    "sortable": True,
-                },
-            )
+            columns.insert(0, self.build_bookmark_table_column("title", {}))
         return columns
 
     def get_bookmark_table_column_choices(self) -> list[dict]:
@@ -1672,25 +1699,27 @@ class UserProfile(models.Model):
         """前端往返用的完整配置：全部列带 on 标志，可见列按展示序在前。
         on 语义由 get_bookmark_table_columns 消费，缺省视为展示。"""
         config, seen = [], set()
+
+        def add(key, entry, on):
+            column = self.build_bookmark_table_column(key, entry)
+            column["on"] = on
+            config.append(column)
+
         for entry in self.bookmark_table_columns or []:
             key = entry.get("key") if isinstance(entry, dict) else None
             if key not in self.BOOKMARK_TABLE_COLUMN_KEYS or key in seen:
                 continue
             seen.add(key)
-            try:
-                w = max(0.35, min(8.0, float(entry.get("w", 1))))
-            except (TypeError, ValueError):
-                w = 1.0
-            config.append({"key": key, "w": round(w, 2), "on": entry.get("on", True) is not False})
-        for key in self.BOOKMARK_TABLE_DEFAULT_COLUMNS:
-            if key["key"] not in seen:
-                seen.add(key["key"])
-                config.append({"key": key["key"], "w": key["w"], "on": True})
+            add(key, entry, entry.get("on", True) is not False)
+        for entry in self.BOOKMARK_TABLE_DEFAULT_COLUMNS:
+            if entry["key"] not in seen:
+                seen.add(entry["key"])
+                add(entry["key"], entry, True)
         for key in self.BOOKMARK_TABLE_COLUMN_KEYS:
             if key not in seen:
-                config.append({"key": key, "w": 1.0, "on": False})
+                add(key, {}, False)
         if not any(c["key"] == "title" and c["on"] for c in config):
-            config.insert(0, {"key": "title", "w": self.BOOKMARK_TABLE_DEFAULT_COLUMNS[0]["w"], "on": True})
+            config.insert(0, {**self.build_bookmark_table_column("title", {}), "on": True})
         return config
 
 
@@ -2061,13 +2090,26 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
                 {
                     "key": entry["key"],
                     "w": round(w, 2),
+                    # 显式列宽（用户手动拖拽产生）；不设就继续按基准宽 + 权重分配
+                    **(
+                        {"px": px}
+                        if (px := UserProfile.parse_bookmark_table_column_px(entry.get("px")))
+                        is not None
+                        else {}
+                    ),
                     "on": entry.get("on", True) is not False
                     or entry["key"] == "actions",
                 }
             )
         if not any(c["key"] == "title" for c in cleaned):
             # 标题列是行选择与悬停操作的锚点，不可移除
-            cleaned.insert(0, {"key": "title", "w": UserProfile.BOOKMARK_TABLE_DEFAULT_COLUMNS[0]["w"]})
+            cleaned.insert(
+                0,
+                {
+                    "key": "title",
+                    "w": UserProfile.BOOKMARK_TABLE_DEFAULT_COLUMNS[0]["w"],
+                },
+            )
         return cleaned
 
 

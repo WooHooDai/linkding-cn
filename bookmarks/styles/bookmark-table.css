@@ -1,16 +1,142 @@
 /* 表格视图：绑 ul.bookmark-list.view-table，样式不外溢。
-   列宽由 ul 上的两个变量驱动：
-   --ld-check-col  选择框列（批量模式 28px，平时 0）
-   --ld-table-cols 数据列（minmax(0, Nfr)…），JS 拖拽/拖序只改这一个变量。 */
+   列宽由 ul 上的三个变量驱动：--ld-check-col 选择框列、--ld-table-cols 数据列（像素宽，
+   空格分隔）、--ld-ops-col 操作列。模板首帧写 minmax(基准px, wfr)，无 JS 也能用。 */
+
+/* 三横向轨道：表头与主体各自横滚、由 JS 同步 scrollLeft；底部是常驻吸底的可见横滚条。 */
+
+/* 表头吸顶，top 由 JS 写入搜索栏高度；上移 1px 用自己的上边框压住搜索栏下边框，
+   否则吸顶后两条 1px 并排。层级高于悬停行（行 z-index:4），浮层滚上去会被盖住。 */
+.table-header-sticky {
+  position: sticky;
+  top: calc(var(--ld-table-top, 0px) - 1px);
+  z-index: 5;
+  background: var(--body-color);
+  border-left: 1px solid var(--secondary-border-color);
+  border-right: 1px solid var(--secondary-border-color);
+  border-top: 1px solid var(--secondary-border-color);
+  border-bottom: 0;
+}
+
+/* 只横滚、不显示滚动条；放得下时禁滚，避免手势滑出空白 */
+.table-header-scroll {
+  overflow-x: hidden;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.table-header-scroll.is-overflowing {
+  overflow-x: auto;
+}
+
+.table-header-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* 唯一的横向滚动容器（纵向交窗口）；左右边框与表头/底栏衔接，上下不画。
+   z-index:0 隔离行内层级，滚过去的行不会穿透面板。 */
+.table-body-scroll {
+  position: relative;
+  z-index: 0;
+  overflow-x: hidden;
+  overflow-y: clip;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  background: var(--body-color);
+  border-left: 1px solid var(--secondary-border-color);
+  border-right: 1px solid var(--secondary-border-color);
+  border-top: 0;
+  border-bottom: 0;
+  scrollbar-width: none;
+}
+
+.table-body-scroll.is-overflowing {
+  overflow-x: auto;
+}
+
+.table-body-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* 常驻可见的横滚条：默认折叠，JS 加 .is-overflowing 才展开；吸底并贴住吸底分页器，
+   由它收面板底边（留缝就会从滚动条下方看到仍在滚动的行）。 */
+.table-footer-scroll {
+  display: none;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.table-footer-scroll.is-overflowing {
+  display: block;
+  position: sticky;
+  bottom: var(--ld-pager-h, 0px);
+  z-index: 1;
+  background: var(--body-color);
+  height: 8px;
+  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: clip;
+  border-left: 1px solid var(--secondary-border-color);
+  border-right: 1px solid var(--secondary-border-color);
+  border-top: 0;
+  border-bottom: 1px solid var(--secondary-border-color);
+  scrollbar-width: thin;
+  scrollbar-color: var(--secondary-border-color) transparent;
+}
+
+.table-footer-scroll.is-overflowing::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-footer-scroll.is-overflowing::-webkit-scrollbar-thumb {
+  background: var(--secondary-border-color);
+  border-radius: 4px;
+}
+
+.table-footer-scroll.is-overflowing::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary-text-color);
+}
+
+.table-footer-scroll.is-overflowing::-webkit-scrollbar-track,
+.table-footer-scroll.is-overflowing::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 等宽占位，只用来撑出与主体一致的横滚范围；它不是 .bookmark-list，需清掉默认边距 */
+.table-footer-list {
+  display: block;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  --ld-check-col: 0px;
+  min-width: max-content;
+}
+
+.table-footer-row {
+  display: grid;
+  grid-template-columns:
+    var(--ld-check-col) var(--ld-table-cols)
+    var(--ld-ops-col);
+  height: 0;
+  visibility: hidden;
+}
+
+/* 触屏设备不展示轨道滚动条：触摸横滑由浏览器原生手势完成 */
+@media (hover: none) and (pointer: coarse) {
+  .table-footer-scroll.is-overflowing {
+    scrollbar-width: none;
+  }
+
+  .table-footer-scroll.is-overflowing::-webkit-scrollbar {
+    display: none;
+  }
+}
 
 ul.bookmark-list.view-table {
   --ld-check-col: 0px;
   --ld-ops-col: 26px;
   display: block;
-  border: 1px solid var(--secondary-border-color);
-  border-radius: var(--border-radius-lg, 8px);
-  /* clip 而非 hidden：hidden 会把 ul 变成滚动容器，粘性表头将按 ul 顶边 + top 偏移定位 */
-  overflow: clip;
 }
 
 .bookmarks-page.active ul.bookmark-list.view-table {
@@ -22,17 +148,24 @@ ul.bookmark-list.view-table > li.table-header,
 ul.bookmark-list.view-table > li[ld-bookmark-item],
 ul.bookmark-list.view-table > li.group-header.table-group-header {
   display: grid;
-  grid-template-columns: var(--ld-check-col) var(--ld-table-cols);
-  grid-template-rows: minmax(0, 1fr);
-  /* 列表行的 flex gap 会泄漏进 grid，撑出列间 8px 缝、表头/数据错位 */
+  grid-template-columns:
+    var(--ld-check-col) var(--ld-table-cols)
+    var(--ld-ops-col);
+  grid-template-rows: minmax(34px, auto);
+  /* 隐式行压成 0：否则 Chrome 会多算一条自动行，展开行时把行高撑到上千像素 */
+  grid-auto-rows: 0;
+  /* 列表行的 flex gap 会漏进 grid，撑出列间缝 */
   gap: 0;
   align-items: center;
-  /* 右侧留出固定操作入口的槽位，避免覆盖最后一列内容 */
-  padding-right: var(--ld-ops-col);
   height: 34px;
   border-bottom: 1px solid var(--secondary-border-color);
   position: relative;
   margin: 0;
+}
+
+/* 行底色：选择框列与操作列用 inherit 跟随，悬停/选中/暗色主题不用各写一份 */
+ul.bookmark-list.view-table > li[ld-bookmark-item] {
+  background: var(--body-color);
 }
 
 /* 日期分组头：横跨全部列 */
@@ -40,7 +173,6 @@ ul.bookmark-list.view-table > li.group-header.table-group-header {
   display: flex;
   grid-column: 1 / -1;
   height: 30px;
-  padding-right: 0;
   background: var(--body-color-contrast);
   font-size: 12px;
   z-index: 11;
@@ -69,7 +201,9 @@ ul.bookmark-list.view-table > li.group-header.table-group-header .group-title {
   color: var(--text-color);
 }
 
-ul.bookmark-list.view-table > li:last-child {
+/* 横滚条展开时去掉末行下边框（由轨道收口）；只作用主体轨道——表头轨道的 li 也是 :last-child */
+#bookmark-list-container:has(.table-footer-scroll.is-overflowing)
+  .table-body-scroll > ul.bookmark-list.view-table > li:last-child {
   border-bottom: 0;
 }
 
@@ -81,16 +215,15 @@ ul.bookmark-list.view-table > li[ld-bookmark-item]:has(.note-text.expanded) {
   min-height: 34px;
 }
 
-/* ── 表头 ───────────────────────────────── */
+/* ── 表头 ── 吸顶在外层；这里给列宽手柄等 absolute 子项提供定位基准与背景 */
 ul.bookmark-list.view-table > li.table-header {
-  position: sticky;
-  top: var(--ld-table-top, 0);
-  z-index: 10;
+  position: relative;
   background: var(--body-color);
   height: 32px;
   grid-template-rows: 32px;
   font-size: 12px;
   color: var(--tertiary-text-color);
+  border-bottom: 1px solid var(--secondary-border-color);
 }
 
 ul.bookmark-list.view-table .th {
@@ -232,10 +365,31 @@ ul.bookmark-list.view-table .cell-author {
   align-self: stretch;
 }
 
+/* 固定列：横滚时钉在可视区边缘，底色跟随行。选择框列只在批量模式有宽 */
 ul.bookmark-list.view-table .cell-check {
+  position: sticky;
+  left: 0;
+  z-index: 2;
   /* 列宽只有 28px：16px 内边距 + 16px 复选框会被裁掉右侧，改为居中 */
   justify-content: center;
   padding: 0;
+  background: inherit;
+}
+
+/* 行尾操作列：真实轨道 + 右侧吸附，纯 CSS 完成。别改成绝对定位 + 每帧写偏移：
+   自定义属性可继承，每帧改一次会让整行子树重算样式，滚动必掉帧。 */
+ul.bookmark-list.view-table li[ld-bookmark-item] .cell-ops {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  /* 悬停操作栏是这一列的子元素，要溢出到左边 */
+  overflow: visible;
+  background: inherit;
 }
 
 ul.bookmark-list.view-table .bulk-edit-checkbox input {
@@ -525,36 +679,25 @@ ul.bookmark-list.view-table .cell-tags .quick-edit-tags-container .form-autocomp
   width: 100%;
 }
 
-/* ── 悬停操作栏：复用 actions.html，覆盖为行内浮层 ── */
+/* ── 悬停操作栏：挂在操作列上，整行高、无边框圆角阴影、底色跟行 ── */
 ul.bookmark-list.view-table li[ld-bookmark-item] .actions {
   position: absolute;
-  /* 停在操作入口左侧：既不遮挡入口，hover 也不会因浮层盖住按钮而抖动 */
-  right: calc(var(--ld-ops-col) + var(--unit-1));
-  top: 50%;
-  transform: translateY(-50%);
-  height: 30px;
+  /* 挂在操作列左缘，随列一起吸附 */
+  right: 100%;
+  top: 0;
+  bottom: 0;
+  width: max-content;
+  height: auto;
   display: flex;
   align-items: center;
   gap: var(--unit-2);
   margin: 0;
-  padding: 0 var(--unit-3);
+  padding: 0 var(--unit-3) 0 var(--unit-5);
   opacity: 0;
   visibility: hidden;
-  /* 实心面板：不再用透明渐变，避免下面的行内容透出来 */
-  background: var(--body-color);
-  border: 1px solid var(--secondary-border-color);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
-}
-
-/* 右侧间隙（浮层与按钮之间）也算浮层命中区，鼠标从按钮移向浮层时不会中断 */
-ul.bookmark-list.view-table li[ld-bookmark-item] .actions::after {
-  content: "";
-  position: absolute;
-  left: 100%;
-  top: 0;
-  bottom: 0;
-  width: calc(var(--ld-ops-col) + var(--unit-2));
+  background: inherit;
+  /* 左缘渐隐，避免硬切竖边 */
+  mask-image: linear-gradient(90deg, transparent 0, #000 var(--unit-6));
 }
 
 /* 显隐由行尾操作入口驱动（悬浮/点击），与「自动隐藏工具栏」偏好无关。
@@ -598,15 +741,10 @@ ul.bookmark-list.view-table .actions .toolbar-date + .toolbar-sep {
 
 /* ── 行尾固定操作入口：无边框、图标恒定 ── */
 ul.bookmark-list.view-table li[ld-bookmark-item] .row-ops-btn {
-  position: absolute;
-  right: 0;
-  top: 0;
-  /* 只需盖住行内内容；浮层已在左侧，按钮不必高于表头 */
-  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--ld-ops-col);
+  width: 100%;
   height: 100%;
   padding: 0;
   border: none;
@@ -646,50 +784,6 @@ ul.bookmark-list.view-table li[ld-bookmark-item].toolbar-visible .row-ops-btn {
   body:has(ul.view-table) .bookmarks-page.grid.sidebar-closed {
     grid-template-columns: minmax(0, 1fr);
   }
-}
-
-/* ── 可用宽度不足时横向滚动（由 JS 按列数判定后加 .ld-table-hscroll） ── */
-#bookmark-list-container.ld-table-hscroll {
-  /* 只裁切、不成为滚动容器：否则表头/分页器的 sticky 全部失效。
-     横向位移由 ul 的 translateX 完成，滚动条是下方那条常驻视口的自定义条 */
-  overflow: clip;
-}
-
-#bookmark-list-container.ld-table-hscroll ul.bookmark-list.view-table {
-  transform: translateX(var(--ld-hscroll-x, 0px));
-}
-
-/* 自定义横向滚动条：sticky 在视口底部，样式与其他滚动条一致 */
-.ld-hscroll-bar {
-  position: sticky;
-  bottom: 0;
-  z-index: 25;
-  height: 14px;
-  background: var(--body-color);
-}
-
-.ld-hscroll-bar[hidden] {
-  display: none;
-}
-
-/* 自绘滑块：macOS 原生滚动条是 overlay（不占位、不滚动就不显示），自绘才能常显 */
-.ld-hscroll-thumb {
-  position: absolute;
-  top: 4px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--secondary-border-color);
-  cursor: grab;
-  transition: background 0.15s ease;
-}
-
-.ld-hscroll-thumb:hover {
-  background: var(--secondary-text-color);
-}
-
-.ld-hscroll-thumb.dragging {
-  background: var(--text-color);
-  cursor: grabbing;
 }
 
 /* 表格视图不需要容器上间距（工具条自带），其它视图保留首条上方的呼吸位 */
@@ -735,13 +829,26 @@ body:not(:has(ul.view-table)):not(:has(ul.view-compact)) #bookmark-list-containe
   margin-bottom: var(--unit-2);
 }
 
-/* 分页器压过表格内一切浮层/操作入口（sticky 态的 z-index 10 不够，会被行内 z12 盖住） */
-#bookmark-list-container:has(ul.view-table) .bookmark-pagination {
-  z-index: 20;
-}
-
+/* 分页器在三条轨道之外的文档流里：吸底态沿用通用 sticky，这里只补上边距；
+   横滚条展开时它自己就是面板底边，分页器上线会凑成双线，去掉 */
 #bookmark-list-container:has(ul.view-table) .bookmark-pagination:not([data-sticky-on="true"]) {
   position: relative;
+  z-index: 20;
+  margin-top: var(--unit-2);
+}
+
+#bookmark-list-container:has(ul.view-table) .bookmark-pagination[data-sticky-on="true"] {
+  margin-top: var(--unit-2);
+}
+
+#bookmark-list-container:has(.table-footer-scroll.is-overflowing)
+  .bookmark-pagination {
+  border-top: 0;
+}
+
+/* sticky 态专用的左侧遮罩条在表格双轨道外底栏下不再需要，避免错位 */
+#bookmark-list-container:has(ul.view-table) .bookmark-pagination::before {
+  display: none;
 }
 
 /* 标签编辑框聚焦时与其它行内编辑器一样转主色，保持视觉一致 */
