@@ -2852,10 +2852,10 @@ ul.bookmark-list.view-compact .compact-tag:hover {
   color: var(--primary-color-highlight);
 }
 
-/* 触屏/窄屏的展开折叠按钮；桌面 hover 唤起，默认隐藏 */
+/* 展开折叠按钮：移动端与桌面端常驻显示；桌面 hover 仅临时预览，按钮负责钉住状态 */
 ul.bookmark-list.view-compact .compact-toggle-btn {
   flex: none;
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: flex-end;
   width: 20px;
@@ -2867,6 +2867,10 @@ ul.bookmark-list.view-compact .compact-toggle-btn {
   cursor: pointer;
 }
 
+ul.bookmark-list.view-compact .compact-toggle-btn:hover {
+  color: var(--primary-color-highlight);
+}
+
 ul.bookmark-list.view-compact .compact-chevron {
   display: block;
   transform-origin: center;
@@ -2876,12 +2880,6 @@ ul.bookmark-list.view-compact .compact-chevron {
 /* 收起箭头朝右，展开旋转朝下 */
 ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .compact-chevron {
   transform: rotate(90deg);
-}
-
-@media (hover: none), (max-width: 600px) {
-  ul.bookmark-list.view-compact .compact-toggle-btn {
-    display: inline-flex;
-  }
 }
 
 /* 保留动作栏模块间竖分隔线，只隐藏末尾多余的那条 */
@@ -2957,6 +2955,20 @@ ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-visible .actions {
 
   ul.bookmark-list.view-compact li[ld-bookmark-item]:hover .actions {
     display: flex;
+  }
+
+  /* 按钮收起后指针仍在行内：临时压掉悬停预览，直到指针离开，避免收起态被 :hover 顶回来 */
+  ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-suppressed:hover {
+    align-items: center;
+  }
+
+  ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-suppressed:hover .content {
+    display: flex;
+  }
+
+  ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-suppressed:hover .description,
+  ul.bookmark-list.view-compact li[ld-bookmark-item].toolbar-suppressed:hover .actions {
+    display: none;
   }
 }
 

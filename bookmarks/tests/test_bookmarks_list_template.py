@@ -1438,8 +1438,13 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertEqual(author.get_text(strip=True), bookmark.author)
         self.assertIsNone(soup.select_one(".compact-date"))
 
-        # 触屏/窄屏展开按钮
-        self.assertIsNotNone(soup.select_one(".compact-toggle-btn"))
+        # 展开折叠按钮：移动端与桌面端常驻渲染，携带展开/折叠两套 tooltip 文案
+        toggle_btn = soup.select_one(".compact-toggle-btn")
+        self.assertIsNotNone(toggle_btn)
+        self.assertEqual(toggle_btn.get("aria-expanded"), "false")
+        self.assertEqual(toggle_btn.get("title"), "Expand")
+        self.assertEqual(toggle_btn.get("data-title-expand"), "Expand")
+        self.assertEqual(toggle_btn.get("data-title-collapse"), "Collapse")
 
         # 标题链接与动作（含详情入口）仍然存在
         self.assertIsNotNone(

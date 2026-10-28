@@ -815,7 +815,9 @@ function hideAllToolbarFloats(keep) {
   document
     .querySelectorAll("li[ld-bookmark-item].toolbar-visible")
     .forEach((el) => {
-      if (el !== keep) el.classList.remove("toolbar-visible");
+      // 紧凑视图的开合状态由自身脚本独立管理，不在此排他收起
+      if (el === keep || el.closest("ul.view-compact")) return;
+      el.classList.remove("toolbar-visible");
     });
 }
 

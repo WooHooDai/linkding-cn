@@ -237,26 +237,52 @@
       if (window.__ldCompactToggleBound) return;
       window.__ldCompactToggleBound = true;
       // Document-level delegation so the handler survives Turbo DOM swaps
-      document.addEventListener('click', function(e) {
-        // 点在列表外：收起全部
-        var item = e.target.closest('ul.bookmark-list.view-compact li[ld-bookmark-item]');
-        if (!item) {
-          document.querySelectorAll('li[ld-bookmark-item].toolbar-visible').forEach(function(el) {
-            el.classList.remove('toolbar-visible');
-          });
-          return;
+      var LIST_SELECTOR = 'ul.bookmark-list.view-compact';
+      var ITEM_SELECTOR = 'li[ld-bookmark-item]';
+      var INTERACTIVE_SELECTOR = 'a, button, input, textarea, label, ld-health-indicator';
+      // 桌面（精确指针 + 支持 hover）：只有按钮能钉住展开/折叠，本体点击不切换；
+      // 触屏/粗指针：点按条目本体同样切换（hover 不存在，本体是主要入口）。
+      var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+
+      function syncButton(btn, expanded) {
+        if (!btn) return;
+        btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        btn.title = expanded ? btn.dataset.titleCollapse : btn.dataset.titleExpand;
+      }
+
+      function toggleItem(item) {
+        var expanded = item.classList.toggle('toolbar-visible');
+        syncButton(item.querySelector('.compact-toggle-btn'), expanded);
+        // 桌面端按钮收起后指针仍在行内：临时抑制 :hover 临时预览，直到指针离开，
+        // 否则收起状态会被悬停样式立刻顶回来。
+        if (!expanded && finePointer.matches) {
+          item.classList.add('toolbar-suppressed');
+          item.addEventListener('pointerleave', function release() {
+            item.classList.remove('toolbar-suppressed');
+          }, { once: true });
+        } else if (expanded) {
+          item.classList.remove('toolbar-suppressed');
         }
-        // 展开/折叠按钮（触屏/窄屏）：独立切换当前条目，不联动其他条目
+      }
+
+      document.addEventListener('click', function(e) {
+        var list = e.target.closest(LIST_SELECTOR);
+        // 点在紧凑列表外不做任何收起：按钮展开的条目只能通过按钮折叠
+        if (!list) return;
+        var item = e.target.closest(LIST_SELECTOR + ' ' + ITEM_SELECTOR);
+        if (!item) return;
+
+        // 展开/折叠按钮：独立切换当前条目，不联动其他条目
         var toggleBtn = e.target.closest('.compact-toggle-btn');
         if (toggleBtn) {
-          var toggleItem = toggleBtn.closest('li[ld-bookmark-item]');
-          var expanded = toggleItem.classList.toggle('toolbar-visible');
-          toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+          toggleItem(toggleBtn.closest(ITEM_SELECTOR));
           return;
         }
         // 其余交互元素（链接/输入/健康指示等）自行处理，不触发切换
-        if (e.target.closest('a, button, input, textarea, label, ld-health-indicator')) return;
-        item.classList.toggle('toolbar-visible');
+        if (e.target.closest(INTERACTIVE_SELECTOR)) return;
+        // 桌面本体点击不钉住；触屏本体点按切换
+        if (finePointer.matches) return;
+        toggleItem(item);
       });
     })();
     </script>
