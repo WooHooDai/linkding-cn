@@ -22,6 +22,8 @@ const CELL_CLASS = {
   date: "date",
   status: "status",
   author: "author",
+  highlights: "highlights",
+  annotations: "annotations",
 };
 
 /** 可就地编辑的字段 → 单元格选择器 */
@@ -445,21 +447,15 @@ class BookmarkTable extends Behavior {
     });
   }
 
-  /** 数据行按新列序重排：格子 DOM 顺序 + 显式轨道号，浮层与操作入口保持末尾 */
+// 数据行按新列序重排：格子布局完全由显式 grid-column 决定，只改轨道号、不动 DOM。
   applyColumnOrder(keys) {
-    const ul = this.element;
-    ul.querySelectorAll("li[ld-bookmark-item]").forEach((li) => {
+    this.element.querySelectorAll("li[ld-bookmark-item]").forEach((li) => {
       keys.forEach((key, i) => {
         const suffix = CELL_CLASS[key];
         const cell = suffix && li.querySelector(`:scope > .cell-${suffix}`);
         if (!cell) return;
         cell.style.gridColumn = String(i + 2);
-        li.appendChild(cell);
       });
-      const actions = li.querySelector(":scope > .actions");
-      if (actions) li.appendChild(actions);
-      const ops = li.querySelector(":scope > .row-ops-btn");
-      if (ops) li.appendChild(ops);
     });
   }
 
