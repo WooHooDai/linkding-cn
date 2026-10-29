@@ -800,7 +800,7 @@ ul.bookmark-list.view-table li[ld-bookmark-item].toolbar-suppressed .actions {
 }
 
 /* 「自动隐藏工具栏」的塌缩规则不得作用于表格浮层 */
-ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item] .actions > *:not(.toolbar-date):not(.health-status) {
+ul.bookmark-list.view-table.toolbar-auto-hide li[ld-bookmark-item] .actions > *:not(.toolbar-date):not(.health-status) {
   max-height: none;
   opacity: 1;
   pointer-events: auto;
