@@ -27,6 +27,9 @@
 @import "bookmark-details.css";
 @import "bookmark-form.css";
 @import "bookmark-page.css";
+@import "bookmark-row.css";
+@import "bookmark-list.css";
+@import "bookmark-compact.css";
 @import "bookmark-table.css";
 @import "markdown.css";
 @import "reader-mode.css";

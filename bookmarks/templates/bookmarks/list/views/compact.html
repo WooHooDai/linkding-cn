@@ -1,0 +1,40 @@
+{% load i18n %}
+{# 紧凑视图：常驻只显示标题行（含作者），hover/点行展开描述、动作栏与笔记。 #}
+<ul class="bookmark-list view-compact" role="list" tabindex="-1" ld-bookmark-compact ld-bookmark-groups
+    style="--ld-bookmark-description-max-lines:{{ bookmark_list.description_max_lines }};"
+    data-bookmarks-total="{{ bookmark_list.bookmarks_total }}"
+    data-notes-global="{{ bookmark_list.show_notes|yesno:'true,false,false' }}">
+  {% for bookmark_item in bookmark_list.items %}
+    {% if bookmark_list.group_by_date %}{% ifchanged bookmark_item.group_key %}
+      {% include 'bookmarks/list/parts/group_header.html' %}
+    {% endifchanged %}{% endif %}
+    <li ld-bookmark-item data-bookmark-id="{{ bookmark_item.id }}" role="listitem"
+        data-notes-enabled="{{ bookmark_list.show_notes|yesno:'true,false,false' }}"
+        class="{% if bookmark_item.css_classes %}{{ bookmark_item.css_classes }}{% endif %}{% if bookmark_list.show_notes %} show-notes{% endif %}">
+      <div class="content">
+        <div class="compact-row">
+          <div class="compact-head">
+            {% include 'bookmarks/list/parts/title.html' %}
+          </div>
+          <div class="compact-side">
+            <button type="button" class="compact-toggle-btn" aria-expanded="false"
+                    title="{% translate 'Expand' %}"
+                    data-title-expand="{% translate 'Expand' %}"
+                    data-title-collapse="{% translate 'Collapse' %}">
+              <svg class="compact-chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m9 6 6 6 -6 6"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        {% include 'bookmarks/list/parts/description.html' %}
+        {% include 'bookmarks/list/parts/actions.html' %}
+      </div>
+      {% include 'bookmarks/list/parts/notes.html' %}
+    </li>
+  {% endfor %}
+</ul>
+
+{% include 'bookmarks/list/parts/footer.html' %}

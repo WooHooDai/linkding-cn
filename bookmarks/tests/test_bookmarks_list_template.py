@@ -1781,3 +1781,40 @@ class BookmarkTableStatusColumnTest(TestCase, BookmarkFactoryMixin, HtmlTestMixi
         cell = soup.select_one("li[ld-bookmark-item] .cell-status")
         self.assertIsNotNone(cell)
         self.assertIsNotNone(cell.select_one('[data-action="mark_as_unread"]'))
+
+
+class BookmarkTableTagsColumnTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
+    """标签列被隐藏时不应再提供标签编辑入口，否则编辑器会落到描述格里。"""
+
+    render_template = BookmarkListTemplateTest.render_template
+
+    def setUp(self):
+        profile = self.get_or_create_test_user().profile
+        profile.bookmark_view_mode = UserProfile.BOOKMARK_VIEW_MODE_TABLE
+        profile.save()
+
+    def test_tags_edit_hidden_when_tags_column_hidden(self):
+        self.get_or_create_test_user().profile.bookmark_table_columns = [
+            {"key": "title", "w": 2.4, "on": True},
+            {"key": "desc", "w": 2.2, "on": True},
+            {"key": "tags", "w": 1.2, "on": False},
+        ]
+        self.get_or_create_test_user().profile.save()
+        self.setup_bookmark()
+
+        soup = self.make_soup(self.render_template())
+        self.assertIsNone(soup.select_one(".cell-tags"))
+        self.assertIsNone(soup.select_one('[data-quick-edit="tags"]'))
+        self.assertIsNone(soup.select_one(".quick-tag-btn"))
+
+    def test_tags_edit_available_when_tags_column_visible(self):
+        self.get_or_create_test_user().profile.bookmark_table_columns = [
+            {"key": "title", "w": 2.4, "on": True},
+            {"key": "tags", "w": 1.2, "on": True},
+        ]
+        self.get_or_create_test_user().profile.save()
+        self.setup_bookmark()
+
+        soup = self.make_soup(self.render_template())
+        self.assertIsNotNone(soup.select_one(".cell-tags"))
+        self.assertIsNotNone(soup.select_one('[data-quick-edit="tags"]'))

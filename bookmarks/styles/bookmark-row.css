@@ -1,0 +1,480 @@
+/* 三视图共享的行样式基座：li[ld-bookmark-item] 及其内容块（标题/URL/描述/标签/动作/预览图）。
+   视图专属的排布差异在 bookmark-list.css / bookmark-compact.css / bookmark-table.css 里覆盖。 */
+/* Bookmark list */
+ul.bookmark-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  /* Increase line-height for better separation within / between items */
+  line-height: 1.1rem;
+}
+
+@keyframes appear {
+  0% {
+    opacity: 0;
+  }
+  90% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Bookmarks */
+li[ld-bookmark-item] {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--unit-2);
+  margin-top: 0;
+  margin-bottom: var(--unit-3);
+
+  & .content {
+    flex: 1 1 0;
+    min-width: 0;
+    order: 1;
+  }
+
+  & .preview-image {
+    order: 2;
+    flex: 0 0 auto;
+    width: 100px;
+    height: 60px;
+    margin-top: var(--unit-h);
+    border-radius: var(--border-radius);
+    border: solid 1px var(--border-color);
+    object-fit: cover;
+
+    &.placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      & .img {
+        width: var(--unit-12);
+        height: var(--unit-12);
+        background-color: var(--tertiary-text-color);
+        opacity: 0.5;
+        -webkit-mask: url(preview-placeholder.svg) no-repeat center;
+        mask: url(preview-placeholder.svg) no-repeat center;
+      }
+    }
+  }
+
+  & .preview-image-container {
+    position: relative;
+    order: 2;
+    flex: 0 0 auto;
+    width: 100px;
+    height: 60px;
+    margin-top: var(--unit-h);
+
+    & > .preview-image {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+    }
+  }
+
+  & .form-checkbox.bulk-edit-checkbox {
+    display: none;
+  }
+
+  & .title {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  & .title img {
+    display: block;
+    width: 16px;
+    height: 16px;
+  }
+
+  & .title img + a {
+    /* padding-left: 22px; */
+  }
+
+  & .title .title-link {
+    color: var(--bookmark-title-color);
+    font-weight: var(--bookmark-title-weight);
+    display: block;
+    width: 100%;
+  }
+
+  & .title .quick-edit-title-input {
+    width: 100%;
+    min-width: 0;
+    font: inherit;
+    font-weight: var(--bookmark-title-weight);
+    color: inherit;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 2px 4px;
+    background: var(--body-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    outline: none;
+  }
+
+  & .title .quick-edit-title-input:focus {
+    border-color: var(--primary-color);
+    outline: var(--focus-outline);
+    outline-offset: calc(var(--focus-outline-offset) * -1);
+  }
+
+  & .title .favicon-link {
+    display: inline-block;
+    vertical-align: middle;
+    width: 16px;
+    height: 16px;
+    
+    text-decoration: none;
+    border: none;
+    background: none;
+    padding: 0;
+    margin: 0;
+  }
+  & .title .favicon-link:visited,
+  & .title .favicon-link:active,
+  & .title .favicon-link:hover {
+    text-decoration: none;
+    border: none;
+    background: none;
+  }
+
+  &.unread .title a {
+    font-style: italic;
+  }
+
+  & .url-path,
+  & .url-display {
+    font-size: var(--font-size-sm);
+    color: var(--secondary-link-color);
+  }
+
+  & .description {
+    color: var(--bookmark-description-color);
+    font-weight: var(--bookmark-description-weight);
+    position: relative;
+  }
+
+  /* 展开态描述容器公共样式：限制最大高度 + 滚动条（同行/分行一致） */
+  & .description .description-container.expanded,
+  & .description.expanded .description-container {
+    max-height: calc(15 * 1.1rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* 滚动条样式 */
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+    scrollbar-color: transparent transparent;
+    &::-webkit-scrollbar { width: 8px; }
+    &::-webkit-scrollbar-thumb {
+      background: transparent;
+      border-radius: 4px;
+    }
+    &:hover {
+      scrollbar-color: var(--secondary-border-color) transparent;
+    }
+    &:hover::-webkit-scrollbar-thumb {
+      background: var(--secondary-border-color);
+    }
+  }
+
+  /* 同行模式展开：容器 normal（模板空白折叠为空格，不产生额外换行），
+     隐藏分隔符 */
+  & .description .description-container.expanded {
+    white-space: normal;
+    text-overflow: clip;
+  }
+
+  & .description .description-container.expanded .description-separator {
+    display: none;
+  }
+
+  /* 可点击展开提示：由 JS 添加 is-expandable 类管理，替代内联 cursor */
+  & .description .description-text.is-expandable,
+  & .description .description-container.is-expandable {
+    cursor: pointer;
+  }
+
+  /* 展开态描述文本：保留原始换行；长无空格文本（URL）可任意断行 */
+  & .description .description-text.expanded,
+  & .description.expanded .description-text {
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+  }
+
+  /* 同行模式展开：描述另起一行显示 */
+  & .description .description-text.expanded {
+    display: block;
+  }
+
+  /* 分行模式展开：容器保持 normal，解除行数限制 */
+  & .description.expanded .description-container {
+    white-space: normal;
+    -webkit-line-clamp: unset;
+  }
+
+
+  & .description.is-editing-description .description-container {
+    display: block;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  /* 作者（标题链接之后）：浅灰弱化文字，最长 10em（短名自然宽度，超长限宽并往复自动滚动），容器内文字右对齐；可点击进入 author 搜索 */
+  & .title .author {
+    flex: none;
+    display: inline-block;
+    color: var(--secondary-text-color);
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+    white-space: nowrap;
+    max-width: 10em;
+    overflow: hidden;
+    text-align: right;
+    text-decoration: none;
+    box-sizing: border-box;
+    cursor: pointer;
+  }
+
+  & .title .author:hover {
+    color: var(--text-color);
+    text-decoration: none;
+  }
+
+  & .title .author .author-inner {
+    display: inline-block;
+    padding-inline: 0.15em;
+    white-space: nowrap;
+    will-change: transform;
+  }
+
+  /* 内容超出固定宽度时启用：在 0 ↔ -overflow 间往复滚动，hover 暂停便于阅读/编辑 */
+  & .title .author.auto-scroll .author-inner {
+    animation: author-marquee var(--author-duration, 6s) ease-in-out infinite alternate;
+  }
+
+  & .title .author.auto-scroll:hover .author-inner {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    & .title .author.auto-scroll .author-inner {
+      animation: none;
+    }
+  }
+
+  & .title .quick-edit-author-input {
+    flex: none;
+    width: auto;
+    min-width: 160px;
+    max-width: 100%;
+    font: inherit;
+    color: inherit;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 2px 4px;
+    background: var(--body-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    outline: none;
+  }
+
+  & .title .quick-edit-author-input:focus {
+    border-color: var(--primary-color);
+    outline: var(--focus-outline);
+    outline-offset: calc(var(--focus-outline-offset) * -1);
+  }
+
+  & .description .quick-edit-description-textarea {
+    width: 100%;
+    max-height: 300px;
+    padding: var(--unit-1) var(--unit-2);
+    margin: 0;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--body-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    overflow-y: hidden;
+    resize: none;
+    outline: none;
+    box-sizing: border-box;
+    vertical-align: middle;
+    /* 滚动条样式：匹配笔记，默认隐藏，hover/focus 时显示 */
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+    scrollbar-color: transparent transparent;
+    &::-webkit-scrollbar { width: 8px; }
+    &::-webkit-scrollbar-thumb {
+      background: transparent;
+      border-radius: 4px;
+    }
+    &:hover,
+    &:focus {
+      scrollbar-color: var(--secondary-border-color) transparent;
+    }
+    &:hover::-webkit-scrollbar-thumb,
+    &:focus::-webkit-scrollbar-thumb {
+      background: var(--secondary-border-color);
+    }
+  }
+
+  /* 聚焦态与标签输入框一致 */
+  & .description .quick-edit-description-textarea:focus {
+    border-color: var(--primary-color);
+    outline: var(--focus-outline);
+    outline-offset: calc(var(--focus-outline-offset) * -1);
+  }
+
+  & .description .separate{
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: var(--ld-bookmark-description-max-lines, 1);
+    overflow: hidden;
+  }
+
+  & .float-tooltip {
+    content: attr(data-tooltip);
+    position: absolute;
+    z-index: 10;
+    left: 0;
+    top: 100%;
+    width: 100%;
+    max-width: 100%;
+    background-color: #292f62;
+    color: #fff;
+    padding: var(--unit-1);
+    border-radius: var(--border-radius);
+    border: 1px solid #424a8c;
+    font-size: var(--font-size-sm);
+    font-style: normal;
+    white-space: normal;
+    pointer-events: none; /* 默认鼠标穿透 */
+    animation: 0.3s ease 0s appear;
+  }
+
+  @media (pointer: coarse) {
+    & .float-tooltip {
+      pointer-events: auto; /* 移动端靠点击交互，禁止穿透 */
+    }
+  }
+
+  & .tags {
+    & a,
+    & a:visited:hover {
+      color: var(--alternative-color);
+    }
+    & a::before {
+      content: "#";
+    }
+    & a:not(:last-child) {
+      margin-right: var(--unit-1);
+    }
+  }
+
+  & .actions,
+  & .extra-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    column-gap: var(--unit-2);
+  }
+
+  @media (max-width: 600px) {
+    & .extra-actions {
+      /* width: 100%;
+      margin-top: var(--unit-1); */
+    }
+  }
+
+  & .actions {
+    color: var(--bookmark-actions-color);
+    font-size: var(--font-size-sm);
+
+    & a,
+    & button.btn-link {
+      color: var(--bookmark-actions-color);
+      --btn-icon-color: var(--bookmark-actions-color);
+      font-weight: var(--bookmark-actions-weight);
+      padding: 0;
+      height: auto;
+      vertical-align: unset;
+      border: none;
+      box-sizing: border-box;
+      transition: none;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+
+      &:focus,
+      &:hover,
+      &:active,
+      &.active {
+        color: var(--bookmark-actions-hover-color);
+        --btn-icon-color: var(--bookmark-actions-hover-color);
+      }
+    }
+
+    & button.btn-link.quick-edit-btn.active {
+      color: var(--primary-color);
+      --btn-icon-color: var(--primary-color);
+    }
+
+    & button.btn-link.quick-edit-btn.active:hover,
+    & button.btn-link.quick-edit-btn.active:focus {
+      color: var(--primary-color-highlight);
+      --btn-icon-color: var(--primary-color-highlight);
+    }
+
+    & button.btn-link.quick-tag-btn.active {
+      color: var(--primary-color);
+      --btn-icon-color: var(--primary-color);
+    }
+
+    & button.btn-link.quick-tag-btn.active:hover,
+    & button.btn-link.quick-tag-btn.active:focus {
+      color: var(--primary-color-highlight);
+      --btn-icon-color: var(--primary-color-highlight);
+    }
+
+
+    & .quick-tag-menu-wrapper {
+      position: relative;
+      display: inline-flex;
+    }
+
+    & .date-link-exists {
+      color: var(--success-color);
+    }
+
+    & .toolbar-sep {
+      display: inline-flex;
+      align-items: center;
+      color: var(--bookmark-actions-color);
+      vertical-align: unset;
+      line-height: inherit;
+    }
+
+    & .toolbar-sep:last-child {
+      display: none;
+    }
+
+    & .action-icon,
+    & iconify-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+  }
+}

@@ -799,15 +799,6 @@ ul.bookmark-list.view-table li[ld-bookmark-item].toolbar-suppressed .actions {
   visibility: hidden !important;
 }
 
-/* 「自动隐藏工具栏」的塌缩规则不得作用于表格浮层 */
-ul.bookmark-list.view-table.toolbar-auto-hide li[ld-bookmark-item] .actions > *:not(.toolbar-date):not(.health-status) {
-  max-height: none;
-  opacity: 1;
-  pointer-events: auto;
-  flex: 0 1 auto;
-  min-width: 0;
-}
-
 /* 日期已是独立列，工具栏里的日期项及其分隔线在表格视图中是重复信息 */
 ul.bookmark-list.view-table .actions .toolbar-date,
 ul.bookmark-list.view-table .actions .toolbar-date + .toolbar-sep {
@@ -880,6 +871,37 @@ body:not(:has(ul.view-table)):not(:has(ul.view-compact)) #bookmark-list-containe
 /* 批量编辑栏与表格工具条相邻，底部留白是多余的（只影响表格视图） */
 .bookmarks-page.active:has(ul.view-table) .bulk-edit-bar {
   margin-bottom: 0;
+}
+
+/* 表格视图列配置 */
+.header-table-col-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--unit-1) var(--unit-3);
+  padding: var(--unit-1) var(--unit-4) var(--unit-2);
+}
+
+.header-table-col {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--unit-1);
+  font-size: var(--font-size-sm);
+  color: var(--text-color);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.header-table-col input {
+  margin: 0;
+  accent-color: var(--primary-color);
+}
+
+.header-table-col input:disabled {
+  cursor: default;
+}
+
+.header-table-col input:disabled ~ span {
+  color: var(--tertiary-text-color);
 }
 
 /* ── 表格工具条：列显隐 ── */

@@ -1,5 +1,16 @@
 import { queryBookmarkList } from "./utils/bookmark-list.js";
 
+/** 视图可自定义快捷键行为：在列表或行的 Behavior 上实现 handleShortcut(action, event)。
+ *  返回 true 表示已处理，通用逻辑不再介入。 */
+function handleByView(action, event, target) {
+  const list = target.closest?.("ul.bookmark-list");
+  const owner = list?.__behaviors?.find(
+    (b) => typeof b.handleShortcut === "function",
+  );
+  if (!owner) return false;
+  return owner.handleShortcut(action, event, target) === true;
+}
+
 // Track mouse position for elementFromPoint lookups
 let _lastMouseX = 0;
 let _lastMouseY = 0;
@@ -88,11 +99,7 @@ document.addEventListener("keydown", (event) => {
     const list = queryBookmarkList();
     if (!list) return;
 
-    // 紧凑视图：笔记常驻会撑破单行，e 切换「hover 行时显示笔记」
-    if (list.classList.contains("view-compact")) {
-      list.classList.toggle("notes-hover");
-      return;
-    }
+    if (handleByView(action, event, list)) return;
 
     const current = list.dataset.notesGlobal === "true";
     const next = !current;
@@ -120,29 +127,7 @@ document.addEventListener("keydown", (event) => {
     const li = target.closest("li[ld-bookmark-item]");
     if (!li) return;
 
-    // 表格视图：就地编辑所在单元格（标签走详情弹窗，需要补全菜单）
-    const table = target.closest("ul.bookmark-list.view-table");
-    if (table) {
-      const field = target.closest(".cell-title, .title-link")
-        ? "title"
-        : target.closest(".cell-tags")
-          ? "tags"
-          : target.closest(".cell-desc")
-            ? "description"
-            : target.closest(".cell-notes")
-              ? "notes"
-              : target.closest(".cell-author")
-                ? "author"
-                : null;
-      const behavior = table.__behaviors?.find(
-        (b) => typeof b.editCell === "function",
-      );
-      if (field && behavior) {
-        event.preventDefault();
-        behavior.editCell(li, field);
-      }
-      return;
-    }
+    if (handleByView(action, event, target)) return;
 
     let fieldType;
     if (target.closest(".inline-edit-notes, .toggle-notes")) {

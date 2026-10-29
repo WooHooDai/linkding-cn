@@ -215,3 +215,6 @@ docs/plans
 .claude
 .worktrees
 .ruff_cache
+
+# Python 打包产物 parts/ 会误伤模板目录，模板片段需要纳入版本控制
+!bookmarks/templates/bookmarks/list/parts

@@ -1,6 +1,6 @@
 // 作者名自动滚动
 //
-// 列表项标题行内的 author 采用固定宽度（见 bookmark-page.css `.title .author`）。
+// 列表项标题行内的 author 采用固定宽度（见 bookmark-row.css `.title .author`）。
 // 内容超出固定宽度时，启用左右往复自动滚动（auto-scroll）：
 //   - 外层 .author 负责固定宽度与 overflow 裁切
 //   - 内层 .author-inner 承载文本，通过 translateX 动画在 0 ↔ -overflow 间往复

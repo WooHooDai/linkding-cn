@@ -88,9 +88,7 @@ def _is_health_stale(checked_at: str, max_age_days: int) -> bool:
 def _health_status_display(health_status) -> str:
     """NULL（未检查）派生为 unknown，其余映射 CHOICES 显示名。"""
     if health_status is None:
-        return dict(HEALTH_STATUS_CHOICES).get(
-            HEALTH_STATUS_UNKNOWN, "Unknown"
-        )
+        return dict(HEALTH_STATUS_CHOICES).get(HEALTH_STATUS_UNKNOWN, "Unknown")
     return dict(HEALTH_STATUS_CHOICES).get(health_status, health_status)
 
 
@@ -321,7 +319,9 @@ class BookmarkItem:
         )
         self.health_checked_at = _health_details.get("checked_at", "")
         self.health_http_status = _health_details.get("http_status")
-        self.health_checked_at_display = format_health_checked_at(self.health_checked_at)
+        self.health_checked_at_display = format_health_checked_at(
+            self.health_checked_at
+        )
         self.health_status_display = _health_status_display(self.health_status)
         self.health_stale = _is_health_stale(
             self.health_checked_at, profile.health_max_age
@@ -329,7 +329,9 @@ class BookmarkItem:
         self.health_display_status = (
             HEALTH_STATUS_UNKNOWN if self.health_stale else self.health_status
         )
-        self.health_display_status_display = _health_status_display(self.health_display_status)
+        self.health_display_status_display = _health_status_display(
+            self.health_display_status
+        )
         self.details_url = context.details(bookmark.id)
         self.highlight_count = getattr(bookmark, "annotation_count", 0)
         self.annotation_note_count = getattr(bookmark, "annotation_note_count", 0)
@@ -1376,6 +1378,44 @@ class SidebarUserSummaryContext:
         return base_url + "?" + encoded_params if encoded_params else base_url
 
 
+# 列表视图注册表：新增视图只改这里 + 加一个模板。template 是该视图的完整模板，
+# settings 是布局菜单在该视图下展示的偏好项（与视图无关的项对所有视图都生效）。
+_VIEW_SETTINGS_COMMON = {
+    "theme",
+    "bookmark_view_mode",
+    "group_by_date",
+    "items_per_page",
+    "show_sidebar",
+    "enable_random_button",
+    "random_mode",
+    "random_target",
+    "sticky_header_controls",
+    "sticky_pagination",
+}
+
+BOOKMARK_VIEWS = {
+    UserProfile.BOOKMARK_VIEW_MODE_LIST: {
+        "template": "bookmarks/list/views/list.html",
+        "settings": _VIEW_SETTINGS_COMMON
+        | {"enable_preview_images", "bookmark_toolbar_auto_hide"},
+    },
+    UserProfile.BOOKMARK_VIEW_MODE_COMPACT: {
+        "template": "bookmarks/list/views/compact.html",
+        "settings": _VIEW_SETTINGS_COMMON,
+    },
+    UserProfile.BOOKMARK_VIEW_MODE_TABLE: {
+        "template": "bookmarks/list/views/table.html",
+        "settings": _VIEW_SETTINGS_COMMON,
+        # 列配置：服务端首帧即按「基准宽 + 权重」渲染，避免加载后列宽跳变
+        "columns": True,
+        # 高亮数/批注数列需要聚合计数
+        "needs_annotation_counts": True,
+        # 行高 34px，文字按钮会把悬停操作栏撑宽盖住末列，强制图标模式
+        "force_icon_actions": True,
+    },
+}
+
+
 class BookmarkListContext:
     request_context = RequestContext
 
@@ -1389,6 +1429,18 @@ class BookmarkListContext:
         self.query_is_valid = request_context.query_is_valid
         self.query_error_message = request_context.query_error_message
 
+        self.view_mode = (
+            user_profile.bookmark_view_mode
+            if user_profile.bookmark_view_mode
+            in (
+                UserProfile.BOOKMARK_VIEW_MODE_LIST,
+                UserProfile.BOOKMARK_VIEW_MODE_COMPACT,
+                UserProfile.BOOKMARK_VIEW_MODE_TABLE,
+            )
+            else UserProfile.BOOKMARK_VIEW_MODE_LIST
+        )
+        self.view = BOOKMARK_VIEWS[self.view_mode]
+
         query_set = request_context.get_bookmark_query_set(self.search)
         page_number = request.GET.get("page")
         paginator = Paginator(query_set, user_profile.items_per_page)
@@ -1400,7 +1452,7 @@ class BookmarkListContext:
         needs_annotation_counts = (
             user_profile.bookmark_date_route
             == UserProfile.BOOKMARK_DATE_ROUTE_HIGHLIGHTS
-            or user_profile.bookmark_view_mode == UserProfile.BOOKMARK_VIEW_MODE_TABLE
+            or self.view.get("needs_annotation_counts", False)
         )
         if needs_annotation_counts and bookmarks_page.object_list:
             from django.db.models import Count, Q
@@ -1468,18 +1520,8 @@ class BookmarkListContext:
         self.date_display = user_profile.bookmark_date_display
         self.date_route = user_profile.bookmark_date_route
         self.description_display = user_profile.bookmark_description_display
-        self.view_mode = (
-            user_profile.bookmark_view_mode
-            if user_profile.bookmark_view_mode
-            in (
-                UserProfile.BOOKMARK_VIEW_MODE_LIST,
-                UserProfile.BOOKMARK_VIEW_MODE_COMPACT,
-                UserProfile.BOOKMARK_VIEW_MODE_TABLE,
-            )
-            else UserProfile.BOOKMARK_VIEW_MODE_LIST
-        )
         self.description_max_lines = user_profile.bookmark_description_max_lines
-        if self.view_mode == UserProfile.BOOKMARK_VIEW_MODE_TABLE:
+        if self.view.get("columns"):
             self.table_columns = user_profile.get_bookmark_table_columns()
             # 首帧即按「基准宽 + 权重」渲染，与前端同源，避免加载后列宽跳变
             self.table_columns_grid = " ".join(
@@ -1508,12 +1550,20 @@ class BookmarkListContext:
                     continue
                 asc_key, desc_key = pair
                 if current_sort == asc_key:
-                    column["sort_dir"], column["sort_url"] = "asc", _table_sort_query(self.request, desc_key)
+                    column["sort_dir"], column["sort_url"] = (
+                        "asc",
+                        _table_sort_query(self.request, desc_key),
+                    )
                 elif current_sort == desc_key:
-                    column["sort_dir"], column["sort_url"] = "desc", _table_sort_query(self.request, asc_key)
+                    column["sort_dir"], column["sort_url"] = (
+                        "desc",
+                        _table_sort_query(self.request, asc_key),
+                    )
                 else:
                     column["sort_dir"] = None
-                    column["sort_url"] = _table_sort_query(self.request, asc_key if column["key"] == "title" else desc_key)
+                    column["sort_url"] = _table_sort_query(
+                        self.request, asc_key if column["key"] == "title" else desc_key
+                    )
         self.show_url = user_profile.display_url
         self.action_list = [
             {
@@ -1526,9 +1576,7 @@ class BookmarkListContext:
         self.action_display_mode = user_profile.bookmark_action_display_mode
         self.status_display_mode = user_profile.bookmark_status_display_mode
         self.quick_edit_display_mode = user_profile.bookmark_quick_edit_display_mode
-        if self.view_mode == UserProfile.BOOKMARK_VIEW_MODE_TABLE:
-            # 表格行高 34px，文字按钮会把悬停操作栏撑到 400px 宽、盖住末列内容；
-            # 表格上下文强制图标模式
+        if self.view.get("force_icon_actions"):
             self.action_display_mode = UserProfile.ACTION_DISPLAY_MODE_ICON
             self.status_display_mode = UserProfile.ACTION_DISPLAY_MODE_ICON
             self.quick_edit_display_mode = UserProfile.ACTION_DISPLAY_MODE_ICON
@@ -1550,6 +1598,16 @@ class BookmarkListContext:
             }
             for item in user_profile.get_bookmark_quick_edits()
         ]
+        # 表格视图隐藏标签列时没有标签单元格可编辑，标签编辑与快捷标签一并关闭，
+        # 否则编辑框会落到描述格里
+        # 只有带列的视图才可能因为隐藏标签列而失去标签编辑入口
+        self.tags_editable = not self.view.get("columns") or (
+            "tags" in [c["key"] for c in self.table_columns]
+        )
+        if not self.tags_editable:
+            self.quick_edit_list = [
+                item for item in self.quick_edit_list if item["key"] != "tags"
+            ]
         self.has_visible_quick_edits = any(
             item["enabled"] for item in self.quick_edit_list
         )
@@ -1564,6 +1622,9 @@ class BookmarkListContext:
             for i, qt in enumerate(quick_tags)
             if qt["enabled"] and qt["tag_names"] and qt["display_position"] == "submenu"
         ]
+        if not self.tags_editable:
+            self.quick_tags_direct = []
+            self.quick_tags_submenu = []
         self.has_quick_tags = bool(self.quick_tags_direct or self.quick_tags_submenu)
         # 为所有快捷标签加载图标 SVG 数据（内存缓存 → 本地文件 → API）
         icon_data_map = {}
@@ -2588,7 +2649,9 @@ class BookmarkDetailsContext:
         self.health_reason = _health_reason_display(
             _hd.get("reason", ""), _hd.get("http_status")
         )
-        self.health_checked_at_display = format_health_checked_at(self.health_checked_at)
+        self.health_checked_at_display = format_health_checked_at(
+            self.health_checked_at
+        )
         self.health_status_display = _health_status_display(self.health_status)
         self.health_stale = _is_health_stale(
             self.health_checked_at, user_profile.health_max_age
@@ -2596,7 +2659,9 @@ class BookmarkDetailsContext:
         self.health_display_status = (
             HEALTH_STATUS_UNKNOWN if self.health_stale else self.health_status
         )
-        self.health_display_status_display = _health_status_display(self.health_display_status)
+        self.health_display_status_display = _health_status_display(
+            self.health_display_status
+        )
         self.has_pending_assets = any(
             asset.status == BookmarkAsset.STATUS_PENDING for asset in self.assets
         )

@@ -83,8 +83,8 @@
     <div class="field-errors" data-field-error-for="items_per_page"></div>
   </div>
 
-  {# 紧凑/表格视图不显示预览图，开关在此模式下没有意义 #}
-  {% if request.user_profile.bookmark_view_mode != 'compact' and request.user_profile.bookmark_view_mode != 'table' %}
+  {# 只在当前视图支持的项里展示：预览图与自动隐藏工具栏仅默认视图有意义 #}
+  {% if 'enable_preview_images' in bookmark_list.view.settings %}
   <div class="header-pref-row">
     <span class="header-pref-label">{% translate 'Display preview images' %}</span>
     <label class="form-switch header-pref-switch">
@@ -94,7 +94,9 @@
       <i class="form-icon"></i>
     </label>
   </div>
+  {% endif %}
 
+  {% if 'bookmark_toolbar_auto_hide' in bookmark_list.view.settings %}
   {# 紧凑视图的工具栏本就常隐、hover/点按才展开，等价于强制自动隐藏 #}
   <div class="header-pref-row">
     <span class="header-pref-label">{% translate 'Auto-hide toolbar' %}</span>

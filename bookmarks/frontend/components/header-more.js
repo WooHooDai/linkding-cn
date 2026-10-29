@@ -2,7 +2,7 @@ import { Behavior, registerBehavior } from "./runtime.js";
 import { getCSRFToken } from "../utils/csrf.js";
 import { gettext } from "../utils/i18n.js";
 import { showToast } from "./toast.js";
-import { applyToolbarAutoHide } from "./toolbar-auto-hide.js";
+import { applyToolbarAutoHide } from "./bookmark-list.js";
 import { saveColumnsFromPanel } from "./bookmark-table.js";
 
 async function savePref(url, field, value, { appendEmpty = true } = {}) {

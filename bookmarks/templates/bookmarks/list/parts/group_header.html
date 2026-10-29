@@ -1,0 +1,22 @@
+{% load i18n %}
+{# 按日期分组的组标题。group_class 由视图传入（如表格视图的 table-group-header）。 #}
+<li class="group-header{% if group_class %} {{ group_class }}{% endif %}" data-group-key="{{ bookmark_item.group_key }}" role="listitem">
+  <label class="form-checkbox bulk-group-checkbox" aria-label="{% translate 'Select group' %}">
+    <input type="checkbox">
+    <i class="form-icon"></i>
+  </label>
+  <button type="button" class="group-toggle" aria-expanded="true">
+    <svg class="group-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+    <span class="group-title">
+      {% if bookmark_item.group_key == 'today' %}{% translate 'Today' %}
+      {% elif bookmark_item.group_key == 'yesterday' %}{% translate 'Yesterday' %}
+      {% elif bookmark_item.group_key == 'this_week' %}{% translate 'This week' %}
+      {% elif bookmark_item.group_key == 'this_month' %}{% translate 'This month' %}
+      {% else %}{{ bookmark_item.group_month|date:"Y年m月" }}{% endif %}
+    </span>
+    <span class="group-count">{{ bookmark_item.group_page_count }}</span>
+    {% if bookmark_item.group_page_count < bookmark_item.group_total %}
+    <span class="group-more">{% blocktranslate with start=bookmark_item.group_page_start end=bookmark_item.group_page_end total=bookmark_item.group_total %}Showing {{ start }}-{{ end }} of {{ total }}{% endblocktranslate %}</span>
+    {% endif %}
+  </button>
+</li>

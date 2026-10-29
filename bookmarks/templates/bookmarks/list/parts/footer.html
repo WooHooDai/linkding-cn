@@ -1,0 +1,15 @@
+{% load pagination %}
+{# 列表尾：分页器 + 健康任务胶囊 + 快捷标签子菜单数据。与视图无关。 #}
+<div class="bookmark-pagination" data-sticky-on="{{ sticky_pagination|yesno:'true,false' }}">
+  {% pagination bookmark_list.bookmarks_page %}
+</div>
+
+{% include 'bookmarks/health_job_capsule.html' %}
+
+{% if bookmark_list.quick_tags_submenu_json %}
+<script>
+  (function() {
+    try { window.__ldQuickTagsSubmenu = JSON.parse('{{ bookmark_list.quick_tags_submenu_json|escapejs }}'); } catch(e) {}
+  })();
+</script>
+{% endif %}

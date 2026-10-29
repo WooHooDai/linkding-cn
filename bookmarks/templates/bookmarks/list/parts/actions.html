@@ -4,7 +4,7 @@
     {% if item.has_content and item.key == "date" and bookmark_item.display_date %}
       <span class="toolbar-date">
       {# 日期始终渲染（含 preview 模式） #}
-      {% include 'bookmarks/list/date_link.html' %}
+      {% include 'bookmarks/list/parts/date_link.html' %}
       </span>
       <span class="toolbar-sep">|</span>
 
@@ -164,7 +164,7 @@
       <span class="toolbar-sep">|</span>
 
     {% elif not bookmark_list.is_preview and item.has_content and item.key == "statuses" %}
-      {% include 'bookmarks/list/statuses.html' %}
+      {% include 'bookmarks/list/parts/statuses.html' %}
       <span class="toolbar-sep">|</span>
     {% endif %}
   {% endfor %}
