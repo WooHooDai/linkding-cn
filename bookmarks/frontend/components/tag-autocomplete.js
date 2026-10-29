@@ -21,6 +21,7 @@ export class TagAutocomplete extends TurboLitElement {
       attribute: "input-aria-describedby",
     },
     variant: { type: String },
+    multiline: { type: Boolean },
     isFocus: { state: true },
     isOpen: { state: true },
     suggestions: { state: true },
@@ -35,6 +36,7 @@ export class TagAutocomplete extends TurboLitElement {
     this.inputPlaceholder = "";
     this.inputAriaDescribedBy = "";
     this.variant = "default";
+    this.multiline = false;
     this.isFocus = false;
     this.isOpen = false;
     this.suggestions = [];
@@ -44,8 +46,9 @@ export class TagAutocomplete extends TurboLitElement {
   }
 
   firstUpdated() {
-    this.input = this.querySelector("input");
+    this.input = this.querySelector("input, textarea");
     this.suggestionList = this.querySelector(".menu");
+    if (this.multiline) this.autoResize();
     this.positionController = new PositionController({
       anchor: this.input,
       overlay: this.suggestionList,
@@ -63,6 +66,13 @@ export class TagAutocomplete extends TurboLitElement {
     this.isFocus = true;
   }
 
+  /** 多行模式下让 textarea 高度跟随内容：软换行后 scrollHeight 增长，手动撑开 */
+  autoResize() {
+    if (!this.multiline || !this.input) return;
+    this.input.style.height = "auto";
+    this.input.style.height = `${this.input.scrollHeight}px`;
+  }
+
   handleBlur() {
     this.isFocus = false;
     this.close();
@@ -70,6 +80,8 @@ export class TagAutocomplete extends TurboLitElement {
 
   async handleInput(event) {
     this.input = event.target;
+
+    if (this.multiline) this.autoResize();
 
     const tags = await cache.getTags();
     const word = getCurrentWord(this.input);
@@ -168,21 +180,41 @@ export class TagAutocomplete extends TurboLitElement {
             ? "is-focused"
             : ""}"
         >
-          <input
-            id="${this.inputId || nothing}"
-            name="${this.inputName || nothing}"
-            .value="${this.inputValue || ""}"
-            placeholder="${this.inputPlaceholder || " "}"
-            class="form-input"
-            type="text"
-            autocomplete="off"
-            autocapitalize="off"
-            aria-describedby="${this.inputAriaDescribedBy || nothing}"
-            @input=${this.handleInput}
-            @keydown=${this.handleKeyDown}
-            @focus=${this.handleFocus}
-            @blur=${this.handleBlur}
-          />
+          ${this.multiline
+            ? html`
+                <textarea
+                  id="${this.inputId || nothing}"
+                  name="${this.inputName || nothing}"
+                  .value="${this.inputValue || ""}"
+                  placeholder="${this.inputPlaceholder || " "}"
+                  class="form-input"
+                  rows="1"
+                  autocomplete="off"
+                  autocapitalize="off"
+                  aria-describedby="${this.inputAriaDescribedBy || nothing}"
+                  @input=${this.handleInput}
+                  @keydown=${this.handleKeyDown}
+                  @focus=${this.handleFocus}
+                  @blur=${this.handleBlur}
+                ></textarea>
+              `
+            : html`
+                <input
+                  id="${this.inputId || nothing}"
+                  name="${this.inputName || nothing}"
+                  .value="${this.inputValue || ""}"
+                  placeholder="${this.inputPlaceholder || " "}"
+                  class="form-input"
+                  type="text"
+                  autocomplete="off"
+                  autocapitalize="off"
+                  aria-describedby="${this.inputAriaDescribedBy || nothing}"
+                  @input=${this.handleInput}
+                  @keydown=${this.handleKeyDown}
+                  @focus=${this.handleFocus}
+                  @blur=${this.handleBlur}
+                />
+              `}
         </div>
 
         <ul

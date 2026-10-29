@@ -9,7 +9,7 @@ import { patchBookmark } from "./bookmark-page.js";
 const MIN_COL_PX = 60;
 // 单击展开的延迟：留出双击判定窗口，双击改为编辑
 const EXPAND_DELAY = 200;
-/** 服务端没给基准宽时的兜底（正常配置不会走到） */
+// 服务端没给基准宽时的兜底（正常配置不会走到）
 const DEFAULT_BASE_PX = 120;
 
 /** 列 key → 单元格 class 后缀 */
@@ -543,11 +543,15 @@ class BookmarkTable extends Behavior {
     const current = (
       cell.querySelector(EDIT_TEXT[field])?.textContent || ""
     ).trim();
+    // 输入多行（desc/notes 用 Enter 换行）vs 软换行显示（title 用 Enter 保存但超宽自动折行）
     const multiline = field === "description" || field === "notes";
+    const softWrap = field === "title";
 
-    const editor = document.createElement(multiline ? "textarea" : "input");
+    const editor = document.createElement(
+      multiline || softWrap ? "textarea" : "input",
+    );
     editor.className = "table-cell-editor";
-    if (multiline) {
+    if (multiline || softWrap) {
       // 单行起步：高度完全由内容决定（textarea 默认两行会多出一行空白）
       editor.rows = 1;
     } else {
@@ -559,7 +563,7 @@ class BookmarkTable extends Behavior {
     // 高度跟随内容、封顶 MAX_HEIGHT：box-sizing 是 border-box，
     // 直接取 scrollHeight 会少算边框，导致内容不满也出现滚动条
     const grow = () => {
-      if (!multiline) return;
+      if (!multiline && !softWrap) return;
       editor.style.height = "auto";
       const border = editor.offsetHeight - editor.clientHeight;
       const contentHeight = editor.scrollHeight + border;
@@ -634,9 +638,15 @@ class BookmarkTable extends Behavior {
     const cellRect = cell.getBoundingClientRect();
     const PREFERRED = 420;
     const GAP = 12;
+    // 可视区（表格主体横滚视口）内的可用宽度：编辑器绝不允许溢出它，
+    // 否则标签列横滚出可视区时，编辑器会跟着跑到屏幕外被裁切
+    const viewportWidth = viewportRect.right - viewportRect.left;
     const availRight = viewportRect.right - cellRect.left - GAP;
     const availLeft = cellRect.right - viewportRect.left - GAP;
-    const maxWidth = Math.max(availRight, availLeft, 160);
+    const maxWidth = Math.min(
+      Math.max(availRight, availLeft, 160),
+      viewportWidth - 2 * GAP,
+    );
     let width = Math.min(maxWidth, Math.max(PREFERRED, cellRect.width));
 
     if (field === "title") {
@@ -651,7 +661,21 @@ class BookmarkTable extends Behavior {
       );
     }
 
-    const left = availRight >= width ? 0 : Math.round(cellRect.width - width);
+    let left = availRight >= width ? 0 : Math.round(cellRect.width - width);
+    // 视口约束：编辑器（相对 cell 定位）最终渲染位置必须落在可视区内。
+    // cell 横滚出可视区时（如通过操作栏快捷编辑靠右的标签列），left 要回拉，
+    // 否则编辑器右缘/左缘被视口裁掉。
+    const editorViewportLeft = cellRect.left + left;
+    const editorViewportRight = editorViewportLeft + width;
+    const maxLeft = viewportRect.right - GAP - cellRect.left - width;
+    const minLeft = viewportRect.left + GAP - cellRect.left;
+    if (editorViewportRight > viewportRect.right - GAP) {
+      left = Math.round(maxLeft);
+    }
+    if (editorViewportLeft < viewportRect.left + GAP) {
+      left = Math.round(minLeft);
+    }
+
     editor.style.right = "auto";
     editor.style.left = `${left}px`;
     editor.style.width = `${Math.round(width)}px`;
@@ -673,6 +697,8 @@ class BookmarkTable extends Behavior {
     const cell = editor?.closest(".cell-tags");
     if (!editor || !cell) return;
     this.placeEditor(editor, cell, "tags");
+    // 宽度确定后再让多行编辑器重算高度（lit 首次 render 可能尚未完成）
+    requestAnimationFrame(() => editor.autoResize?.());
   }
 
   /* 操作栏里的快捷编辑按钮：直接进对应单元格的编辑态 */
@@ -687,6 +713,17 @@ class BookmarkTable extends Behavior {
     if (!field) return;
     event.preventDefault();
     event.stopPropagation();
+    // 进入编辑态即收起操作栏：编辑框覆盖在行上，操作栏继续悬浮会挡内容/被表头盖住
+    if (li.classList.contains("toolbar-visible")) {
+      hideAllToolbarFloats(li);
+      li.classList.remove("toolbar-visible");
+      li.classList.add("toolbar-suppressed");
+      li.addEventListener(
+        "pointerleave",
+        () => li.classList.remove("toolbar-suppressed"),
+        { once: true },
+      );
+    }
     this.editCell(li, field);
   }
 
@@ -733,35 +770,51 @@ class BookmarkTable extends Behavior {
       return;
     }
 
-    // 标签列：芯片被右缘裁掉时先展开整行，否则点芯片照常筛标签
-    if (cell.classList.contains("cell-tags")) {
-      if (link) {
-        const right = cell.getBoundingClientRect().right;
-        if (link.getBoundingClientRect().right <= right - 8) return;
-        event.preventDefault();
-      }
-      this.toggleRow(li);
-      return;
-    }
-
-    // 标题列：点文字/图标打开书签，点省略号或空白处展开整行
-    if (cell.classList.contains("cell-title")) {
-      if (link) return;
-      this.toggleRow(li);
-      return;
-    }
-
-    // 作者列：被截断时整格都是开关，未截断时点文字仍筛作者
-    if (cell.classList.contains("cell-author")) {
-      if (link && !this.isAuthorTruncated(li)) return;
+    // 跳转/筛选只认「点在内容上」；右缘死区与空白处一律展开折叠，杜绝误触跳转
+    if (!this.hitsContent(cell, link, event)) {
       if (link) event.preventDefault();
       this.toggleRow(li);
       return;
     }
 
-    // 描述/笔记：整格点击
     if (link) return;
     this.toggleRow(li);
+  }
+
+  /** 点击是否落在可跳转/可筛选的内容上。
+   *  链接盒普遍被 flex 撑满格子（标题/作者），只有文字本身才算内容，
+   *  空白处（含行展开后的充裕留白）是展开折叠的安全区。 */
+  hitsContent(cell, link, event) {
+    if (!link) return false;
+    if (cell.classList.contains("cell-tags")) {
+      // 芯片被右缘裁掉时只露出半个，点它多半是想展开而非筛标签
+      const right = cell.getBoundingClientRect().right;
+      return link.getBoundingClientRect().right <= right - 8;
+    }
+    // favicon 等图标链接是实体按钮，命中即算
+    if (!link.matches(".title-link, .author")) return true;
+    const li = cell.closest("li[ld-bookmark-item]");
+    // 折叠态作者被截断时整格都是开关，点文字只展开（未截断时点文字筛作者）
+    if (
+      cell.classList.contains("cell-author") &&
+      !li.classList.contains("is-expanded") &&
+      this.isAuthorTruncated(li)
+    ) {
+      return false;
+    }
+    return this.hitsText(link, event.clientX, event.clientY);
+  }
+
+  /** 点位是否落在链接文字上：按 Range 行盒逐行判定（链接盒宽 ≠ 文字宽） */
+  hitsText(link, x, y) {
+    const range = document.createRange();
+    range.selectNodeContents(link);
+    for (const rect of range.getClientRects()) {
+      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** 整行展开/折叠：切换都延迟 EXPAND_DELAY，快速双击时取消切换改为编辑 */

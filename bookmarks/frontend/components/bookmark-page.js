@@ -63,10 +63,16 @@ function scrollToBookmarkTop(element) {
     '.section-header[data-sticky-on="true"]',
   );
   const stickyHeight = stickyHeader ? stickyHeader.offsetHeight : 0;
+  // 表格视图另有一层吸顶表头，贴在搜索栏下方，编辑态滚顶时也要一并让开
+  let offset = stickyHeight;
+  if (li.closest("ul.view-table")) {
+    const tableHeader = document.querySelector(".table-header-sticky");
+    if (tableHeader) offset += tableHeader.offsetHeight;
+  }
   const rect = li.getBoundingClientRect();
   const currentScroll =
     window.pageYOffset || document.scrollingElement.scrollTop;
-  const targetTop = rect.top + currentScroll - stickyHeight;
+  const targetTop = rect.top + currentScroll - offset;
   window.scrollTo({ top: targetTop, behavior: "instant" });
 }
 
@@ -858,6 +864,10 @@ class BookmarkItem extends Behavior {
     autocomplete.classList.add("quick-edit-tags-container");
     autocomplete.setAttribute("input-value", currentTags.join(" "));
     autocomplete.setAttribute("input-placeholder", gettext("Enter tags"));
+    // 表格视图：标签列窄、编辑框宽度受视口限制，多标签易超宽，改用软换行看全
+    if (this.element.closest("ul.view-table")) {
+      autocomplete.setAttribute("multiline", "");
+    }
     tagsContainer.parentNode.insertBefore(
       autocomplete,
       tagsContainer.nextSibling,
@@ -887,7 +897,7 @@ class BookmarkItem extends Behavior {
     });
 
     const onReady = () => {
-      input = autocomplete.querySelector("input");
+      input = autocomplete.querySelector("input, textarea");
       if (!input || editor.closed) return;
 
       savedScrollY = window.scrollY;

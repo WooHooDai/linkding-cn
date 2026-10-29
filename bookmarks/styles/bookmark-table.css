@@ -416,16 +416,35 @@ ul.bookmark-list.view-table .bulk-edit-checkbox input {
   margin: 0;
 }
 
-/* 标题/作者右缘（省略号所在处）是展开开关；文字本身仍是链接 */
+/* 标题/作者/标签列右缘（省略号/渐隐所在处）是展开开关的死区：单击折叠展开、
+   双击编辑，绝不触发跳转——这几列的链接占满格子，窄屏点行极易误触。
+   触屏命中普遍有偏移，死区放宽。 */
+ul.bookmark-list.view-table {
+  --ld-cell-toggle-w: 18px;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  ul.bookmark-list.view-table {
+    --ld-cell-toggle-w: 28px;
+  }
+}
+
 ul.bookmark-list.view-table .cell-title::after,
-ul.bookmark-list.view-table .cell-author::after {
+ul.bookmark-list.view-table .cell-author::after,
+ul.bookmark-list.view-table .cell-tags::after {
   content: "";
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  width: var(--unit-5);
+  width: var(--ld-cell-toggle-w);
   cursor: pointer;
+}
+
+/* 编辑态不抢指针：编辑器可能比格子窄，死区会误触折叠 */
+ul.bookmark-list.view-table .cell.is-editing::after,
+ul.bookmark-list.view-table .cell-tags:has(.quick-edit-tags-container)::after {
+  content: none;
 }
 
 /* ── 标题列 ─────────────────────────────── */
@@ -586,9 +605,9 @@ ul.bookmark-list.view-table .cell-tags .tags {
   overflow: hidden;
 }
 
-/* 截断态右缘渐隐，提示后面还有标签（点击展开整行） */
+/* 截断态右缘渐隐，提示后面还有标签（点击展开整行）；渐隐带宽与右缘死区对齐 */
 ul.bookmark-list.view-table > li:not(.is-expanded) .cell-tags .tags {
-  mask-image: linear-gradient(90deg, #000 calc(100% - 18px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - var(--ld-cell-toggle-w)), transparent);
 }
 
 ul.bookmark-list.view-table > li.is-expanded .cell-tags {
@@ -644,9 +663,9 @@ ul.bookmark-list.view-table .table-cell-editor {
   position: absolute;
   left: 0;
   right: 0;
-  /* 行被撑高时也保持自身高度、在行内垂直居中 */
-  top: 50%;
-  transform: translateY(-50%);
+  /* 顶部对齐向下扩展：单行时与居中几乎重合，多行只向下溢出，
+     不向上探进吸顶表头被遮挡 */
+  top: 0;
   box-sizing: border-box;
   width: auto;
   min-height: 26px;
@@ -708,8 +727,8 @@ ul.bookmark-list.view-table .cell-tags:has(.quick-edit-tags-container) {
 
 ul.bookmark-list.view-table .cell-tags .quick-edit-tags-container {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
+  /* 顶部对齐向下扩展：多行软换行时只向下溢出，不向上探进吸顶表头 */
+  top: 0;
   z-index: 25;
   display: block;
   /* 不受标签列宽限制：屏幕够宽时给足编辑空间（flex 子项不许被压缩） */
@@ -723,13 +742,29 @@ ul.bookmark-list.view-table .cell-tags .quick-edit-tags-container .form-autocomp
   width: 100%;
 }
 
+/* 深色主题的 --input-bg-color 是 6% 白的半透明层，编辑框悬在行上会透出
+   下方列的文字与框线；与 .table-cell-editor 统一用不透明的主题底色 */
+ul.bookmark-list.view-table .cell-tags .quick-edit-tags-container .form-autocomplete-input {
+  background: var(--body-color);
+  /* 多行软换行时容器要随 textarea 撑高：autocomplete.css 默认 height 固定在
+     control-size，textarea 撑高会溢出容器、文字跑出框外 */
+  height: auto;
+  align-items: stretch;
+}
+
+ul.bookmark-list.view-table .cell-tags .quick-edit-tags-container .form-autocomplete-input textarea.form-input {
+  /* 容器 height:auto 后，textarea 的 height:100% 会退化为 auto，交给 autoResize 的
+     inline height 决定，无需手动覆盖 */
+  height: auto;
+}
+
 /* ── 悬停操作栏：挂在操作列上，整行高、无边框圆角阴影、底色跟行 ── */
 ul.bookmark-list.view-table li[ld-bookmark-item] .actions {
   position: absolute;
-  /* 挂在操作列左缘，随列一起吸附；以行中心为轴，放不下就折行（宽度上限由 JS 写入） */
+  /* 挂在操作列左缘，随列一起吸附。顶部对齐向下扩展：单行时与居中几乎重合，
+     折行变高时只向下溢出，不会向上探进吸顶表头被遮挡（第一行尤其明显） */
   right: 100%;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 0;
   width: max-content;
   max-width: var(--ld-actions-max-w, 420px);
   /* 不做滚动/裁切：健康检查浮窗挂在面板内，overflow 会把它困在里面 */
@@ -905,4 +940,13 @@ body:not(:has(ul.view-table)):not(:has(ul.view-compact)) #bookmark-list-containe
 /* 标签编辑框聚焦时与其它行内编辑器一样转主色，保持视觉一致 */
 ul.bookmark-list.view-table .cell-tags .form-autocomplete .form-autocomplete-input.is-focused {
   border-color: var(--primary-color);
+}
+
+/* 多行标签编辑：软换行看全超宽标签，高度由 JS 撑开、禁滚动与手动缩放 */
+ul.bookmark-list.view-table .cell-tags .quick-edit-tags-container textarea.form-input {
+  resize: none;
+  overflow-y: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  line-height: inherit;
 }
