@@ -5,8 +5,18 @@ linkding-cn 是一款开源、自托管的网页管理&阅读工具（书签管�
 ![](https://github.com/user-attachments/assets/725f6d6f-c286-4119-a280-c4cde450e171)
 
 <details style="align:center;">
-    <summary>点击查看截图：书签列表</summary>
+    <summary>点击查看截图：书签列表（默认视图）</summary>
     <img width="1000" height="933" alt="full" src="https://github.com/user-attachments/assets/767526f7-ebc0-4758-a222-b631d1769e67" />
+</details>
+
+<details style="align:center;">
+    <summary>点击查看截图：书签列表（表格视图）</summary>
+    <img width="1531" height="882" alt="表格视图" src="https://github.com/user-attachments/assets/9c17463b-4f39-4d97-b206-cb004830372b" />
+</details>
+
+<details style="align:center;">
+    <summary>点击查看截图：书签列表（紧凑视图）</summary>
+    <img width="1053" height="882" alt="紧凑视图" src="https://github.com/user-attachments/assets/62c33fe4-f6a0-4000-bb6a-1c8113fd7340" />
 </details>
 
 <details style="align:center;">
@@ -18,6 +28,7 @@ linkding-cn 是一款开源、自托管的网页管理&阅读工具（书签管�
 ## 核心特性
 
 - 🌍 多语言：内置 **简体中文🇨🇳**、English，支持[增加更多其他语言](./docs/i18n-guide.md)
+- 👀 多视图：默认、紧凑、表格
 - 📦 快照存档：自动获取网页的 Favicon、元数据、HTML 快照。
     - 支持通过声明或自定义脚本[自定义适配规则](./docs/site-adapters.md)，对元数据、快照、阅读页面进行灵活的获取、清理、定制
     - 内置**官方适配订阅源**，欢迎前往[WooHooDai/linkding-cn-adapters](https://github.com/WooHooDai/linkding-cn-adapters) 提适配需求或贡献适配规则
@@ -87,6 +98,7 @@ docker compose pull && docker compose up -d
 | 功能 | linkding-cn  | linkding  |
 |:---:|:---:|:---:|
 |**语言**|_简体中文🇨🇳_ / English / [其他](./docs/i18n-guide.md)|English|
+|**视图**|_列表/紧凑/表格_ |列表|
 |**阅读模式**|阅读页面 + _高亮批注_ |阅读页面|
 |**元数据&快照**|内置 + [_声明式适配/自定义脚本_](./docs/site-adapters.md)|内置|
 |**书签工具栏自定义**|_支持启用/禁用、排序、显示模式_|❌|

@@ -1,3 +1,88 @@
+# v1.3.2 (2026/10/29)
+
+> [!IMPORTANT]
+> **升级注意：快照浏览器 profile 目录变更**
+> 浏览器 profile 该由环境变量 `LD_CHROMIUM_PROFILE_DIR` 指定，`LD_SINGLEFILE_UBLOCK_OPTIONS` 中的 `--browser-arg=--user-data-dir=...` 将被忽略
+> 可直接删除不再`/etc/linkding/chromium-profile` 不再使用，可直接删除（重建容器时也会自然消失）
+> 希望 profile 跨容器重建保留时，可设 `LD_CHROMIUM_PROFILE_DIR=/etc/linkding/data/chromium-profile`，并把该目录排除在备份之外（它是浏览器缓存，不是用户数据）
+
+## 全新构建的书签列表视图
+
+- **新增：紧凑视图、表格视图**
+    - <details>
+        <summary>紧凑视图</summary>
+        <img width="1053" height="882" alt="紧凑视图" src="https://github.com/user-attachments/assets/62c33fe4-f6a0-4000-bb6a-1c8113fd7340" />
+      </details>
+    - <details>
+        <summary>表格视图</summary>
+        <img width="1531" height="882" alt="表格视图" src="https://github.com/user-attachments/assets/9c17463b-4f39-4d97-b206-cb004830372b" />
+      </details>
+- <details>
+    <summary>新增：支持书签列表按日期分组</summary>
+    <img width="1004" height="348" alt="按日期分组" src="https://github.com/user-attachments/assets/729f116f-2624-4268-befc-d9da8b161827" />
+  </details>
+- <details>
+    <summary>新增：布局按钮可快速调整书签列表视觉效果</summary>
+    <img width="495" height="534" alt="布局菜单" src="https://github.com/user-attachments/assets/95ec2456-0089-4a53-a59b-eb93ec5cd86b" />
+  </details>
+
+## 重构&增强批量编辑增强
+
+- **批量编辑支持区域选择**
+    - 支持长按单击进行区域选择，或使用键盘 Shift 进行区域选择
+    - 支持按日期分组启用时，对日期分组进行批量选择
+- 批量编辑动作语义修正：
+    - 新增：**原“重新抓取”拆分为“抓取元数据”（仅用新值填补空值）、“刷新元数据”（无条件覆盖原值）**
+    - 优化：“创建快照”会跳过已有 pending 快照的书签
+    - 优化：“删除快照”会丢弃 pending 快照的抓取结果
+    - 优化：“刷新图标”改走正式任务入口
+    - 优化：回收站页隐藏“检查健康”
+    - 修复：原“重新抓取”会创建快照的错误
+    - 修复：“移除标签”会创建标签的错误
+- 批量编辑执行后保留勾选（移除操作除外），便于对同一批书签继续批量操作
+
+## 优化书签
+
+- 新增：**书签元数据新增“作者”（author）字段**，已引入 site-adpaters 在内的全链路支持
+- 新增：统一书签详情弹窗、新增页面、编辑页面的“重新抓取”交互，支持字段级与整体撤销
+- 新增：favicon 根据对比度动态描边，尽力避免因背景色而看不见图标
+- 新增：全局快捷键支持自定义按键（设置 - 通用 - 快捷键）
+- 优化：`date_modified`（修改日期）只反映内容修改，即标题/描述/作者/笔记/预览图/URL/标签变化时才更新，归档/分享/已读/未读、快照、文章、资产上传不再更新它
+- 修复：“重新抓取”到空白元数据会清空已有字段的错误
+- 修复：部分非正方形 favicon 拉伸变形的问题
+
+## 修复 Site Adapters 框架
+
+- 新增：L1 凭据探针支持 GET 方法与探测 URL 覆盖，可探测「页面不校验 token 而 API 才校验」的站点
+- 重构：重要行为变化
+    - 全局/默认 UA 不再注入 metadata、snapshot，仅适配器显式配置的 UA 生效；
+    - `LD_DEFAULT_USER_AGENT` 改为内置中性 Chrome UA 常量、不再读 env
+    - `LD_SINGLEFILE_OPTIONS` / `LD_SINGLEFILE_UBLOCK_OPTIONS` 中的 `--user-agent` 被剔除
+- 重构：凭据来源语义——manual 提供即意图，auto 配置驱动
+- 修复：元数据 cookie 刷新后未正确传递给 hook 的问题——刷新出的 cookie 写回 config，单次请求完成「探针发现失效 → 刷新 → 钩子还原」闭环
+- 修复：403 视为 cookie 失效信号强制刷新，reader 复用 metadata 抓取通路；cookie 刷新域名级互斥，批量并发只启动一次浏览器
+- 修复：cookie 验证/刷新链路（L2 数据源、空刷新死循环、profile 锁维度、Set-Cookie 按条解析、只读 dry_run、L1 探针 405 不可信等）
+- 修复：凭据存储加密与 meta 并发互斥、health scope 与共享凭据越权读防护、损坏文件/密钥热更/域匹配/meta 键错位等隐藏缺陷
+- 修复：health 检查（location 误伤、零重试、限流无界、重定向环归类、probe_timeout 统一、reason 透传、嵌套容器字段校验、与 metadata 抓取同源）
+- 修复：metadata 限流双重 sleep
+- 修复：引擎脚本与资源管理（carousel 就绪口径、无界等待、hook 超时残留、pw 泄漏等）
+- 修复：快照/reader 产物处理（临时文件泄漏、空操作整文件重写、空响应 COMPLETE、replace 缺校验等）
+- 修复：视图层与执行日志（死路径 500、测试按钮写副作用、输出脱敏、配置并发丢更新、假成功端点、异常回显）
+- 修复：订阅拉取与 CLI（SSRF 重定向绕过、脚本无上限、首拉落盘、失败重试窗口、缓存键、外链校验、validate 错误级退出码非零）
+- 修复：配置包（builtin 缓存、health 配置口径收敛、lazy 默认表、BOM 解析、类型校验）
+- 修复：Python hook 分派兜底收窄，杜绝 before/after 静默错派到 extract
+
+## 其他修复
+
+- 修复：避免书签列表标题、描述的浮窗在窗口宽度变化后出现残留，导致内容已完整展示却仍弹出浮窗
+- 修复：chromium-profile 改由 `LD_CHROMIUM_PROFILE_DIR` 单一来源指定，修复快照集体失败问题
+- 修复：快照临时文件异常路径清理；`snapshot.enabled:false` 时临时快照并发串行化
+- 修复：快照调度器锁增加心跳，持锁者失联时自动接管
+- 修复：归一化镜像内代码权限，避免 worker 读不到 0600 模板
+- 修复：不再固定 chromium 精确版本，避免 bookworm-security 下架导致构建周期性失败
+- 移除：DRF git 源依赖，改用 PyPI 3.18.3
+
+---
 # v1.3.1 (2026/09/30)
 
 > [!IMPORTANT]
