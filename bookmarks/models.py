@@ -1517,6 +1517,35 @@ class UserProfile(models.Model):
         default=HIGHLIGHT_COPY_ACTION_BOTH,
     )
 
+    # 书签列表页快捷键（key 为动作标识，value 为单键；空字符串表示禁用）
+    # 方向键导航（↑/↓）固定不变，不提供配置。
+    SHORTCUT_NEW_BOOKMARK = "new_bookmark"
+    SHORTCUT_FOCUS_SEARCH = "focus_search"
+    SHORTCUT_QUICK_EDIT = "quick_edit"
+    SHORTCUT_TOGGLE_NOTES = "toggle_notes"
+    SHORTCUT_KEYS = [
+        SHORTCUT_NEW_BOOKMARK,
+        SHORTCUT_FOCUS_SEARCH,
+        SHORTCUT_QUICK_EDIT,
+        SHORTCUT_TOGGLE_NOTES,
+    ]
+    DEFAULT_SHORTCUT_KEYS = {
+        SHORTCUT_NEW_BOOKMARK: "n",
+        SHORTCUT_FOCUS_SEARCH: "s",
+        SHORTCUT_QUICK_EDIT: "q",
+        SHORTCUT_TOGGLE_NOTES: "e",
+    }
+    shortcut_keys = models.JSONField(default=dict, blank=True, null=False)
+
+    def get_shortcut_keys(self) -> dict:
+        """返回合并默认值后的快捷键映射，禁用项以空字符串表示。"""
+        stored = self.shortcut_keys if isinstance(self.shortcut_keys, dict) else {}
+        merged = dict(self.DEFAULT_SHORTCUT_KEYS)
+        for key in self.SHORTCUT_KEYS:
+            if key in stored:
+                merged[key] = stored[key] if isinstance(stored[key], str) else ""
+        return merged
+
     @classmethod
     def normalize_quick_tag(cls, qt: dict) -> dict:
         tag_name = (qt.get("tag_name") or "").strip()
@@ -2539,6 +2568,54 @@ class UserProfileHighlightCopyFormatForm(forms.ModelForm):
         }
         if commit:
             profile.save()
+        return profile
+
+
+class UserProfileShortcutsForm(forms.ModelForm):
+    SHORTCUT_LABELS = {
+        UserProfile.SHORTCUT_NEW_BOOKMARK: _("New bookmark"),
+        UserProfile.SHORTCUT_FOCUS_SEARCH: _("Focus search"),
+        UserProfile.SHORTCUT_QUICK_EDIT: _("Quick edit"),
+        UserProfile.SHORTCUT_TOGGLE_NOTES: _("Show notes"),
+    }
+    # 可绑定的单键：仅 26 个英文字母与 0-9 数字
+    SHORTCUT_KEY_CHOICES = [
+        ("", _("Disabled")),
+        ("a", "a"), ("b", "b"), ("c", "c"), ("d", "d"), ("e", "e"),
+        ("f", "f"), ("g", "g"), ("h", "h"), ("i", "i"), ("j", "j"),
+        ("k", "k"), ("l", "l"), ("m", "m"), ("n", "n"), ("o", "o"),
+        ("p", "p"), ("q", "q"), ("r", "r"), ("s", "s"), ("t", "t"),
+        ("u", "u"), ("v", "v"), ("w", "w"), ("x", "x"), ("y", "y"),
+        ("z", "z"),
+        ("0", "0"), ("1", "1"), ("2", "2"), ("3", "3"), ("4", "4"),
+        ("5", "5"), ("6", "6"), ("7", "7"), ("8", "8"), ("9", "9"),
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        current = self.instance.get_shortcut_keys()
+        for key in UserProfile.SHORTCUT_KEYS:
+            field_name = f"shortcut_{key}"
+            self.fields[field_name] = forms.ChoiceField(
+                required=False,
+                choices=self.SHORTCUT_KEY_CHOICES,
+                initial=current.get(key, ""),
+                label=self.SHORTCUT_LABELS[key],
+            )
+
+    class Meta:
+        model = UserProfile
+        fields = []
+
+    def save(self, commit=True):
+        profile = super().save(commit=False)
+        shortcut_keys = dict(profile.shortcut_keys) if isinstance(profile.shortcut_keys, dict) else {}
+        for key in UserProfile.SHORTCUT_KEYS:
+            field_name = f"shortcut_{key}"
+            shortcut_keys[key] = self.cleaned_data.get(field_name, "")
+        profile.shortcut_keys = shortcut_keys
+        if commit:
+            profile.save(update_fields=["shortcut_keys"])
         return profile
 
 

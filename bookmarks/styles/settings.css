@@ -119,6 +119,10 @@
     order: 55;
   }
 
+  .settings-content > #settings-shortcuts {
+    order: 56;
+  }
+
   .settings-content > #settings-user {
     order: 60;
   }

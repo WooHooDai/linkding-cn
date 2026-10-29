@@ -37,6 +37,7 @@ from bookmarks.models import (
     UserProfileHealthForm,
     UserProfileHighlightCopyFormatForm,
     UserProfileQuickSettingsForm,
+    UserProfileShortcutsForm,
 )
 from bookmarks.services import exporter, importer, tasks
 from bookmarks.type_defs import HttpRequest
@@ -163,6 +164,7 @@ def general(request: HttpRequest, status=200, context_overrides=None):
     highlight_copy_format_form = UserProfileHighlightCopyFormatForm(
         instance=request.user_profile
     )
+    shortcuts_form = UserProfileShortcutsForm(instance=request.user_profile)
     global_settings_form = None
     if request.user.is_superuser:
         global_settings_form = GlobalSettingsForm(instance=GlobalSettings.get())
@@ -198,6 +200,7 @@ def general(request: HttpRequest, status=200, context_overrides=None):
             "auto_tagging_rules_form": auto_tagging_rules_form,
             "custom_domain_root_form": custom_domain_root_form,
             "highlight_copy_format_form": highlight_copy_format_form,
+            "shortcuts_form": shortcuts_form,
             "global_settings_form": global_settings_form,
             "primary_language_choices": primary_language_choices,
             "other_language_choices": other_language_choices,
@@ -295,6 +298,7 @@ def _form_context_key(form_id: str) -> str | None:
         "profile_hl_separator": "highlight_copy_format_form",
         "profile_auto_tagging_rules": "auto_tagging_rules_form",
         "profile_custom_domain_root": "custom_domain_root_form",
+        "profile_shortcuts": "shortcuts_form",
         "global_quick": "global_settings_form",
     }.get(form_id)
 
@@ -409,6 +413,8 @@ def save(request: HttpRequest):
         form = UserProfileAutoTaggingRulesForm(request.POST, instance=profile)
     elif form_id == "profile_custom_domain_root":
         form = UserProfileCustomDomainRootForm(request.POST, instance=profile)
+    elif form_id == "profile_shortcuts":
+        form = UserProfileShortcutsForm(request.POST, instance=profile)
     elif form_id in ("profile_highlight_copy_format", "profile_hl_item_format", "profile_hl_separator"):
         submitted_fields = _parse_form_fields(request.POST.get("form_fields"))
         existing_fmt = profile.highlight_copy_format or {}

@@ -13,6 +13,37 @@ document.addEventListener(
   { passive: true },
 );
 
+// 默认按键：与 UserProfile.DEFAULT_SHORTCUT_KEYS 保持一致，
+// 在服务端未注入配置（如静态缓存页）时作为兜底。
+// 方向键导航（↑/↓）固定不变，不参与配置。
+const DEFAULT_KEYS = {
+  new_bookmark: "n",
+  focus_search: "s",
+  quick_edit: "q",
+  toggle_notes: "e",
+};
+
+function loadShortcutKeys() {
+  const el = document.getElementById("ld-shortcut-keys");
+  if (!el) return { ...DEFAULT_KEYS };
+  try {
+    const parsed = JSON.parse(el.textContent);
+    if (!parsed || typeof parsed !== "object") return { ...DEFAULT_KEYS };
+    return { ...DEFAULT_KEYS, ...parsed };
+  } catch {
+    return { ...DEFAULT_KEYS };
+  }
+}
+
+// 空字符串表示禁用。
+const shortcutKeys = loadShortcutKeys();
+const keyByAction = {};
+for (const [action, key] of Object.entries(shortcutKeys)) {
+  if (key) {
+    keyByAction[key] = action;
+  }
+}
+
 document.addEventListener("keydown", (event) => {
   const targetNodeName = event.target.nodeName;
   const isInputTarget =
@@ -24,6 +55,7 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
+  // 方向键导航：固定不变
   const isArrowUp = event.key === "ArrowUp";
   const isArrowDown = event.key === "ArrowDown";
   if (isArrowUp || isArrowDown) {
@@ -44,9 +76,15 @@ document.addEventListener("keydown", (event) => {
       nextItem = items[0];
     }
     nextItem?.querySelector("a.title-link")?.focus();
+    return;
   }
 
-  if (event.key === "e") {
+  const action = keyByAction[event.key];
+  if (!action) {
+    return;
+  }
+
+  if (action === "toggle_notes") {
     const list = queryBookmarkList();
     if (!list) return;
 
@@ -63,17 +101,19 @@ document.addEventListener("keydown", (event) => {
       item.dataset.notesEnabled = String(next);
       item.classList.toggle("show-notes", next);
     });
+    return;
   }
 
-  if (event.key === "s") {
+  if (action === "focus_search") {
     const searchInput = document.querySelector('input[type="search"]');
     if (searchInput) {
       searchInput.focus();
       event.preventDefault();
     }
+    return;
   }
 
-  if (event.key === "q") {
+  if (action === "quick_edit") {
     const target = document.elementFromPoint(_lastMouseX, _lastMouseY);
     if (!target) return;
 
@@ -129,7 +169,7 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
-  if (event.key === "n") {
+  if (action === "new_bookmark") {
     window.location.assign("/bookmarks/new");
   }
 });

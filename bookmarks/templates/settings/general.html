@@ -1658,6 +1658,65 @@ reddit.com/r/Music music reddit</pre>
           </div>
         </section>
 
+        <section id="settings-shortcuts" class="settings-section" aria-labelledby="settings-shortcuts-heading">
+          <div class="settings-section-heading">
+            <div class="settings-label-row">
+              <h2 id="settings-shortcuts-heading">{% translate "Shortcuts" %}</h2>
+              <span class="settings-help" data-settings-help data-settings-help-open="false">
+                <button type="button" class="settings-help-button" data-settings-help-button aria-label="{% translate 'More info' %}" aria-expanded="false">
+                  <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+                </button>
+                <span class="settings-help-popover" role="tooltip"><span class="form-input-hint">{% translate "Customize the keyboard shortcuts for the bookmark list. Choose a single key, or select “Disabled” to turn a shortcut off." %}</span></span>
+              </span>
+            </div>
+          </div>
+          <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card settings-card-stack" data-settings-save-mode="instant">
+            {% csrf_token %}
+            <input type="hidden" name="form_id" value="profile_shortcuts">
+            <div class="settings-row">
+              <div class="settings-copy">
+                <label for="{{ shortcuts_form.shortcut_new_bookmark.id_for_label }}" class="settings-label">{% translate "New bookmark" %}</label>
+                <div class="form-input-hint">
+                  {% translate "Open the add bookmark page." %}
+                </div>
+              </div>
+              <div class="settings-control">
+                {% formfield shortcuts_form.shortcut_new_bookmark class="form-select settings-select-input" %}
+              </div>
+            </div>
+            <div class="settings-row">
+              <div class="settings-copy">
+                <label for="{{ shortcuts_form.shortcut_focus_search.id_for_label }}" class="settings-label">{% translate "Focus search" %}</label>
+              </div>
+              <div class="settings-control">
+                {% formfield shortcuts_form.shortcut_focus_search class="form-select settings-select-input" %}
+              </div>
+            </div>
+            <div class="settings-row">
+              <div class="settings-copy">
+                <label for="{{ shortcuts_form.shortcut_quick_edit.id_for_label }}" class="settings-label">{% translate "Quick edit" %}</label>
+                <div class="form-input-hint">
+                  {% translate "Put the title, author, tags, description or notes under the mouse cursor into edit mode." %}
+                </div>
+              </div>
+              <div class="settings-control">
+                {% formfield shortcuts_form.shortcut_quick_edit class="form-select settings-select-input" %}
+              </div>
+            </div>
+            <div class="settings-row">
+              <div class="settings-copy">
+                <label for="{{ shortcuts_form.shortcut_toggle_notes.id_for_label }}" class="settings-label">{% translate "Show notes" %}</label>
+                <div class="form-input-hint">
+                  {% translate "Keep the notes permanently visible on the page." %}
+                </div>
+              </div>
+              <div class="settings-control">
+                {% formfield shortcuts_form.shortcut_toggle_notes class="form-select settings-select-input" %}
+              </div>
+            </div>
+          </form>
+        </section>
+
         <section id="settings-user" class="settings-section" aria-labelledby="settings-user-heading">
           <div class="settings-section-heading">
             <h2 id="settings-user-heading">{% translate "User & Visitors" %}</h2>
@@ -1836,6 +1895,7 @@ reddit.com/r/Music music reddit</pre>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-health" aria-controls="settings-health">{% translate "Health Check" %}</button>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-sharing" aria-controls="settings-sharing">{% translate "Sharing" %}</button>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-highlights" aria-controls="settings-highlights">{% translate "Highlights" %}</button>
+        <button type="button" class="settings-directory-link" data-settings-section-target="settings-shortcuts" aria-controls="settings-shortcuts">{% translate "Shortcuts" %}</button>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-user" aria-controls="settings-user">{% translate "User & Visitors" %}</button>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-import-export" aria-controls="settings-import-export">{% translate "Import & Export" %}</button>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-about" aria-controls="settings-about">{% translate "About" %}</button>
