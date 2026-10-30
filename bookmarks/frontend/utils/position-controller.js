@@ -15,10 +15,20 @@ export class PositionController {
     this.placement = options.placement || "bottom";
     this.offsetValue = options.offset;
     this.autoWidth = options.autoWidth || false;
+    this.widthAnchor = options.widthAnchor || this.anchor;
     this.autoUpdateCleanup = null;
   }
 
   enable() {
+    this.overlay.style.position = "fixed";
+    if (typeof this.overlay.showPopover === "function") {
+      this.overlay.setAttribute("popover", "manual");
+      if (!this.overlay.matches(":popover-open")) {
+        this.overlay.showPopover();
+      }
+    }
+
+    this.updatePosition();
     if (!this.autoUpdateCleanup) {
       this.autoUpdateCleanup = autoUpdate(this.anchor, this.overlay, () =>
         this.updatePosition(),
@@ -31,9 +41,25 @@ export class PositionController {
       this.autoUpdateCleanup();
       this.autoUpdateCleanup = null;
     }
+    if (this.overlay.matches(":popover-open")) {
+      this.overlay.hidePopover();
+    }
+    this.overlay.removeAttribute("popover");
+    this.overlay.style.removeProperty("position");
+    this.overlay.style.removeProperty("left");
+    this.overlay.style.removeProperty("top");
+    this.overlay.style.removeProperty("right");
+    this.overlay.style.removeProperty("bottom");
+    if (this.autoWidth) {
+      this.overlay.style.removeProperty("width");
+    }
   }
 
   updatePosition() {
+    if (this.autoWidth) {
+      this.overlay.style.width = `${this.widthAnchor.offsetWidth}px`;
+    }
+
     const middleware = [flip(), shift()];
     if (this.arrow) {
       middleware.push(arrow({ element: this.arrow }));
@@ -50,6 +76,8 @@ export class PositionController {
       Object.assign(this.overlay.style, {
         left: `${x}px`,
         top: `${y}px`,
+        right: "auto",
+        bottom: "auto",
       });
 
       this.overlay.classList.remove("top-aligned", "bottom-aligned");
@@ -64,8 +92,5 @@ export class PositionController {
       }
     });
 
-    if (this.autoWidth) {
-      this.overlay.style.width = `${this.anchor.offsetWidth}px`;
-    }
   }
 }

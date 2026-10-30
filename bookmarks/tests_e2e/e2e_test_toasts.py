@@ -16,11 +16,11 @@ class ToastsE2ETestCase(LinkdingE2ETestCase):
         with sync_playwright() as p:
             page = self.open(reverse("linkding:bookmarks.index"), p)
 
-            toast = page.locator(".message-list .toast").filter(
+            toast = page.locator(".toast-notice").filter(
                 has_text="Toast visible in header"
             )
             expect(toast).to_have_count(1)
 
             toast.locator("button[type='submit']").click()
 
-            expect(page.locator(".message-list .toast")).to_have_count(0)
+            expect(page.locator(".toast-notice")).to_have_count(0)

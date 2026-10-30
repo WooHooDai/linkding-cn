@@ -22,6 +22,12 @@
   transform: translateY(var(--layout-spacing-sm));
   z-index: var(--zindex-3);
 
+  &[popover] {
+    inset: auto;
+    margin: 0;
+    padding: 0;
+  }
+
   &.menu-nav {
     background: transparent;
     box-shadow: none;

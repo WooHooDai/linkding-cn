@@ -1,10 +1,10 @@
-from django.contrib.staticfiles.testing import LiveServerTestCase
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from playwright.sync_api import BrowserContext, Page, Playwright, expect
 
 from bookmarks.tests.helpers import BookmarkFactoryMixin
 
 
-class LinkdingE2ETestCase(LiveServerTestCase, BookmarkFactoryMixin):
+class LinkdingE2ETestCase(StaticLiveServerTestCase, BookmarkFactoryMixin):
     def setUp(self) -> None:
         self.client.force_login(self.get_or_create_test_user())
         self.cookie = self.client.cookies["ld_sessionid"]
