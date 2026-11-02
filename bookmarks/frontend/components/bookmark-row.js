@@ -8,6 +8,7 @@ import { bookmarkRowFields } from "./bookmark-row-fields.js";
 import { bookmarkRowNotes } from "./bookmark-row-notes.js";
 import { bookmarkRowTags } from "./bookmark-row-tags.js";
 import { bookmarkRowActions } from "./bookmark-row-actions.js";
+import { bookmarkRowDblClick } from "./bookmark-row-dblclick.js";
 import { toggleTaskCheckbox } from "./bookmark-notes-task.js";
 
 /** 书签行的行为本体：只负责事件接线、编辑器单例互斥与销毁。
@@ -89,11 +90,16 @@ class BookmarkItem extends Behavior {
     // 初始化作者名自动滚动（标题行内固定宽度，超长时左右往复滚动）
     this._initAuthorScroll();
 
+    // 初始化双击进入编辑（默认/紧凑视图；表格视图由表格行为接管）
+    this._initDblClickEdit();
+
     // 初始化 action 按钮（分享、已读、归档、删除等）
     this._initActionButtons();
   }
 
   destroy() {
+    this._teardownDblClickEdit();
+
     if (activeEditor?.bookmarkId === this.bookmarkId) {
       closeActiveEditor({ save: false });
     }
@@ -267,6 +273,7 @@ Object.assign(
   bookmarkRowNotes,
   bookmarkRowTags,
   bookmarkRowActions,
+  bookmarkRowDblClick,
 );
 
 registerBehavior("ld-bookmark-item", BookmarkItem);

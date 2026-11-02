@@ -276,7 +276,12 @@ class BookmarkViewSet(
             return Response({"html": ""})
 
         from bookmarks.templatetags.shared import render_markdown
-        html = render_markdown({}, bookmark.notes)
+
+        html = render_markdown(
+            {},
+            bookmark.notes,
+            link_target=request.user.profile.bookmark_link_target,
+        )
         return Response({"html": str(html)})
 
 class BookmarkAssetViewSet(

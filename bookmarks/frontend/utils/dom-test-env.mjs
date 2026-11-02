@@ -35,6 +35,14 @@ const SHIMS = `
   Object.defineProperty(proto, "offsetWidth", { get: () => 400, configurable: true });
   Object.defineProperty(proto, "offsetHeight", { get: () => 20, configurable: true });
   Object.defineProperty(proto, "scrollHeight", { get: () => 20, configurable: true });
+  // 文本量宽走 Range.getBoundingClientRect，linkedom 未实现：截断判断与标题浮窗都会用到
+  const createRange = window.document.createRange.bind(window.document);
+  window.document.createRange = () => {
+    const range = createRange();
+    range.getBoundingClientRect = () => ({ width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0 });
+    range.getClientRects = () => [];
+    return range;
+  };
 `;
 
 // 每个用例都要一份全新的模块实例：行行为里的 activeEditor / editorOverlay

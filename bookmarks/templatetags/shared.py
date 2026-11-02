@@ -251,7 +251,27 @@ def _rewrite_tasklist(html_text):
     return str(soup)
 
 
-def _convert_markdown(markdown_text, renderer=None):
+def _apply_link_target(html_text, link_target):
+    """给笔记里的链接补上用户配置的打开方式，与书签链接保持一致。
+
+    必须在 bleach 清洗之后：target/rel 不在白名单里，清洗前写会被剥掉。
+    """
+    if not link_target:
+        return html_text
+
+    soup = BeautifulSoup(html_text, "html.parser")
+    for anchor in soup.find_all("a", href=True):
+        anchor["target"] = link_target
+        if link_target != "_blank":
+            continue
+        # 新窗口打开的链接断开 opener，避免外部页面通过 window.opener 反向操作
+        rel = anchor.get("rel") or []
+        if "noopener" not in rel:
+            anchor["rel"] = [*rel, "noopener"]
+    return str(soup)
+
+
+def _convert_markdown(markdown_text, renderer=None, link_target=None):
     """复用现有 Markdown 扩展配置，返回清洗 + 链接化后的安全 HTML。"""
     if renderer is None:
         renderer = markdown.Markdown(extensions=["fenced_code", "nl2br"])
@@ -259,11 +279,11 @@ def _convert_markdown(markdown_text, renderer=None):
     as_html = renderer.convert(markdown_text)
     as_html = _rewrite_tasklist(as_html)
     sanitized_html = bleach.clean(as_html, markdown_tags, markdown_attrs_with_class)
-    return linker.linkify(sanitized_html)
+    return _apply_link_target(linker.linkify(sanitized_html), link_target)
 
 
 @register.simple_tag(name="markdown", takes_context=True)
-def render_markdown(context, markdown_text):
+def render_markdown(context, markdown_text, link_target=None):
     # naive approach to reusing the renderer for a single request
     # works for bookmark list for now
     if "markdown_renderer" not in context:
@@ -271,7 +291,13 @@ def render_markdown(context, markdown_text):
             extensions=["fenced_code", "nl2br"]
         )
 
-    return mark_safe(_convert_markdown(markdown_text, context["markdown_renderer"]))
+    if link_target is None:
+        profile = getattr(context.get("request"), "user_profile", None)
+        link_target = getattr(profile, "bookmark_link_target", None)
+
+    return mark_safe(
+        _convert_markdown(markdown_text, context["markdown_renderer"], link_target)
+    )
 
 
 @register.filter(name="markdown_plain")

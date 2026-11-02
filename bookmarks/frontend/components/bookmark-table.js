@@ -5,6 +5,7 @@ import { gettext } from "../utils/i18n.js";
 import { showToast } from "./toast.js";
 import { patchBookmark, wireInlineEditor } from "./bookmark-row-editor.js";
 import { toggleTaskCheckbox } from "./bookmark-notes-task.js";
+import { hasSelectionWithin } from "../utils/text-selection.js";
 
 // 拖拽的硬下限：再窄就看不出内容了
 const MIN_COL_PX = 60;
@@ -823,6 +824,9 @@ class BookmarkTable extends Behavior {
       }
       return;
     }
+
+    // 拖选描述/笔记文字松手会补一次 click（detail=1）：有选区就不当作展开/折叠
+    if (hasSelectionWithin(cell)) return;
 
     // 跳转/筛选只认「点在内容上」；右缘死区与空白处一律展开折叠，杜绝误触跳转
     if (!this.hitsContent(cell, link, event)) {

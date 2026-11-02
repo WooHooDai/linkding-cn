@@ -177,6 +177,33 @@ test("围栏代码块里的待办写法不算待办，按序数不会被误改",
   });
 });
 
+/* ── 拖选文字 ── */
+
+test("拖选笔记文字松手不展开/折叠行，未选中时才切换", async () => {
+  const { li, cell } = await setupTasks();
+  const textNode = cell.querySelector(".task-checkbox").nextSibling;
+
+  // 拖选松手时浏览器会补一次 click：选区还在，不能当作展开/折叠
+  window.getSelection = () => ({
+    isCollapsed: false,
+    anchorNode: textNode,
+    focusNode: textNode,
+  });
+  click(cell.querySelector(".note-markdown"));
+  await new Promise((resolve) => setTimeout(resolve, 260));
+  assert.equal(
+    li.classList.contains("is-expanded"),
+    false,
+    "选着文字点一下不应该展开行",
+  );
+
+  // 回到无选区的普通点击，展开照旧
+  window.getSelection = () => ({ isCollapsed: true });
+  click(cell.querySelector(".note-markdown"));
+  await new Promise((resolve) => setTimeout(resolve, 260));
+  assert.equal(li.classList.contains("is-expanded"), true);
+});
+
 test("保存失败时勾选框与源回滚到原状态", async () => {
   const { li, cell, boxes } = await setupTasks();
   globalThis.fetch = async (url, options = {}) =>

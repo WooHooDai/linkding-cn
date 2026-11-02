@@ -1100,33 +1100,33 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.setup_bookmark(notes="Example: https://example.com")
         html = self.render_template()
 
-        note_html = '<p>Example: <a href="https://example.com" rel="nofollow">https://example.com</a></p>'
+        note_html = '<p>Example: <a href="https://example.com" rel="nofollow noopener" target="_blank">https://example.com</a></p>'
         self.assertNotes(html, note_html, 1)
 
         # Should not linkify URL in markdown link
         self.setup_bookmark(notes="[https://example.com](https://example.com)")
         html = self.render_template()
 
-        note_html = '<p><a href="https://example.com" rel="nofollow">https://example.com</a></p>'
+        note_html = '<p><a href="https://example.com" rel="nofollow noopener" target="_blank">https://example.com</a></p>'
         self.assertNotes(html, note_html, 1)
 
     def test_note_linkify_converts_schemeless_urls_to_https(self):
         self.setup_bookmark(notes="Example: example.com")
         html = self.render_template()
 
-        note_html = '<p>Example: <a href="https://example.com" rel="nofollow">example.com</a></p>'
+        note_html = '<p>Example: <a href="https://example.com" rel="nofollow noopener" target="_blank">example.com</a></p>'
         self.assertNotes(html, note_html, 1)
 
         self.setup_bookmark(notes="Example: http://example.com")
         html = self.render_template()
 
-        note_html = '<p>Example: <a href="http://example.com" rel="nofollow">http://example.com</a></p>'
+        note_html = '<p>Example: <a href="http://example.com" rel="nofollow noopener" target="_blank">http://example.com</a></p>'
         self.assertNotes(html, note_html, 1)
 
         self.setup_bookmark(notes="Example: https://example.com")
         html = self.render_template()
 
-        note_html = '<p>Example: <a href="https://example.com" rel="nofollow">https://example.com</a></p>'
+        note_html = '<p>Example: <a href="https://example.com" rel="nofollow noopener" target="_blank">https://example.com</a></p>'
         self.assertNotes(html, note_html, 1)
 
         self.setup_bookmark(notes="Contact: hello@example.com")
@@ -1138,7 +1138,19 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.setup_bookmark(notes="FTP: ftp://ftp.example.com")
         html = self.render_template()
 
-        note_html = '<p>FTP: <a href="ftp://ftp.example.com" rel="nofollow">ftp://ftp.example.com</a></p>'
+        note_html = '<p>FTP: <a href="ftp://ftp.example.com" rel="nofollow noopener" target="_blank">ftp://ftp.example.com</a></p>'
+        self.assertNotes(html, note_html, 1)
+
+    def test_note_link_target_should_respect_user_profile(self):
+        # 笔记里的链接与书签链接同一份「打开方式」设置
+        profile = self.get_or_create_test_user().profile
+        profile.bookmark_link_target = UserProfile.BOOKMARK_LINK_TARGET_SELF
+        profile.save()
+
+        self.setup_bookmark(notes="Example: https://example.com")
+        html = self.render_template()
+
+        note_html = '<p>Example: <a href="https://example.com" rel="nofollow" target="_self">https://example.com</a></p>'
         self.assertNotes(html, note_html, 1)
 
     def test_note_cleans_html(self):

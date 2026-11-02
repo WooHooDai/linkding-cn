@@ -1,4 +1,6 @@
 import { initAuthorScroll } from "../utils/author-scroll.js";
+import { deferFollow, followNow } from "../utils/deferred-link.js";
+import { hasSelectionWithin } from "../utils/text-selection.js";
 import {
   autoResizeTextarea,
   closeEditor,
@@ -259,12 +261,26 @@ export const bookmarkRowFields = {
     const link = this.titleElement.querySelector("a.title-link");
     if (!link || !link.href) return;
 
-    const target = link.getAttribute("target");
-    if (target === "_blank") {
-      window.open(link.href, target, "noopener noreferrer");
-    } else {
-      window.open(link.href, target);
+    // 标题链接在这里被置为 pointer-events:none，点击跳转只剩这一个入口，
+    // 双击改编辑也只能靠它让路：文字上先挂起，末尾空白仍即时打开
+    if (this._titleTextHit(event.clientX, event.clientY)) {
+      deferFollow(link);
+      return;
     }
+    followNow(link);
+  },
+
+  /** 点位是否落在标题文字上：链接盒比文字宽，按 Range 行盒逐行判定 */
+  _titleTextHit(x, y) {
+    const text = this.titleElement?.querySelector("a.title-link span");
+    if (!text || !text.textContent.trim()) return false;
+
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    return [...range.getClientRects()].some(
+      (rect) =>
+        x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom,
+    );
   },
 
   showFloatTooltip(targetEl, text) {
@@ -413,29 +429,14 @@ export const bookmarkRowFields = {
 
     this._descriptionToggleTarget = target;
     this.onToggleDescription = (event) => {
-      event.stopPropagation();
       // 拖选描述文本松手会触发 click，此时不折叠
       if (this._hasTextSelection()) return;
-      // 未展开且当前并未截断：不响应点击
+      // 未展开且当前并未截断：不响应点击，也不拦传播（这次点击什么也没做）
       if (!this._isDescriptionExpanded() && !this._isDescriptionTruncated())
         return;
 
-      if (this._descriptionIsInline) {
-        const expanded = !this._descriptionText.classList.contains("expanded");
-        this._descriptionText.classList.toggle("expanded", expanded);
-        this.descriptionContainer.classList.toggle("expanded", expanded);
-      } else {
-        const expanding =
-          !this.descriptionElement.classList.contains("expanded");
-        if (!expanding) {
-          this._descriptionScrollTop = this.descriptionContainer.scrollTop || 0;
-        }
-        this.descriptionElement.classList.toggle("expanded", expanding);
-        if (expanding) {
-          this.descriptionContainer.scrollTop = this._descriptionScrollTop || 0;
-        }
-      }
-      this._refreshDescriptionHint();
+      event.stopPropagation();
+      this._setDescriptionExpanded(!this._isDescriptionExpanded());
     };
     target.addEventListener("click", this.onToggleDescription);
 
@@ -449,17 +450,32 @@ export const bookmarkRowFields = {
     this._refreshDescriptionHint();
   },
 
+  /** 设置描述的展开态：同行模式挂在文本与容器上，分行模式挂在 .description 上。 */
+  _setDescriptionExpanded(expanded) {
+    if (!this.descriptionContainer) return;
+
+    if (this._descriptionIsInline) {
+      this._descriptionText?.classList.toggle("expanded", expanded);
+      this.descriptionContainer.classList.toggle("expanded", expanded);
+    } else {
+      if (!expanded) {
+        this._descriptionScrollTop = this.descriptionContainer.scrollTop || 0;
+      }
+      this.descriptionElement?.classList.toggle("expanded", expanded);
+      if (expanded) {
+        this.descriptionContainer.scrollTop = this._descriptionScrollTop || 0;
+      }
+    }
+    this._refreshDescriptionHint();
+  },
+
   /**
    * 判断用户是否正在选择描述区域内的文本。
    * 展开态下鼠标拖选/触摸长按选择文本，松手时浏览器会合成 click，
    * 此检查用于避免把“选择文本”误判为“点击折叠”。
    */
   _hasTextSelection() {
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed) return false;
-    const isInside = (node) =>
-      !!node && this.descriptionContainer.contains(node);
-    return isInside(selection.anchorNode) || isInside(selection.focusNode);
+    return hasSelectionWithin(this.descriptionContainer);
   },
 
   /**
