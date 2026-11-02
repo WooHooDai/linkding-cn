@@ -27,15 +27,12 @@ ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item] .actions {
 ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .toolbar-date {
   margin-right: var(--unit-2);
 }
-/* 隐藏态：健康状态只显示为一个带颜色的小圆点（无外圈、无文字、无波形图标） */
+/* 隐藏态：健康状态只显示为一个带颜色的小圆点（无外圈、无文字、无波形图标）。
+   popover 不在这里压掉：它本身默认 display:none，靠指示器 :hover / :focus /
+   .health-popover-open 显形，与表格、紧凑视图保持一致。 */
 ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status .health-text,
-ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status .health-ring,
-ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status .health-popover {
+ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status .health-ring {
   display: none;
-}
-/* 显式点击/键盘打开健康 popover：与工具栏展开状态解耦（触屏点击也可弹出） */
-ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status.health-popover-open .health-popover {
-  display: flex;
 }
 ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status .health-dot,
 ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .health-status.health-icon-mode .health-dot {
@@ -79,7 +76,7 @@ ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item] .actions > .he
   ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status .health-ring {
     display: block;
   }
-  /* 悬浮工具栏不自动打开健康 popover（仅显式点击/键盘打开） */
+  /* 展开态圆点恢复图标模式的圆环内嵌样式 */
   ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status .health-dot,
   ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item]:hover .actions > .health-status.health-icon-mode .health-dot {
     width: 8px;
@@ -131,7 +128,7 @@ ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visibl
 ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status .health-ring {
   display: block;
 }
-/* 工具栏展开不自动打开健康 popover（仅显式点击/键盘打开） */
+/* 钉住展开态同样恢复圆环内嵌样式 */
 ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status .health-dot,
 ul.bookmark-list.view-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions > .health-status.health-icon-mode .health-dot {
   width: 8px;

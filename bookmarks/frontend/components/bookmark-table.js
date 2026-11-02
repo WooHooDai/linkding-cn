@@ -527,28 +527,26 @@ class BookmarkTable extends Behavior {
       popover.style.right = "0";
     }
 
-    // 纵向：优先向下；下方空间不足时换向上；两侧都不够就限高滚动
-    const spaceBelow = boundsBottom - rect.bottom - GAP - 6;
-    const spaceAbove = rect.top - boundsTop - GAP - 6;
-    if (spaceBelow >= box.height || spaceBelow >= spaceAbove) {
-      popover.style.top = "calc(100% + 6px)";
-      popover.style.bottom = "auto";
-      if (spaceBelow < box.height) {
-        popover.style.maxHeight = `${Math.max(56, Math.round(spaceBelow))}px`;
-        popover.style.overflowY = "auto";
-      } else {
-        popover.style.overflowY = "";
-      }
-    } else {
-      popover.style.top = "auto";
-      popover.style.bottom = "calc(100% + 6px)";
-      if (spaceAbove < box.height) {
-        popover.style.maxHeight = `${Math.max(56, Math.round(spaceAbove))}px`;
-        popover.style.overflowY = "auto";
-      } else {
-        popover.style.overflowY = "";
-      }
-    }
+    // 纵向：优先向下，放不下换向上；选中的一侧仍放不下就整体平移到贴边——
+    // 弹层与指示器之间只差几像素，平移比限高滚动更可读。只有可视区本身矮于弹层时才滚动。
+    const ANCHOR_GAP = 6;
+    const available = boundsBottom - boundsTop - 2 * GAP;
+    // 限高前先算最终高度，否则按原高算出的偏移配上裁短的高度会顶出上界
+    const height = Math.min(box.height, available);
+    const spaceBelow = boundsBottom - rect.bottom - ANCHOR_GAP - GAP;
+    const spaceAbove = rect.top - boundsTop - ANCHOR_GAP - GAP;
+    const below = spaceBelow >= height || spaceBelow >= spaceAbove;
+    const overflow = below
+      ? rect.bottom + ANCHOR_GAP + height - (boundsBottom - GAP)
+      : boundsTop + GAP - (rect.top - ANCHOR_GAP - height);
+    let top = below ? rect.height + ANCHOR_GAP : -ANCHOR_GAP - height;
+    if (overflow > 0) top += below ? -overflow : overflow;
+    popover.style.top = `${Math.round(top)}px`;
+    popover.style.bottom = "auto";
+
+    popover.style.maxHeight =
+      height < box.height ? `${Math.round(height)}px` : "";
+    popover.style.overflowY = height < box.height ? "auto" : "";
   }
 
   /* ── 单元格内编辑 ─────────────────────────

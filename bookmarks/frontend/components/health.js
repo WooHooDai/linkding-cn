@@ -14,13 +14,16 @@ import { Behavior, registerBehavior } from "./runtime.js";
  */
 export function attachHealthPopover(host) {
   const isOpen = () => host.classList.contains("health-popover-open");
+  // 表格视图的弹层挂在会裁切的表格视口里，由 bookmark-table.js 按「视口 ∩ 窗口」定位
+  const positionedElsewhere = () => !!host.closest("ul.view-table");
 
   /**
    * 将弹窗钳制在视口内：窄屏限制宽度，超出右/左/下边缘时反向平移。
    * 列表工具栏中健康指示靠近行尾，绝对定位（left:0）的弹窗在小屏上
-   * 容易右溢出视口，打开时按当前视口重算一次，并在滚动/缩放时保持。
+   * 容易右溢出视口，显形时按当前视口重算一次，并在滚动/缩放时保持。
    */
   const clampPopover = () => {
+    if (positionedElsewhere()) return;
     const popover = host.querySelector(".health-popover");
     if (!popover) return;
     const margin = 8;
@@ -46,17 +49,29 @@ export function attachHealthPopover(host) {
       overflowBottom > 0 ? `${-(rect.bottom - (vh - margin))}px` : "";
   };
 
+  const resetPosition = () => {
+    const popover = host.querySelector(".health-popover");
+    if (!popover) return;
+    popover.style.left = "";
+    popover.style.top = "";
+    popover.style.maxWidth = "";
+  };
+
+  const bindViewportTracking = () => {
+    window.addEventListener("resize", clampPopover);
+    window.addEventListener("scroll", clampPopover, { passive: true });
+  };
+
+  const unbindViewportTracking = () => {
+    window.removeEventListener("resize", clampPopover);
+    window.removeEventListener("scroll", clampPopover);
+  };
+
   const close = () => {
     host.classList.remove("health-popover-open");
     host.setAttribute("aria-expanded", "false");
-    const popover = host.querySelector(".health-popover");
-    if (popover) {
-      popover.style.left = "";
-      popover.style.top = "";
-      popover.style.maxWidth = "";
-    }
-    window.removeEventListener("resize", clampPopover);
-    window.removeEventListener("scroll", clampPopover);
+    resetPosition();
+    unbindViewportTracking();
     document.removeEventListener("click", handleOutside, true);
   };
 
@@ -64,9 +79,10 @@ export function attachHealthPopover(host) {
     host.classList.add("health-popover-open");
     host.setAttribute("aria-expanded", "true");
     document.addEventListener("click", handleOutside, true);
-    window.addEventListener("resize", clampPopover);
-    window.addEventListener("scroll", clampPopover, { passive: true });
-    clampPopover();
+    if (!positionedElsewhere()) {
+      bindViewportTracking();
+      clampPopover();
+    }
   };
 
   const toggle = () => {
@@ -99,13 +115,39 @@ export function attachHealthPopover(host) {
     }
   };
 
+  // 悬浮/聚焦显形由 CSS 完成，JS 只补视口钳制（窄屏、贴右缘时 CSS 定位会推出视口）
+  const handleEnter = () => {
+    if (isOpen() || positionedElsewhere()) return;
+    bindViewportTracking();
+    clampPopover();
+  };
+
+  const handleLeave = () => {
+    if (isOpen() || positionedElsewhere()) return;
+    unbindViewportTracking();
+    resetPosition();
+  };
+
+  const handleFocusOut = (event) => {
+    if (!host.contains(event.relatedTarget)) handleLeave();
+  };
+
   host.addEventListener("click", handleClick);
   host.addEventListener("keydown", handleKeydown);
+  host.addEventListener("pointerenter", handleEnter);
+  host.addEventListener("pointerleave", handleLeave);
+  host.addEventListener("focusin", handleEnter);
+  host.addEventListener("focusout", handleFocusOut);
 
   return {
     destroy() {
       host.removeEventListener("click", handleClick);
       host.removeEventListener("keydown", handleKeydown);
+      host.removeEventListener("pointerenter", handleEnter);
+      host.removeEventListener("pointerleave", handleLeave);
+      host.removeEventListener("focusin", handleEnter);
+      host.removeEventListener("focusout", handleFocusOut);
+      unbindViewportTracking();
       document.removeEventListener("click", handleOutside, true);
     },
   };
