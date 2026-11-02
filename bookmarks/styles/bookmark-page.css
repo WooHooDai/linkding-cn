@@ -1112,6 +1112,10 @@ ul.bookmark-list {
     padding: var(--unit-2) var(--unit-3);
     box-sizing: border-box;
     overflow-y: auto;
+    /* 待办勾选框可点（切换完成态） */
+    & .task-checkbox {
+      cursor: pointer;
+    }
     /* 宽图片适配 */
     & img {
       max-width: 100%;

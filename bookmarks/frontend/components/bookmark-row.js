@@ -8,6 +8,7 @@ import { bookmarkRowFields } from "./bookmark-row-fields.js";
 import { bookmarkRowNotes } from "./bookmark-row-notes.js";
 import { bookmarkRowTags } from "./bookmark-row-tags.js";
 import { bookmarkRowActions } from "./bookmark-row-actions.js";
+import { toggleTaskCheckbox } from "./bookmark-notes-task.js";
 
 /** 书签行的行为本体：只负责事件接线、编辑器单例互斥与销毁。
  *  各字段的编辑逻辑按职责放在 bookmark-row-{fields,notes,tags,actions}.js，
@@ -24,6 +25,7 @@ class BookmarkItem extends Behavior {
     this.onQuickEditMouseDown = this.onQuickEditMouseDown.bind(this);
     this.onNotesBlur = this.onNotesBlur.bind(this);
     this.onNotesKeydown = this.onNotesKeydown.bind(this);
+    this.onNotesTaskClick = this.onNotesTaskClick.bind(this);
 
     this.scroller = document.scrollingElement;
     this.bookmarkId = element.dataset.bookmarkId;
@@ -45,6 +47,9 @@ class BookmarkItem extends Behavior {
       this.notesEditor.addEventListener("blur", this.onNotesBlur);
       this.notesEditor.addEventListener("keydown", this.onNotesKeydown);
     }
+
+    // 笔记待办勾选框（默认/紧凑视图共用同一套笔记片段）
+    element.addEventListener("click", this.onNotesTaskClick);
 
     // 初始化快捷编辑按钮
     this.quickEditBtns = element.querySelectorAll(".quick-edit-btn");
@@ -119,6 +124,8 @@ class BookmarkItem extends Behavior {
       this.notesEditor.removeEventListener("keydown", this.onNotesKeydown);
     }
 
+    this.element.removeEventListener("click", this.onNotesTaskClick);
+
     if (this.titleElement) {
       this.titleElement.removeEventListener(
         "mouseenter",
@@ -151,6 +158,24 @@ class BookmarkItem extends Behavior {
     const next = !this.element.classList.contains("show-notes");
     this.element.dataset.notesEnabled = String(next);
     this.element.classList.toggle("show-notes", next);
+  }
+
+  /** 笔记里的待办勾选框：只切完成态，不连带触发行的其它行为（工具栏/展开） */
+  onNotesTaskClick(event) {
+    const box = event.target.closest(".inline-edit-notes .task-checkbox");
+    if (!box) return;
+    event.preventDefault();
+    event.stopPropagation();
+    toggleTaskCheckbox(box, {
+      bookmarkId: this.bookmarkId,
+      source: box
+        .closest(".inline-edit-notes")
+        ?.querySelector(".inline-edit-textarea"),
+      // 下次编辑笔记的初值要与勾选后的源一致，否则保存会把勾选改回去
+      onChange: (markdown) => {
+        this.originalNotes = markdown;
+      },
+    });
   }
 
   onQuickEditMouseDown(event) {

@@ -568,9 +568,87 @@ ul.bookmark-list.view-table .cell-desc .description-container {
   min-width: 0;
 }
 
+/* 笔记原始 Markdown 源只供行内编辑器读取，不参与展示 */
+ul.bookmark-list.view-table .cell-notes .note-source {
+  display: none;
+}
+
+/* 表格里的勾选框可点（切换完成态），只有这里需要可点击提示 */
+ul.bookmark-list.view-table .cell-notes .task-checkbox {
+  cursor: pointer;
+}
+
+/* 折叠态：Markdown 渲染结果压成单行，保留粗体/代码/链接等行内样式；
+   段落、列表、引用、代码块等块级元素全部内联化，由外层 nowrap + 省略号截断。 */
+ul.bookmark-list.view-table .cell-notes .note-markdown {
+  display: block;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown p,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown ul,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown ol,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown pre,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown blockquote,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown h1,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown h2,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown h3,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown h4,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown h5,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown h6,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown div {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
+/* 折叠态标题退化为普通行内文本：浏览器默认标题字号/字重/行距会撑破单行高度 */
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown h1,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown h2,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown h3,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown h4,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown h5,
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown h6 {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown li {
+  display: inline;
+  list-style: none;
+  margin: 0;
+}
+
+/* 折叠态列表项被压成 inline，勾选框得自成 inline-block 才拿得到宽高（否则只剩边框一条竖线）；
+   折叠态没有 flex gap，用右边距与文字隔开。 */
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown .task-checkbox {
+  display: inline-block;
+  vertical-align: middle;
+  margin-top: 0;
+  margin-right: var(--unit-1);
+}
+
+/* 多个列表项压成一行时用间隔符区分，避免文字粘连 */
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown li + li::before {
+  content: " · ";
+}
+
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown pre {
+  background: none;
+  border-radius: 0;
+}
+
+ul.bookmark-list.view-table > li:not(.is-expanded) .cell-notes .note-markdown br {
+  display: none;
+}
+
 /* 行展开后的文本：换行显示完整内容，超过 15 行在格内滚动（与列表视图同口径） */
 ul.bookmark-list.view-table > li.is-expanded .cell-desc .description-text,
-ul.bookmark-list.view-table > li.is-expanded .cell-notes .note-text,
+ul.bookmark-list.view-table > li.is-expanded .cell-notes .note-markdown,
 ul.bookmark-list.view-table > li.is-expanded .cell-author .author-inner,
 ul.bookmark-list.view-table > li.is-expanded .cell-title .title-link > span {
   display: block;
@@ -582,8 +660,12 @@ ul.bookmark-list.view-table > li.is-expanded .cell-title .title-link > span {
   scrollbar-color: transparent transparent;
 }
 
+ul.bookmark-list.view-table > li.is-expanded .cell-notes .note-markdown {
+  white-space: normal;
+}
+
 ul.bookmark-list.view-table > li.is-expanded .cell-desc .description-text:hover,
-ul.bookmark-list.view-table > li.is-expanded .cell-notes .note-text:hover,
+ul.bookmark-list.view-table > li.is-expanded .cell-notes .note-markdown:hover,
 ul.bookmark-list.view-table > li.is-expanded .cell-author .author-inner:hover,
 ul.bookmark-list.view-table > li.is-expanded .cell-title .title-link > span:hover {
   scrollbar-color: var(--secondary-border-color) transparent;

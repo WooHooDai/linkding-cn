@@ -4,6 +4,7 @@ import { getCSRFToken } from "../utils/csrf.js";
 import { gettext } from "../utils/i18n.js";
 import { showToast } from "./toast.js";
 import { patchBookmark, wireInlineEditor } from "./bookmark-row-editor.js";
+import { toggleTaskCheckbox } from "./bookmark-notes-task.js";
 
 // 拖拽的硬下限：再窄就看不出内容了
 const MIN_COL_PX = 60;
@@ -34,13 +35,20 @@ const EDIT_CELL = {
   notes: ".cell-notes",
 };
 
-/** 字段 → 需要回写的文本节点 */
-const EDIT_TEXT = {
+/** 字段 → 编辑器初始值所在节点（notes 取隐藏 textarea 里的原始 Markdown 源） */
+const EDIT_SOURCE = {
   title: ".title-link span",
   description: ".description-text",
-  notes: ".note-text",
+  notes: ".note-source",
   author: ".author-inner, .author",
 };
+
+/** 读取编辑器初始值：textarea 取 value，其余取 textContent。 */
+function readSourceValue(cell, field) {
+  const el = cell.querySelector(EDIT_SOURCE[field]);
+  if (!el) return "";
+  return el.tagName === "TEXTAREA" ? el.value : el.textContent;
+}
 
 function parseConfig(ul) {
   try {
@@ -552,9 +560,7 @@ class BookmarkTable extends Behavior {
     }
     const cell = li?.querySelector(EDIT_CELL[field]);
     if (!cell || cell.classList.contains("is-editing")) return;
-    const current = (
-      cell.querySelector(EDIT_TEXT[field])?.textContent || ""
-    ).trim();
+    const current = readSourceValue(cell, field).trim();
     // 输入多行（desc/notes 用 Enter 换行）vs 软换行显示（title 用 Enter 保存但超宽自动折行）
     const multiline = field === "description" || field === "notes";
     const softWrap = field === "title";
@@ -602,29 +608,73 @@ class BookmarkTable extends Behavior {
         editor.remove();
         cell.classList.remove("is-editing");
       },
-      onSave: (value) =>
-        patchBookmark(li.dataset.bookmarkId, { [field]: value }).then(() => {
-          let target = cell.querySelector(EDIT_TEXT[field]);
-          // 原本为空的格没有文本节点，补一个再写入，避免要刷新才见
-          if (!target && field === "description") {
-            target = document.createElement("span");
-            target.className = "description-text";
-            cell.querySelector(".description-container")?.appendChild(target);
-          } else if (!target && field === "notes") {
-            target = document.createElement("span");
-            target.className = "note-text";
-            cell.querySelector(".note-container")?.appendChild(target);
-          }
-          if (target) target.textContent = value;
-          if (field === "title") {
-            cell.querySelector(".title-link")?.setAttribute("title", value);
-          }
-        }),
+      onSave: (value) => {
+        if (field === "notes") {
+          return this.saveNotes(cell, li, value);
+        }
+        return patchBookmark(li.dataset.bookmarkId, { [field]: value }).then(
+          () => {
+            let target = cell.querySelector(EDIT_SOURCE[field]);
+            // 原本为空的格没有文本节点，补一个再写入，避免要刷新才见
+            if (!target && field === "description") {
+              target = document.createElement("span");
+              target.className = "description-text";
+              cell.querySelector(".description-container")?.appendChild(target);
+            }
+            if (target) target.textContent = value;
+            if (field === "title") {
+              cell.querySelector(".title-link")?.setAttribute("title", value);
+            }
+          },
+        );
+      },
       onError: () =>
         showToast(gettext("Couldn't save changes. Please try again."), {
           tone: "error",
         }),
     });
+  }
+
+  /** 待办勾选框：交给笔记待办的公共实现，保存链路与另外两个视图一致 */
+  toggleTask(box) {
+    const cell = box.closest(".cell-notes");
+    return toggleTaskCheckbox(box, {
+      bookmarkId: cell?.closest("li[ld-bookmark-item]")?.dataset.bookmarkId,
+      source: cell?.querySelector(".note-source"),
+    });
+  }
+
+  /** 笔记保存：PATCH 后复用 notes_html 接口局部刷新渲染层，不重载页面；
+      同步更新隐藏原始源与折叠提示，清空笔记时一并清空渲染层。 */
+  async saveNotes(cell, li, value) {
+    const bookmarkId = li.dataset.bookmarkId;
+    await patchBookmark(bookmarkId, { notes: value });
+
+    const source = cell.querySelector(".note-source");
+    if (source) source.value = value;
+
+    const rendered = cell.querySelector(".note-markdown");
+    const wrap = cell.querySelector(".note.inline");
+    if (!rendered) return;
+
+    if (!value.trim()) {
+      rendered.innerHTML = "";
+      wrap?.removeAttribute("title");
+      return;
+    }
+
+    let html = "";
+    try {
+      const response = await fetch(`/api/bookmarks/${bookmarkId}/notes_html/`);
+      if (response.ok) {
+        const data = await response.json();
+        html = data.html || "";
+      }
+    } catch (error) {
+      console.error("Failed to refresh notes rendering:", error);
+    }
+    rendered.innerHTML = html;
+    if (wrap) wrap.setAttribute("title", rendered.textContent.trim());
   }
 
   /** 编辑器统一尺寸：至少与标签编辑器同宽（420px），右侧放不下就向左展开 */
@@ -726,6 +776,13 @@ class BookmarkTable extends Behavior {
 
   onClick(event) {
     if (event.target.closest(".table-cell-editor")) return;
+
+    // 待办勾选框是独立点击目标：切换完成态，不连带展开/折叠（与链接同理）
+    const taskBox = event.target.closest(".cell-notes .task-checkbox");
+    if (taskBox) {
+      this.toggleTask(taskBox);
+      return;
+    }
 
     const opsBtn = event.target.closest(".row-ops-btn");
     if (opsBtn) {

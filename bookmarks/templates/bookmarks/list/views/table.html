@@ -78,10 +78,12 @@
           </div>
           {% elif col.key == 'notes' %}
           <div class="cell cell-notes" style="grid-column: {{ forloop.counter|add:'1' }}">
-            <div class="note inline" title="{{ bookmark_item.notes|striptags }}">
-              <div class="note-container truncate">
-                {% if bookmark_item.notes %}<span class="note-text">{{ bookmark_item.notes|striptags }}</span>{% endif %}
+            <div class="note inline" {% if bookmark_item.notes %}title="{{ bookmark_item.notes|markdown_plain }}"{% endif %}>
+              {% comment %}折叠/展开共用同一份渲染结果：折叠态由 CSS 把块级元素压成单行、保留行内样式；展开态恢复块级排版。隐藏 textarea 保存原始 Markdown 源，供行内编辑器读取。{% endcomment %}
+              <div class="note-container note-markdown markdown">
+                {% if bookmark_item.notes %}{% markdown bookmark_item.notes %}{% endif %}
               </div>
+              <textarea class="note-source" hidden>{{ bookmark_item.notes }}</textarea>
             </div>
           </div>
           {% elif col.key == 'domain' %}

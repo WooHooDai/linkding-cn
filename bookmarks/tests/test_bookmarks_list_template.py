@@ -1083,6 +1083,18 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         )
         self.assertNotes(html, note_html, 1)
 
+    def test_note_renders_tasklist(self):
+        self.setup_bookmark(notes="- [ ] 未完成事项\n- [x] 已完成事项")
+        html = self.render_template()
+
+        note_html = (
+            '<ul>'
+            '<li class="task-list-item"><span class="task-checkbox"></span>未完成事项</li>'
+            '<li class="task-list-item is-done"><span class="task-checkbox checked"></span>已完成事项</li>'
+            '</ul>'
+        )
+        self.assertNotes(html, note_html, 1)
+
     def test_note_renders_markdown_with_linkify(self):
         # Should linkify plain URL
         self.setup_bookmark(notes="Example: https://example.com")
@@ -1751,6 +1763,94 @@ class BookmarkTableViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         ]
         # 非法 key 被丢弃；title 列被强制保留并排在最前
         self.assertEqual(labels, ["Title", "Date", "Domain"])
+
+    def test_table_view_notes_render_markdown(self):
+        """表格笔记列：渲染层输出解析后的 Markdown，隐藏源保留原始语法，提示用纯文本。"""
+        self.setup_bookmark(notes='**Example:** `print("Hello world!")`')
+        soup = self.make_soup(self.render_template())
+
+        cell = soup.select_one(".table-body-scroll .cell-notes")
+        self.assertIsNotNone(cell)
+
+        rendered = cell.select_one(".note-markdown")
+        self.assertIsNotNone(rendered)
+        self.assertIsNotNone(rendered.select_one("strong"))
+        self.assertEqual(rendered.select_one("strong").get_text(strip=True), "Example:")
+        self.assertIsNotNone(rendered.select_one("code"))
+        self.assertEqual(
+            rendered.select_one("code").get_text(strip=True),
+            'print("Hello world!")',
+        )
+
+        source = cell.select_one(".note-source")
+        self.assertIsNotNone(source)
+        self.assertIn("**Example:**", source.text)
+
+        tooltip = cell.select_one(".note.inline")["title"]
+        self.assertNotIn("**", tooltip)
+        self.assertNotIn("`", tooltip)
+        self.assertEqual(tooltip, 'Example: print("Hello world!")')
+
+    def test_table_view_notes_renders_list(self):
+        """多行列表在展开层渲染为 ul/li；折叠提示合并为纯文本、去掉列表符号。"""
+        self.setup_bookmark(notes="- 第一项\n- 第二项")
+        soup = self.make_soup(self.render_template())
+
+        rendered = soup.select_one(".cell-notes .note-markdown")
+        items = rendered.select("ul li")
+        self.assertEqual(len(items), 2)
+        self.assertEqual(items[0].get_text(strip=True), "第一项")
+        self.assertEqual(items[1].get_text(strip=True), "第二项")
+
+        tooltip = soup.select_one(".cell-notes .note.inline")["title"]
+        self.assertNotIn("-", tooltip)
+        self.assertIn("第一项", tooltip)
+        self.assertIn("第二项", tooltip)
+
+    def test_table_view_notes_renders_tasklist(self):
+        """待办语法渲染为复选框列表：未完成/已完成类名与勾选状态正确，普通列表不受影响。"""
+        self.setup_bookmark(
+            notes="- [ ] 未完成事项\n- [x] 已完成事项\n- 普通列表项",
+        )
+        soup = self.make_soup(self.render_template())
+        rendered = soup.select_one(".cell-notes .note-markdown")
+
+        task_items = rendered.select("li.task-list-item")
+        self.assertEqual(len(task_items), 2)
+
+        pending = task_items[0]
+        self.assertFalse(pending.has_attr("class") and "is-done" in pending["class"])
+        self.assertIsNotNone(pending.select_one(".task-checkbox:not(.checked)"))
+        self.assertEqual(pending.get_text(strip=True), "未完成事项")
+
+        done = task_items[1]
+        self.assertIn("is-done", done["class"])
+        self.assertIsNotNone(done.select_one(".task-checkbox.checked"))
+        self.assertEqual(done.get_text(strip=True), "已完成事项")
+
+        plain = rendered.select("li:not(.task-list-item)")
+        self.assertEqual(len(plain), 1)
+        self.assertEqual(plain[0].get_text(strip=True), "普通列表项")
+
+    def test_table_view_notes_sanitizes_html(self):
+        """表格笔记列复用同一清洗管线，脚本等危险 HTML 不进入渲染层。"""
+        self.setup_bookmark(notes='<script>alert("test")</script> **bold**')
+        soup = self.make_soup(self.render_template())
+
+        rendered = soup.select_one(".cell-notes .note-markdown")
+        self.assertIsNone(rendered.select_one("script"))
+        self.assertIsNotNone(rendered.select_one("strong"))
+
+    def test_table_view_notes_empty(self):
+        """无笔记：渲染层为空、隐藏源为空、不输出提示标题。"""
+        self.setup_bookmark()
+        soup = self.make_soup(self.render_template())
+
+        cell = soup.select_one(".table-body-scroll .cell-notes")
+        self.assertIsNotNone(cell)
+        self.assertEqual(cell.select_one(".note-markdown").text.strip(), "")
+        self.assertEqual(cell.select_one(".note-source").text.strip(), "")
+        self.assertNotIn("title", cell.select_one(".note.inline").attrs)
 
 
 class BookmarkTableStatusColumnTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):

@@ -1,9 +1,11 @@
+import html
 import re
 
 import bleach
 import markdown
 from bleach.linkifier import DEFAULT_CALLBACKS, Linker
 from bleach_allowlist import markdown_attrs, markdown_tags
+from bs4 import BeautifulSoup
 from django import template
 from django.utils.safestring import mark_safe
 
@@ -214,21 +216,82 @@ def schemeless_urls_to_https(attrs, _new):
 linker = Linker(callbacks=[*DEFAULT_CALLBACKS, schemeless_urls_to_https])
 
 
+# 待办复选框需要保留元素上的 class 样式；其余白名单沿用 bleach_allowlist
+markdown_attrs_with_class = {
+    **markdown_attrs,
+    "*": sorted({*markdown_attrs.get("*", []), "class"}),
+}
+
+
+def _rewrite_tasklist(html_text):
+    """把 - [ ] / - [x] 待办列表项改写为复选框样式的列表项，不依赖第三方扩展。"""
+    soup = BeautifulSoup(html_text, "html.parser")
+    for li in soup.select("li"):
+        text = li.get_text(strip=True)
+        if text.startswith("[ ]"):
+            done = False
+        elif text.startswith(("[x]", "[X]")):
+            done = True
+        else:
+            continue
+
+        li["class"] = "task-list-item" + (" is-done" if done else "")
+
+        # 去掉开头的方括号前缀，保留粗体/代码等行内子元素
+        first_text = li.find(string=True)
+        if first_text and first_text.strip().startswith(("[ ]", "[x]", "[X]")):
+            remainder = first_text.strip()[3:].lstrip()
+            first_text.replace_with(remainder)
+
+        checkbox = soup.new_tag(
+            "span",
+            attrs={"class": "task-checkbox" + (" checked" if done else "")},
+        )
+        li.insert(0, checkbox)
+    return str(soup)
+
+
+def _convert_markdown(markdown_text, renderer=None):
+    """复用现有 Markdown 扩展配置，返回清洗 + 链接化后的安全 HTML。"""
+    if renderer is None:
+        renderer = markdown.Markdown(extensions=["fenced_code", "nl2br"])
+
+    as_html = renderer.convert(markdown_text)
+    as_html = _rewrite_tasklist(as_html)
+    sanitized_html = bleach.clean(as_html, markdown_tags, markdown_attrs_with_class)
+    return linker.linkify(sanitized_html)
+
+
 @register.simple_tag(name="markdown", takes_context=True)
 def render_markdown(context, markdown_text):
     # naive approach to reusing the renderer for a single request
     # works for bookmark list for now
     if "markdown_renderer" not in context:
-        renderer = markdown.Markdown(extensions=["fenced_code", "nl2br"])
-        context["markdown_renderer"] = renderer
-    else:
-        renderer = context["markdown_renderer"]
+        context["markdown_renderer"] = markdown.Markdown(
+            extensions=["fenced_code", "nl2br"]
+        )
 
-    as_html = renderer.convert(markdown_text)
-    sanitized_html = bleach.clean(as_html, markdown_tags, markdown_attrs)
-    linkified_html = linker.linkify(sanitized_html)
+    return mark_safe(_convert_markdown(markdown_text, context["markdown_renderer"]))
 
-    return mark_safe(linkified_html)
+
+@register.filter(name="markdown_plain")
+def markdown_plain(markdown_text):
+    """把 Markdown 渲染后剥成纯文本：去掉全部语法符号与标签，仅保留可读文字。
+    用于表格折叠预览的 title 提示等单行场景；输出由模板自动转义。"""
+    if not markdown_text:
+        return ""
+
+    rendered_html = _convert_markdown(markdown_text)
+    # 块级标签边界先换行，避免剥标签后列表项/段落文字粘连
+    spaced_html = re.sub(
+        r"<(br|/p|/li|/ul|/ol|/h[1-6]|/blockquote|/pre)[^>]*>",
+        "\n",
+        rendered_html,
+    )
+    plain_html = bleach.clean(spaced_html, tags=[], attributes={}, strip=True)
+    plain_text = html.unescape(plain_html)
+    plain_text = re.sub(r"\s+", " ", plain_text).strip()
+    return plain_text
 
 
 def append_attr(widget, attr, value):

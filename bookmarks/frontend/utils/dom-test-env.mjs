@@ -111,6 +111,9 @@ export async function setupDom(html) {
   const entry = `
     export * from "./bookmarks/frontend/components/runtime.js";
     export * from "./bookmarks/frontend/components/bookmark-row.js";
+    export * from "./bookmarks/frontend/components/bookmark-table.js";
+    export * from "./bookmarks/frontend/components/bookmark-compact.js";
+    export * from "./bookmarks/frontend/components/bookmark-notes-task.js";
     export const __seq = ${moduleSeq++};
   `;
   const result = buildSync({
@@ -124,13 +127,15 @@ export async function setupDom(html) {
   return import("data:text/javascript;base64," + Buffer.from(code).toString("base64"));
 }
 
-/** 构造一个最小的书签行；withCell 模拟表格视图的格子行 */
+/** 构造一个最小的书签行；withCell 模拟表格视图的格子行，notes 模拟行内笔记片段 */
 export function rowHtml({
   id = "1",
   title = "Hello",
   description = "Desc",
   tags = ["a"],
   withCell = false,
+  notes = "",
+  notesHtml = "",
 } = {}) {
   const tagLinks = tags
     .map((t) => `<a href="?q=%23${t}">${t}</a>`)
@@ -149,9 +154,15 @@ export function rowHtml({
   const body = withCell
     ? `<div class="cell cell-title">${inner}</div>`
     : `<div class="content">${inner}</div>`;
+  const notesBlock = notes
+    ? `<div class="inline-edit inline-edit-notes">
+         <div class="markdown">${notesHtml}</div>
+         <textarea class="inline-edit-textarea" style="display:none;">${notes}</textarea>
+       </div>`
+    : "";
   return `
     <ul class="bookmark-list ${withCell ? "view-table" : "view-list"}">
-      <li ld-bookmark-item data-bookmark-id="${id}">${body}</li>
+      <li ld-bookmark-item data-bookmark-id="${id}">${body}${notesBlock}</li>
     </ul>`;
 }
 
@@ -160,4 +171,54 @@ export function mountRow(mod, selector = "li[ld-bookmark-item]") {
   mod.applyBehaviors(document.body, ["ld-bookmark-item"]);
   const element = document.querySelector(selector);
   return element.__behaviors[0];
+}
+
+/** 构造最小表格行，默认带一个笔记单元格，用于表格行为单测 */
+export function tableRowHtml({
+  id = "1",
+  notes = "**old** source",
+  rendered = "<p>old <strong>render</strong></p>",
+} = {}) {
+  return `
+    <div class="table-body-scroll">
+      <ul class="bookmark-list view-table" ld-bookmark-table>
+        <li ld-bookmark-item data-bookmark-id="${id}">
+          <div class="cell cell-notes">
+            <div class="note inline">
+              <div class="note-container note-markdown markdown">${rendered}</div>
+              <textarea class="note-source" hidden>${notes}</textarea>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>`;
+}
+
+/** 挂载表格行为并返回 BookmarkTable 实例 */
+export function mountTable(mod) {
+  mod.applyBehaviors(document.body, ["ld-bookmark-table"]);
+  const ul = document.querySelector("ul[ld-bookmark-table]");
+  return ul.__behaviors[0];
+}
+
+/** 记录 fetch 调用：PATCH 返回成功，notes_html 接口返回指定渲染 HTML */
+export function trackFetch(html = "") {
+  const calls = [];
+  globalThis.fetch = async (url, options = {}) => {
+    calls.push({
+      url: String(url),
+      method: options.method || "GET",
+      body: options.body ? JSON.parse(options.body) : null,
+    });
+    if (url.includes("notes_html")) {
+      return { ok: true, json: async () => ({ html }) };
+    }
+    return { ok: true, json: async () => ({}) };
+  };
+  return calls;
+}
+
+/** 等一个异步保存回合落地（fetch → 状态回写） */
+export function flush(ms = 20) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

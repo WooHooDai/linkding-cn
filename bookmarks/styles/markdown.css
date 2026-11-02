@@ -43,4 +43,45 @@
     background: none;
     border-radius: 0;
   }
+
+  /* 待办清单（- [ ] / - [x]） */
+  & li.task-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--unit-1);
+    list-style: none;
+  }
+
+  & .task-checkbox {
+    flex: none;
+    width: var(--control-icon-size);
+    height: var(--control-icon-size);
+    margin-top: calc((var(--line-height) - var(--control-icon-size)) / 2);
+    border: var(--border-width) solid var(--checkbox-border-color);
+    border-radius: var(--border-radius);
+    background: var(--checkbox-bg-color);
+    position: relative;
+  }
+
+  & .task-checkbox.checked {
+    border-color: var(--checkbox-checked-bg-color);
+    background: var(--checkbox-checked-bg-color);
+  }
+
+  & .task-checkbox.checked::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 4px;
+    height: 8px;
+    border: solid var(--checkbox-icon-color);
+    border-width: 0 2px 2px 0;
+    transform: translate(-50%, -58%) rotate(45deg);
+  }
+
+  & li.task-list-item.is-done {
+    color: var(--secondary-text-color);
+    text-decoration: line-through;
+  }
 }
