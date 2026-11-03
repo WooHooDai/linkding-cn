@@ -9,6 +9,10 @@ import {
   tagsEqual,
 } from "./bookmark-row-editor.js";
 
+// 触屏上按下补全候选会先失焦，浏览器的兼容鼠标事件要再晚一两百毫秒才到。
+// 这段时间窗内的失焦归因于「按在补全框里」，不能当成点到外面收编辑态。
+const PRESS_BLUR_GRACE = 400;
+
 /** 标签：就地编辑、快捷标签按钮、快捷标签子菜单。 */
 export const bookmarkRowTags = {
   _getOrCreateTagsContainer() {
@@ -138,9 +142,18 @@ export const bookmarkRowTags = {
       savedScrollY = window.scrollY;
       scrollToBookmarkTop(input);
       focusEnd(input);
+      // 记录最近一次按下补全框的时间，供 blur 判断这次失焦是不是「按在候选上」
+      let pressedInsideAt = 0;
+      autocomplete.addEventListener("pointerdown", () => {
+        pressedInsideAt = performance.now();
+      });
       input.addEventListener("blur", () => {
         setTimeout(() => {
           if (autocomplete.contains(document.activeElement)) return;
+          if (performance.now() - pressedInsideAt < PRESS_BLUR_GRACE) {
+            focusEnd(input);
+            return;
+          }
           closeEditor(editor);
         }, 150);
       });

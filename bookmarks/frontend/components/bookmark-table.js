@@ -774,7 +774,10 @@ class BookmarkTable extends Behavior {
   }
 
   onClick(event) {
-    if (event.target.closest(".table-cell-editor")) return;
+    // 编辑器（含标签补全菜单）是独立交互区：点它不折叠/展开整行
+    if (event.target.closest(".table-cell-editor, .quick-edit-tags-container")) {
+      return;
+    }
 
     // 待办勾选框是独立点击目标：切换完成态，不连带展开/折叠（与链接同理）
     const taskBox = event.target.closest(".cell-notes .task-checkbox");

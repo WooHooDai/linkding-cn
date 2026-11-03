@@ -98,6 +98,33 @@ test("标签编辑保存时发出 PATCH 并就地更新显示", async () => {
   assert.deepEqual(displayedTags(li), ["a", "b"], "保存后应就地更新标签显示");
 });
 
+test("按下补全框导致的失焦不收编辑态", async () => {
+  // 触屏：按下候选后浏览器会把焦点移走，兼容 mousedown 更晚才到；
+  // 这段窗口里若收掉编辑器，刚落下的候选就一起丢了
+  const mod = await setupDom(rowHtml({ tags: [], withCell: true }));
+  const api = trackFetch();
+  const item = mountRow(mod);
+  const li = document.querySelector("li[ld-bookmark-item]");
+
+  item.startQuickEdit("tags");
+  await tick();
+
+  const input = tagEditorInput(li);
+  assert.ok(input);
+  li.querySelector(".quick-edit-tags-container").dispatchEvent(
+    new window.Event("pointerdown", { bubbles: true }),
+  );
+  input.value = "a b";
+  input.dispatchEvent(new window.Event("blur"));
+  await tick(200);
+
+  assert.ok(
+    li.querySelector(".quick-edit-tags-container"),
+    "按下补全框后失焦不应关闭编辑器",
+  );
+  assert.equal(api.calls.length, 0, "不应发出请求");
+});
+
 test("标签保存失败时回滚到原标签", async () => {
   const mod = await setupDom(rowHtml({ tags: ["a"] }));
   const api = trackFetch();

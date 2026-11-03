@@ -4,6 +4,7 @@ import { cache } from "../utils/tag-cache.js";
 import { TurboLitElement } from "../utils/element.js";
 import { PositionController } from "../utils/position-controller.js";
 import { getCurrentWord, getCurrentWordBounds } from "../utils/input.js";
+import { swallowNextClickIn } from "../utils/swallow-click.js";
 import { scoreTag } from "../utils/tag-match.js";
 
 // 候选列表上限：前缀命中（强信号）几乎总能被完整覆盖，
@@ -226,12 +227,18 @@ export class TagAutocomplete extends TurboLitElement {
             (tag, index) => html`
               ${keyed(tag.name, html`
                 <li class="menu-item ${this.selectedIndex === index ? "selected" : ""}">
+                  <!-- 按下即选中：触屏的兼容 mousedown 可能晚到失焦之后，那时菜单已被收起 -->
                   <a
                     href="#"
-                    @mousedown=${(event) => {
+                    @pointerdown=${(event) => {
                       event.preventDefault();
+                      // 菜单马上收起，补发的 click 会按坐标落到下面的行上
+                      swallowNextClickIn(
+                        event.currentTarget.getBoundingClientRect(),
+                      );
                       this.complete(tag);
                     }}
+                    @click=${(event) => event.preventDefault()}
                   >
                     ${tag.name}
                   </a>

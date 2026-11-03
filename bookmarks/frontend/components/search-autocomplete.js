@@ -3,6 +3,7 @@ import { api } from "../api.js";
 import { TurboLitElement } from "../utils/element.js";
 import { PositionController } from "../utils/position-controller.js";
 import { SearchHistory } from "../utils/search-history.js";
+import { swallowNextClickIn } from "../utils/swallow-click.js";
 import { cache } from "../utils/tag-cache.js";
 import { scoreTag } from "../utils/tag-match.js";
 import {
@@ -261,10 +262,13 @@ export class SearchAutocomplete extends TurboLitElement {
           >
             <a
               href="#"
-              @mousedown=${(event) => {
+              @pointerdown=${(event) => {
                 event.preventDefault();
+                // 菜单马上收起，补发的 click 会按坐标落到下面的行上
+                swallowNextClickIn(event.currentTarget.getBoundingClientRect());
                 this.completeSuggestion(suggestion);
               }}
+              @click=${(event) => event.preventDefault()}
             >
               ${suggestion.label}
             </a>
