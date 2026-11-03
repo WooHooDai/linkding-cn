@@ -186,6 +186,11 @@ export function isActiveEditor(bookmarkId, fieldType) {
   );
 }
 
+// 只要活跃编辑器属于这条书签就返回 true，不区分字段
+export function isEditorActiveFor(bookmarkId) {
+  return activeEditor?.bookmarkId === bookmarkId;
+}
+
 export function closeEditor(editor, options = {}) {
   if (!editor) return;
   if (activeEditor === editor) {

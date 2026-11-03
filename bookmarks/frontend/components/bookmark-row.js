@@ -3,6 +3,7 @@ import {
   activateEditor,
   closeActiveEditor,
   isActiveEditor,
+  isEditorActiveFor,
 } from "./bookmark-row-editor.js";
 import { bookmarkRowFields } from "./bookmark-row-fields.js";
 import { bookmarkRowNotes } from "./bookmark-row-notes.js";
@@ -100,7 +101,7 @@ class BookmarkItem extends Behavior {
   destroy() {
     this._teardownDblClickEdit();
 
-    if (activeEditor?.bookmarkId === this.bookmarkId) {
+    if (isEditorActiveFor(this.bookmarkId)) {
       closeActiveEditor({ save: false });
     }
 
