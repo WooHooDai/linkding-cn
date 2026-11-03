@@ -160,6 +160,11 @@ class ConfirmButtonBehavior extends Behavior {
   }
 
   onClick(event) {
+    // 动作本身没有破坏性、或调用方已在别处确认过时，直接走默认提交
+    if (this.element.hasAttribute("data-skip-confirm")) {
+      return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
     Behavior.interacting = true;

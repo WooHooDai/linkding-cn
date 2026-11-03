@@ -335,12 +335,14 @@ class BookmarkArchivedViewTestCase(
         response = self.client.get(url)
         values = self._get_bulk_action_values(response)
 
-        for v in ["bulk_unarchive", "bulk_delete", "bulk_tag", "bulk_untag",
+        for v in ["bulk_unarchive", "bulk_delete", "bulk_edit_metadata",
                    "bulk_read", "bulk_unread", "bulk_enrich_metadata",
                    "bulk_refresh_metadata"]:
             self.assertIn(v, values)
         self.assertNotIn("bulk_share", values)
         self.assertNotIn("bulk_unshare", values)
+        self.assertNotIn("bulk_tag", values)
+        self.assertNotIn("bulk_untag", values)
 
     @override_settings(LD_ENABLE_SNAPSHOTS=True)
     def test_allowed_bulk_actions_with_html_snapshot_enabled(self):

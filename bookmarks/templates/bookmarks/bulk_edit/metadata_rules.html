@@ -1,0 +1,23 @@
+{% load i18n %}
+{# 同一字段的替换规则按顺序执行；至少保留一行，避免出现"没有规则却处于替换模式" #}
+<div class="bulk-metadata-rules" data-rules>
+  <div class="bulk-metadata-rule" data-rule>
+    <span class="bulk-metadata-rule-index" data-rule-index data-rule-handle
+          title="{% translate 'Drag to reorder' %}">
+      <svg class="bulk-metadata-grip" width="12" height="12" aria-hidden="true">
+        <use href="#ld-icon-grip"></use>
+      </svg>
+      <span data-rule-number></span>
+    </span>
+    <input type="text" class="form-input" data-find
+           placeholder="{% translate 'Find' %}">
+    <input type="text" class="form-input" data-replacement
+           placeholder="{% translate 'Replace with' %}">
+    <button type="button" class="btn btn-link btn-sm bulk-metadata-rule-remove" data-rule-remove
+            title="{% translate 'Remove rule' %}"
+            aria-label="{% translate 'Remove rule' %}">&times;</button>
+  </div>
+</div>
+<button type="button" class="btn btn-link btn-sm bulk-metadata-rule-add" data-rule-add>
+  {% translate "Add rule" %}
+</button>

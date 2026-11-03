@@ -1087,3 +1087,51 @@ msgstr "作者"
 #: bookmarks/frontend/reader/reader-sidebar.js:465
 msgid "Click to edit author"
 msgstr "点击编辑作者"
+
+#: bookmarks/frontend/components/bulk-metadata-edit.js
+#, python-format
+msgid "Applies to %(count)s bookmarks"
+msgstr "将作用于 %(count)s 个书签"
+
+#: bookmarks/frontend/components/bulk-metadata-edit.js
+#, python-format
+msgid "Changes: %(count)s"
+msgstr "变化 %(count)s 处"
+
+#: bookmarks/frontend/components/bulk-edit.js
+msgid "Execute"
+msgstr "执行"
+
+#: bookmarks/frontend/components/bulk-edit.js
+msgid "Collapse panel"
+msgstr "收起"
+
+#: bookmarks/frontend/components/bulk-metadata-edit.js
+msgid "Apply changes?"
+msgstr "应用修改？"
+
+#: bookmarks/frontend/components/bulk-metadata-edit.js
+msgid "This cannot be undone!"
+msgstr "此操作不可撤销！"
+
+#: bookmarks/frontend/components/bulk-metadata-edit.js
+#, python-format
+msgid "This will change: %(details)s."
+msgstr "将修改：%(details)s。"
+
+#: bookmarks/frontend/components/bulk-metadata-edit.js
+#, python-format
+msgid "%(field)s of %(count)s bookmarks"
+msgstr "%(count)s 个书签的%(field)s"
+
+#: bookmarks/frontend/components/bulk-metadata-edit.js
+#, python-format
+msgid ""
+"Selected %(count)s bookmarks exceed the limit of %(limit)s. Narrow the "
+"selection and try again."
+msgstr "已选中 %(count)s 个书签，超过单次上限 %(limit)s。请缩小筛选范围后重试。"
+
+#: bookmarks/frontend/components/bulk-metadata-edit.js
+#, python-format
+msgid "%(rules)s matched nothing"
+msgstr "%(rules)s 未命中"

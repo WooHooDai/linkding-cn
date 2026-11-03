@@ -1,0 +1,134 @@
+{% load i18n %}
+{% comment %}
+  批量编辑元数据的面板。直接挂在批量条下方而不是弹窗：
+  改规则时列表仍然可见，执行后草稿保留，可以接着调。
+{% endcomment %}
+<div class="bulk-metadata-panel" data-bulk-metadata-panel hidden
+     data-preview-url="{% url 'linkding:bookmarks.metadata.preview' %}">
+  <div class="bulk-metadata-panel-body scrollbar">
+    <p class="bulk-metadata-warning" data-warning hidden></p>
+
+    <div class="bulk-metadata-fields">
+      <div class="bulk-metadata-field" data-field="title">
+        <div class="bulk-metadata-field-header">
+          <span class="bulk-metadata-label">{% translate "Title" %}</span>
+          <span class="bulk-metadata-stat" data-stat></span>
+          <select class="form-select select-sm" data-mode
+                  aria-label="{% translate 'Title' %}">
+            <option value="none">{% translate "Do not change" %}</option>
+            <option value="clear">{% translate "Clear" %}</option>
+            <option value="replace">{% translate "Find and replace" %}</option>
+            <option value="normalize">{% translate "Clean up whitespace" %}</option>
+          </select>
+        </div>
+        <div class="bulk-metadata-input" data-input hidden>
+          <textarea class="form-input" rows="1" data-value
+                    placeholder="{% translate 'New value' %}"></textarea>
+          <div class="bulk-metadata-replace" data-replace hidden>
+            {% include 'bookmarks/bulk_edit/metadata_rules.html' %}
+          </div>
+        </div>
+      </div>
+
+      <div class="bulk-metadata-field" data-field="description">
+        <div class="bulk-metadata-field-header">
+          <span class="bulk-metadata-label">{% translate "Description" %}</span>
+          <span class="bulk-metadata-stat" data-stat></span>
+          <select class="form-select select-sm" data-mode
+                  aria-label="{% translate 'Description' %}">
+            <option value="none">{% translate "Do not change" %}</option>
+            <option value="set">{% translate "Set to" %}</option>
+            <option value="clear">{% translate "Clear" %}</option>
+            <option value="replace">{% translate "Find and replace" %}</option>
+            <option value="normalize">{% translate "Clean up whitespace" %}</option>
+          </select>
+        </div>
+        <div class="bulk-metadata-input" data-input hidden>
+          <textarea class="form-input" rows="1" data-value
+                    placeholder="{% translate 'New value' %}"></textarea>
+          <div class="bulk-metadata-replace" data-replace hidden>
+            {% include 'bookmarks/bulk_edit/metadata_rules.html' %}
+          </div>
+        </div>
+      </div>
+
+      <div class="bulk-metadata-field" data-field="author">
+        <div class="bulk-metadata-field-header">
+          <span class="bulk-metadata-label">{% translate "Author" %}</span>
+          <span class="bulk-metadata-stat" data-stat></span>
+          <select class="form-select select-sm" data-mode
+                  aria-label="{% translate 'Author' %}">
+            <option value="none">{% translate "Do not change" %}</option>
+            <option value="set">{% translate "Set to" %}</option>
+            <option value="clear">{% translate "Clear" %}</option>
+            <option value="replace">{% translate "Find and replace" %}</option>
+            <option value="normalize">{% translate "Clean up whitespace" %}</option>
+          </select>
+        </div>
+        <div class="bulk-metadata-input" data-input hidden>
+          <textarea class="form-input" rows="1" data-value
+                    placeholder="{% translate 'New value' %}"></textarea>
+          <div class="bulk-metadata-replace" data-replace hidden>
+            {% include 'bookmarks/bulk_edit/metadata_rules.html' %}
+          </div>
+        </div>
+      </div>
+
+      <div class="bulk-metadata-field" data-field="notes">
+        <div class="bulk-metadata-field-header">
+          <span class="bulk-metadata-label">{% translate "Notes" %}</span>
+          <span class="bulk-metadata-stat" data-stat></span>
+          <select class="form-select select-sm" data-mode
+                  aria-label="{% translate 'Notes' %}">
+            <option value="none">{% translate "Do not change" %}</option>
+            <option value="clear">{% translate "Clear" %}</option>
+            <option value="replace">{% translate "Find and replace" %}</option>
+            <option value="normalize">{% translate "Clean up whitespace" %}</option>
+          </select>
+        </div>
+        <div class="bulk-metadata-input" data-input hidden>
+          <textarea class="form-input" rows="1" data-value
+                    placeholder="{% translate 'New value' %}"></textarea>
+          <div class="bulk-metadata-replace" data-replace hidden>
+            {% include 'bookmarks/bulk_edit/metadata_rules.html' %}
+          </div>
+        </div>
+      </div>
+
+      <div class="bulk-metadata-field" data-field="tags">
+        <div class="bulk-metadata-field-header">
+          <span class="bulk-metadata-label">{% translate "Tags" %}</span>
+          <span class="bulk-metadata-stat" data-stat></span>
+        </div>
+        <div class="bulk-metadata-tags">
+          <div class="bulk-metadata-tag-row">
+            <span class="bulk-metadata-tag-op">{% translate "Add" context "tag_action" %}</span>
+            <ld-tag-autocomplete data-tag-add
+                                 input-placeholder="{% translate 'tag1 tag2' %}"></ld-tag-autocomplete>
+          </div>
+          <div class="bulk-metadata-tag-row">
+            <span class="bulk-metadata-tag-op">{% translate "Remove" context "tag_action" %}</span>
+            <ld-tag-autocomplete data-tag-remove
+                                 input-placeholder="{% translate 'tag1 tag2' %}"></ld-tag-autocomplete>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <label class="form-checkbox bulk-metadata-case" data-case-toggle hidden>
+      <input type="checkbox" data-case-insensitive>
+      <i class="form-icon"></i>
+      {% translate "Ignore case in all replacements" %}
+    </label>
+  </div>
+
+  <div class="bulk-metadata-actions">
+    <button type="button" class="btn btn-link btn-sm" data-reset>
+      {% translate "Reset" %}
+    </button>
+    <span class="bulk-metadata-actions-spacer"></span>
+    <button type="button" class="btn btn-primary btn-sm" data-execute disabled>
+      {% translate "Apply changes" %}
+    </button>
+  </div>
+</div>

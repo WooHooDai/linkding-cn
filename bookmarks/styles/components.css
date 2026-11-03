@@ -198,3 +198,23 @@ ld-confirm-popup {
     display: block;
   }
 }
+
+/* 一次性确认框：由 confirmDialog() 动态插入 .modals */
+.confirm-dialog {
+  .modal-container {
+    max-width: 26rem;
+  }
+
+  .confirm-dialog-warning {
+    color: var(--error-color);
+    font-weight: 600;
+    margin-bottom: var(--unit-2);
+  }
+
+  .confirm-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--unit-2);
+    width: 100%;
+  }
+}

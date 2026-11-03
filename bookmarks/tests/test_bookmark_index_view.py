@@ -427,12 +427,15 @@ class BookmarkIndexViewTestCase(
         response = self.client.get(url)
         values = self._get_bulk_action_values(response)
 
-        for v in ["bulk_read", "bulk_unread", "bulk_tag", "bulk_untag",
+        for v in ["bulk_read", "bulk_unread", "bulk_edit_metadata",
                    "bulk_enrich_metadata", "bulk_refresh_metadata",
                    "bulk_archive", "bulk_trash", "bulk_delete"]:
             self.assertIn(v, values)
         self.assertNotIn("bulk_share", values)
         self.assertNotIn("bulk_unshare", values)
+        # 标签的增删已收进「编辑元数据」面板，不再有独立动作
+        self.assertNotIn("bulk_tag", values)
+        self.assertNotIn("bulk_untag", values)
 
     @override_settings(LD_ENABLE_SNAPSHOTS=True)
     def test_allowed_bulk_actions_with_html_snapshot_enabled(self):

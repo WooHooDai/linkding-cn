@@ -22,6 +22,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
+from django.views.decorators.http import require_POST
 
 from bookmarks import queries, utils
 from bookmarks.forms import BookmarkForm
@@ -45,14 +46,18 @@ from bookmarks.services import (
     tasks,
 )
 from bookmarks.services.bookmarks import (
+    METADATA_EDIT_LIMIT,
     archive_bookmark,
     archive_bookmarks,
+    bulk_edit_metadata,
     create_html_articles,
     create_html_snapshots,
     delete_bookmarks,
     enrich_bookmarks_metadata,
     mark_bookmarks_as_read,
     mark_bookmarks_as_unread,
+    parse_metadata_ops,
+    preview_metadata_edits,
     refresh_bookmarks_favicons,
     refresh_bookmarks_metadata,
     remove_all_html_articles,
@@ -1066,6 +1071,87 @@ def trashed_action(request: HttpRequest):
     return utils.redirect_with_query(request, reverse("linkding:bookmarks.trashed"))
 
 
+def _resolve_bulk_selection(request: HttpRequest, query: QuerySet[Bookmark]) -> list:
+    if request.POST.get("bulk_select_across") == "on":
+        # Query full list of bookmarks across all pages
+        bookmark_ids = list(query.only("id").values_list("id", flat=True))
+        # Exclude bookmarks that were explicitly unchecked while selecting all
+        exclude_ids = {
+            int(x)
+            for x in request.POST.getlist("bulk_exclude_id")
+            if x.lstrip("-").isdigit()
+        }
+        if exclude_ids:
+            bookmark_ids = [i for i in bookmark_ids if i not in exclude_ids]
+    else:
+        # Use only selected bookmarks
+        bookmark_ids = request.POST.getlist("bookmark_id")
+
+    # Guard against duplicate ids: the bulk edit form submits checkboxes
+    # together with injected hidden fields for selections on other pages,
+    # so the same id can arrive twice. Deduplicate to keep toast counts
+    # and job totals accurate.
+    return list(dict.fromkeys(bookmark_ids))
+
+
+def _metadata_edit_message(stats: dict) -> str:
+    labels = {
+        "title": _("Title"),
+        "description": _("Description"),
+        "author": _("Author"),
+        "notes": _("Notes"),
+    }
+    details = [
+        f"{label} {stats['fields'].get(field, 0)}"
+        for field, label in labels.items()
+        if stats["fields"].get(field, 0)
+    ]
+
+    tags = stats["tags"]
+    if tags["added"]:
+        details.append(f"{_('Tags')} +{tags['added']}")
+    if tags["removed"]:
+        details.append(f"{_('Tags')} -{tags['removed']}")
+    if tags["cleared"]:
+        details.append(f"{_('Tags cleared')} {tags['cleared']}")
+
+    if not details:
+        return _("No metadata was changed.")
+
+    return _("Updated %(count)s bookmarks: %(details)s") % {
+        "count": stats["updated"],
+        "details": ", ".join(details),
+    }
+
+
+@login_required
+@require_POST
+def metadata_preview(request: HttpRequest):
+    mode = request.POST.get("mode", "index")
+    search = BookmarkSearch.from_request(
+        request, request.GET, request.user_profile.search_preferences
+    )
+    if mode == "archived":
+        query = queries.query_archived_bookmarks(
+            request.user, request.user_profile, search
+        )
+    else:
+        query = queries.query_bookmarks(request.user, request.user_profile, search)
+
+    bookmark_ids = _resolve_bulk_selection(request, query)
+    ops = parse_metadata_ops(request.POST.get("bulk_metadata_ops"))
+    stats = preview_metadata_edits(bookmark_ids, ops, request.user)
+
+    return JsonResponse(
+        {
+            "stats": stats,
+            "count": len(bookmark_ids),
+            "limit": METADATA_EDIT_LIMIT,
+            "exceeded": len(bookmark_ids) > METADATA_EDIT_LIMIT,
+        }
+    )
+
+
 def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
     # Single bookmark actions
     if "archive" in request.POST:
@@ -1106,27 +1192,7 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
 
         bulk_action = request.POST["bulk_action"]
 
-        # Determine set of bookmarks
-        if request.POST.get("bulk_select_across") == "on":
-            # Query full list of bookmarks across all pages
-            bookmark_ids = list(query.only("id").values_list("id", flat=True))
-            # Exclude bookmarks that were explicitly unchecked while selecting all
-            exclude_ids = {
-                int(x)
-                for x in request.POST.getlist("bulk_exclude_id")
-                if x.lstrip("-").isdigit()
-            }
-            if exclude_ids:
-                bookmark_ids = [i for i in bookmark_ids if i not in exclude_ids]
-        else:
-            # Use only selected bookmarks
-            bookmark_ids = request.POST.getlist("bookmark_id")
-
-        # Guard against duplicate ids: the bulk edit form submits checkboxes
-        # together with injected hidden fields for selections on other pages,
-        # so the same id can arrive twice. Deduplicate to keep toast counts
-        # and job totals accurate.
-        bookmark_ids = list(dict.fromkeys(bookmark_ids))
+        bookmark_ids = _resolve_bulk_selection(request, query)
 
         if bulk_action == "bulk_archive":
             return archive_bookmarks(bookmark_ids, request.user)
@@ -1152,6 +1218,28 @@ def handle_action(request: HttpRequest, query: QuerySet[Bookmark] = None):
             return enrich_bookmarks_metadata(bookmark_ids, request.user)
         if bulk_action == "bulk_refresh_metadata":
             return refresh_bookmarks_metadata(bookmark_ids, request.user)
+        if bulk_action == "bulk_edit_metadata":
+            # 超限直接整体拒绝：不可逆改写不能以"只改了一部分"收场
+            if len(bookmark_ids) > METADATA_EDIT_LIMIT:
+                messages.error(
+                    request,
+                    _(
+                        "Selected %(count)s bookmarks exceed the limit of %(limit)s. Narrow the selection and try again."
+                    )
+                    % {"count": len(bookmark_ids), "limit": METADATA_EDIT_LIMIT},
+                )
+            else:
+                ops = parse_metadata_ops(request.POST.get("bulk_metadata_ops"))
+                stats = bulk_edit_metadata(bookmark_ids, ops, request.user)
+                if stats["updated"]:
+                    messages.success(request, _metadata_edit_message(stats))
+                else:
+                    messages.info(request, _metadata_edit_message(stats))
+
+            return redirect(
+                request.META.get("HTTP_REFERER")
+                or reverse("linkding:bookmarks.index")
+            )
         if bulk_action == "bulk_refresh_favicon":
             return refresh_bookmarks_favicons(bookmark_ids, request.user)
         if bulk_action == "bulk_trash":

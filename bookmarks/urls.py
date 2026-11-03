@@ -22,6 +22,11 @@ urlpatterns = [
         views.bookmarks.archived_action,
         name="bookmarks.archived.action",
     ),
+    path(
+        "bookmarks/metadata/preview",
+        views.bookmarks.metadata_preview,
+        name="bookmarks.metadata.preview",
+    ),
     path("bookmarks/shared", views.bookmarks.shared, name="bookmarks.shared"),
     path(
         "bookmarks/shared/action",

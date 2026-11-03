@@ -1,4 +1,6 @@
+import json
 import logging
+import re
 
 from django.db import transaction
 from django.utils import timezone
@@ -379,6 +381,365 @@ def refresh_bookmarks_favicons(bookmark_ids: list[int | str], current_user: User
     )
 
     tasks.refresh_favicons_for_bookmarks(current_user, owned_bookmarks)
+
+
+# --- 批量编辑元数据 -------------------------------------------------------
+
+METADATA_EDIT_FIELDS = ("title", "description", "author", "notes")
+METADATA_EDIT_TAG_FIELD = "tags"
+METADATA_EDIT_MODES = ("set", "clear", "replace", "normalize")
+METADATA_EDIT_TAG_MODES = ("add", "remove", "clear")
+# 同字段的替换规则按顺序执行，条数上限避免弹窗纵向失控与误配
+MAX_METADATA_REPLACE_RULES = 10
+# 单次改写的安全阀，不是性能阀：上限内的事务能在请求超时线之前落定，
+# 超出则整体拒绝，而不是让一部分书签被改、一部分没改
+METADATA_EDIT_LIMIT = 5000
+
+_INLINE_WHITESPACE_RE = re.compile(r"[ \t\u00a0\u3000]+")
+
+
+def _empty_edit_stats():
+    return {
+        "total": 0,
+        "updated": 0,
+        "fields": {},
+        "steps": {},
+        "tags": {"added": 0, "removed": 0, "cleared": 0, "bookmarks": 0},
+    }
+
+
+def parse_metadata_ops(raw) -> dict:
+    """把弹窗提交的 ops 规范化，未知字段、未知模式、无效查找串一律丢弃。"""
+    if isinstance(raw, str):
+        try:
+            data = json.loads(raw)
+        except (TypeError, ValueError):
+            return {}
+    elif isinstance(raw, dict):
+        data = raw
+    else:
+        return {}
+
+    if not isinstance(data, dict):
+        return {}
+
+    ops = {}
+    for field in METADATA_EDIT_FIELDS:
+        op = data.get(field)
+        if not isinstance(op, dict):
+            continue
+        mode = op.get("mode")
+        if mode not in METADATA_EDIT_MODES:
+            continue
+
+        entry = {"mode": mode}
+        if mode == "set":
+            entry["value"] = str(op.get("value") or "")
+        elif mode == "replace":
+            # 兼容单条 {find, replace} 与多规则 {rules: [...]}，统一按有序列表处理
+            candidates = op.get("rules") if isinstance(op.get("rules"), list) else [op]
+            rules = []
+            for rule in candidates:
+                if not isinstance(rule, dict):
+                    continue
+                find = str(rule.get("find") or "")
+                if not find:
+                    continue
+                rules.append(
+                    {"find": find, "replace": str(rule.get("replace") or "")}
+                )
+                if len(rules) >= MAX_METADATA_REPLACE_RULES:
+                    break
+            if not rules:
+                continue
+            entry["rules"] = rules
+            entry["case_insensitive"] = bool(op.get("case_insensitive"))
+        ops[field] = entry
+
+    tag_op = data.get(METADATA_EDIT_TAG_FIELD)
+    if isinstance(tag_op, dict):
+        add_names, remove_names = _tag_op_lists(tag_op)
+        if add_names or remove_names:
+            ops[METADATA_EDIT_TAG_FIELD] = {
+                "add": add_names,
+                "remove": remove_names,
+            }
+
+    return ops
+
+
+def _normalize_tag_names(value) -> list[str]:
+    if isinstance(value, (list, tuple)):
+        raw = " ".join(str(item) for item in value)
+    else:
+        raw = str(value or "")
+    # 输入用空格分隔，服务层解析用逗号
+    raw = raw.replace(" ", ",")
+    return [name for name in parse_tag_string(raw) if len(name) <= 64]
+
+
+def _tag_op_lists(op: dict):
+    """标签动作是"添加一份 + 移除一份"，同时兼容旧的单模式写法。"""
+    add = op.get("add")
+    remove = op.get("remove")
+    if add is None and remove is None:
+        names = op.get("names") or op.get("value") or []
+        if op.get("mode") == "add":
+            add = names
+        elif op.get("mode") == "remove":
+            remove = names
+    return _normalize_tag_names(add), _normalize_tag_names(remove)
+
+
+def _replace_rules(op: dict) -> list:
+    rules = op.get("rules")
+    if isinstance(rules, list) and rules:
+        return rules[:MAX_METADATA_REPLACE_RULES]
+    return [op]
+
+
+def _apply_text_op(value: str, op: dict):
+    """返回 (新值, 每条规则的命中标记)。非替换模式的命中标记为空列表。"""
+    mode = op["mode"]
+    if mode == "set":
+        return op["value"], []
+    if mode == "clear":
+        return "", []
+    if mode == "normalize":
+        # 按行清理：行首尾空白与行内连续空白都压掉，换行与空行结构保留
+        return (
+            "\n".join(
+                _INLINE_WHITESPACE_RE.sub(" ", line.strip())
+                for line in value.strip().splitlines()
+            ),
+            [],
+        )
+    if mode == "replace":
+        # 规则按顺序串联：后一条看到的是前一条改写后的值
+        hits = []
+        for rule in _replace_rules(op):
+            find = rule.get("find") or ""
+            if not find:
+                hits.append(0)
+                continue
+            replacement = rule.get("replace") or ""
+            if rule.get("case_insensitive", op.get("case_insensitive")):
+                updated = re.sub(
+                    re.escape(find),
+                    lambda _match, repl=replacement: repl,
+                    value,
+                    flags=re.IGNORECASE,
+                )
+            else:
+                updated = value.replace(find, replacement)
+            hits.append(1 if updated != value else 0)
+            value = updated
+        return value, hits
+    return value, []
+
+
+def collect_metadata_changes(bookmarks, ops):
+    """计算每条书签需要写入的字段值。预览与执行共用，避免两套逻辑漂移。"""
+    fields = [field for field in METADATA_EDIT_FIELDS if field in ops]
+    changes = []
+    counts = {field: 0 for field in fields}
+    # 每条替换规则各自命中多少条，用来告诉用户哪一步没起作用
+    steps = {
+        field: [0] * len(_replace_rules(ops[field]))
+        for field in fields
+        if ops[field]["mode"] == "replace"
+    }
+    if not fields:
+        return changes, counts, steps
+
+    for bookmark in bookmarks:
+        values = {}
+        for field in fields:
+            current = getattr(bookmark, field) or ""
+            updated, hits = _apply_text_op(current, ops[field])
+            if hits:
+                for index, hit in enumerate(hits):
+                    if hit:
+                        steps[field][index] += 1
+            if updated != current:
+                values[field] = updated
+                counts[field] += 1
+        if values:
+            changes.append((bookmark, values))
+
+    return changes, counts, steps
+
+
+def _preview_tag_op(bookmark_ids: list[int], op: dict, user: User):
+    through = Bookmark.tags.through
+    stats = {"added": 0, "removed": 0, "cleared": 0}
+    changed_ids = set()
+    removed_tag_ids = set()
+
+    add_names, remove_names = _tag_op_lists(op)
+
+    if remove_names:
+        tags = get_existing_tags(remove_names, user)
+        if tags:
+            removed_tag_ids = {tag.id for tag in tags}
+            qs = through.objects.filter(bookmark_id__in=bookmark_ids, tag__in=tags)
+            changed_ids |= set(qs.values_list("bookmark_id", flat=True))
+            stats["removed"] = qs.count()
+
+    if add_names:
+        existing = {
+            tag.name.lower(): tag.id for tag in get_existing_tags(add_names, user)
+        }
+        linked = set(
+            through.objects.filter(
+                bookmark_id__in=bookmark_ids, tag_id__in=existing.values()
+            ).values_list("bookmark_id", "tag_id")
+        )
+        # 执行是先移除后添加，预览也要按同样的中间态判断"是否已存在"
+        linked = {
+            (bookmark_id, tag_id)
+            for bookmark_id, tag_id in linked
+            if tag_id not in removed_tag_ids
+        }
+        for bookmark_id in bookmark_ids:
+            for name in add_names:
+                tag_id = existing.get(name.lower())
+                if tag_id is None or (bookmark_id, tag_id) not in linked:
+                    stats["added"] += 1
+                    changed_ids.add(bookmark_id)
+
+    return stats, changed_ids
+
+
+def preview_metadata_edits(bookmark_ids: list[int | str], ops: dict, current_user: User):
+    sanitized_bookmark_ids = _sanitize_id_list(bookmark_ids)
+    stats = _empty_edit_stats()
+    if not sanitized_bookmark_ids or not ops:
+        return stats
+
+    owned_bookmarks = Bookmark.objects.filter(
+        owner=current_user, id__in=sanitized_bookmark_ids
+    )
+    stats["total"] = owned_bookmarks.count()
+    ids = list(owned_bookmarks.values_list("id", flat=True))
+
+    fields = [field for field in METADATA_EDIT_FIELDS if field in ops]
+    changed_ids = set()
+    if fields:
+        changes, counts, steps = collect_metadata_changes(
+            owned_bookmarks.only("id", *fields).iterator(chunk_size=1000), ops
+        )
+        stats["fields"] = counts
+        stats["steps"] = steps
+        changed_ids |= {bookmark.id for bookmark, _values in changes}
+
+    tag_op = ops.get(METADATA_EDIT_TAG_FIELD)
+    if tag_op:
+        tag_stats, tag_changed_ids = _preview_tag_op(ids, tag_op, current_user)
+        tag_stats["bookmarks"] = len(tag_changed_ids)
+        stats["tags"] = tag_stats
+        changed_ids |= tag_changed_ids
+
+    stats["updated"] = len(changed_ids)
+    return stats
+
+
+def bulk_edit_metadata(bookmark_ids: list[int | str], ops: dict, current_user: User):
+    sanitized_bookmark_ids = _sanitize_id_list(bookmark_ids)
+    stats = _empty_edit_stats()
+    if not sanitized_bookmark_ids or not ops:
+        return stats
+
+    fields = [field for field in METADATA_EDIT_FIELDS if field in ops]
+    tag_op = ops.get(METADATA_EDIT_TAG_FIELD)
+
+    # 整个改写必须原子：中途任何异常都整体回滚，不留下改了一半的集合
+    with transaction.atomic():
+        bookmarks = list(
+            Bookmark.objects.filter(
+                owner=current_user, id__in=sanitized_bookmark_ids
+            ).only("id", "date_modified", *fields)
+        )
+        stats["total"] = len(bookmarks)
+        if not bookmarks:
+            return stats
+
+        now = timezone.now()
+        text_changed_ids = set()
+        tag_changed_ids = set()
+        if fields:
+            changes, counts, steps = collect_metadata_changes(bookmarks, ops)
+            stats["fields"] = counts
+            stats["steps"] = steps
+            for bookmark, values in changes:
+                for field, value in values.items():
+                    setattr(bookmark, field, value)
+                bookmark.date_modified = now
+                text_changed_ids.add(bookmark.id)
+            if changes:
+                Bookmark.objects.bulk_update(
+                    [bookmark for bookmark, _values in changes],
+                    [*fields, "date_modified"],
+                )
+
+        if tag_op:
+            tag_stats, tag_changed_ids = _apply_tag_op(
+                [bookmark.id for bookmark in bookmarks], tag_op, current_user
+            )
+            tag_stats["bookmarks"] = len(tag_changed_ids)
+            stats["tags"] = tag_stats
+            # 文本与标签都变的不必重复写时间戳
+            only_tag_changed = tag_changed_ids - text_changed_ids
+            if only_tag_changed:
+                Bookmark.objects.filter(id__in=only_tag_changed).update(
+                    date_modified=now
+                )
+
+        stats["updated"] = len(text_changed_ids | tag_changed_ids)
+
+    return stats
+
+
+def _apply_tag_op(bookmark_ids: list[int], op: dict, user: User):
+    through = Bookmark.tags.through
+    stats = {"added": 0, "removed": 0, "cleared": 0}
+    changed_ids = set()
+
+    add_names, remove_names = _tag_op_lists(op)
+
+    # 先移除后添加：同一标签同时出现在两边时，用户最终是想留下它
+    if remove_names:
+        tags = get_existing_tags(remove_names, user)
+        if tags:
+            qs = through.objects.filter(bookmark_id__in=bookmark_ids, tag__in=tags)
+            changed_ids |= set(qs.values_list("bookmark_id", flat=True))
+            stats["removed"] = qs.count()
+            qs.delete()
+
+    if add_names:
+        tags = get_or_create_tags(add_names, user)
+        if tags:
+            existing = set(
+                through.objects.filter(
+                    bookmark_id__in=bookmark_ids, tag__in=tags
+                ).values_list("bookmark_id", "tag_id")
+            )
+            relationships = [
+                through(bookmark_id=bookmark_id, tag=tag)
+                for tag in tags
+                for bookmark_id in bookmark_ids
+                if (bookmark_id, tag.id) not in existing
+            ]
+            if relationships:
+                through.objects.bulk_create(
+                    relationships, batch_size=1000, ignore_conflicts=True
+                )
+                stats["added"] = len(relationships)
+                changed_ids |= {
+                    relationship.bookmark_id for relationship in relationships
+                }
+
+    return stats, changed_ids
 
 
 def create_html_snapshots(bookmark_ids: list[int | str], current_user: User):

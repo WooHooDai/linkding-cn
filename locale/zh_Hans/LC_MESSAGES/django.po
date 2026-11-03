@@ -4270,6 +4270,93 @@ msgstr "图片过大"
 msgid "Invalid image size"
 msgstr "图片尺寸无效"
 
+#: bookmarks/templates/bookmarks/bulk_edit/bar.html
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_modal.html
+msgid "Edit metadata"
+msgstr "编辑元数据"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_modal.html
+msgid "Do not change"
+msgstr "不修改"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_modal.html
+msgid "Set to"
+msgstr "设为"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_modal.html
+msgid "Find and replace"
+msgstr "查找并替换"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_modal.html
+msgid "Clean up whitespace"
+msgstr "清理多余空白"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_modal.html
+msgid "New value"
+msgstr "新内容"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_modal.html
+msgid "Find"
+msgstr "查找"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_modal.html
+msgid "Replace with"
+msgstr "替换为"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_modal.html
+msgid "Remove all tags"
+msgstr "清空标签"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_rules.html
+msgid "Add rule"
+msgstr "添加一条规则"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_rules.html
+msgid "Remove rule"
+msgstr "删除这条规则"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_panel.html
+msgid "Reset"
+msgstr "重置"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_modal.html
+msgid "Ignore case in all replacements"
+msgstr "所有查找替换忽略大小写"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_modal.html
+msgctxt "tag_action"
+msgid "Add"
+msgstr "添加"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_modal.html
+msgctxt "tag_action"
+msgid "Remove"
+msgstr "移除"
+
+#: bookmarks/templates/bookmarks/bulk_edit/metadata_modal.html
+msgid "Apply changes"
+msgstr "应用修改"
+
+#: bookmarks/views/bookmarks.py
+#, python-format
+msgid ""
+"Selected %(count)s bookmarks exceed the limit of %(limit)s. Narrow the "
+"selection and try again."
+msgstr "已选中 %(count)s 个书签，超过单次上限 %(limit)s。请缩小筛选范围后重试。"
+
+#: bookmarks/views/bookmarks.py
+msgid "No metadata was changed."
+msgstr "没有元数据被修改。"
+
+#: bookmarks/views/bookmarks.py
+#, python-format
+msgid "Updated %(count)s bookmarks: %(details)s"
+msgstr "已更新 %(count)s 个书签：%(details)s"
+
+#: bookmarks/views/bookmarks.py
+msgid "Tags cleared"
+msgstr "清空标签"
+
 #~ msgid "Earlier"
 #~ msgstr "更早"
 
