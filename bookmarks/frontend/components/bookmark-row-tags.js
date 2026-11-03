@@ -5,6 +5,7 @@ import {
   gettext,
   parseTags,
   patchBookmark,
+  refreshEditorOverlay,
   scrollToBookmarkTop,
   tagsEqual,
 } from "./bookmark-row-editor.js";
@@ -114,26 +115,32 @@ export const bookmarkRowTags = {
 
     let input = null;
     let savedScrollY = null;
-    const editor = this._activateQuickEditor("tags", ({ save }) => {
-      const newTags = save && input ? parseTags(input.value) : currentTags;
+    const editor = this._activateQuickEditor(
+      "tags",
+      ({ save }) => {
+        const newTags = save && input ? parseTags(input.value) : currentTags;
 
-      autocomplete.remove();
-      tagsContainer._editing = false;
-      this._updateTagsDisplay(tagsContainer, newTags);
-      if (savedScrollY != null) window.scrollTo(0, savedScrollY);
+        autocomplete.remove();
+        tagsContainer._editing = false;
+        this._updateTagsDisplay(tagsContainer, newTags);
+        if (savedScrollY != null) window.scrollTo(0, savedScrollY);
 
-      if (save && input && !tagsEqual(newTags, currentTags)) {
-        patchBookmark(this.bookmarkId, { tag_names: newTags }).catch(
-          (error) => {
-            console.error("Failed to save tags:", error);
-            const restoreContainer = tagsContainer.isConnected
-              ? tagsContainer
-              : this._getOrCreateTagsContainer();
-            this._updateTagsDisplay(restoreContainer, currentTags);
-          },
-        );
-      }
-    });
+        if (save && input && !tagsEqual(newTags, currentTags)) {
+          patchBookmark(this.bookmarkId, { tag_names: newTags }).catch(
+            (error) => {
+              console.error("Failed to save tags:", error);
+              const restoreContainer = tagsContainer.isConnected
+                ? tagsContainer
+                : this._getOrCreateTagsContainer();
+              this._updateTagsDisplay(restoreContainer, currentTags);
+            },
+          );
+        }
+      },
+      // 遮罩要挖掉的就是这个输入框（多行时它会跟着长高，遮罩按尺寸跟踪）
+      () =>
+        autocomplete.querySelector(".form-autocomplete-input") ?? autocomplete,
+    );
 
     const onReady = () => {
       input = autocomplete.querySelector("input, textarea");
@@ -142,6 +149,8 @@ export const bookmarkRowTags = {
       savedScrollY = window.scrollY;
       scrollToBookmarkTop(input);
       focusEnd(input);
+      // 输入框是首帧之后才渲染出来的，遮罩得再对一次位才挖得准
+      refreshEditorOverlay();
       // 记录最近一次按下补全框的时间，供 blur 判断这次失焦是不是「按在候选上」
       let pressedInsideAt = 0;
       autocomplete.addEventListener("pointerdown", () => {

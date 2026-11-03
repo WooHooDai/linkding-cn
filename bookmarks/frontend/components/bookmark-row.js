@@ -228,8 +228,12 @@ class BookmarkItem extends Behavior {
     return this.element.querySelector(".inline-edit-notes");
   }
 
-  _activateQuickEditor(fieldType, closeFn) {
+  _activateQuickEditor(fieldType, closeFn, hole) {
     this._setQuickEditButtonActive(fieldType, true);
+
+    // 格子行的编辑器抬不到遮罩之上，只认「开洞」这一种遮罩；给不出洞就不盖，
+    // 免得编辑框被压在遮罩下
+    const isCellRow = Boolean(this.element.querySelector(".cell"));
 
     return activateEditor(
       this.bookmarkId,
@@ -241,7 +245,7 @@ class BookmarkItem extends Behavior {
           this._setQuickEditButtonActive(fieldType, false);
         }
       },
-      { overlay: !this.element.querySelector(".cell") },
+      { overlay: !isCellRow || Boolean(hole), hole: isCellRow ? hole : undefined },
     );
   }
 

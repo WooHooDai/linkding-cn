@@ -3,7 +3,13 @@ import { Behavior, registerBehavior } from "./runtime.js";
 import { getCSRFToken } from "../utils/csrf.js";
 import { gettext } from "../utils/i18n.js";
 import { showToast } from "./toast.js";
-import { patchBookmark, wireInlineEditor } from "./bookmark-row-editor.js";
+import {
+  closeActiveEditor,
+  closeEditorOverlay,
+  openEditorOverlay,
+  patchBookmark,
+  wireInlineEditor,
+} from "./bookmark-row-editor.js";
 import { toggleTaskCheckbox } from "./bookmark-notes-task.js";
 import { hasSelectionWithin } from "../utils/text-selection.js";
 
@@ -557,6 +563,8 @@ class BookmarkTable extends Behavior {
       this.editTags(li);
       return;
     }
+    // 卡片编辑器与行编辑器互斥；标签编辑走 startQuickEdit，自己会处理开关切换
+    closeActiveEditor();
     const cell = li?.querySelector(EDIT_CELL[field]);
     if (!cell || cell.classList.contains("is-editing")) return;
     const current = readSourceValue(cell, field).trim();
@@ -599,11 +607,12 @@ class BookmarkTable extends Behavior {
       grow();
     });
 
-    wireInlineEditor(editor, {
+    const close = wireInlineEditor(editor, {
       originalValue: current,
       multiline,
       onInput: grow,
       onClose: () => {
+        closeEditorOverlay();
         editor.remove();
         cell.classList.remove("is-editing");
       },
@@ -632,6 +641,9 @@ class BookmarkTable extends Behavior {
           tone: "error",
         }),
     });
+
+    // 遮罩挖出编辑器本身：格内编辑器抬不到遮罩之上，只能反过来让遮罩让开
+    openEditorOverlay({ hole: () => editor, onDismiss: () => close(true) });
   }
 
   /** 待办勾选框：交给笔记待办的公共实现，保存链路与另外两个视图一致 */

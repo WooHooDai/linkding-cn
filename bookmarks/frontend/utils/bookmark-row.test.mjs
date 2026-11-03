@@ -211,9 +211,9 @@ test("快捷标签请求失败后回滚为原状态", async () => {
   assert.deepEqual(displayedTags(li), [], "请求失败后应清空回滚");
 });
 
-test("表格格子行进入标签编辑时不创建移动端遮罩", async () => {
-  // 遮罩挂 body，而 .table-body-scroll 有 z-index:0 自成层叠上下文，
-  // 遮罩会盖住格内编辑器——表格行必须跳过遮罩
+test("表格格子行进入标签编辑时用开洞遮罩", async () => {
+  // 遮罩挂 body，而 .table-body-scroll 有 z-index:0 自成层叠上下文，格内编辑器
+  // 抬不到遮罩之上——改用四条遮条把编辑框挖出来
   const mod = await setupDom(rowHtml({ withCell: true }));
   window.matchMedia = (query) => ({
     matches: query.includes("coarse"),
@@ -228,10 +228,13 @@ test("表格格子行进入标签编辑时不创建移动端遮罩", async () =>
   await tick();
 
   assert.ok(li.querySelector(".quick-edit-tags-container"), "应打开标签编辑器");
+  const overlay = document.querySelector(".editor-overlay");
+  assert.ok(overlay, "格子行也应有遮罩");
+  assert.ok(overlay.classList.contains("is-spotlight"), "应为开洞版");
   assert.equal(
-    document.querySelector(".editor-overlay"),
-    null,
-    "格子行不应创建遮罩",
+    overlay.querySelectorAll(".editor-overlay-strip").length,
+    4,
+    "四条遮条分别盖住上下左右",
   );
 });
 

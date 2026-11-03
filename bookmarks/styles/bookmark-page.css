@@ -2053,6 +2053,47 @@ ul.bookmark-list {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* 开洞版：容器只是舞台，四条遮条盖住编辑框以外的区域（编辑器本身在遮罩下层，
+   被格子的层叠上下文压着抬不上来，只能让遮罩让开）。
+   --hole-* 是编辑框的四边坐标，--hole-height 是它的高（左右两条只占那一行） */
+.editor-overlay.is-spotlight {
+  background: none;
+  pointer-events: none;
+  --hole-top: 0px;
+  --hole-left: 0px;
+  --hole-right: 0px;
+  --hole-bottom: 0px;
+  --hole-height: 0px;
+}
+
+.editor-overlay-strip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.12);
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.editor-overlay-strip[data-side="top"] {
+  inset: 0 0 auto 0;
+  height: var(--hole-top);
+}
+
+.editor-overlay-strip[data-side="bottom"] {
+  inset: var(--hole-bottom) 0 0 0;
+}
+
+.editor-overlay-strip[data-side="left"] {
+  inset: var(--hole-top) auto auto 0;
+  width: var(--hole-left);
+  height: var(--hole-height);
+}
+
+.editor-overlay-strip[data-side="right"] {
+  inset: var(--hole-top) 0 auto auto;
+  width: calc(100% - var(--hole-right));
+  height: var(--hole-height);
+}
+
 /* 编辑器元素需要在遮罩之上 */
 @media (hover: none) and (pointer: coarse) {
   .quick-edit-title-input,
