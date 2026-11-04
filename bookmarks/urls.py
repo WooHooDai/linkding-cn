@@ -14,6 +14,11 @@ urlpatterns = [
     # Bookmarks
     path("bookmarks", views.bookmarks.index, name="bookmarks.index"),
     path(
+        "bookmarks/list-fragment",
+        views.bookmarks.list_fragment,
+        name="bookmarks.list_fragment",
+    ),
+    path(
         "bookmarks/action", views.bookmarks.index_action, name="bookmarks.index.action"
     ),
     path("bookmarks/archived", views.bookmarks.archived, name="bookmarks.archived"),
@@ -112,6 +117,11 @@ urlpatterns = [
     path("settings", views.settings.general, name="settings.index"),
     path("settings/general", views.settings.general, name="settings.general"),
     path("settings/save", views.settings.save, name="settings.save"),
+    path(
+        "settings/quick-tags",
+        views.settings.quick_tags_fragment,
+        name="settings.quick_tags_fragment",
+    ),
     path("settings/update", views.settings.update, name="settings.update"),
     path(
         "settings/integrations",

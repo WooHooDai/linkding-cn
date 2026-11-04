@@ -1,0 +1,956 @@
+import Sortable from "sortablejs";
+import { Behavior, registerBehavior } from "./runtime.js";
+import { getCSRFToken } from "../utils/csrf.js";
+import { gettext } from "../utils/i18n.js";
+import { showToast } from "./toast.js";
+import { applyToolbarAutoHide } from "./bookmark-list.js";
+import { panelsFitTogether, syncPanelSpace } from "../utils/panel-space.js";
+import {
+  getSidebarScope,
+  syncSidebarStateCache,
+} from "../state/sidebar-state.js";
+
+// 布局抽屉：桌面端让位（内容平移不重排），窄屏全宽 + 遮罩。
+// 偏好保存走 settings.save 的单字段通道；改完按 data-pref-apply 决定
+// 就地生效（dom）/ 只换列表（fragment）/ 重载（reload）。
+
+const TAB_KEY = "ld:layout-drawer:tab";
+const SCROLL_KEY = "ld:layout-drawer:scroll";
+// 主题要整页重载，先把「开着的页签」记下来，重载后自动展开
+const REOPEN_KEY = "ld:layout-drawer:reopen";
+// 「模块设置」这类可折叠列表的开合记忆
+const PANELS_KEY = "ld:layout-drawer:panels";
+// 抽屉是否开着：刷新后保持
+const OPEN_KEY = "ld:layout-drawer:open";
+const MOBILE_QUERY = "(max-width: 840px)";
+// 连点多个开关时合并成一次片段请求
+const REFRESH_DELAY = 120;
+const LEGACY_TABS = { view: "page", toolbar: "bookmark" };
+
+function isMobile() {
+  return window.matchMedia(MOBILE_QUERY).matches;
+}
+
+function readJSON(key, fallback) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+class LayoutDrawer extends Behavior {
+  constructor(element) {
+    super(element);
+    this.url = element.dataset.saveUrl;
+    this.fragmentUrl = element.dataset.fragmentUrl;
+    this.quickTagsUrl = element.dataset.quickTagsUrl;
+    this.page = document.querySelector(".bookmarks-page");
+    this.scroller = element.querySelector("[data-layout-scroll]");
+    this.sortables = [];
+    this.refreshTimer = null;
+    this.refreshSeq = 0;
+    this.resetPage = false;
+    this.scrollTimer = null;
+    this.lastTrigger = null;
+    this.helpPopover = null;
+    this.helpTrigger = null;
+
+    this.onDocumentClick = this.onDocumentClick.bind(this);
+    this.onKeydown = this.onKeydown.bind(this);
+    this.onChange = this.onChange.bind(this);
+    this.onInput = this.onInput.bind(this);
+    this.onTabKeydown = this.onTabKeydown.bind(this);
+    this.onDrawerClick = this.onDrawerClick.bind(this);
+    this.onScroll = this.onScroll.bind(this);
+    this.onPointerOver = this.onPointerOver.bind(this);
+    this.onPointerOut = this.onPointerOut.bind(this);
+    this.closeHelpTimer = null;
+
+    this.init();
+  }
+
+  destroy() {
+    document.removeEventListener("click", this.onDocumentClick);
+    document.removeEventListener("keydown", this.onKeydown);
+    this.element.removeEventListener("change", this.onChange);
+    this.element.removeEventListener("input", this.onInput);
+    this.element.removeEventListener("click", this.onDrawerClick);
+    this.element
+      .querySelector("[role='tablist']")
+      ?.removeEventListener("keydown", this.onTabKeydown);
+    this.scroller?.removeEventListener("scroll", this.onScroll);
+    document.removeEventListener("pointerover", this.onPointerOver);
+    document.removeEventListener("pointerout", this.onPointerOut);
+    clearTimeout(this.closeHelpTimer);
+    this.sortables.forEach((instance) => instance.destroy());
+    this.sortables = [];
+    this.helpPopover?.remove();
+    this.helpPopover = null;
+    clearTimeout(this.refreshTimer);
+    clearTimeout(this.scrollTimer);
+  }
+
+  init() {
+    // 触发布局按钮在抽屉外，用文档级委托
+    document.addEventListener("click", this.onDocumentClick);
+    document.addEventListener("keydown", this.onKeydown);
+    this.element.addEventListener("change", this.onChange);
+    this.element.addEventListener("input", this.onInput);
+    this.element.addEventListener("click", this.onDrawerClick);
+    this.element
+      .querySelector("[role='tablist']")
+      ?.addEventListener("keydown", this.onTabKeydown);
+    this.scroller?.addEventListener("scroll", this.onScroll, { passive: true });
+    document.addEventListener("pointerover", this.onPointerOver);
+    document.addEventListener("pointerout", this.onPointerOut);
+
+    this.initSortables();
+    this.restorePanels();
+    this.selectTab(this.readSavedTab(), { focus: false });
+
+    // 深链：?layout=page / ?layout=bookmark（兼容旧的 view / toolbar）
+    const requested = new URLSearchParams(window.location.search).get("layout");
+    if (requested) {
+      this.open(LEGACY_TABS[requested] || requested);
+      return;
+    }
+    // 刚从主题切换重载回来：恢复展开态
+    let reopen = null;
+    try {
+      reopen = sessionStorage.getItem(REOPEN_KEY);
+      if (reopen) sessionStorage.removeItem(REOPEN_KEY);
+    } catch {
+      reopen = null;
+    }
+    if (reopen) {
+      this.open(LEGACY_TABS[reopen] || reopen);
+      return;
+    }
+    // 刷新后保持上次的开合状态
+    try {
+      if (localStorage.getItem(OPEN_KEY) === "1") this.open(null, { focus: false });
+    } catch {
+      // 忽略
+    }
+  }
+
+  // ---------- 开合 ----------
+
+  isOpen() {
+    return this.element.classList.contains("is-open");
+  }
+
+  toggleButtons() {
+    return document.querySelectorAll("[data-layout-drawer-toggle]");
+  }
+
+  open(tab = null, { focus = true } = {}) {
+    this.lastTrigger = document.activeElement;
+    this.element.classList.add("is-open");
+    this.element.removeAttribute("inert");
+    this.element.setAttribute("aria-hidden", "false");
+    document.body.classList.add("layout-drawer-open");
+    this.toggleButtons().forEach((button) =>
+      button.setAttribute("aria-expanded", "true"),
+    );
+    // 宽度够就让位（内容平移不重排），不够就浮层覆盖
+    syncPanelSpace();
+
+    if (tab) this.selectTab(tab);
+
+    // 窄屏两层遮罩会叠在一起；宽屏但两个面板放不下时也会把列表夹成一条缝，
+    // 两种情况下都只留一个面板
+    if (
+      this.page?.classList.contains("sidebar-open") &&
+      (isMobile() || !panelsFitTogether())
+    ) {
+      document.querySelector("[data-sidebar-close]")?.click();
+    }
+
+    try {
+      localStorage.setItem(OPEN_KEY, "1");
+    } catch {
+      // 忽略
+    }
+    if (focus) this.element.querySelector(".layout-drawer-close")?.focus();
+  }
+
+  close({ restoreFocus = true } = {}) {
+    if (!this.isOpen()) return;
+    this.closeHelp();
+    this.saveScroll();
+    this.element.classList.remove("is-open");
+    this.element.setAttribute("inert", "");
+    this.element.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("layout-drawer-open");
+    this.toggleButtons().forEach((button) =>
+      button.setAttribute("aria-expanded", "false"),
+    );
+    syncPanelSpace();
+    try {
+      localStorage.setItem(OPEN_KEY, "0");
+    } catch {
+      // 忽略
+    }
+    if (restoreFocus && this.lastTrigger instanceof HTMLElement) {
+      this.lastTrigger.focus();
+    }
+  }
+
+  onDocumentClick(event) {
+    const helpButton = event.target.closest("[data-drawer-help] .ld-help-button");
+    if (helpButton && this.isHelpScope(helpButton)) {
+      this.toggleHelp(helpButton);
+      return;
+    }
+    if (!event.target.closest("[data-drawer-help]")) this.closeHelp();
+    if (event.target.closest("[data-layout-drawer-toggle]")) {
+      this.isOpen() ? this.close() : this.open();
+      return;
+    }
+    if (event.target.closest("[data-layout-drawer-close]")) {
+      this.close();
+      return;
+    }
+    // 桌面没有遮罩：点抽屉以外即关闭。另一个面板（侧边栏）不算「点外面」——
+    // 两个面板可以同时开着，一起参与让位判断。
+    if (
+      this.isOpen() &&
+      // 弹窗开着时，弹窗内的任何点击都不该顺手把抽屉关掉
+      !document.querySelector(".modals .modal") &&
+      !event.target.closest(
+        "[data-layout-drawer], [data-layout-drawer-toggle], " +
+          "[data-sidebar-toggle], [data-sidebar-close], .sidebar, " +
+          // 抽屉里打开的弹窗（快捷标签）与说明浮层不算「点外面」
+          ".modal, ld-modal, .ld-help-popover",
+      )
+    ) {
+      this.close({ restoreFocus: false });
+    }
+  }
+
+  onKeydown(event) {
+    if (event.key !== "Escape") return;
+    // 先收说明浮层，再收抽屉
+    if (this.helpTrigger) {
+      event.preventDefault();
+      this.closeHelp();
+      return;
+    }
+    if (this.isOpen()) {
+      event.preventDefault();
+      this.close();
+    }
+  }
+
+  // 抽屉内部的点击：只处理关闭、切页与两个入口按钮，不拦冒泡
+  //（拦住会让 Turbo 收不到链接点击，页内跳转退化成整页刷新）
+  onDrawerClick(event) {
+    if (event.target.closest("[data-layout-drawer-close]")) {
+      this.close();
+      return;
+    }
+    const tab = event.target.closest("[data-layout-tab]");
+    if (tab) {
+      this.selectTab(tab.dataset.layoutTab);
+      return;
+    }
+    const disclosure = event.target.closest("[data-drawer-disclosure]");
+    if (disclosure) {
+      this.togglePanel(disclosure);
+      return;
+    }
+    if (event.target.closest("[data-drawer-quick-tags]")) {
+      this.openQuickTags();
+      return;
+    }
+    if (event.target.closest("[data-drawer-sidebar-modules]")) {
+      this.openSidebarModules();
+    }
+  }
+
+  // ---------- 页签与滚动位置 ----------
+
+  tabs() {
+    return Array.from(this.element.querySelectorAll("[data-layout-tab]"));
+  }
+
+  currentTab() {
+    return (
+      this.element.querySelector("[data-layout-tab].is-active")?.dataset
+        .layoutTab || "page"
+    );
+  }
+
+  readSavedTab() {
+    const raw = localStorage.getItem(TAB_KEY);
+    const saved = LEGACY_TABS[raw] || raw;
+    return this.tabs().some((tab) => tab.dataset.layoutTab === saved)
+      ? saved
+      : "page";
+  }
+
+  selectTab(name, { focus = true, restoreScroll = true } = {}) {
+    const tabs = this.tabs();
+    if (!tabs.some((tab) => tab.dataset.layoutTab === name)) return;
+    this.closeHelp();
+    this.saveScroll();
+
+    tabs.forEach((tab) => {
+      const active = tab.dataset.layoutTab === name;
+      tab.classList.toggle("is-active", active);
+      tab.setAttribute("aria-selected", active ? "true" : "false");
+      tab.tabIndex = active ? 0 : -1;
+      if (active && focus) tab.focus();
+    });
+
+    this.element.querySelectorAll("[data-layout-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.layoutPanel !== name;
+    });
+
+    try {
+      localStorage.setItem(TAB_KEY, name);
+    } catch {
+      // 隐私模式下不可用，忽略
+    }
+
+    if (restoreScroll && this.scroller) {
+      const positions = readJSON(SCROLL_KEY, {});
+      this.scroller.scrollTop = positions[name] || 0;
+    }
+    // 面板切换后内容高度变了，重算一下让位判据
+    syncPanelSpace();
+  }
+
+  onTabKeydown(event) {
+    const tabs = this.tabs();
+    const index = tabs.indexOf(document.activeElement.closest("[data-layout-tab]"));
+    if (index === -1) return;
+    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+
+    event.preventDefault();
+    const delta = event.key === "ArrowRight" ? 1 : -1;
+    const next = tabs[(index + delta + tabs.length) % tabs.length];
+    this.selectTab(next.dataset.layoutTab);
+  }
+
+  saveScroll() {
+    if (!this.scroller) return;
+    const positions = readJSON(SCROLL_KEY, {});
+    positions[this.currentTab()] = Math.round(this.scroller.scrollTop);
+    try {
+      localStorage.setItem(SCROLL_KEY, JSON.stringify(positions));
+    } catch {
+      // 忽略
+    }
+  }
+
+  onScroll() {
+    this.closeHelp();
+    clearTimeout(this.scrollTimer);
+    this.scrollTimer = setTimeout(() => this.saveScroll(), 150);
+  }
+
+  // ---------- 说明浮层 ----------
+
+  // 悬浮即显示，移开稍等一下再收，方便鼠标移到浮层里读长文案
+  onPointerOver(event) {
+    if (event.pointerType === "touch") return;
+    const help = event.target.closest("[data-drawer-help]");
+    if (!help || !this.isHelpScope(help)) return;
+    clearTimeout(this.closeHelpTimer);
+    const button = help.querySelector(".ld-help-button");
+    if (button) this.openHelp(button);
+  }
+
+  onPointerOut(event) {
+    if (event.pointerType === "touch") return;
+    const help = event.target.closest("[data-drawer-help]");
+    if (!help || !this.isHelpScope(help)) return;
+    const next = event.relatedTarget;
+    if (next && (help.contains(next) || this.helpPopover?.contains(next))) return;
+    this.scheduleCloseHelp();
+  }
+
+  // 帮助图标只认抽屉与快捷标签弹窗里的那几处
+  isHelpScope(element) {
+    return (
+      this.element.contains(element) ||
+      Boolean(element.closest(".modal-container.ld-modal-wide"))
+    );
+  }
+
+  // 可折叠列表（当前只有侧边栏的「模块设置」）
+  togglePanel(button) {
+    const name = button.dataset.drawerDisclosure;
+    const panel = this.element.querySelector(`[data-drawer-panel="${name}"]`);
+    if (!panel) return;
+    const open = panel.hidden;
+    panel.hidden = !open;
+    button.setAttribute("aria-expanded", open ? "true" : "false");
+
+    const stored = readJSON(PANELS_KEY, {});
+    stored[name] = open;
+    try {
+      localStorage.setItem(PANELS_KEY, JSON.stringify(stored));
+    } catch {
+      // 忽略
+    }
+  }
+
+  restorePanels() {
+    const stored = readJSON(PANELS_KEY, {});
+    this.element.querySelectorAll("[data-drawer-disclosure]").forEach((button) => {
+      const name = button.dataset.drawerDisclosure;
+      if (!stored[name]) return;
+      const panel = this.element.querySelector(`[data-drawer-panel="${name}"]`);
+      if (!panel) return;
+      panel.hidden = false;
+      button.setAttribute("aria-expanded", "true");
+    });
+  }
+
+  scheduleCloseHelp() {
+    clearTimeout(this.closeHelpTimer);
+    this.closeHelpTimer = setTimeout(() => this.closeHelp(), 120);
+  }
+
+  toggleHelp(button) {
+    if (this.helpTrigger === button && !this.helpPopover?.hidden) {
+      this.closeHelp();
+      return;
+    }
+    this.openHelp(button);
+  }
+
+  openHelp(button) {
+    const text = button.parentElement.querySelector(".ld-help-text");
+    if (!text) return;
+
+    if (!this.helpPopover) {
+      this.helpPopover = document.createElement("div");
+      this.helpPopover.className = "ld-help-popover";
+      this.helpPopover.setAttribute("role", "tooltip");
+      this.helpPopover.hidden = true;
+      this.helpPopover.addEventListener("pointerenter", () =>
+        clearTimeout(this.closeHelpTimer),
+      );
+      this.helpPopover.addEventListener("pointerleave", () =>
+        this.scheduleCloseHelp(),
+      );
+      document.body.appendChild(this.helpPopover);
+    }
+
+    const popover = this.helpPopover;
+    // 文案是模板里的可信内容：允许 <code> 之类的行内标签，§ 作为换行标记
+    popover.innerHTML = text.textContent.trim().replace(/§/g, "<br>");
+    popover.hidden = false;
+
+    // 贴在图标下方，放不下就翻到上方；左右夹在视口内
+    const gap = 6;
+    const rect = button.getBoundingClientRect();
+    const width = popover.offsetWidth;
+    const height = popover.offsetHeight;
+    const left = Math.max(
+      8,
+      Math.min(rect.left, window.innerWidth - width - 8),
+    );
+    let top = rect.bottom + gap;
+    if (top + height > window.innerHeight - 8) {
+      top = Math.max(8, rect.top - height - gap);
+    }
+    popover.style.left = `${left}px`;
+    popover.style.top = `${top}px`;
+
+    this.helpTrigger = button;
+    button.setAttribute("aria-expanded", "true");
+  }
+
+  closeHelp() {
+    if (!this.helpPopover || this.helpPopover.hidden) return;
+    this.helpPopover.hidden = true;
+    this.helpTrigger?.setAttribute("aria-expanded", "false");
+    this.helpTrigger = null;
+  }
+
+  // ---------- 拖拽排序 ----------
+
+  initSortables() {
+    this.element.querySelectorAll("[data-drawer-list]").forEach((list) => {
+      this.sortables.push(
+        new Sortable(list, {
+          animation: 120,
+          draggable: "[data-item-key]",
+          handle: ".ld-module-handle",
+          ghostClass: "ld-module-ghost",
+          onEnd: () => {
+            const field = list.dataset.drawerList;
+            this.save(field, this.serializeList(list), "fragment");
+            if (field === "sidebar_modules") this.syncSidebarModules();
+          },
+        }),
+      );
+    });
+  }
+
+  serializeList(list) {
+    const items = Array.from(list.querySelectorAll("[data-item-key]")).map(
+      (item) => ({
+        key: item.dataset.itemKey,
+        enabled: Boolean(item.querySelector("[data-item-enabled]")?.checked),
+      }),
+    );
+    return JSON.stringify(items);
+  }
+
+  // ---------- 保存 ----------
+
+  onInput(event) {
+    const input = event.target.closest("[data-pref]");
+    if (input) this.clearFieldError(input.dataset.pref);
+  }
+
+  onChange(event) {
+    const otherToggle = event.target.closest("[data-language-other-toggle]");
+    if (otherToggle) {
+      // 「...」只是展开更多语言，选中具体语言才提交
+      const row = this.element.querySelector("[data-language-other]");
+      const select = row?.querySelector("[data-language-select]");
+      if (row) row.hidden = false;
+      if (select) {
+        select.disabled = false;
+        select.focus();
+      }
+      return;
+    }
+    if (event.target.matches("[data-language-select]")) {
+      event.target.closest("form")?.requestSubmit();
+      return;
+    }
+    if (event.target.matches(".ld-form input[name='language']")) {
+      // 选常用语言时把「其他语言」下拉禁用，否则它会作为同一字段的第二个值提交
+      const select = this.element.querySelector("[data-language-select]");
+      if (select) select.disabled = true;
+      event.target.closest("form")?.requestSubmit();
+      return;
+    }
+
+    const enabledInput = event.target.closest("[data-item-enabled]");
+    if (enabledInput) {
+      const list = enabledInput.closest("[data-drawer-list]");
+      if (!list) return;
+      if (list.dataset.drawerList === "bookmark_toolbar_modules") {
+        // 模块关掉后，对应的设置项一起收起
+        this.syncModuleGates();
+      }
+      this.save(list.dataset.drawerList, this.serializeList(list), "fragment");
+      return;
+    }
+
+    const input = event.target.closest("[data-pref]");
+    if (!input) return;
+
+    const field = input.dataset.pref;
+    const isCheckbox = input.type === "checkbox";
+    const value = isCheckbox ? (input.checked ? "on" : "") : input.value;
+    this.save(field, value, input.dataset.prefApply || "dom", {
+      appendEmpty: !isCheckbox,
+      formId: input.dataset.prefForm,
+    });
+  }
+
+  fieldErrorTarget(field) {
+    return this.element.querySelector(
+      `[data-field-error-for="${CSS.escape(field)}"]`,
+    );
+  }
+
+  clearFieldError(field) {
+    const target = this.fieldErrorTarget(field);
+    if (!target) return;
+    target.textContent = "";
+    target.classList.remove("is-visible");
+    this.element
+      .querySelector(`[name="${CSS.escape(field)}"]`)
+      ?.classList.remove("is-error");
+  }
+
+  showFieldError(field, errors) {
+    const target = this.fieldErrorTarget(field);
+    const input = this.element.querySelector(`[name="${CSS.escape(field)}"]`);
+    input?.classList.add("is-error");
+    if (!target) return false;
+    target.textContent =
+      (errors || []).map((error) => error.message).join(" ") ||
+      gettext("Please review the highlighted fields.");
+    target.classList.add("is-visible");
+    return true;
+  }
+
+  async save(field, value, apply, { appendEmpty = true, formId } = {}) {
+    const id = formId || "profile_quick";
+    const body = new FormData();
+    body.append("csrfmiddlewaretoken", getCSRFToken());
+    body.append("form_id", id);
+    body.append("form_fields", field);
+    // 复选框为空表示未勾选，不能提交空值；其余字段要提交空串让服务端报「必填」
+    if (value !== "" || appendEmpty) body.append(field, value);
+    if (id === "global_quick") {
+      // 全局表单要带上未展示字段，否则保存会把它们清空
+      this.element
+        .querySelectorAll("[data-global-field]")
+        .forEach((input) => body.append(input.name, input.value));
+    }
+
+    let response;
+    try {
+      response = await fetch(this.url, {
+        method: "POST",
+        body,
+        headers: {
+          "X-CSRFToken": getCSRFToken(),
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      this.reportFailure();
+      return;
+    }
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      const errors = data?.errors?.[field];
+      if (!errors || !this.showFieldError(field, errors)) {
+        this.reportFailure();
+      }
+      return;
+    }
+
+    this.clearFieldError(field);
+    this.applyLocalState(field, value, apply);
+  }
+
+  reportFailure() {
+    showToast(gettext("Couldn't save settings. Please try again."), {
+      tone: "error",
+    });
+  }
+
+  // ---------- 生效 ----------
+
+  applyLocalState(field, value, apply) {
+    this.syncConditionalRows();
+    // 头部控件不在列表片段里（随机按钮、随机书签的链接目标），先就地更新
+    this.applyDomPref(field, value);
+
+    if (apply === "reload") {
+      this.reloadKeepingDrawer();
+      return;
+    }
+    if (field === "sidebar_modules") this.syncSidebarModules();
+    if (apply === "fragment") {
+      // 每页数量变了还停在原页号会落到越界页
+      if (field === "items_per_page") this.resetPage = true;
+      this.scheduleListRefresh();
+    }
+  }
+
+  // 侧边栏模块顺序/开关变了：就地改侧边栏里的 section，不重新取内容
+  syncSidebarModules() {
+    const list = this.element.querySelector(
+      '[data-drawer-list="sidebar_modules"]',
+    );
+    const sidebar = document.querySelector(".sidebar");
+    if (!list || !sidebar) return;
+
+    const items = Array.from(list.querySelectorAll("[data-item-key]"));
+    const sections = [];
+    items.forEach((item) => {
+      const section = sidebar.querySelector(
+        `[data-sidebar-module="${item.dataset.itemKey}"]`,
+      );
+      if (!section) return;
+      section.hidden = !item.querySelector("[data-item-enabled]")?.checked;
+      sections.push(section);
+    });
+
+    // 统一父级才重排，避免把 section 挪出各自的容器
+    const parent = sections[0]?.parentElement;
+    if (!parent || sections.some((section) => section.parentElement !== parent)) {
+      return;
+    }
+    sections.forEach((section) => parent.appendChild(section));
+  }
+
+  reloadKeepingDrawer() {
+    try {
+      sessionStorage.setItem(REOPEN_KEY, this.currentTab());
+    } catch {
+      // 忽略
+    }
+    window.location.reload();
+  }
+
+  applyDomPref(field, value) {
+    const enabled = Boolean(value);
+
+    if (field === "sticky_header_controls" || field === "sticky_pagination") {
+      const selector =
+        field === "sticky_header_controls"
+          ? ".section-header[data-sticky-on]"
+          : ".bookmark-pagination[data-sticky-on]";
+      document
+        .querySelectorAll(selector)
+        .forEach((el) =>
+          el.setAttribute("data-sticky-on", enabled ? "true" : "false"),
+        );
+      return;
+    }
+    if (field === "bookmark_toolbar_auto_hide") {
+      applyToolbarAutoHide(enabled);
+      return;
+    }
+    if (field === "bookmark_link_target") {
+      const single = document.querySelector("[ld-random-single]");
+      if (single) single.dataset.linkTarget = value;
+      return;
+    }
+    if (field === "show_sidebar" && this.page) {
+      // 「常驻显示」存的是默认值：同步 cookie 与开合记忆，页面按新默认切换
+      this.page.dataset.sidebarDefault = enabled ? "1" : "0";
+      syncSidebarStateCache(getSidebarScope(), enabled);
+      syncPanelSpace();
+      return;
+    }
+    if (field === "sticky_side_panel") {
+      const sidebar = document.querySelector(".sidebar");
+      if (sidebar) sidebar.dataset.stickyOn = enabled ? "true" : "false";
+      return;
+    }
+    if (
+      field === "enable_random_button" ||
+      field === "random_mode" ||
+      field === "random_target"
+    ) {
+      this.syncRandomControls();
+    }
+  }
+
+  // 行是否可见：视图能力（data-drawer-views）+ 其它字段条件，一次算完
+  syncConditionalRows() {
+    const mode =
+      this.element.querySelector('[name="bookmark_view_mode"]:checked')?.value ||
+      "list";
+    const listOnly = mode === "list";
+    const previewOn = Boolean(
+      this.element.querySelector('[name="enable_preview_images"]')?.checked,
+    );
+    const randomOn = Boolean(
+      this.element.querySelector('[name="enable_random_button"]')?.checked,
+    );
+    const randomMode =
+      this.element.querySelector('[name="random_mode"]')?.value || "list";
+    const grouped = Boolean(
+      this.element.querySelector('[name="group_by_date"]')?.checked,
+    );
+
+    const visible = {
+      preview_placeholders: listOnly && previewOn,
+      toolbar_auto_hide: listOnly,
+      random_mode: randomOn,
+      random_target: randomOn && randomMode === "single",
+      collapse_groups: grouped,
+    };
+    Object.entries(visible).forEach(([name, shown]) =>
+      this.setRowHidden(name, !shown),
+    );
+
+    // 只受视图影响的项（显示 URL、展开笔记、预览图等）
+    this.element.querySelectorAll("[data-drawer-views]").forEach((row) => {
+      if (row.dataset.drawerRow) return;
+      const views = (row.dataset.drawerViews || "").split(",");
+      row.hidden = !views.includes(mode);
+    });
+
+    this.syncModuleGates();
+  }
+
+  // 工具栏模块关掉后，对应的设置项一起收起
+  syncModuleGates() {
+    const list = this.element.querySelector(
+      '[data-drawer-list="bookmark_toolbar_modules"]',
+    );
+    if (!list) return;
+    const states = new Map(
+      Array.from(list.querySelectorAll("[data-item-key]")).map((item) => [
+        item.dataset.itemKey,
+        Boolean(item.querySelector("[data-item-enabled]")?.checked),
+      ]),
+    );
+    this.element.querySelectorAll("[data-drawer-gate]").forEach((section) => {
+      const enabled = states.get(section.dataset.drawerGate);
+      section.hidden = enabled === false;
+    });
+  }
+
+  setRowHidden(name, hidden) {
+    const row = this.element.querySelector(`[data-drawer-row="${name}"]`);
+    if (row) row.hidden = hidden;
+  }
+
+  syncRandomControls() {
+    const enabled = this.element.querySelector(
+      '[name="enable_random_button"]',
+    )?.checked;
+    const mode =
+      this.element.querySelector('[name="random_mode"]')?.value || "list";
+    const target =
+      this.element.querySelector('[name="random_target"]')?.value || "url";
+
+    document.querySelectorAll("[data-random-control]").forEach((control) => {
+      const single = control.hasAttribute("ld-random-single");
+      control.hidden = !enabled || (single ? mode !== "single" : mode === "single");
+    });
+
+    const single = document.querySelector("[ld-random-single]");
+    if (single) single.dataset.randomTarget = target;
+  }
+
+  // ---------- 两个入口按钮 ----------
+
+  async openQuickTags() {
+    if (!this.quickTagsUrl) return;
+    let html;
+    try {
+      const response = await fetch(this.quickTagsUrl, {
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        credentials: "same-origin",
+      });
+      if (!response.ok) return;
+      html = await response.text();
+    } catch (error) {
+      console.error(error);
+      return;
+    }
+
+    const title = this.element.dataset.labelQuickTags || gettext("Quick tags");
+    const helpText = this.element.dataset.helpQuickTags || "";
+    const modal = document.createElement("ld-modal");
+    modal.className = "modal active";
+    modal.innerHTML = `
+      <div class="modal-overlay" data-close-modal></div>
+      <div class="modal-container ld-modal-wide" role="dialog" aria-modal="true">
+        <div class="modal-header">
+          <h2>${title}${
+            helpText
+              ? `<span class="ld-help" data-drawer-help>
+                   <button type="button" class="ld-help-button"
+                           aria-label="${this.element.dataset.labelMoreInfo || gettext("More info")}" aria-expanded="false">
+                     <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+                   </button>
+                   <span class="ld-help-text" hidden>${helpText}</span>
+                 </span>`
+              : ""
+          }</h2>
+          <button type="button" class="btn btn-noborder close" data-close-modal
+                  aria-label="${this.element.dataset.labelClose || gettext("Close")}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                 stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                 stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 6l-12 12"></path><path d="M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body settings-page" ld-settings-page>${html}</div>
+      </div>`;
+
+    document.querySelector(".modals")?.appendChild(modal);
+    // innerHTML 插入的 <script> 不会执行，重新插一遍让图标数据生效
+    modal.querySelectorAll("script").forEach((script) => {
+      const replacement = document.createElement("script");
+      replacement.textContent = script.textContent;
+      script.replaceWith(replacement);
+    });
+    // 关掉弹窗后刷新列表，快捷标签改动才会出现在行工具栏上
+    modal.addEventListener("modal:close", () => this.scheduleListRefresh());
+  }
+
+  openSidebarModules() {
+    const page = this.page;
+    if (!page) return;
+    if (!page.classList.contains("sidebar-open")) {
+      document.querySelector("[data-sidebar-toggle]")?.click();
+    }
+    page
+      .querySelector("[data-sidebar-settings]")
+      ?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
+  // ---------- 列表局部刷新 ----------
+
+  scheduleListRefresh() {
+    clearTimeout(this.refreshTimer);
+    this.refreshTimer = setTimeout(() => this.refreshList(), REFRESH_DELAY);
+  }
+
+  async refreshList() {
+    const container = document.getElementById("bookmark-list-container");
+    if (!container) return;
+
+    const params = new URLSearchParams(window.location.search);
+    params.delete("layout");
+    if (this.resetPage) {
+      params.delete("page");
+      this.resetPage = false;
+      // 地址栏也要丢掉页号，否则下次刷新又回到越界页
+      const rest = params.toString();
+      window.history.replaceState(
+        {},
+        "",
+        `${window.location.pathname}${rest ? `?${rest}` : ""}`,
+      );
+    }
+    params.set("ctx", this.page?.dataset.ctx || "active");
+
+    const seq = ++this.refreshSeq;
+    let html;
+    try {
+      const response = await fetch(`${this.fragmentUrl}?${params.toString()}`, {
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        credentials: "same-origin",
+      });
+      if (!response.ok) return;
+      html = await response.text();
+    } catch (error) {
+      console.error(error);
+      return;
+    }
+
+    // 后发先至时丢弃旧响应，避免把列表刷回上一版偏好
+    if (seq !== this.refreshSeq) return;
+
+    const template = document.createElement("template");
+    template.innerHTML = html.trim();
+    const next = template.content.querySelector("#bookmark-list-container");
+    if (!next) return;
+
+    container.replaceWith(next);
+    document.dispatchEvent(new CustomEvent("bookmark-list-updated"));
+    // 表格列宽按替换时的可用宽度算，切换视图后要等布局稳定再算一次
+    requestAnimationFrame(() =>
+      window.dispatchEvent(new Event("resize")),
+    );
+  }
+}
+
+registerBehavior("data-layout-drawer", LayoutDrawer);
+
+// 抽屉是页面级浮层，缓存快照里不能带着展开态
+document.addEventListener("turbo:before-cache", () => {
+  document
+    .querySelectorAll(".layout-drawer.is-open")
+    .forEach((el) => el.classList.remove("is-open"));
+  document.body.classList.remove("layout-drawer-open");
+});

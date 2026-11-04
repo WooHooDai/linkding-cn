@@ -1,0 +1,54 @@
+{% load i18n %}
+{% comment %}
+左侧「布局」抽屉：列表页显示偏好的唯一入口。桌面端让位、窄屏全宽 + 遮罩。
+两个页签按「页面级设置」与「书签级设置」分，行一律 label 与控件同行、控件右对齐。
+{% endcomment %}
+<aside id="layout-drawer" class="layout-drawer" data-layout-drawer
+       data-save-url="{% url 'linkding:settings.save' %}"
+       data-fragment-url="{% url 'linkding:bookmarks.list_fragment' %}"
+       data-quick-tags-url="{% url 'linkding:settings.quick_tags_fragment' %}"
+       data-label-quick-tags="{% translate 'Manage quick tags' %}"
+       data-help-quick-tags="{% translate 'Quick tags allow adding one or more specified tags to a bookmark with a single click.' %}§{% translate 'Quick tags can be displayed directly on the bookmark action bar, or collected in a quick tags submenu.' %}§{% translate 'When displayed directly, quick tags can be shown as icons or text.' %}§{% translate 'You can search with English keywords to find more relevant icons.' %}"
+       data-label-close="{% translate 'Close' %}"
+       data-label-more-info="{% translate 'More info' %}"
+       data-label-more-info="{% translate 'More info' %}"
+       aria-label="{% translate 'Layout' %}"
+       aria-hidden="true" inert>
+  <div class="layout-drawer-header">
+    <span class="layout-drawer-title">{% translate "Layout" %}</span>
+    <button type="button" class="btn btn-noborder layout-drawer-close"
+            data-layout-drawer-close
+            aria-label="{% translate 'Close' %}" title="{% translate 'Close' %}">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+           stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+           stroke-linejoin="round" aria-hidden="true">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+        <path d="M18 6l-12 12"></path>
+        <path d="M6 6l12 12"></path>
+      </svg>
+    </button>
+  </div>
+
+  <div class="layout-drawer-tabs" role="tablist" aria-label="{% translate 'Layout' %}">
+    <button type="button" role="tab" class="layout-drawer-tab is-active"
+            id="layout-tab-page" aria-controls="layout-panel-page" aria-selected="true"
+            data-layout-tab="page">{% translate "Page" %}</button>
+    <button type="button" role="tab" class="layout-drawer-tab"
+            id="layout-tab-bookmark" aria-controls="layout-panel-bookmark" aria-selected="false"
+            tabindex="-1" data-layout-tab="bookmark">{% translate "Bookmarks" %}</button>
+  </div>
+
+  <div class="layout-drawer-body" data-layout-scroll>
+    <div class="layout-drawer-panel" role="tabpanel" id="layout-panel-page"
+         aria-labelledby="layout-tab-page" data-layout-panel="page">
+      {% include 'bookmarks/header/layout_drawer_page.html' %}
+    </div>
+    <div class="layout-drawer-panel" role="tabpanel" id="layout-panel-bookmark"
+         aria-labelledby="layout-tab-bookmark" data-layout-panel="bookmark" hidden>
+      {% include 'bookmarks/header/layout_drawer_bookmark.html' %}
+    </div>
+  </div>
+
+</aside>
+{# 遮罩只在窄屏出现；桌面点外部也能关闭，由 JS 判断 #}
+<div class="layout-drawer-scrim" data-layout-drawer-close aria-hidden="true"></div>

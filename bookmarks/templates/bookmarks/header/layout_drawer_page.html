@@ -1,0 +1,333 @@
+{% load i18n %}
+{% get_available_languages as LANGUAGES %}
+{# 页面页：界面 → 视图 → 工具栏 → 侧边栏。控件一律右对齐，说明收进标签旁的 info 图标。 #}
+<div class="ld-group">
+  <div class="layout-drawer-group-label">{% translate "Interface" %}</div>
+
+  <form action="{% url 'language-update' %}" method="post" class="ld-form">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <div class="ld-row">
+      <div class="ld-row-text">
+        <span class="ld-row-label">{% translate "Language" %}</span>
+      </div>
+      <div class="ld-row-control">
+        <div class="ld-segment ld-segment-auto" role="radiogroup" aria-label="{% translate 'Language' %}">
+          {% for code, label in primary_language_choices %}
+            <label class="ld-segment-option">
+              <input type="radio" name="language" value="{{ code }}"
+                     {% if language_segment_value == code %}checked{% endif %}>
+              <span>{{ label }}</span>
+            </label>
+          {% endfor %}
+          <label class="ld-segment-option">
+            <input type="radio" name="language" value="{{ language_other_sentinel }}"
+                   data-language-other-toggle
+                   {% if language_segment_value == language_other_sentinel %}checked{% endif %}>
+            <span>...</span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="ld-row" data-language-other
+         {% if language_segment_value != language_other_sentinel %}hidden{% endif %}>
+      <div class="ld-row-text">
+        <span class="ld-row-label">{% translate "Other languages" %}</span>
+      </div>
+      <div class="ld-row-control">
+        <select name="language" class="form-select input-sm ld-control-select ld-control-language"
+                data-language-select
+                {% if language_segment_value != language_other_sentinel or not other_language_choices %}disabled{% endif %}>
+          {% if other_language_choices %}
+            <option value="" disabled>...</option>
+            {% for code, label in other_language_choices %}
+              <option value="{{ code }}"
+                      {% if language_other_current_code == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          {% else %}
+            <option value="" selected>{% translate "No other languages" %}</option>
+          {% endif %}
+        </select>
+      </div>
+    </div>
+  </form>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Theme" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <div class="ld-segment ld-control-segment" role="radiogroup" aria-label="{% translate 'Theme' %}">
+        <label class="ld-segment-option">
+          <input type="radio" name="theme" value="auto"
+                 data-pref="theme" data-pref-apply="reload"
+                 {% if request.user_profile.theme == 'auto' %}checked{% endif %}>
+          <span>{% translate "Auto" %}</span>
+        </label>
+        <label class="ld-segment-option">
+          <input type="radio" name="theme" value="light"
+                 data-pref="theme" data-pref-apply="reload"
+                 {% if request.user_profile.theme == 'light' %}checked{% endif %}>
+          <span>{% translate "Light" %}</span>
+        </label>
+        <label class="ld-segment-option">
+          <input type="radio" name="theme" value="dark"
+                 data-pref="theme" data-pref-apply="reload"
+                 {% if request.user_profile.theme == 'dark' %}checked{% endif %}>
+          <span>{% translate "Dark" %}</span>
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ld-group">
+  <div class="layout-drawer-group-label">{% translate "View" context "layout drawer" %}</div>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "List view" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <div class="ld-segment ld-control-segment" role="radiogroup" aria-label="{% translate 'List view' %}">
+        <label class="ld-segment-option">
+          <input type="radio" name="bookmark_view_mode" value="list"
+                 data-pref="bookmark_view_mode" data-pref-apply="fragment"
+                 {% if request.user_profile.bookmark_view_mode == 'list' %}checked{% endif %}>
+          <span>{% translate "Default" %}</span>
+        </label>
+        <label class="ld-segment-option">
+          <input type="radio" name="bookmark_view_mode" value="compact"
+                 data-pref="bookmark_view_mode" data-pref-apply="fragment"
+                 {% if request.user_profile.bookmark_view_mode == 'compact' %}checked{% endif %}>
+          <span>{% translate "Compact" %}</span>
+        </label>
+        <label class="ld-segment-option">
+          <input type="radio" name="bookmark_view_mode" value="table"
+                 data-pref="bookmark_view_mode" data-pref-apply="fragment"
+                 {% if request.user_profile.bookmark_view_mode == 'table' %}checked{% endif %}>
+          <span>{% translate "Table" %}</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Group by date" %}<span class="ld-help" data-drawer-help>
+              <button type="button" class="ld-help-button"
+                      aria-label="{% translate 'More info' %}" aria-expanded="false">
+                <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+              </button>
+              <span class="ld-help-text" hidden>{% translate "Group bookmarks by when they were added: today, yesterday, this week, this month, by month." %}</span>
+            </span></span>
+    </div>
+    <div class="ld-row-control">
+      <label class="form-switch ld-switch">
+        <input type="checkbox" name="group_by_date"
+               data-pref="group_by_date" data-pref-apply="fragment"
+               {% if request.user_profile.group_by_date %}checked{% endif %}>
+        <i class="form-icon"></i>
+      </label>
+    </div>
+  </div>
+
+  <div class="ld-row" data-drawer-row="collapse_groups"
+       {% if not request.user_profile.group_by_date %}hidden{% endif %}>
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Collapse groups" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <button type="button" class="btn btn-primary btn-sm group-toggle-all"
+              data-label-collapse="{% translate 'Collapse' %}"
+              data-label-expand="{% translate 'Expand' %}">{% translate "Collapse" %}</button>
+    </div>
+  </div>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Bookmarks per page" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <input type="number" min="10" inputmode="numeric"
+             class="form-input input-sm ld-control-number"
+             name="items_per_page" data-pref="items_per_page" data-pref-apply="fragment"
+             value="{{ request.user_profile.items_per_page }}">
+    </div>
+    <div class="field-errors" data-field-error-for="items_per_page"></div>
+  </div>
+</div>
+
+<div class="ld-group">
+  <div class="layout-drawer-group-label">{% translate "Toolbar" %}</div>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Sticky search bar" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <label class="form-switch ld-switch">
+        <input type="checkbox" name="sticky_header_controls"
+               data-pref="sticky_header_controls" data-pref-apply="dom"
+               {% if request.user_profile.sticky_header_controls %}checked{% endif %}>
+        <i class="form-icon"></i>
+      </label>
+    </div>
+  </div>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Sticky pagination" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <label class="form-switch ld-switch">
+        <input type="checkbox" name="sticky_pagination"
+               data-pref="sticky_pagination" data-pref-apply="dom"
+               {% if request.user_profile.sticky_pagination %}checked{% endif %}>
+        <i class="form-icon"></i>
+      </label>
+    </div>
+  </div>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Tag search mode" %}<span class="ld-help" data-drawer-help>
+              <button type="button" class="ld-help-button"
+                      aria-label="{% translate 'More info' %}" aria-expanded="false">
+                <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+              </button>
+              <span class="ld-help-text" hidden>{% translate "In strict mode, tags must be prefixed with a hash character (#)." %} {% translate "In lax mode, tags can also be found without the hash character." %} {% translate "Without the hash character, tags are harder to distinguish from ordinary search terms, so unrelated results may also match." %}</span>
+            </span></span>
+    </div>
+    <div class="ld-row-control">
+      <div class="ld-segment ld-control-segment" role="radiogroup" aria-label="{% translate 'Tag search mode' %}">
+        <label class="ld-segment-option">
+          <input type="radio" name="tag_search" value="strict"
+                 data-pref="tag_search" data-pref-apply="dom"
+                 {% if request.user_profile.tag_search == 'strict' %}checked{% endif %}>
+          <span>{% translate "Strict" %}</span>
+        </label>
+        <label class="ld-segment-option">
+          <input type="radio" name="tag_search" value="lax"
+                 data-pref="tag_search" data-pref-apply="dom"
+                 {% if request.user_profile.tag_search == 'lax' %}checked{% endif %}>
+          <span>{% translate "Lax" %}</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Random button" %}<span class="ld-help" data-drawer-help>
+              <button type="button" class="ld-help-button"
+                      aria-label="{% translate 'More info' %}" aria-expanded="false">
+                <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+              </button>
+              <span class="ld-help-text" hidden>{% translate "Whether to show a random button in the toolbar. It shuffles the bookmark list, or opens a random bookmark." %}</span>
+            </span></span>
+    </div>
+    <div class="ld-row-control">
+      <label class="form-switch ld-switch">
+        <input type="checkbox" name="enable_random_button"
+               data-pref="enable_random_button" data-pref-apply="dom"
+               {% if request.user_profile.enable_random_button %}checked{% endif %}>
+        <i class="form-icon"></i>
+      </label>
+    </div>
+  </div>
+
+  <div class="ld-row" data-drawer-row="random_mode"
+       {% if not request.user_profile.enable_random_button %}hidden{% endif %}>
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Random mode" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <select class="form-select input-sm ld-control-select"
+              name="random_mode" data-pref="random_mode" data-pref-apply="dom">
+        <option value="list" {% if request.user_profile.random_mode == 'list' %}selected{% endif %}>{% translate "List" %}</option>
+        <option value="single" {% if request.user_profile.random_mode == 'single' %}selected{% endif %}>{% translate "Single" %}</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="ld-row" data-drawer-row="random_target"
+       {% if not request.user_profile.enable_random_button or request.user_profile.random_mode != 'single' %}hidden{% endif %}>
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Random target" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <select class="form-select input-sm ld-control-select"
+              name="random_target" data-pref="random_target" data-pref-apply="dom">
+        <option value="url" {% if request.user_profile.random_target == 'url' %}selected{% endif %}>{% translate "URL" %}</option>
+        <option value="reader" {% if request.user_profile.random_target == 'reader' %}selected{% endif %}>{% translate "Reader" %}</option>
+        <option value="snapshot" {% if request.user_profile.random_target == 'snapshot' %}selected{% endif %}>{% translate "Snapshot" %}</option>
+        <option value="details" {% if request.user_profile.random_target == 'details' %}selected{% endif %}>{% translate "Details" %}</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="ld-group">
+  <div class="layout-drawer-group-label">{% translate "Sidebar" %}</div>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Always visible" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <label class="form-switch ld-switch">
+        <input type="checkbox" name="show_sidebar"
+               data-pref="show_sidebar" data-pref-apply="dom"
+               {% if request.user_profile.show_sidebar %}checked{% endif %}>
+        <i class="form-icon"></i>
+      </label>
+    </div>
+  </div>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Follow on scroll" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <label class="form-switch ld-switch">
+        <input type="checkbox" name="sticky_side_panel"
+               data-pref="sticky_side_panel" data-pref-apply="dom"
+               {% if request.user_profile.sticky_side_panel %}checked{% endif %}>
+        <i class="form-icon"></i>
+      </label>
+    </div>
+  </div>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Module settings" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <button type="button" class="ld-disclosure" data-drawer-disclosure="sidebar-modules"
+              aria-expanded="false" aria-controls="drawer-sidebar-modules"
+              aria-label="{% translate 'Expand' %}">
+        <span class="ld-chevron" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+  {# 「设置」模块是这块面板的旧入口，列表里只列真正的侧边栏模块 #}
+  <ul class="ld-module-list" id="drawer-sidebar-modules" data-drawer-panel="sidebar-modules"
+      data-drawer-list="sidebar_modules" hidden>
+    {% for item in request.user_profile.get_sidebar_module_items %}
+      {% if item.key != 'settings' %}
+        <li class="ld-module-item" data-item-key="{{ item.key }}">
+          <button type="button" class="ld-module-handle"
+                  aria-label="{% translate 'Drag to reorder' %}" tabindex="-1">
+            <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-grip"></use></svg>
+          </button>
+          <span class="ld-module-name">{{ item.label }}</span>
+          <label class="form-switch ld-switch">
+            <input type="checkbox" data-item-enabled {% if item.enabled %}checked{% endif %}>
+            <i class="form-icon"></i>
+          </label>
+        </li>
+      {% endif %}
+    {% endfor %}
+  </ul>
+</div>

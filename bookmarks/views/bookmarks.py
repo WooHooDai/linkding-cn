@@ -37,6 +37,8 @@ from bookmarks.middlewares import (
 from bookmarks.models import (
     Bookmark,
     BookmarkSearch,
+    GlobalSettings,
+    GlobalSettingsForm,
     UserProfile,
 )
 from bookmarks.services import assets as asset_actions
@@ -299,6 +301,40 @@ def index(request: HttpRequest):
     )
 
 
+# 布局抽屉保存后只换列表本身：按页面 ctx 选对应的列表上下文，
+# 不重算侧边栏/标签云，避免一次开关触发整页查询。
+_LIST_FRAGMENT_CONTEXTS = {
+    "active": contexts.ActiveBookmarkListContext,
+    "archived": contexts.ArchivedBookmarkListContext,
+    "shared": contexts.SharedBookmarkListContext,
+    "trash": contexts.TrashedBookmarkListContext,
+}
+
+
+@login_required
+def list_fragment(request: HttpRequest):
+    ctx = request.GET.get("ctx", "active")
+    context_class = _LIST_FRAGMENT_CONTEXTS.get(ctx)
+    if context_class is None:
+        return HttpResponseBadRequest("Unknown context")
+
+    search = BookmarkSearch.from_request(
+        request, request.GET, request.user_profile.search_preferences
+    )
+    bookmark_list = context_class(request, search)
+
+    return render(
+        request,
+        "bookmarks/list/container.html",
+        {
+            "bookmark_list": bookmark_list,
+            "is_trash_page": ctx == "trash",
+            "sticky_pagination": request.user_profile.sticky_pagination,
+            "active_check_job": get_active_check_job(request.user),
+        },
+    )
+
+
 @login_required
 def archived(request: HttpRequest):
     if request.method == "POST":
@@ -497,6 +533,38 @@ def render_bookmarks_view(request: HttpRequest, template_name, context):
         context["active_check_job"] = get_active_check_job(request.user)
 
     profile = request.user_profile
+    # 抽屉里的语言分段控件：与设置页同一套「常用语言 + 其他」逻辑
+    from bookmarks.views.settings import (
+        LANGUAGE_OTHER_SENTINEL,
+        _get_other_language_choices,
+        _get_primary_language_choices,
+        _normalize_language_code,
+    )
+
+    primary_language_choices = _get_primary_language_choices()
+    other_language_choices = _get_other_language_choices()
+    current_language = _normalize_language_code(
+        profile.language or settings.LANGUAGE_CODE
+    )
+    primary_codes = {code for code, _ in primary_language_choices}
+    other_codes = {code for code, _ in other_language_choices}
+    context.setdefault("primary_language_choices", primary_language_choices)
+    context.setdefault("other_language_choices", other_language_choices)
+    context.setdefault(
+        "language_segment_value",
+        current_language if current_language in primary_codes else LANGUAGE_OTHER_SENTINEL,
+    )
+    context.setdefault("language_other_sentinel", LANGUAGE_OTHER_SENTINEL)
+    context.setdefault(
+        "language_other_current_code",
+        current_language if current_language in other_codes else "",
+    )
+
+    # 抽屉「预取内部链接」是全局设置，只有超级管理员能改
+    if request.user.is_superuser:
+        context.setdefault(
+            "global_settings_form", GlobalSettingsForm(instance=GlobalSettings.get())
+        )
     context.setdefault("show_sidebar", profile.show_sidebar)
     context.setdefault("sticky_side_panel", profile.sticky_side_panel)
     context.setdefault("sticky_pagination", profile.sticky_pagination)

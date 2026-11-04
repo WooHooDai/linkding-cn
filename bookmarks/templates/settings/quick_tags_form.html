@@ -1,0 +1,70 @@
+{% load i18n %}
+{% load shared %}
+{# 快捷标签编辑器：设置页与列表页抽屉的弹窗共用，挂 ld-settings-page 后由设置页脚本接管 #}
+<form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card settings-card-stack" data-settings-save-mode="instant">
+  {% csrf_token %}
+  <input type="hidden" name="form_id" value="profile_quick">
+  <input type="hidden" name="form_fields" value="bookmark_quick_tags">
+  {{ profile_quick_form.bookmark_quick_tags.as_hidden }}
+
+  <div class="settings-stack settings-modules-stack" data-quick-tags-panel>
+    <div class="settings-stack-header">
+      <div class="settings-stack-actions">
+        <button type="button" class="btn btn-primary btn-sm" data-qt-add>
+          {% translate "Add" %}
+        </button>
+      </div>
+    </div>
+    <div id="settings-bookmark-quick-tags-panel">
+      <ul class="settings-modules-list" data-bookmark-quick-tags-list>
+        {% for qt in profile_quick_form.bookmark_quick_tag_items %}
+          <li class="settings-module-item settings-qt-row" data-qt-index="{{ forloop.counter0 }}">
+            <button type="button" class="settings-module-handle" aria-label="{% translate 'Drag to reorder' %}">
+              <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-grip"></use></svg>
+            </button>
+            <div class="settings-qt-controls">
+              <button type="button" class="settings-qt-chip-btn" data-qt-field="display_position" data-qt-value="{{ qt.display_position }}" title="{% translate 'Click to toggle' %}">
+                {% if qt.display_position == "direct" %}{% translate "direct" %}{% else %}{% translate "submenu" %}{% endif %}
+              </button>
+              <button type="button" class="settings-qt-chip-btn" data-qt-field="display_mode" data-qt-value="{{ qt.display_mode }}" title="{% translate 'Click to toggle' %}">
+                {% if qt.display_mode == "icon" %}{% translate "icon" %}{% else %}{% translate "text" %}{% endif %}
+              </button>
+              <button type="button" class="settings-qt-delete-btn" title="{% translate 'Delete' %}">
+                <svg width="14" height="14"><use href="#ld-icon-remove"></use></svg>
+              </button>
+            </div>
+            <label class="form-switch settings-switch">
+              <input type="checkbox" data-qt-enabled {% if qt.enabled %}checked{% endif %}>
+              <i class="form-icon"></i>
+            </label>
+            <div class="settings-qt-main">
+              <button type="button" class="settings-qt-icon-btn" data-qt-icon="{{ qt.icon_name }}" title="{% translate 'Pick icon' %}">
+                {% if qt.icon_data %}
+                  <svg class="settings-qt-icon-placeholder" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 {{ qt.icon_data.width }} {{ qt.icon_data.height }}">{{ qt.icon_data.body|sanitize_svg }}</svg>
+                {% elif qt.icon_name %}
+                  <iconify-icon icon="{{ qt.icon_name }}" width="16" height="16"></iconify-icon>
+                {% else %}
+                  <svg class="settings-qt-icon-placeholder" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+                {% endif %}
+              </button>
+              <span class="settings-qt-label-view{% if not qt.label %} is-empty{% endif %}" title="{% translate 'Click to edit name' %}">{% if qt.label %}{{ qt.label }}{% else %}{% translate "Name" %}{% endif %}</span>
+              <input type="text" class="settings-qt-label-input form-input" value="{{ qt.label }}" placeholder="{% translate 'Name' %}">
+            </div>
+            <div class="settings-qt-sub">
+              <div class="settings-qt-tags-wrapper">
+                <span class="settings-qt-tags-view{% if not qt.tag_names %} is-empty{% endif %}">
+                  {% for tn in qt.tag_names %}
+                    <span class="qt-tag">{{ tn }}</span>
+                  {% empty %}
+                    {% translate "tag1 tag2" %}
+                  {% endfor %}
+                </span>
+              </div>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+      <div class="field-errors" data-field-error-for="bookmark_quick_tags"></div>
+    </div>
+  </div>
+</form>

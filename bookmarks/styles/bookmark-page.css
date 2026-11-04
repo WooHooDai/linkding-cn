@@ -56,7 +56,7 @@
       right: 0;
       bottom: 0;
       left: auto;
-      width: 340px;
+      width: var(--ld-sidebar-width, 340px);
       max-width: 85vw;
       height: 100vh;
       max-height: none;
@@ -88,6 +88,15 @@
   .highlights-page[data-sidebar-default="1"].sidebar-closed main {
     grid-column: span min(2, var(--grid-columns));
   }
+}
+
+/* 让位模式下侧边栏不再是浮层：去掉投影，改用细边线分隔 */
+body.sidebar-push .bookmarks-page[data-sidebar-default="0"].sidebar-open .sidebar,
+body.sidebar-push
+  .highlights-page[data-sidebar-default="0"].sidebar-open
+  .sidebar {
+  box-shadow: none;
+  border-inline-start: var(--border-width) solid var(--secondary-border-color);
 }
 
 /* 移动端：sidebar 始终用 fixed overlay 模式

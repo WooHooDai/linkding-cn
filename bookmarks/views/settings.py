@@ -104,6 +104,32 @@ def update_language(request: HttpRequest):
     return response
 
 
+def _build_quick_tag_icon_context(profile_quick_form) -> dict:
+    """快捷标签图标：当前用到的 + 预置图标，供前端直接渲染 SVG。"""
+    from bookmarks.services.icon_loader import load_quick_tags_icon
+
+    icon_data_map = {}
+    for item in profile_quick_form.bookmark_quick_tag_items:
+        icon_name = item.get("icon_name")
+        if icon_name:
+            data = load_quick_tags_icon(icon_name)
+            if data:
+                icon_data_map[icon_name] = data
+    # 预置图标（首次从 API 获取，后续从文件缓存）
+    for icon_name in PRESET_ICON_NAMES:
+        if icon_name not in icon_data_map:
+            data = load_quick_tags_icon(icon_name)
+            if data:
+                icon_data_map[icon_name] = data
+
+    return {
+        "quick_tag_icon_data_json": (
+            json.dumps(icon_data_map, ensure_ascii=False) if icon_data_map else None
+        ),
+        "preset_icon_names_json": json.dumps(PRESET_ICON_NAMES, ensure_ascii=False),
+    }
+
+
 @login_required
 def general(request: HttpRequest, status=200, context_overrides=None):
     enable_refresh_favicons = django_settings.LD_ENABLE_REFRESH_FAVICONS
@@ -117,26 +143,7 @@ def general(request: HttpRequest, status=200, context_overrides=None):
     version_info = get_version_info(get_ttl_hash())
 
     profile_quick_form = UserProfileQuickSettingsForm(instance=request.user_profile)
-    # 加载快捷标签 + 预置图标数据，注入前端渲染
-    from bookmarks.services.icon_loader import load_quick_tags_icon
-    icon_data_map = {}
-    # 快捷标签使用的图标
-    for item in profile_quick_form.bookmark_quick_tag_items:
-        icon_name = item.get("icon_name")
-        if icon_name:
-            data = load_quick_tags_icon(icon_name)
-            if data:
-                icon_data_map[icon_name] = data
-    # 预置图标（首次从 API 获取，后续从文件缓存）
-    for icon_name in PRESET_ICON_NAMES:
-        if icon_name not in icon_data_map:
-            data = load_quick_tags_icon(icon_name)
-            if data:
-                icon_data_map[icon_name] = data
-    quick_tag_icon_data_json = (
-        json.dumps(icon_data_map, ensure_ascii=False)
-        if icon_data_map else None
-    )
+    quick_tag_icons = _build_quick_tag_icon_context(profile_quick_form)
     custom_css_form = UserProfileCustomCssForm(instance=request.user_profile)
     # 全局默认值（环境变量），供设置页帮助文案动态展示
     health_defaults = {
@@ -213,14 +220,27 @@ def general(request: HttpRequest, status=200, context_overrides=None):
             "settings_general_url": reverse("linkding:settings.general"),
             "enable_refresh_favicons": enable_refresh_favicons,
             "has_snapshot_support": has_snapshot_support,
-            "preset_icon_names_json": json.dumps(PRESET_ICON_NAMES, ensure_ascii=False),
-            "quick_tag_icon_data_json": quick_tag_icon_data_json,
+            **quick_tag_icons,
             "success_message": success_message,
             "error_message": error_message,
             "version_info": version_info,
             **context_overrides,
         },
         status=status,
+    )
+
+
+@login_required
+def quick_tags_fragment(request: HttpRequest):
+    """抽屉弹窗用：只回快捷标签编辑器本身，含图标数据脚本。"""
+    profile_quick_form = UserProfileQuickSettingsForm(instance=request.user_profile)
+    return render(
+        request,
+        "settings/quick_tags_form.html",
+        {
+            "profile_quick_form": profile_quick_form,
+            **_build_quick_tag_icon_context(profile_quick_form),
+        },
     )
 
 

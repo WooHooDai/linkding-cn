@@ -259,7 +259,9 @@ class BookmarkSharedViewTestCase(
             element["data-sidebar-module"]
             for element in soup.select(".sidebar [data-sidebar-module]")
         ]
-        self.assertEqual(module_keys, ["tags", "domains"])
+        self.assertEqual(
+            module_keys, ["tags", "domains", "authors"]
+        )
         self.assertIsNotNone(soup.select_one("#user-heading"))
         self.assertIsNone(
             soup.select_one(".sidebar [data-sidebar-module='summary']")

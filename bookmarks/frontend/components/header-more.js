@@ -128,12 +128,15 @@ class HeaderMoreMenu extends Behavior {
     if (action === "bulk-edit") {
       document.querySelector(".bulk-edit-active-toggle")?.click();
     } else if (action === "random-sort") {
-      // 两种随机模式各有一份控件，点当前可见的那个
+      // 两种随机模式各有一份控件，点当前可见的那个；两个都隐藏说明随机按钮已关
       const single = document.querySelector("[ld-random-single]:not([hidden])");
+      const form = document.querySelector(
+        "form[data-random-control]:not([hidden])",
+      );
       if (single) {
         single.click();
-      } else {
-        document.querySelector("form[data-random-control]")?.requestSubmit();
+      } else if (form) {
+        form.requestSubmit();
       }
     }
 

@@ -713,7 +713,9 @@ class BookmarkIndexViewTestCase(
             element["data-sidebar-module"]
             for element in soup.select(".sidebar [data-sidebar-module]")
         ]
-        self.assertEqual(module_keys, ["tags", "summary", "domains", "authors"])
+        self.assertEqual(
+            module_keys, ["tags", "summary", "domains", "authors"]
+        )
         self.assertIsNone(
             soup.select_one(".sidebar [data-sidebar-module='bundles']")
         )

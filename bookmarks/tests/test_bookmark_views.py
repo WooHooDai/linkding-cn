@@ -100,10 +100,16 @@ class BookmarkViewsRegistryTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         unique = {frozenset(attrs) for attrs in attribute_sets.values()}
         self.assertEqual(len(unique), 1, attribute_sets)
 
-    # --- 布局菜单 ---
+    # --- 布局抽屉 ---
 
-    def test_layout_panel_lists_exactly_the_view_settings(self):
+    def test_layout_drawer_gates_view_specific_options_on_registry(self):
+        # 注册表里的 settings 现在是「该视图下可调的项」：视图相关项必须严格跟随，
+        # 与视图无关的项（模块顺序、动作列表等）任何视图都要在。
         self.client.force_login(self.user)
+        view_specific = (
+            "enable_preview_images",
+            "bookmark_toolbar_auto_hide",
+        )
         for mode, view in contexts.BOOKMARK_VIEWS.items():
             with self.subTest(view=mode):
                 self.switch_view(mode)
@@ -112,9 +118,20 @@ class BookmarkViewsRegistryTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
                         reverse("linkding:bookmarks.index")
                     ).content.decode()
                 )
-                panel = soup.select_one(".header-layout .header-more-panel")
-                rendered = {el["data-pref"] for el in panel.select("[data-pref]")}
-                self.assertEqual(rendered, view["settings"])
+                drawer = soup.select_one("[data-layout-drawer]")
+                rendered = {el["data-pref"] for el in drawer.select("[data-pref]")}
+                self.assertIn("bookmark_view_mode", rendered)
+                for field in view_specific:
+                    # 行常驻 DOM，注册表决定它首帧是否收起
+                    row = drawer.select_one(
+                        f'[data-drawer-views] [data-pref="{field}"]'
+                    ).find_parent(attrs={"data-drawer-views": True})
+                    self.assertIsNotNone(row, field)
+                    self.assertEqual(
+                        row.has_attr("hidden"),
+                        field not in view["settings"],
+                        field,
+                    )
 
     # --- 静态文件 ---
 

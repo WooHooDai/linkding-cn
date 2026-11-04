@@ -1,3 +1,5 @@
+import { syncPanelSpace } from "./utils/panel-space.js";
+
 /**
  * 侧边栏状态初始化
  *
@@ -44,6 +46,9 @@ function initSidebarState() {
     const cookieName = isHighlights ? "ld_sidebar_highlights" : "ld_sidebar_bookmarks";
     document.cookie = `${cookieName}=${shouldOpen ? "1" : "0"}; path=/; max-age=31536000; SameSite=Lax`;
   } catch {}
+
+  // 开合状态一变就要重算让位，否则首帧会先按「关闭」排版再跳一下
+  syncPanelSpace();
 }
 
 document.addEventListener("turbo:load", initSidebarState);

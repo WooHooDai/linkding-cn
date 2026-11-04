@@ -1,0 +1,419 @@
+{% load i18n %}
+{# 书签页：内容 → 行为 → 工具栏。工具栏里的模块关掉后，对应设置项一起收起；说明收进 info 图标。 #}
+<div class="ld-group">
+  <div class="layout-drawer-group-label">{% translate "Content" %}</div>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Display Favicons" %}<span class="ld-help" data-drawer-help>
+              <button type="button" class="ld-help-button"
+                      aria-label="{% translate 'More info' %}" aria-expanded="false">
+                <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+              </button>
+              <span class="ld-help-text" hidden>{% translate "Automatically load favicons for bookmarked websites and display them next to each bookmark." %} {% translate "Enabling this feature downloads all missing favicons in the background." %}</span>
+            </span></span>
+    </div>
+    <div class="ld-row-control">
+      <label class="form-switch ld-switch">
+        <input type="checkbox" name="enable_favicons"
+               data-pref="enable_favicons" data-pref-apply="fragment"
+               {% if request.user_profile.enable_favicons %}checked{% endif %}>
+        <i class="form-icon"></i>
+      </label>
+    </div>
+  </div>
+
+  {# 只对默认视图有意义的项：表格/紧凑视图下隐藏 #}
+  <div class="ld-row" data-drawer-views="list"
+       {% if request.user_profile.bookmark_view_mode != 'list' %}hidden{% endif %}>
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Show URL" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <label class="form-switch ld-switch">
+        <input type="checkbox" name="display_url"
+               data-pref="display_url" data-pref-apply="fragment"
+               {% if request.user_profile.display_url %}checked{% endif %}>
+        <i class="form-icon"></i>
+      </label>
+    </div>
+  </div>
+
+  <div class="ld-row" data-drawer-views="list"
+       {% if request.user_profile.bookmark_view_mode != 'list' %}hidden{% endif %}>
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Expand notes" %}<span class="ld-help" data-drawer-help>
+              <button type="button" class="ld-help-button"
+                      aria-label="{% translate 'More info' %}" aria-expanded="false">
+                <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+              </button>
+              <span class="ld-help-text" hidden>{% translate "Keep notes expanded by default instead of toggling them individually." %} {% translate "You can also temporarily show all notes with the keyboard shortcut" %} <code>e</code>.</span>
+            </span></span>
+    </div>
+    <div class="ld-row-control">
+      <label class="form-switch ld-switch">
+        <input type="checkbox" name="permanent_notes"
+               data-pref="permanent_notes" data-pref-apply="fragment"
+               {% if request.user_profile.permanent_notes %}checked{% endif %}>
+        <i class="form-icon"></i>
+      </label>
+    </div>
+  </div>
+
+  <div class="ld-row" data-drawer-views="list"
+       {% if request.user_profile.bookmark_view_mode != 'list' %}hidden{% endif %}>
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Display preview images" %}<span class="ld-help" data-drawer-help>
+              <button type="button" class="ld-help-button"
+                      aria-label="{% translate 'More info' %}" aria-expanded="false">
+                <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+              </button>
+              <span class="ld-help-text" hidden>{% translate "Automatically load preview images for bookmarked websites and display them next to each bookmark." %} {% translate "Enabling this feature downloads missing preview images in the background." %}</span>
+            </span></span>
+    </div>
+    <div class="ld-row-control">
+      <label class="form-switch ld-switch">
+        <input type="checkbox" name="enable_preview_images"
+               data-pref="enable_preview_images" data-pref-apply="fragment"
+               {% if request.user_profile.enable_preview_images %}checked{% endif %}>
+        <i class="form-icon"></i>
+      </label>
+    </div>
+  </div>
+
+  <div class="ld-row" data-drawer-row="preview_placeholders" data-drawer-views="list"
+       {% if request.user_profile.bookmark_view_mode != 'list' or not request.user_profile.enable_preview_images %}hidden{% endif %}>
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Display preview image placeholders" %}<span class="ld-help" data-drawer-help>
+              <button type="button" class="ld-help-button"
+                      aria-label="{% translate 'More info' %}" aria-expanded="false">
+                <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+              </button>
+              <span class="ld-help-text" hidden>{% translate "Show a placeholder image when a bookmark has no preview image or the preview image cannot be loaded." %}</span>
+            </span></span>
+    </div>
+    <div class="ld-row-control">
+      <label class="form-switch ld-switch">
+        <input type="checkbox" name="enable_preview_image_placeholders"
+               data-pref="enable_preview_image_placeholders" data-pref-apply="fragment"
+               {% if request.user_profile.enable_preview_image_placeholders %}checked{% endif %}>
+        <i class="form-icon"></i>
+      </label>
+    </div>
+  </div>
+
+  <div class="ld-row" data-drawer-gate="date">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Date format" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <div class="ld-segment ld-control-segment" role="radiogroup" aria-label="{% translate 'Date format' %}">
+        <label class="ld-segment-option">
+          <input type="radio" name="bookmark_date_display" value="relative"
+                 data-pref="bookmark_date_display" data-pref-apply="fragment"
+                 {% if request.user_profile.bookmark_date_display == 'relative' %}checked{% endif %}>
+          <span>{% translate "Relative" %}</span>
+        </label>
+        <label class="ld-segment-option">
+          <input type="radio" name="bookmark_date_display" value="absolute"
+                 data-pref="bookmark_date_display" data-pref-apply="fragment"
+                 {% if request.user_profile.bookmark_date_display == 'absolute' %}checked{% endif %}>
+          <span>{% translate "Absolute" %}</span>
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ld-group">
+  <div class="layout-drawer-group-label">{% translate "Behavior" %}</div>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Link open mode" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <div class="ld-segment ld-control-segment" role="radiogroup" aria-label="{% translate 'Link open mode' %}">
+        <label class="ld-segment-option">
+          <input type="radio" name="bookmark_link_target" value="_blank"
+                 data-pref="bookmark_link_target" data-pref-apply="fragment"
+                 {% if request.user_profile.bookmark_link_target == '_blank' %}checked{% endif %}>
+          <span>{% translate "New page" %}</span>
+        </label>
+        <label class="ld-segment-option">
+          <input type="radio" name="bookmark_link_target" value="_self"
+                 data-pref="bookmark_link_target" data-pref-apply="fragment"
+                 {% if request.user_profile.bookmark_link_target == '_self' %}checked{% endif %}>
+          <span>{% translate "Same page" %}</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Date click navigation" %}</span>
+    </div>
+    <div class="ld-row-control">
+      <select class="form-select input-sm ld-control-select"
+              name="bookmark_date_route" data-pref="bookmark_date_route" data-pref-apply="fragment">
+        <option value="disabled" {% if request.user_profile.bookmark_date_route == 'disabled' %}selected{% endif %}>{% translate "Disabled" %}</option>
+        <option value="snapshot" {% if request.user_profile.bookmark_date_route == 'snapshot' %}selected{% endif %}>{% translate "Snapshot" %}</option>
+        <option value="reader" {% if request.user_profile.bookmark_date_route == 'reader' %}selected{% endif %}>{% translate "Reader mode" %}</option>
+        <option value="web_archive" {% if request.user_profile.bookmark_date_route == 'web_archive' %}selected{% endif %}>{% translate "Internet Archive" %}</option>
+        <option value="highlights" {% if request.user_profile.bookmark_date_route == 'highlights' %}selected{% endif %}>{% translate "Highlights & Annotations" %}</option>
+      </select>
+    </div>
+  </div>
+
+  {% if global_settings_form %}
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Prefetch internal links" %}<span class="ld-help" data-drawer-help>
+              <button type="button" class="ld-help-button"
+                      aria-label="{% translate 'More info' %}" aria-expanded="false">
+                <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+              </button>
+              <span class="ld-help-text" hidden>{% translate "Prefetch internal links when users hover over them. This improves perceived speed, but increases server load." %}</span>
+            </span></span>
+    </div>
+    <div class="ld-row-control">
+      <label class="form-switch ld-switch">
+        <input type="checkbox" name="enable_link_prefetch"
+               data-pref="enable_link_prefetch" data-pref-form="global_quick" data-pref-apply="dom"
+               {% if global_settings_form.enable_link_prefetch.value %}checked{% endif %}>
+        <i class="form-icon"></i>
+      </label>
+    </div>
+    {# 全局表单要带上未展示字段，否则保存会把它们清空 #}
+    <input type="hidden" data-global-field
+           name="{{ global_settings_form.landing_page.html_name }}"
+           value="{{ global_settings_form.landing_page.value }}">
+    <input type="hidden" data-global-field
+           name="{{ global_settings_form.guest_profile_user.html_name }}"
+           value="{{ global_settings_form.guest_profile_user.value|default_if_none:'' }}">
+  </div>
+  {% endif %}
+</div>
+
+<div class="ld-group">
+  <div class="layout-drawer-group-label">{% translate "Toolbar" %}</div>
+
+  <div class="ld-row" data-drawer-row="toolbar_auto_hide" data-drawer-views="list"
+       {% if request.user_profile.bookmark_view_mode != 'list' %}hidden{% endif %}>
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Auto-hide" %}<span class="ld-help" data-drawer-help>
+              <button type="button" class="ld-help-button"
+                      aria-label="{% translate 'More info' %}" aria-expanded="false">
+                <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+              </button>
+              <span class="ld-help-text" hidden>{% translate "Toolbar items stay hidden until you hover a bookmark, and the bookmark date is always shown." %}</span>
+            </span></span>
+    </div>
+    <div class="ld-row-control">
+      <label class="form-switch ld-switch">
+        <input type="checkbox" name="bookmark_toolbar_auto_hide"
+               data-pref="bookmark_toolbar_auto_hide" data-pref-apply="dom"
+               {% if request.user_profile.bookmark_toolbar_auto_hide %}checked{% endif %}>
+        <i class="form-icon"></i>
+      </label>
+    </div>
+  </div>
+
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Module settings" %}<span class="ld-help" data-drawer-help>
+              <button type="button" class="ld-help-button"
+                      aria-label="{% translate 'More info' %}" aria-expanded="false">
+                <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+              </button>
+              <span class="ld-help-text" hidden>{% translate "Drag to reorder. Turning a module off also hides its settings below." %}</span>
+            </span></span>
+    </div>
+    <div class="ld-row-control">
+      <button type="button" class="ld-disclosure" data-drawer-disclosure="toolbar-modules"
+              aria-expanded="false" aria-controls="drawer-toolbar-modules"
+              aria-label="{% translate 'Expand' %}">
+        <span class="ld-chevron" aria-hidden="true"></span>
+      </button>
+    </div>
+  </div>
+  <ul class="ld-module-list" id="drawer-toolbar-modules"
+      data-drawer-panel="toolbar-modules" data-drawer-list="bookmark_toolbar_modules" hidden>
+    {% for item in request.user_profile.get_bookmark_toolbar_module_items %}
+      <li class="ld-module-item" data-item-key="{{ item.key }}">
+        <button type="button" class="ld-module-handle"
+                aria-label="{% translate 'Drag to reorder' %}" tabindex="-1">
+          <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-grip"></use></svg>
+        </button>
+        <span class="ld-module-name">{{ item.label }}</span>
+        <label class="form-switch ld-switch">
+          <input type="checkbox" data-item-enabled {% if item.enabled %}checked{% endif %}>
+          <i class="form-icon"></i>
+        </label>
+      </li>
+    {% endfor %}
+  </ul>
+
+  <details class="ld-details" data-drawer-gate="actions">
+    <summary class="ld-row ld-row-summary">
+      <div class="ld-row-text">
+        <span class="ld-row-label">{% translate "Bookmark actions" %}</span>
+      </div>
+      <span class="ld-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="ld-sub">
+      <div class="ld-row">
+        <div class="ld-row-text">
+          <span class="ld-row-label">{% translate "Display mode" %}</span>
+        </div>
+        <div class="ld-row-control">
+          <div class="ld-segment ld-control-segment" role="radiogroup" aria-label="{% translate 'Display mode' %}">
+            <label class="ld-segment-option">
+              <input type="radio" name="bookmark_action_display_mode" value="text"
+                     data-pref="bookmark_action_display_mode" data-pref-apply="fragment"
+                     {% if request.user_profile.bookmark_action_display_mode == 'text' %}checked{% endif %}>
+              <span>{% translate "Text" %}</span>
+            </label>
+            <label class="ld-segment-option">
+              <input type="radio" name="bookmark_action_display_mode" value="icon"
+                     data-pref="bookmark_action_display_mode" data-pref-apply="fragment"
+                     {% if request.user_profile.bookmark_action_display_mode == 'icon' %}checked{% endif %}>
+              <span>{% translate "Icon" %}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <ul class="ld-module-list" data-drawer-list="bookmark_actions">
+        {% for item in request.user_profile.get_bookmark_action_items %}
+          <li class="ld-module-item" data-item-key="{{ item.key }}">
+            <button type="button" class="ld-module-handle"
+                    aria-label="{% translate 'Drag to reorder' %}" tabindex="-1">
+              <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-grip"></use></svg>
+            </button>
+            <span class="ld-module-name">{{ item.label }}</span>
+            <label class="form-switch ld-switch">
+              <input type="checkbox" data-item-enabled {% if item.enabled %}checked{% endif %}>
+              <i class="form-icon"></i>
+            </label>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </details>
+
+  <details class="ld-details" data-drawer-gate="quick_edits">
+    <summary class="ld-row ld-row-summary">
+      <div class="ld-row-text">
+        <span class="ld-row-label">{% translate "Quick edit" %}<span class="ld-help" data-drawer-help>
+              <button type="button" class="ld-help-button"
+                      aria-label="{% translate 'More info' %}" aria-expanded="false">
+                <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+              </button>
+              <span class="ld-help-text" hidden>{% translate "Quick edit buttons allow inline editing of bookmark fields." %}</span>
+            </span></span>
+      </div>
+      <span class="ld-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="ld-sub">
+      <div class="ld-row">
+        <div class="ld-row-text">
+          <span class="ld-row-label">{% translate "Display mode" %}</span>
+        </div>
+        <div class="ld-row-control">
+          <div class="ld-segment ld-control-segment" role="radiogroup" aria-label="{% translate 'Display mode' %}">
+            <label class="ld-segment-option">
+              <input type="radio" name="bookmark_quick_edit_display_mode" value="text"
+                     data-pref="bookmark_quick_edit_display_mode" data-pref-apply="fragment"
+                     {% if request.user_profile.bookmark_quick_edit_display_mode == 'text' %}checked{% endif %}>
+              <span>{% translate "Text" %}</span>
+            </label>
+            <label class="ld-segment-option">
+              <input type="radio" name="bookmark_quick_edit_display_mode" value="icon"
+                     data-pref="bookmark_quick_edit_display_mode" data-pref-apply="fragment"
+                     {% if request.user_profile.bookmark_quick_edit_display_mode == 'icon' %}checked{% endif %}>
+              <span>{% translate "Icon" %}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <ul class="ld-module-list" data-drawer-list="bookmark_quick_edits">
+        {% for item in request.user_profile.get_bookmark_quick_edit_items %}
+          <li class="ld-module-item" data-item-key="{{ item.key }}">
+            <button type="button" class="ld-module-handle"
+                    aria-label="{% translate 'Drag to reorder' %}" tabindex="-1">
+              <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-grip"></use></svg>
+            </button>
+            <span class="ld-module-name">{{ item.label }}</span>
+            <label class="form-switch ld-switch">
+              <input type="checkbox" data-item-enabled {% if item.enabled %}checked{% endif %}>
+              <i class="form-icon"></i>
+            </label>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </details>
+
+  <div class="ld-row" data-drawer-gate="quick_tags">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Quick tags" %}<span class="ld-help" data-drawer-help>
+              <button type="button" class="ld-help-button"
+                      aria-label="{% translate 'More info' %}" aria-expanded="false">
+                <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+              </button>
+              <span class="ld-help-text" hidden>{% translate "Quick tags allow adding one or more specified tags to a bookmark with a single click." %}</span>
+            </span></span>
+    </div>
+    <div class="ld-row-control">
+      <button type="button" class="btn btn-sm" data-drawer-quick-tags>{% translate "Manage" %}</button>
+    </div>
+  </div>
+
+  <details class="ld-details" data-drawer-gate="statuses">
+    <summary class="ld-row ld-row-summary">
+      <div class="ld-row-text">
+        <span class="ld-row-label">{% translate "Bookmark status" %}</span>
+      </div>
+      <span class="ld-chevron" aria-hidden="true"></span>
+    </summary>
+    <div class="ld-sub">
+      <div class="ld-row">
+        <div class="ld-row-text">
+          <span class="ld-row-label">{% translate "Display mode" %}</span>
+        </div>
+        <div class="ld-row-control">
+          <div class="ld-segment ld-control-segment" role="radiogroup" aria-label="{% translate 'Display mode' %}">
+            <label class="ld-segment-option">
+              <input type="radio" name="bookmark_status_display_mode" value="text"
+                     data-pref="bookmark_status_display_mode" data-pref-apply="fragment"
+                     {% if request.user_profile.bookmark_status_display_mode == 'text' %}checked{% endif %}>
+              <span>{% translate "Text" %}</span>
+            </label>
+            <label class="ld-segment-option">
+              <input type="radio" name="bookmark_status_display_mode" value="icon"
+                     data-pref="bookmark_status_display_mode" data-pref-apply="fragment"
+                     {% if request.user_profile.bookmark_status_display_mode == 'icon' %}checked{% endif %}>
+              <span>{% translate "Icon" %}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <ul class="ld-module-list" data-drawer-list="bookmark_statuses">
+        {% for item in request.user_profile.get_bookmark_status_items %}
+          <li class="ld-module-item" data-item-key="{{ item.key }}">
+            <button type="button" class="ld-module-handle"
+                    aria-label="{% translate 'Drag to reorder' %}" tabindex="-1">
+              <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-grip"></use></svg>
+            </button>
+            <span class="ld-module-name">{{ item.label }}</span>
+            <label class="form-switch ld-switch">
+              <input type="checkbox" data-item-enabled {% if item.enabled %}checked{% endif %}>
+              <i class="form-icon"></i>
+            </label>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </details>
+</div>

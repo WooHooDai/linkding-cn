@@ -16,8 +16,8 @@
           {% bookmark_search bookmark_list.search mode='shared' %}
           <div class="hc-wide header-controls-wide">
             {% random_sort bookmark_list.search %}
-            {% include 'bookmarks/header/layout_menu.html' %}
           </div>
+          {% include 'bookmarks/header/layout_menu.html' %}
           {% include 'bookmarks/sidebar/components/toggle_button.html' %}
           {% include 'bookmarks/header/more_menu.html' with show_bulk=False show_random=True %}
         </div>
@@ -27,9 +27,7 @@
             action="{{ bookmark_list.action_url|safe }}"
             method="post" autocomplete="off">
         {% csrf_token %}
-        <div id="bookmark-list-container">
-          {% include 'bookmarks/bookmark_list.html' %}
-        </div>
+        {% include 'bookmarks/list/container.html' %}
       </form>
     </main>
 
@@ -51,6 +49,8 @@
       {% include 'bookmarks/sidebar/index.html' %}
     </div>
   </div>
+
+  {% include 'bookmarks/header/layout_drawer.html' %}
 {% endblock %}
 
 {% block overlays %}

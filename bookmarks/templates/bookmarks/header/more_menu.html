@@ -1,5 +1,6 @@
 {% load i18n %}
-{# 窄屏外露的「更多」菜单：动作项在前，分隔线后是显示偏好。宽屏隐藏。 #}
+{# 窄屏「更多」菜单：只放动作项。列表显示偏好统一在左侧「布局」抽屉里，不再重复一份。 #}
+{% if show_bulk or show_random %}{% if show_bulk or request.user_profile.enable_random_button %}
 <ld-dropdown class="header-more dropdown dropdown-right" data-header-more
              data-save-url="{% url 'linkding:settings.save' %}">
   <button type="button" class="btn dropdown-toggle"
@@ -46,11 +47,6 @@
         </button>
       </div>
     {% endif %}
-
-    {% if show_bulk or show_random and request.user_profile.enable_random_button %}
-    <div class="header-menu-divider"></div>
-    {% endif %}
-
-    {% include 'bookmarks/header/prefs_panel.html' %}
   </div>
 </ld-dropdown>
+{% endif %}{% endif %}

@@ -31,6 +31,20 @@ export function clearSidebarState(scope) {
   }
 }
 
+// 记录当前开合状态（localStorage 优先，cookie 给服务端决定是否懒加载）
+export function setSidebarState(scope, open) {
+  const storageKey =
+    STATE_STORAGE_KEYS[scope] || STATE_STORAGE_KEYS[SIDEBAR_SCOPE_BOOKMARKS];
+  const cookieName =
+    STATE_COOKIE_NAMES[scope] || STATE_COOKIE_NAMES[SIDEBAR_SCOPE_BOOKMARKS];
+  try {
+    localStorage.setItem(storageKey, open ? "1" : "0");
+  } catch {
+    // 隐私模式下不可用，忽略
+  }
+  document.cookie = `${cookieName}=${open ? "1" : "0"}; path=/; max-age=31536000; SameSite=Lax`;
+}
+
 export function syncSidebarStateCache(scope, enabled) {
   clearSidebarState(scope);
   const cookieName =

@@ -5,8 +5,10 @@ import { gettext } from "../utils/i18n.js";
 import { showToast } from "./toast.js";
 import {
   getSidebarScope,
+  setSidebarState,
   syncSidebarStateCache,
 } from "../state/sidebar-state.js";
+import { panelsFitTogether, syncPanelSpace } from "../utils/panel-space.js";
 
 // ==========================================
 // 展开折叠按钮
@@ -634,13 +636,21 @@ function disconnectSidebarContentObserver() {
 }
 
 // ==========================================
-// 侧边栏模块：拖拽排序
+// 侧边栏模块：拖拽排序与「设置」模块
 // ==========================================
 
 // 两种侧边栏字段名不同，保存入口相同
 const SIDEBAR_PREF_FIELDS = {
-  bookmarks: { modules: "sidebar_modules" },
-  highlights: { modules: "highlights_sidebar_modules" },
+  bookmarks: {
+    show: "show_sidebar",
+    sticky: "sticky_side_panel",
+    modules: "sidebar_modules",
+  },
+  highlights: {
+    show: "show_highlights_sidebar",
+    sticky: "highlights_sticky_side_panel",
+    modules: "highlights_sidebar_modules",
+  },
 };
 
 function sidebarModuleWrappers(sidebar) {
@@ -649,8 +659,20 @@ function sidebarModuleWrappers(sidebar) {
   );
 }
 
+function findModuleWrapper(sidebar, key) {
+  return (
+    sidebarModuleWrappers(sidebar).find(
+      (el) => el.dataset.sidebarModule === key,
+    ) || null
+  );
+}
+
 function sidebarModuleKeys(sidebar) {
   return sidebarModuleWrappers(sidebar).map((el) => el.dataset.sidebarModule);
+}
+
+function moduleListItems(list) {
+  return Array.from(list.querySelectorAll("[data-module-key]"));
 }
 
 // 按 keys 重排容器内的直接子元素，不在 keys 里的保持原位（如侧边栏的关闭栏）
@@ -667,25 +689,20 @@ function reorderChildren(container, keys, selector, keyOf) {
   });
 }
 
-// 服务端把完整模块状态渲染在容器上：拖拽只改顺序，保存时要把
-// 没渲染出来的模块（禁用、懒加载还没取回）按原状态带回去
-function readModuleState(sidebar) {
-  let known = [];
-  try {
-    known = JSON.parse(sidebar.dataset.sidebarModuleState || "[]");
-  } catch {
-    known = [];
-  }
-  const rendered = new Set(sidebarModuleKeys(sidebar));
-  const ordered = sidebarModuleWrappers(sidebar).map((el) => {
-    const key = el.dataset.sidebarModule;
-    const item = known.find((entry) => entry.key === key);
-    return { key, enabled: item ? item.enabled : true };
+// 模块显隐与顺序是同一个 JSON 字段，统一从列表读状态：列表包含全部模块，
+// 懒加载时没渲染出来的模块也不会在保存时丢失。
+function readModuleState(panel, list) {
+  const modules = moduleListItems(list).map((item) => ({
+    key: item.dataset.moduleKey,
+    enabled: Boolean(item.querySelector("[data-module-enabled]")?.checked),
+  }));
+  panel.querySelectorAll("[data-sidebar-hidden-module]").forEach((input) => {
+    modules.push({
+      key: input.dataset.moduleKey,
+      enabled: input.value === "1",
+    });
   });
-  known.forEach((item) => {
-    if (!rendered.has(item.key)) ordered.push(item);
-  });
-  return ordered;
+  return modules;
 }
 
 async function saveSidebarPrefs(url, scope, fields) {
@@ -725,17 +742,62 @@ function reportSaveFailure(error) {
   });
 }
 
-async function persistModuleState(sidebar, url, scope) {
+async function persistModuleState(panel, list, url, scope) {
   try {
     await saveSidebarPrefs(url, scope, {
-      modules: JSON.stringify(readModuleState(sidebar)),
+      modules: JSON.stringify(readModuleState(panel, list)),
     });
   } catch (error) {
     reportSaveFailure(error);
   }
 }
 
-function initSidebarSortables(sidebar, url, scope) {
+async function fetchModuleHtml(key) {
+  const params = new URLSearchParams();
+  params.set("ctx", document.querySelector("[data-ctx]")?.dataset.ctx || "active");
+  params.set("modules", key);
+  try {
+    const response = await fetch(`/sidebar-content?${params.toString()}`);
+    if (!response.ok) return "";
+    return await response.text();
+  } catch (error) {
+    console.error(error);
+    return "";
+  }
+}
+
+// 懒加载时未启用的模块没有 DOM，重新打开需要单独取一次，并插回列表指定的位置
+async function showSidebarModule(sidebar, list, key) {
+  const existing = findModuleWrapper(sidebar, key);
+  if (existing) {
+    existing.hidden = false;
+    return;
+  }
+
+  const html = (await fetchModuleHtml(key)).trim();
+  if (!html) return;
+
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const wrapper = template.content.firstElementChild;
+  if (!wrapper) return;
+
+  const keys = moduleListItems(list).map((item) => item.dataset.moduleKey);
+  const nextKey = keys
+    .slice(keys.indexOf(key) + 1)
+    .find((candidate) => findModuleWrapper(sidebar, candidate));
+  sidebar.insertBefore(
+    wrapper,
+    nextKey ? findModuleWrapper(sidebar, nextKey) : null,
+  );
+}
+
+function hideSidebarModule(sidebar, key) {
+  const wrapper = findModuleWrapper(sidebar, key);
+  if (wrapper) wrapper.hidden = true;
+}
+
+function initSidebarSortables(sidebar, panel, list, url, scope) {
   const instances = [];
 
   // 拖模块本体：整条标题行都是抓手，排除其中的按钮与菜单，
@@ -754,7 +816,37 @@ function initSidebarSortables(sidebar, url, scope) {
         onStart: () => sidebar.classList.add("is-sorting-modules"),
         onEnd: () => {
           sidebar.classList.remove("is-sorting-modules");
-          persistModuleState(sidebar, url, scope);
+          reorderChildren(
+            list,
+            sidebarModuleKeys(sidebar),
+            "[data-module-key]",
+            (el) => el.dataset.moduleKey,
+          );
+          persistModuleState(panel, list, url, scope);
+        },
+      }),
+    );
+  }
+
+  // 拖设置里的列表行：反推侧边栏顺序，两个入口共用同一份持久化状态
+  if (moduleListItems(list).length > 1) {
+    instances.push(
+      new Sortable(list, {
+        animation: 150,
+        draggable: "[data-module-key]",
+        handle: ".sidebar-module-handle",
+        ghostClass: "sidebar-module-ghost",
+        onEnd: () => {
+          const keys = moduleListItems(list).map(
+            (item) => item.dataset.moduleKey,
+          );
+          reorderChildren(
+            sidebar,
+            keys,
+            "[data-sidebar-module]",
+            (el) => el.dataset.sidebarModule,
+          );
+          persistModuleState(panel, list, url, scope);
         },
       }),
     );
@@ -767,12 +859,75 @@ function setupSidebarModules() {
   const sidebar = document.querySelector(".sidebar");
   if (!sidebar || sidebar.dataset.sidebarModulesReady === "1") return;
 
-  const url = sidebar.dataset.sidebarSaveUrl;
-  if (!url) return;
+  const panel = sidebar.querySelector("[data-sidebar-settings]");
+  const list = panel?.querySelector("[data-sidebar-module-list]");
+  const url = panel?.dataset.sidebarSaveUrl;
+  // 懒加载时模块尚未取回，等加载完成后再初始化
+  if (!panel || !list || !url) return;
 
   sidebar.dataset.sidebarModulesReady = "1";
-  const scope = sidebar.dataset.sidebarScope || getSidebarScope();
-  initSidebarSortables(sidebar, url, scope);
+  const scope = panel.dataset.sidebarScope || getSidebarScope();
+
+  // Turbo 会缓存 DOM 并复用：用 controller 统一收回监听，缓存恢复后重新绑一份
+  sidebar.__sidebarListeners?.abort();
+  const controller = new AbortController();
+  sidebar.__sidebarListeners = controller;
+
+  panel.querySelectorAll("[data-sidebar-option]").forEach((input) =>
+    input.addEventListener("change", onSidebarOptionChange, {
+      signal: controller.signal,
+    }),
+  );
+
+  list.addEventListener(
+    "change",
+    (event) => {
+      const input = event.target.closest("[data-module-enabled]");
+      if (!input || input.disabled) return;
+      const item = input.closest("[data-module-key]");
+      if (!item) return;
+      const key = item.dataset.moduleKey;
+      if (input.checked) {
+        showSidebarModule(sidebar, list, key);
+      } else {
+        hideSidebarModule(sidebar, key);
+      }
+      persistModuleState(panel, list, url, scope);
+    },
+    { signal: controller.signal },
+  );
+
+  initSidebarSortables(sidebar, panel, list, url, scope);
+}
+
+async function onSidebarOptionChange(event) {
+  const input = event.target;
+  const panel = input.closest("[data-sidebar-settings]");
+  const sidebar = panel?.closest(".sidebar");
+  const url = panel?.dataset.sidebarSaveUrl;
+  if (!panel || !sidebar || !url) return;
+
+  const scope = panel.dataset.sidebarScope || getSidebarScope();
+  const enabled = Boolean(input.checked);
+
+  if (input.dataset.sidebarOption === "show") {
+    // 「常驻」只改默认值：同步 cookie 与清掉本地开合记忆，当前页面保持原样
+    const page = document.querySelector(".bookmarks-page, .highlights-page");
+    if (page) page.dataset.sidebarDefault = enabled ? "1" : "0";
+    syncSidebarStateCache(scope, enabled);
+    try {
+      await saveSidebarPrefs(url, scope, { show: enabled });
+    } catch (error) {
+      reportSaveFailure(error);
+    }
+  } else if (input.dataset.sidebarOption === "sticky") {
+    sidebar.dataset.stickyOn = enabled ? "true" : "false";
+    try {
+      await saveSidebarPrefs(url, scope, { sticky: enabled });
+    } catch (error) {
+      reportSaveFailure(error);
+    }
+  }
 }
 
 function teardownSidebarModules() {
@@ -887,6 +1042,19 @@ function openSidebar(page) {
   page.classList.add("sidebar-open");
   loadSidebarContent(page);
   restoreSidebar();
+
+  // 与左侧布局抽屉互斥：放不下就只留一个
+  if (!isMobile()) {
+    const drawer = document.querySelector(".layout-drawer.is-open");
+    if (drawer && !panelsFitTogether()) {
+      drawer.querySelector("[data-layout-drawer-close]")?.click();
+    }
+  }
+
+  // 记住这次开合，刷新后照旧
+  setSidebarState(getSidebarScope(), true);
+  // 宽度够就让位（内容平移不重排），不够就浮层覆盖
+  syncPanelSpace();
   if (isMobile()) {
     document.body.classList.add("sidebar-overlay-active");
     page.classList.add("sidebar-animate");
@@ -914,6 +1082,8 @@ function closeSidebar(page) {
         page.classList.remove("sidebar-open", "sidebar-closing");
         page.classList.add("sidebar-closed");
         document.body.classList.remove("sidebar-overlay-active");
+        setSidebarState(getSidebarScope(), false);
+        syncPanelSpace();
       };
       sidebar.addEventListener("transitionend", finalize, { once: true });
       setTimeout(finalize, 300);
@@ -924,6 +1094,8 @@ function closeSidebar(page) {
   page.classList.remove("sidebar-open", "sidebar-visible");
   page.classList.add("sidebar-closed");
   document.body.classList.remove("sidebar-overlay-active");
+  setSidebarState(getSidebarScope(), false);
+  syncPanelSpace();
 }
 
 // 交互 handler

@@ -81,9 +81,25 @@ class OverlayLayeringE2ETestCase(LinkdingE2ETestCase):
     def test_dropdown_is_above_sticky_pagination(self):
         with sync_playwright() as p:
             browser, page = self.open_bookmarks_page(p)
-            page.get_by_role("button", name="Layout").click()
-            overlay = page.locator(".header-layout .menu")
+            # 「布局」现在是左侧抽屉，弹层菜单改为验证搜索选项下拉
+            page.locator(".search-options .dropdown-toggle").click()
+            overlay = page.locator(".search-options .menu")
             expect(overlay).to_be_visible()
 
             self.assert_overlay_above_pagination(page, overlay)
+            browser.close()
+
+    def test_layout_drawer_opens_and_refreshes_list_without_reload(self):
+        with sync_playwright() as p:
+            browser, page = self.open_bookmarks_page(p)
+            page.locator("[data-layout-drawer-toggle]").click()
+            drawer = page.locator("#layout-drawer")
+            expect(drawer).to_be_visible()
+
+            # 切换视图走片段刷新：页面不重载，列表 DOM 换掉
+            page.locator('.ld-segment-option:has-text("Compact")').click()
+            expect(page.locator("#bookmark-list-container ul.view-compact")).to_be_visible()
+
+            page.keyboard.press("Escape")
+            expect(drawer).to_be_hidden()
             browser.close()

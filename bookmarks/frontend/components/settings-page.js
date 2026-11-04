@@ -303,23 +303,28 @@ this.directoryLinks = Array.from(
         this.syncBookmarkQuickEdits(form);
       }
 
-      // 快捷标签拖拽排序
-      const quickTagsList = form.querySelector("[data-bookmark-quick-tags-list]");
-      if (quickTagsList) {
-        const sortable = Sortable.create(quickTagsList, {
-          handle: ".settings-module-handle",
-          animation: 150,
-          ghostClass: "is-dragging",
-          swapThreshold: 0.65,
-          onEnd: () => {
-            this.syncBookmarkQuickTags(form);
-            this.queueSubmit(form);
-          },
-        });
-        this.sortableInstances.push(sortable);
-        this.syncBookmarkQuickTags(form);
-      }
     });
+
+    // 快捷标签拖拽排序：编辑器是独立表单（设置页一节、抽屉弹窗各一份），
+    // 不在工具栏表单里，得单独初始化
+    this.element
+      .querySelectorAll("[data-bookmark-quick-tags-list]")
+      .forEach((list) => {
+        const form = list.closest("form");
+        this.sortableInstances.push(
+          Sortable.create(list, {
+            handle: ".settings-module-handle",
+            animation: 150,
+            ghostClass: "is-dragging",
+            swapThreshold: 0.65,
+            onEnd: () => {
+              this.syncBookmarkQuickTags(form);
+              this.queueSubmit(form);
+            },
+          }),
+        );
+        this.syncBookmarkQuickTags(form);
+      });
 
     this.initializeHelpPopovers();
     this.initializeLanguageControls();
@@ -1724,14 +1729,14 @@ this.directoryLinks = Array.from(
 
     // 空列表没有可折叠的内容，展开按钮不该留在标题行
     this.element
-      .querySelectorAll("[data-toolbar-config-panel='quick_tags']")
+      .querySelectorAll("[data-quick-tags-panel]")
       .forEach((panel) => this._setQuickTagPanelExpanded(panel.closest("form")));
   }
 
   // 快捷标签面板：条目数为 0 时隐藏展开按钮并收起面板；expanded 为 null 时沿用当前状态。
   // 折叠状态存在 localStorage 里，新增条目必须显式展开，否则新行看不见。
   _setQuickTagPanelExpanded(form, expanded = null) {
-    const panel = form?.querySelector("[data-toolbar-config-panel='quick_tags']");
+    const panel = form?.querySelector("[data-quick-tags-panel]");
     if (!panel) return;
 
     const list = panel.querySelector("[data-bookmark-quick-tags-list]");

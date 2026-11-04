@@ -80,6 +80,8 @@ function refreshAllGroupsButton(headers) {
       : btn.dataset.labelExpand;
     btn.setAttribute("aria-label", label);
     btn.setAttribute("title", label);
+    // 抽屉里的按钮直接用文字表达当前动作
+    if (btn.dataset.labelCollapse) btn.textContent = label;
   });
 }
 

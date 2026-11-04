@@ -1,0 +1,619 @@
+/* 左侧「布局」抽屉：列表页显示偏好的唯一入口。
+   桌面端让位（内容平移不重排），窄屏全宽 + 遮罩。
+   行一律 label 与控件同行、控件右对齐，说明文字压在标签下方。 */
+
+/* 面板让位：两个面板（左抽屉 / 右侧边栏）共用同一套宽度与判据，
+   JS 依据「面板宽度 + 最小列表宽度」决定加 push 类，CSS 只负责平移。 */
+:root {
+  --layout-drawer-width: 360px;
+  --ld-sidebar-width: 340px;
+  --ld-panel-gutter: 12px;
+}
+
+.layout-drawer {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: calc(var(--zindex-4) + 5);
+  display: flex;
+  flex-direction: column;
+  width: var(--layout-drawer-width);
+  max-width: 92vw;
+  background: var(--body-color);
+  border-inline-end: var(--border-width) solid var(--secondary-border-color);
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.14);
+  /* 关闭态必须退出 tab 序列与命中测试 */
+  visibility: hidden;
+  transform: translateX(-100%);
+  transition:
+    transform 0.2s ease,
+    visibility 0.2s ease;
+
+  &.is-open {
+    visibility: visible;
+    transform: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+.layout-drawer-scrim {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--zindex-4) + 4);
+  background: rgba(0, 0, 0, 0.32);
+}
+
+/* 让位（push）只在宽度够时由 JS 挂类；宽度不够就保持浮层覆盖，
+   否则把列表挤窄、触发换行重排，看起来就是整页在晃。 */
+@media (min-width: 841px) {
+  body {
+    transition:
+      padding-inline-start 0.2s ease,
+      padding-inline-end 0.2s ease;
+  }
+
+  body.panel-space-no-anim {
+    transition: none;
+  }
+
+  /* 让位时两侧都留出同一条呼吸缝，避免内容贴死视口边缘或面板边线 */
+  body.layout-drawer-push {
+    padding-inline: calc(var(--layout-drawer-width) + var(--ld-panel-gutter))
+      var(--ld-panel-gutter);
+  }
+
+  body.sidebar-push {
+    padding-inline: var(--ld-panel-gutter)
+      calc(var(--ld-sidebar-width) + var(--ld-panel-gutter));
+  }
+
+  body.layout-drawer-push.sidebar-push {
+    padding-inline: calc(var(--layout-drawer-width) + var(--ld-panel-gutter))
+      calc(var(--ld-sidebar-width) + var(--ld-panel-gutter));
+  }
+
+  /* 让位后不再是浮层，投影会让它看起来仍压在内容上 */
+  body.layout-drawer-push .layout-drawer {
+    box-shadow: none;
+  }
+}
+
+.layout-drawer-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--unit-2);
+  padding: var(--unit-3) var(--unit-4);
+  border-bottom: var(--border-width) solid var(--secondary-border-color);
+}
+
+.layout-drawer-title {
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.layout-drawer-close {
+  flex: none;
+  color: var(--secondary-text-color);
+}
+
+.layout-drawer-tabs {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--unit-2);
+  padding: var(--unit-2) var(--unit-4);
+  border-bottom: var(--border-width) solid var(--secondary-border-color);
+}
+
+.layout-drawer-tab {
+  appearance: none;
+  height: var(--control-size);
+  padding: 0 var(--unit-2);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--border-radius);
+  background: transparent;
+  color: var(--secondary-text-color);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-color);
+  }
+
+  /* 选中的页签用主题色，灰底容易被当成普通按钮 */
+  &.is-active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+    font-weight: 500;
+  }
+}
+
+.layout-drawer-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding-bottom: var(--unit-4);
+  /* 与侧边栏一致：默认透明，悬停才显出滚动条 */
+  scrollbar-color: transparent transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+  }
+
+  &:hover {
+    scrollbar-color: var(--secondary-border-color) transparent;
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--secondary-border-color);
+    }
+  }
+}
+
+.layout-drawer-panel[hidden] {
+  display: none;
+}
+
+.layout-drawer-footer {
+  flex: none;
+  padding: var(--unit-3) var(--unit-4);
+  border-top: var(--border-width) solid var(--secondary-border-color);
+}
+
+.layout-drawer-footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--unit-1);
+  font-size: var(--font-size-sm);
+  color: var(--secondary-text-color);
+
+  &:hover {
+    color: var(--text-color);
+  }
+}
+
+/* ---------- 分组与行 ---------- */
+
+.ld-group {
+  padding-block: var(--unit-2);
+
+  & + & {
+    border-top: var(--border-width) solid
+      color-mix(in srgb, var(--secondary-border-color) 55%, var(--body-color));
+  }
+}
+
+.layout-drawer-group-label {
+  padding: var(--unit-2) var(--unit-4) var(--unit-1);
+  font-size: var(--font-size-sm);
+  color: var(--secondary-text-color);
+}
+
+/* 语言行用一个独立表单提交，display:contents 让它不打断分组排版 */
+.ld-form {
+  display: contents;
+}
+
+.ld-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--unit-3);
+  padding: var(--unit-2) var(--unit-4);
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.ld-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ld-row-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--unit-1);
+  font-size: var(--font-size);
+  color: var(--text-color);
+}
+
+/* 说明文字收进 info 图标（与通用设置页一致），点开是浮层 */
+.ld-help {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.ld-help-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: color-mix(in srgb, var(--secondary-text-color) 88%, var(--text-color));
+  cursor: pointer;
+  transition: color 0.15s ease;
+
+  &:hover,
+  &[aria-expanded="true"] {
+    color: var(--text-color);
+  }
+}
+
+.ld-help-text {
+  display: none;
+}
+
+.ld-help-popover {
+  position: fixed;
+  /* 要盖住快捷标签弹窗（+30），否则弹窗里的说明看不见 */
+  z-index: calc(var(--zindex-4) + 60);
+  width: min(340px, calc(100vw - var(--unit-6)));
+  padding: var(--unit-3);
+  border: var(--border-width) solid var(--secondary-border-color);
+  border-radius: calc(var(--border-radius) * 2);
+  background: var(--body-color);
+  box-shadow: var(--box-shadow-lg);
+  color: var(--secondary-text-color);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  white-space: normal;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.ld-row-control {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: var(--unit-2);
+}
+
+.ld-row .field-errors {
+  grid-column: 1 / -1;
+}
+
+/* 控件宽度统一，右侧形成一条对齐线 */
+.ld-control-select {
+  width: 120px;
+  height: var(--control-size-sm);
+  padding-block: 0;
+}
+
+/* 语言名可能比「简体中文」更长，单独放宽 */
+.ld-control-language {
+  width: 150px;
+}
+
+.ld-control-number {
+  width: 64px;
+  height: var(--control-size-sm);
+  padding-block: 0;
+  text-align: right;
+}
+
+/* 开关：滑轨贴行尾 */
+.ld-switch {
+  --checkbox-checked-bg-color: color-mix(
+    in srgb,
+    var(--primary-color) 70%,
+    var(--body-color-contrast)
+  );
+  --switch-bg-color: color-mix(
+    in srgb,
+    var(--body-color-contrast) 84%,
+    var(--body-color)
+  );
+  --switch-border-color: color-mix(
+    in srgb,
+    var(--secondary-border-color) 58%,
+    var(--body-color)
+  );
+  --switch-toggle-color: var(--body-color);
+
+  flex: none;
+  justify-self: end;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: flex-end;
+  width: calc(var(--unit-8) + var(--unit-2));
+  height: var(--control-size-sm);
+  margin: 0;
+  padding: 0;
+
+  input {
+    left: auto;
+    right: 0;
+  }
+
+  /* 与设置页 .settings-switch 一致：滑轨绝对定位贴右，输入框让位 */
+  .form-icon {
+    box-shadow: none;
+    left: auto;
+    right: 0;
+  }
+}
+
+/* ---------- 折叠子区（书签动作 / 快捷编辑 / 书签状态） ---------- */
+
+.ld-details[hidden] {
+  display: none;
+}
+
+.ld-row-summary {
+  cursor: pointer;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+}
+
+.ld-chevron {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-inline-end: var(--unit-1);
+  border-right: 1.5px solid var(--secondary-text-color);
+  border-bottom: 1.5px solid var(--secondary-text-color);
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+
+.ld-details[open] > .ld-row-summary .ld-chevron {
+  transform: rotate(45deg);
+}
+
+.ld-sub {
+  padding-bottom: var(--unit-2);
+  background: color-mix(in srgb, var(--body-color-contrast) 45%, transparent);
+}
+
+/* ---------- 分段控件 ---------- */
+
+/* 选项等宽分布会切掉长文案（含语言差异），改为按文案定宽 */
+.ld-segment {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 1px;
+  border: var(--border-width) solid
+    color-mix(in srgb, var(--secondary-border-color) 72%, var(--body-color));
+  border-radius: 4px;
+  background: color-mix(
+    in srgb,
+    var(--body-color-contrast) 90%,
+    var(--body-color)
+  );
+}
+
+/* 控件列里各选项等宽，宽度取最宽文案：固定宽切字，纯按内容则尾端留空槽 */
+.ld-control-segment {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  min-width: 132px;
+}
+
+.ld-segment-option {
+  position: relative;
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+
+  input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    pointer-events: none;
+  }
+
+  span {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    height: var(--control-size-sm);
+    padding: 0 var(--unit-2);
+    border-radius: 3px;
+    color: var(--secondary-text-color);
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+
+  input:checked + span {
+    background: color-mix(
+      in srgb,
+      var(--body-color) 94%,
+      var(--body-color-contrast)
+    );
+    box-shadow: inset 0 0 0 1px
+      color-mix(in srgb, var(--secondary-border-color) 58%, var(--body-color));
+    color: var(--text-color);
+    font-weight: 500;
+  }
+
+  input:focus-visible + span {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
+  }
+}
+
+/* 折叠开关：用于「模块设置」这类默认收起的列表 */
+.ld-disclosure {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text-color);
+  }
+
+  .ld-chevron {
+    margin: 0;
+  }
+
+  &[aria-expanded="true"] .ld-chevron {
+    transform: rotate(45deg);
+  }
+}
+
+/* ---------- 拖拽排序列表 ---------- */
+
+.ld-module-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--unit-4) var(--unit-1);
+}
+
+.ld-module-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--unit-2);
+  min-height: var(--control-size);
+  padding-inline: var(--unit-1);
+}
+
+.ld-module-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: var(--control-size-sm);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--secondary-text-color);
+  opacity: 0.55;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-drag: none;
+  user-select: none;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.ld-module-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--font-size);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ld-module-ghost {
+  opacity: 0.4;
+  border-radius: var(--border-radius);
+  background: var(--body-color-contrast);
+}
+
+@media (max-width: 840px) {
+  .layout-drawer {
+    width: 100%;
+    max-width: 100%;
+    border-inline-end: 0;
+  }
+
+  body.layout-drawer-open {
+    overflow: hidden;
+  }
+
+  body.layout-drawer-open .layout-drawer-scrim {
+    display: block;
+  }
+}
+
+/* 快捷标签编辑器放在弹窗里：宽度要放下「图标 + 名称 + 标签」，高度尽量占满 */
+.modal-container.ld-modal-wide {
+  width: min(680px, 92vw);
+  max-width: min(680px, 92vw);
+  height: min(860px, calc(100vh - 48px));
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+
+  & .modal-header {
+    align-items: center;
+  }
+
+  & .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* 别让行内控件把宽度撑出横向滚动 */
+  & .settings-modules-list,
+  & .settings-qt-row,
+  & .settings-qt-main,
+  & .settings-qt-tags-wrapper {
+    min-width: 0;
+  }
+
+  /* 头部只剩「新增」：grid 的两列会把按钮挤在 gap 左侧，这里改成单行 flex */
+  & .settings-stack-header {
+    display: flex;
+    justify-content: flex-end;
+    padding-right: 0;
+  }
+}
+
+/* 抽屉的层级高于普通弹窗，弹窗要再抬一层，否则窄屏会被全宽的抽屉盖住 */
+.modal.active:has(.ld-modal-wide) {
+  z-index: calc(var(--zindex-4) + 30);
+}
+
+/* 弹窗里不再套一层卡片：去掉边框与投影，只留内容 */
+.modal-container.ld-modal-wide .settings-card {
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
