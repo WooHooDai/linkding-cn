@@ -4,6 +4,10 @@ import { gettext } from "../utils/i18n.js";
 import { showToast } from "./toast.js";
 import { applyToolbarAutoHide } from "./bookmark-list.js";
 import { saveColumnsFromPanel } from "./bookmark-table.js";
+import {
+  getSidebarScope,
+  syncSidebarStateCache,
+} from "../state/sidebar-state.js";
 
 async function savePref(url, field, value, { appendEmpty = true } = {}) {
   const body = new FormData();
@@ -44,16 +48,7 @@ function applyStickyPref(field, enabled) {
 // 「显示侧边栏」存的是默认值，实际开合在 localStorage（优先）与 cookie（服务端据此决定
 // 是否懒加载）里。不先对齐这两处，重载后会被旧状态顶回去。
 function syncSidebarState(enabled) {
-  try {
-    localStorage.removeItem("ld:sidebar-state:bookmarks");
-    localStorage.removeItem("ld:sidebar-state:highlights");
-  } catch {
-    // 隐私模式下 localStorage 不可用，忽略
-  }
-  const cookieName = document.querySelector(".highlights-page")
-    ? "ld_sidebar_highlights"
-    : "ld_sidebar_bookmarks";
-  document.cookie = `${cookieName}=${enabled ? "1" : "0"}; path=/; max-age=31536000; SameSite=Lax`;
+  syncSidebarStateCache(getSidebarScope(), enabled);
 }
 
 // 随机控件两种模式各渲染一份，这里只切显隐，不改服务端渲染结果

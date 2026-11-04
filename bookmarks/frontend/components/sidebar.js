@@ -1,4 +1,12 @@
+import Sortable from "sortablejs";
 import { Behavior, registerBehavior } from "./runtime.js";
+import { getCSRFToken } from "../utils/csrf.js";
+import { gettext } from "../utils/i18n.js";
+import { showToast } from "./toast.js";
+import {
+  getSidebarScope,
+  syncSidebarStateCache,
+} from "../state/sidebar-state.js";
 
 // ==========================================
 // 展开折叠按钮
@@ -626,6 +634,162 @@ function disconnectSidebarContentObserver() {
 }
 
 // ==========================================
+// 侧边栏模块：拖拽排序
+// ==========================================
+
+// 两种侧边栏字段名不同，保存入口相同
+const SIDEBAR_PREF_FIELDS = {
+  bookmarks: { modules: "sidebar_modules" },
+  highlights: { modules: "highlights_sidebar_modules" },
+};
+
+function sidebarModuleWrappers(sidebar) {
+  return Array.from(sidebar.children).filter((el) =>
+    el.matches("[data-sidebar-module]"),
+  );
+}
+
+function sidebarModuleKeys(sidebar) {
+  return sidebarModuleWrappers(sidebar).map((el) => el.dataset.sidebarModule);
+}
+
+// 按 keys 重排容器内的直接子元素，不在 keys 里的保持原位（如侧边栏的关闭栏）
+function reorderChildren(container, keys, selector, keyOf) {
+  const items = new Map(
+    Array.from(container.querySelectorAll(`:scope > ${selector}`)).map((el) => [
+      keyOf(el),
+      el,
+    ]),
+  );
+  keys.forEach((key) => {
+    const el = items.get(key);
+    if (el) container.appendChild(el);
+  });
+}
+
+// 服务端把完整模块状态渲染在容器上：拖拽只改顺序，保存时要把
+// 没渲染出来的模块（禁用、懒加载还没取回）按原状态带回去
+function readModuleState(sidebar) {
+  let known = [];
+  try {
+    known = JSON.parse(sidebar.dataset.sidebarModuleState || "[]");
+  } catch {
+    known = [];
+  }
+  const rendered = new Set(sidebarModuleKeys(sidebar));
+  const ordered = sidebarModuleWrappers(sidebar).map((el) => {
+    const key = el.dataset.sidebarModule;
+    const item = known.find((entry) => entry.key === key);
+    return { key, enabled: item ? item.enabled : true };
+  });
+  known.forEach((item) => {
+    if (!rendered.has(item.key)) ordered.push(item);
+  });
+  return ordered;
+}
+
+async function saveSidebarPrefs(url, scope, fields) {
+  const names = SIDEBAR_PREF_FIELDS[scope] || SIDEBAR_PREF_FIELDS.bookmarks;
+  const body = new FormData();
+  body.append("csrfmiddlewaretoken", getCSRFToken());
+  body.append("form_id", "profile_quick");
+  body.append(
+    "form_fields",
+    Object.keys(fields)
+      .map((key) => names[key])
+      .join(","),
+  );
+  Object.entries(fields).forEach(([key, value]) => {
+    // 复选框未勾选不能提交空值，缺失即由服务端置为 False
+    if (value === false || value === null || value === undefined) return;
+    body.append(names[key], value);
+  });
+
+  const response = await fetch(url, {
+    method: "POST",
+    body,
+    headers: {
+      "X-CSRFToken": getCSRFToken(),
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`sidebar settings save failed: ${response.status}`);
+  }
+}
+
+function reportSaveFailure(error) {
+  console.error(error);
+  showToast(gettext("Couldn't save settings. Please try again."), {
+    tone: "error",
+  });
+}
+
+async function persistModuleState(sidebar, url, scope) {
+  try {
+    await saveSidebarPrefs(url, scope, {
+      modules: JSON.stringify(readModuleState(sidebar)),
+    });
+  } catch (error) {
+    reportSaveFailure(error);
+  }
+}
+
+function initSidebarSortables(sidebar, url, scope) {
+  const instances = [];
+
+  // 拖模块本体：整条标题行都是抓手，排除其中的按钮与菜单，
+  // 图标不再占位，标题才能和下方内容左对齐
+  if (sidebarModuleWrappers(sidebar).length > 1) {
+    instances.push(
+      new Sortable(sidebar, {
+        animation: 150,
+        draggable: "[data-sidebar-module]",
+        handle: ".section-header",
+        filter: "button, a, input, select, label, ld-dropdown",
+        delay: 200,
+        delayOnTouchOnly: true,
+        ghostClass: "sidebar-module-ghost",
+        fallbackOnBody: true,
+        onStart: () => sidebar.classList.add("is-sorting-modules"),
+        onEnd: () => {
+          sidebar.classList.remove("is-sorting-modules");
+          persistModuleState(sidebar, url, scope);
+        },
+      }),
+    );
+  }
+
+  sidebar.__sidebarSortables = instances;
+}
+
+function setupSidebarModules() {
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar || sidebar.dataset.sidebarModulesReady === "1") return;
+
+  const url = sidebar.dataset.sidebarSaveUrl;
+  if (!url) return;
+
+  sidebar.dataset.sidebarModulesReady = "1";
+  const scope = sidebar.dataset.sidebarScope || getSidebarScope();
+  initSidebarSortables(sidebar, url, scope);
+}
+
+function teardownSidebarModules() {
+  document.querySelectorAll(".sidebar[data-sidebar-modules-ready]").forEach(
+    (sidebar) => {
+      (sidebar.__sidebarSortables || []).forEach((instance) =>
+        instance.destroy(),
+      );
+      sidebar.__sidebarSortables = [];
+      sidebar.__sidebarListeners?.abort();
+      sidebar.__sidebarListeners = null;
+      delete sidebar.dataset.sidebarModulesReady;
+    },
+  );
+}
+
+// ==========================================
 // Sidebar Toggle
 // ==========================================
 
@@ -712,6 +876,7 @@ async function loadSidebarContent(page) {
         (b) => b instanceof DomainTreeBehavior && b.restoreTreeState(),
       );
     });
+    setupSidebarModules();
   }
 }
 
@@ -809,14 +974,17 @@ document.addEventListener("turbo:before-cache", () => {
   saveSidebar();
   unbindSidebarScrollListener();
   disconnectSidebarContentObserver();
+  teardownSidebarModules();
 });
 document.addEventListener("turbo:load", () => {
   bindSidebarScrollListener();
   setupSidebarContentObserver();
   restoreSidebar();
+  setupSidebarModules();
 });
 document.addEventListener("DOMContentLoaded", () => {
   bindSidebarScrollListener();
   setupSidebarContentObserver();
   restoreSidebar();
+  setupSidebarModules();
 });

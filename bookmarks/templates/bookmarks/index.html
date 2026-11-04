@@ -41,7 +41,10 @@
     </main>
 
     {# Filters #}
-    <div class="scrollbar sidebar col-1{% if sticky_pagination %} paginate-sticky{% endif %}" data-sticky-on="{{ sticky_side_panel|yesno:'true,false' }}">
+    <div class="scrollbar sidebar col-1{% if sticky_pagination %} paginate-sticky{% endif %}" data-sticky-on="{{ sticky_side_panel|yesno:'true,false' }}"
+         data-sidebar-scope="bookmarks"
+         data-sidebar-save-url="{% url 'linkding:settings.save' %}"
+         data-sidebar-module-state="{{ sidebar_module_state }}">
       {% include 'bookmarks/sidebar/components/close_button.html' %}
       {% include 'bookmarks/sidebar/index.html' %}
     </div>

@@ -1,0 +1,27 @@
+/* 侧边栏模块：拖拽排序 */
+
+/* 模块被关闭时只在 DOM 上隐藏，重新打开无需重载 */
+.sidebar > [data-sidebar-module][hidden] {
+  display: none;
+}
+
+/* 模块标题行就是拖拽区域，不再放图标，标题与内容才能左对齐 */
+.sidebar > [data-sidebar-module] > section > .section-header {
+  cursor: grab;
+}
+
+.sidebar.is-sorting-modules > [data-sidebar-module] > section > .section-header {
+  cursor: grabbing;
+}
+
+/* 拖拽中的占位行 */
+.sidebar-module-ghost {
+  opacity: 0.4;
+  border-radius: var(--border-radius);
+  background: var(--body-color-contrast);
+}
+
+/* 排序过程中别让标题的 hover 菜单抢鼠标 */
+.sidebar.is-sorting-modules .section-header .dropdown {
+  pointer-events: none;
+}

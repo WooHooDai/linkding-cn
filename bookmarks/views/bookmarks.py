@@ -76,20 +76,18 @@ from bookmarks.services.bookmarks import (
 from bookmarks.type_defs import HttpRequest
 from bookmarks.utils import get_safe_return_url
 from bookmarks.views import access, contexts, partials, turbo
+from bookmarks.views.sidebar_content import (
+    SIDEBAR_SCOPE_BOOKMARKS,
+    SIDEBAR_MODULE_TEMPLATES,
+    enabled_module_keys,
+    sidebar_module_state,
+)
 from bookmarks.views.health_check import (
     get_active_check_job,
     start_ids_job,
 )
 
 logger = logging.getLogger(__name__)
-
-SIDEBAR_MODULE_TEMPLATES = {
-    UserProfile.SIDEBAR_MODULE_SUMMARY: "bookmarks/sidebar/modules/summary/index.html",
-    UserProfile.SIDEBAR_MODULE_BUNDLES: "bookmarks/sidebar/modules/bundles/index.html",
-    UserProfile.SIDEBAR_MODULE_DOMAINS: "bookmarks/sidebar/modules/domains/index.html",
-    UserProfile.SIDEBAR_MODULE_TAGS: "bookmarks/sidebar/modules/tags/index.html",
-    UserProfile.SIDEBAR_MODULE_AUTHORS: "bookmarks/sidebar/modules/authors/index.html",
-}
 
 
 def _build_sidebar_modules(request: HttpRequest, context: dict) -> list[dict]:
@@ -483,6 +481,14 @@ def render_bookmarks_view(request: HttpRequest, template_name, context):
     context["domain_config_fingerprint"] = hashlib.md5(raw.encode()).hexdigest()[:12] if raw else "default"
     
     context["sidebar_modules"] = _build_sidebar_modules(request, context)
+    context["sidebar_module_state"] = sidebar_module_state(
+        request.user_profile, SIDEBAR_SCOPE_BOOKMARKS
+    )
+    if context.get("sidebar_lazy_load"):
+        # 懒加载占位只列 key：内容由 /sidebar-content 按同一顺序补齐
+        context["sidebar_lazy_modules"] = ",".join(
+            enabled_module_keys(request.user_profile, SIDEBAR_SCOPE_BOOKMARKS)
+        )
 
     # 活跃健康检查任务（供前端轮询、完成时 toast 通知）
 

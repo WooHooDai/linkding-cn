@@ -18,6 +18,11 @@ from bookmarks.views.contexts import (
     HighlightDomainsContext,
     HighlightTagCloudContext,
 )
+from bookmarks.views.sidebar_content import (
+    HIGHLIGHTS_SIDEBAR_MODULE_TEMPLATES,
+    SIDEBAR_SCOPE_HIGHLIGHTS,
+    sidebar_module_state,
+)
 
 PAGE_SIZE = 50  # fallback, actual value from user_profile.highlights_per_page
 
@@ -62,11 +67,7 @@ COLOR_LABELS = dict(Annotation.COLOR_CHOICES)
 COLOR_PRIORITY = {"yellow": 0, "green": 1, "blue": 2, "pink": 3, "primary": 4}
 
 # Sidebar module templates for highlights page
-HIGHLIGHTS_SIDEBAR_MODULE_TEMPLATES = {
-    UserProfile.SIDEBAR_MODULE_COLORS: "bookmarks/highlights/sidebar/modules/colors/index.html",
-    UserProfile.SIDEBAR_MODULE_DOMAINS: "bookmarks/highlights/sidebar/modules/domains/index.html",
-    UserProfile.SIDEBAR_MODULE_TAGS: "bookmarks/highlights/sidebar/modules/tags/index.html",
-}
+
 
 
 class HighlightSearch:
@@ -484,6 +485,9 @@ def _render_list(request, search: HighlightSearch, prefs=None, page_size=PAGE_SI
         "highlight_copy_default_action": request.user_profile.highlight_copy_default_action,
     }
     context["sidebar_modules"] = _build_highlights_sidebar_modules(request, context)
+    context["sidebar_module_state"] = sidebar_module_state(
+        request.user_profile, SIDEBAR_SCOPE_HIGHLIGHTS
+    )
     return render(request, "bookmarks/highlights/index.html", context)
 
 

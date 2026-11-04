@@ -34,7 +34,10 @@
     </main>
 
     {# Filters #}
-    <div class="scrollbar sidebar col-1" data-sticky-on="{{ sticky_side_panel|yesno:'true,false' }}">
+    <div class="scrollbar sidebar col-1" data-sticky-on="{{ sticky_side_panel|yesno:'true,false' }}"
+         data-sidebar-scope="bookmarks"
+         data-sidebar-save-url="{% url 'linkding:settings.save' %}"
+         data-sidebar-module-state="{{ sidebar_module_state }}">
       {% include 'bookmarks/sidebar/components/close_button.html' %}
       <section aria-labelledby="user-heading">
         <div class="section-header">
