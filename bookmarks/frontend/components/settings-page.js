@@ -18,6 +18,11 @@ import {
   setStoredSettingsScrollPosition,
 } from "../state/settings-preferences";
 import Sortable from 'sortablejs';
+import {
+  SIDEBAR_SCOPE_BOOKMARKS,
+  SIDEBAR_SCOPE_HIGHLIGHTS,
+  clearSidebarState,
+} from "../state/sidebar-state.js";
 
 // 快捷标签新增行的 HTML 模板
 function quickTagRowTemplate() {
@@ -1016,15 +1021,14 @@ this.directoryLinks = Array.from(
     this.setRowVisibility(targetRow, enabled && mode === "single");
   }
 
-  // 设置页保存后，删除 localStorage 中的 sidebar 状态，
-  // 让下次页面加载使用服务器设置（data-sidebar-default）。
-  // 这样 toolbar toggle 的 localStorage 不会与设置页冲突。
+  // 设置页保存后，删除当前侧边栏的开合记忆，让下次页面加载使用服务端默认值。
+  // 只清同一侧：书签页与高亮页的开合状态互不影响。
   clearSidebarStateFromLocalStorage(form) {
     if (!form.matches("[data-sidebar-modules-form]")) return;
-    try {
-      localStorage.removeItem("ld:sidebar-state:bookmarks");
-      localStorage.removeItem("ld:sidebar-state:highlights");
-    } catch {}
+    const scope = form.querySelector('input[name="highlights_sidebar_modules"]')
+      ? SIDEBAR_SCOPE_HIGHLIGHTS
+      : SIDEBAR_SCOPE_BOOKMARKS;
+    clearSidebarState(scope);
   }
 
   // 语言设置：主选项与”其他语言”下拉的联动提交。
