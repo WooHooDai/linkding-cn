@@ -37,13 +37,13 @@ GROUP_CHOICES = [
 ]
 
 NOTE_FILTER_CHOICES = [
-    ("", _("Off")),
+    ("", _("Any")),
     ("yes", _("Has")),
-    ("no", _("Missing")),
+    ("no", _("None")),
 ]
 
 DATE_FILTER_CHOICES = [
-    ("", _("Off")),
+    ("", _("Any")),
     ("bookmark_added", _("Bookmark added")),
     ("bookmark_modified", _("Bookmark modified")),
     ("highlight_created", _("Highlight created")),

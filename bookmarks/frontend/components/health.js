@@ -312,15 +312,17 @@ class HealthIndicator extends HeadlessElement {
 customElements.define("ld-health-indicator", HealthIndicator);
 
 /**
- * 健康状态筛选的 "All" 批量勾选控件。
- * 点击 All 时：存在未勾选的状态 → 全选；所有状态均已勾选 → 全部取消。
+ * 健康状态筛选："All" 批量勾选控件 + 「不筛选 / 筛选」两态分段控件。
+ * 点 All：存在未勾选的状态 → 全选；所有状态均已勾选 → 全部取消。
  * All 复选框本身作为控件提交（value="all"），后端 from_request 会忽略该值。
+ * 不筛选态隐藏并禁用勾选框，避免勾过的状态在收起后仍被提交。
  */
 class HealthFilterBehavior extends Behavior {
   constructor(element) {
     super(element);
     this.onAllChange = this.onAllChange.bind(this);
     this.syncAllState = this.syncAllState.bind(this);
+    this.onModeChange = this.onModeChange.bind(this);
     this.init();
   }
 
@@ -332,6 +334,15 @@ class HealthFilterBehavior extends Behavior {
     this.allCheckbox = this.element.querySelector(
       'input[name="health_status"][value="all"]',
     );
+    this.options = this.element.querySelector("[data-health-options]");
+    this.modeRadios = this.element.querySelectorAll(
+      'input[name="health_filter_mode"]',
+    );
+
+    this.modeRadios.forEach((radio) => {
+      radio.addEventListener("change", this.onModeChange);
+    });
+    this.applyModeVisibility();
 
     if (this.allCheckbox) {
       this.allCheckbox.addEventListener("change", this.onAllChange);
@@ -377,12 +388,35 @@ class HealthFilterBehavior extends Behavior {
     }
   }
 
+  onModeChange() {
+    this.applyModeVisibility();
+  }
+
+  applyModeVisibility() {
+    if (!this.options) {
+      return;
+    }
+
+    const active =
+      this.element.querySelector('input[name="health_filter_mode"]:checked')
+        ?.value === "on";
+    this.options.hidden = !active;
+    this.options
+      .querySelectorAll('input[name="health_status"]')
+      .forEach((checkbox) => {
+        checkbox.disabled = !active;
+      });
+  }
+
   destroy() {
     if (this.allCheckbox) {
       this.allCheckbox.removeEventListener("change", this.onAllChange);
     }
     this.statusCheckboxes.forEach((cb) => {
       cb.removeEventListener("change", this.syncAllState);
+    });
+    this.modeRadios.forEach((radio) => {
+      radio.removeEventListener("change", this.onModeChange);
     });
   }
 }

@@ -1,0 +1,187 @@
+/* 搜索偏好面板：label 与选项同行，三态筛选收敛为分段控件 */
+.search-container {
+  /* 面板比搜索框略宽：分段控件（Any / Yes / No）在搜索框宽度内会挤到换行。
+     宽度由 PositionController 的内联 width 决定，这里只能给最小值。 */
+  .menu.menu-panel {
+    --overlay-min-width: 320px;
+  }
+
+  /* 窄屏时 theme 的 menu-panel 媒体查询接管定位（贴左右边、width:auto），
+     同时把与锚点的间距归零；补回和桌面一致的那一档间距 */
+  @media (max-width: 426px) {
+    .menu.menu-panel {
+      margin-top: var(--layout-spacing-sm);
+    }
+  }
+
+  /* 每行控件共用一列宽度，左右边界因此都对齐；取 160px 是英文最宽一项
+     （Any / Has / None）的实测值 */
+  --pref-control-width: 160px;
+
+  --pref-segment-track-bg: color-mix(
+    in srgb,
+    var(--body-color-contrast) 90%,
+    var(--body-color)
+  );
+  --pref-segment-track-border: color-mix(
+    in srgb,
+    var(--secondary-border-color) 72%,
+    var(--body-color)
+  );
+  --pref-segment-hover-bg: color-mix(
+    in srgb,
+    var(--body-color) 82%,
+    var(--body-color-contrast)
+  );
+  --pref-segment-active-bg: color-mix(
+    in srgb,
+    var(--body-color) 94%,
+    var(--body-color-contrast)
+  );
+
+  .pref-row {
+    display: flex;
+    align-items: center;
+    gap: var(--unit-2);
+    flex-wrap: wrap;
+  }
+
+  .pref-row > .form-label {
+    /* 同行排布时 label 不再吃 form-label 的下外边距 */
+    flex: none;
+    margin-bottom: 0;
+    white-space: nowrap;
+  }
+
+  .pref-row > .pref-segment {
+    margin-left: auto;
+  }
+
+  /* 所有控件靠右对齐到同一列宽，下拉框不再拉满剩余空间 */
+  .pref-row > .pref-segment,
+  .pref-row > .form-select,
+  .pref-row > .form-input,
+  .pref-row > .pref-inline-fields {
+    flex: none;
+    width: var(--pref-control-width);
+    margin-left: auto;
+  }
+
+  /* 预设/自定义是互斥的模式开关，占 label 那一列 */
+  .pref-row > .pref-mode {
+    flex: none;
+    margin: 0;
+  }
+
+  /* 相对日期自定义：数字 + 单位共用一列控件宽度 */
+  .pref-row > .pref-inline-fields {
+    display: flex;
+    gap: var(--unit-2);
+
+    > .form-input {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    > .form-select {
+      flex: 0 0 auto;
+      width: auto;
+    }
+  }
+
+  /* 健康状态：勾选框作为第二行整行展开 */
+  .pref-suboptions {
+    flex: 0 0 100%;
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: var(--unit-1);
+  }
+
+  .pref-suboptions[hidden] {
+    display: none;
+  }
+
+  .pref-segment {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    padding: 1px;
+    max-width: 100%;
+    border: var(--border-width) solid var(--pref-segment-track-border);
+    border-radius: 4px;
+    background: var(--pref-segment-track-bg);
+  }
+
+  .pref-segment-option {
+    display: inline-flex;
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0;
+
+    input {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+
+      &:focus-visible + span {
+        outline: var(--focus-outline);
+        outline-offset: var(--focus-outline-offset);
+      }
+
+      &:checked + span {
+        background: var(--pref-segment-active-bg);
+        color: var(--text-color);
+        box-shadow: var(--box-shadow-xs);
+        font-weight: 500;
+      }
+
+      &:not(:checked):hover + span {
+        background: var(--pref-segment-hover-bg);
+        color: var(--text-color);
+      }
+
+      &:disabled + span {
+        color: var(--secondary-text-color);
+        cursor: not-allowed;
+      }
+    }
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      min-width: 0;
+      min-height: calc(var(--control-size-sm) - 2px);
+      padding: 0 var(--unit-1);
+      overflow: hidden;
+      border-radius: 3px;
+      color: var(--secondary-text-color);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        box-shadow 0.2s ease;
+    }
+  }
+}
+
+/* 高亮页的筛选面板内容更宽：6 个颜色圆点占 176px，日期筛选项文案到 120px */
+.highlights-page .search-container {
+  --pref-control-width: 184px;
+
+  .menu.menu-panel {
+    --overlay-min-width: 340px;
+  }
+
+  .pref-row > .highlights-color-dots-filter {
+    flex: none;
+    width: var(--pref-control-width);
+    margin-left: auto;
+    justify-content: flex-end;
+  }
+}

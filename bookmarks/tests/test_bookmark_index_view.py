@@ -2289,10 +2289,13 @@ class BookmarkIndexViewTestCase(
         self.assertIsNotNone(search_preferences)
 
         selected_by = search_preferences.select_one(
-            f"input[name='date_filter_by'][value='{BookmarkSearch.FILTER_DATE_BY_ADDED}']"
+            "select[name='date_filter_by']"
         )
         self.assertIsNotNone(selected_by)
-        self.assertTrue(selected_by.has_attr("checked"))
+        self.assertEqual(
+            selected_by.select_one("option[selected]").attrs["value"],
+            BookmarkSearch.FILTER_DATE_BY_ADDED,
+        )
 
         selected_type = search_preferences.select_one(
             f"input[name='date_filter_type'][value='{BookmarkSearch.FILTER_DATE_TYPE_ABSOLUTE}']"

@@ -305,20 +305,20 @@ msgid "Title ↓"
 msgstr "标题 ↓"
 
 #: bookmarks/models.py:840
-msgid "Highlights ↓"
-msgstr "高亮 ↓"
+msgid "Highlight count ↓"
+msgstr "高亮数量 ↓"
 
 #: bookmarks/models.py:841
-msgid "Highlights ↑"
-msgstr "高亮 ↑"
+msgid "Highlight count ↑"
+msgstr "高亮数量 ↑"
 
 #: bookmarks/models.py:842
-msgid "Annotations ↓"
-msgstr "批注 ↓"
+msgid "Annotation count ↓"
+msgstr "批注数量 ↓"
 
 #: bookmarks/models.py:843
-msgid "Annotations ↑"
-msgstr "批注 ↑"
+msgid "Annotation count ↑"
+msgstr "批注数量 ↑"
 
 #: bookmarks/models.py:844
 #: bookmarks/templates/bookmarks/header/more_menu.html:34
@@ -327,25 +327,36 @@ msgstr "批注 ↑"
 msgid "Random"
 msgstr "随机"
 
-#: bookmarks/models.py:847 bookmarks/models.py:852 bookmarks/models.py:857
-#: bookmarks/models.py:862 bookmarks/models.py:867 bookmarks/models.py:872
-#: bookmarks/models.py:877 bookmarks/views/highlights.py:40
-#: bookmarks/views/highlights.py:46
+#: bookmarks/models.py:849 bookmarks/models.py:854 bookmarks/models.py:859
+#: bookmarks/models.py:869 bookmarks/models.py:874 bookmarks/models.py:879
+#: bookmarks/templates/bookmarks/search.html:109
+msgid "Any"
+msgstr "不限"
+
+#: bookmarks/models.py:864
+#: bookmarks/views/highlights.py:40 bookmarks/views/highlights.py:46
 msgid "Off"
 msgstr "关闭"
 
-#: bookmarks/models.py:848 bookmarks/templates/bookmarks/details/form.html:58
+#: bookmarks/templates/bookmarks/details/form.html:58
 #: bookmarks/templates/bookmarks/details/modal.html:193
 #: bookmarks/templates/bookmarks/details/modal.html:196
 #: bookmarks/templates/bookmarks/list/statuses.html:17
+#: bookmarks/templates/bookmarks/search.html:50
 msgid "Shared"
 msgstr "已分享"
 
-#: bookmarks/models.py:849
-msgid "Unshared"
-msgstr "未分享"
+#: bookmarks/models.py:850 bookmarks/models.py:855 bookmarks/models.py:860
+#: bookmarks/models.py:870
+msgid "Yes"
+msgstr "是"
 
-#: bookmarks/models.py:853 bookmarks/models.py:1215
+#: bookmarks/models.py:851 bookmarks/models.py:856 bookmarks/models.py:861
+#: bookmarks/models.py:871
+msgid "No"
+msgstr "否"
+
+#: bookmarks/models.py:1215
 #: bookmarks/templates/bookmarks/list/statuses.html:47
 msgctxt "bookmark_status"
 msgid "Unread"
@@ -358,23 +369,30 @@ msgctxt "bookmark_status"
 msgid "Read"
 msgstr "已读"
 
-#: bookmarks/models.py:858
-msgid "Tagged"
-msgstr "已打标签"
-
-#: bookmarks/models.py:859
-msgid "Untagged"
-msgstr "未打标签"
-
-#: bookmarks/models.py:863 bookmarks/models.py:868 bookmarks/models.py:873
+#: bookmarks/models.py:865 bookmarks/models.py:875
 #: bookmarks/views/highlights.py:41
 msgid "Has"
 msgstr "有"
 
-#: bookmarks/models.py:869 bookmarks/models.py:874
-#: bookmarks/views/highlights.py:33
+#: bookmarks/models.py:876 bookmarks/views/highlights.py:33
 msgid "None"
 msgstr "无"
+
+#: bookmarks/templates/bookmarks/search.html:70
+msgid "Has tags"
+msgstr "有标签"
+
+#: bookmarks/templates/bookmarks/search.html:82
+msgid "Has highlights"
+msgstr "有高亮"
+
+#: bookmarks/templates/bookmarks/search.html:94
+msgid "Has annotations"
+msgstr "有批注"
+
+#: bookmarks/templates/bookmarks/search.html:112
+msgid "Filter"
+msgstr "筛选"
 
 #: bookmarks/models.py:878
 msgctxt "date_filter"
@@ -1187,6 +1205,7 @@ msgstr "已归档"
 #: bookmarks/templates/bookmarks/details/form.html:50
 #: bookmarks/templates/bookmarks/details/modal.html:182
 #: bookmarks/templates/bookmarks/details/modal.html:184
+#: bookmarks/templates/bookmarks/search.html:60
 #: bookmarks/views/contexts.py:553
 msgid "Unread"
 msgstr "未读"

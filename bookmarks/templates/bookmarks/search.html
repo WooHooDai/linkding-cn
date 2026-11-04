@@ -17,7 +17,7 @@
       {{ hidden_field }}
     {% endfor %}
   </form>
-  <ld-dropdown class="search-options dropdown dropdown-right">
+  <ld-dropdown class="search-options dropdown">
     <button type="button" aria-label="{% translate 'Search preferences' %}"
             class="btn dropdown-toggle{% if search.has_modified_preferences %} badge{% endif %}">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" stroke-width="2"
@@ -38,141 +38,120 @@
       <form id="search_preferences" ld-date-filter-fields action="" method="post">
         {% csrf_token %}
         {% if 'sort' in preferences_form.editable_fields %}
-          <div class="form-group">
+          <div class="form-group pref-row">
             <label for="{{ preferences_form.sort.id_for_label }}"
                    class="form-label{% if 'sort' in search.modified_params %} text-bold{% endif %}">{% translate "Sort by" %}</label>
             {% formfield preferences_form.sort class="form-select select-sm" %}
           </div>
         {% endif %}
         {% if 'shared' in preferences_form.editable_fields %}
-          <div class="form-group radio-group" role="radiogroup" aria-labelledby="search-shared-label">
+          <div class="form-group pref-row">
             <label id="search-shared-label"
-                   class="form-label{% if 'shared' in search.modified_params %} text-bold{% endif %}">
-              {% translate "Shared filter" %}
-            </label>
-            {% for radio in preferences_form.shared %}
-              <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
-                {{ radio.tag }}
-                <i class="form-icon"></i>
-                {{ radio.choice_label }}
-              </label>
-            {% endfor %}
+                   class="form-label{% if 'shared' in search.modified_params %} text-bold{% endif %}">{% translate "Shared" %}</label>
+            <div class="pref-segment" role="radiogroup" aria-labelledby="search-shared-label">
+              {% for radio in preferences_form.shared %}
+                <label class="pref-segment-option">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+              {% endfor %}
+            </div>
           </div>
         {% endif %}
         {% if 'unread' in preferences_form.editable_fields %}
-          <div class="form-group radio-group" role="radiogroup" aria-labelledby="search-unread-label">
+          <div class="form-group pref-row">
             <label id="search-unread-label"
-                   class="form-label{% if 'unread' in search.modified_params %} text-bold{% endif %}">
-              {% translate "Unread filter" %}
-            </label>
-            {% for radio in preferences_form.unread %}
-              <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
-                {{ radio.tag }}
-                <i class="form-icon"></i>
-                {{ radio.choice_label }}
-              </label>
-            {% endfor %}
+                   class="form-label{% if 'unread' in search.modified_params %} text-bold{% endif %}">{% translate "Unread" %}</label>
+            <div class="pref-segment" role="radiogroup" aria-labelledby="search-unread-label">
+              {% for radio in preferences_form.unread %}
+                <label class="pref-segment-option">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+              {% endfor %}
+            </div>
           </div>
         {% endif %}
         {% if 'tagged' in preferences_form.editable_fields %}
-          <div class="form-group radio-group" role="radiogroup" aria-labelledby="search-tagged-label">
+          <div class="form-group pref-row">
             <label id="search-tagged-label"
-                   class="form-label{% if 'tagged' in search.modified_params %} text-bold{% endif %}">
-              {% translate "Tagged filter" %}
-            </label>
-            {% for radio in preferences_form.tagged %}
-              <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
-                {{ radio.tag }}
-                <i class="form-icon"></i>
-                {{ radio.choice_label }}
-              </label>
-            {% endfor %}
+                   class="form-label{% if 'tagged' in search.modified_params %} text-bold{% endif %}">{% translate "Has tags" %}</label>
+            <div class="pref-segment" role="radiogroup" aria-labelledby="search-tagged-label">
+              {% for radio in preferences_form.tagged %}
+                <label class="pref-segment-option">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+              {% endfor %}
+            </div>
           </div>
         {% endif %}
         {% if 'highlight' in preferences_form.editable_fields %}
-          <div class="form-group radio-group" role="radiogroup" aria-labelledby="search-highlight-label">
+          <div class="form-group pref-row">
             <label id="search-highlight-label"
-                   class="form-label{% if 'highlight' in search.modified_params %} text-bold{% endif %}">
-              {% translate "Highlight filter" %}
-            </label>
-            {% for radio in preferences_form.highlight %}
-              <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
-                {{ radio.tag }}
-                <i class="form-icon"></i>
-                {{ radio.choice_label }}
-              </label>
-            {% endfor %}
+                   class="form-label{% if 'highlight' in search.modified_params %} text-bold{% endif %}">{% translate "Has highlights" %}</label>
+            <div class="pref-segment" role="radiogroup" aria-labelledby="search-highlight-label">
+              {% for radio in preferences_form.highlight %}
+                <label class="pref-segment-option">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+              {% endfor %}
+            </div>
           </div>
         {% endif %}
         {% if 'annotation' in preferences_form.editable_fields %}
-          <div ld-annotation-filter class="form-group radio-group" role="radiogroup" aria-labelledby="search-annotation-label">
+          <div class="form-group pref-row" ld-annotation-filter>
             <label id="search-annotation-label"
-                   class="form-label{% if 'annotation' in search.modified_params %} text-bold{% endif %}">
-              {% translate "Annotation filter" %}
-            </label>
-            {% for radio in preferences_form.annotation %}
-              <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
-                {{ radio.tag }}
-                <i class="form-icon"></i>
-                {{ radio.choice_label }}
-              </label>
-            {% endfor %}
+                   class="form-label{% if 'annotation' in search.modified_params %} text-bold{% endif %}">{% translate "Has annotations" %}</label>
+            <div class="pref-segment" role="radiogroup" aria-labelledby="search-annotation-label">
+              {% for radio in preferences_form.annotation %}
+                <label class="pref-segment-option">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+              {% endfor %}
+            </div>
           </div>
         {% endif %}
         {% if 'health_status' in preferences_form.editable_fields %}
-          <div class="form-group" role="group" aria-labelledby="search-health-status-label" ld-health-filter>
+          <div class="form-group pref-row pref-row-stacked" ld-health-filter>
             <label id="search-health-status-label"
-                   class="form-label{% if 'health_status' in search.modified_params %} text-bold{% endif %}">
-              {% translate "Health status" %}
-            </label>
-            {% for checkbox in preferences_form.health_status %}
-              <label for="{{ checkbox.id_for_label }}" class="form-checkbox form-inline">
-                {{ checkbox.tag }}
-                <i class="form-icon"></i>
-                {{ checkbox.choice_label }}
+                   class="form-label{% if 'health_status' in search.modified_params %} text-bold{% endif %}">{% translate "Health status" %}</label>
+            <div class="pref-segment" role="radiogroup" aria-labelledby="search-health-status-label">
+              <label class="pref-segment-option">
+                <input type="radio" name="health_filter_mode" value="off"{% if not health_filter_active %} checked{% endif %}>
+                <span>{% translate "Any" %}</span>
               </label>
-            {% endfor %}
+              <label class="pref-segment-option">
+                <input type="radio" name="health_filter_mode" value="on"{% if health_filter_active %} checked{% endif %}>
+                <span>{% translate "Filter" %}</span>
+              </label>
+            </div>
+            <div class="pref-suboptions" data-health-options{% if not health_filter_active %} hidden{% endif %}>
+              {% for checkbox in preferences_form.health_status %}
+                <label for="{{ checkbox.id_for_label }}" class="form-checkbox form-inline">
+                  {{ checkbox.tag }}
+                  <i class="form-icon"></i>
+                  {{ checkbox.choice_label }}
+                </label>
+              {% endfor %}
+            </div>
           </div>
         {% endif %}
         {% if 'date_filter_by' in preferences_form.editable_fields %}
           <!-- 日期筛选相关表单项 -->
-          <div id="date-filter-by-group" class="form-group radio-group" role="radiogroup" aria-labelledby="date-filter-by-label">
-            <label id="date-filter-by-label" class="form-label">{% translate "Date filter" %}</label>
-            {% for radio in preferences_form.date_filter_by %}
-              <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
-                {{ radio.tag }}
-                <i class="form-icon"></i>
-                {{ radio.choice_label }}
-              </label>
-            {% endfor %}
+          <div id="date-filter-by-group" class="form-group pref-row">
+            <label for="{{ preferences_form.date_filter_by.id_for_label }}" id="date-filter-by-label"
+                   class="form-label">{% translate "Date filter" %}</label>
+            {% formfield preferences_form.date_filter_by class="form-select select-sm" %}
           </div>
-          <div id="date-filter-type-fields" class="form-group radio-group" role="radiogroup" aria-labelledby="date-filter-type-label">
+          <div id="date-filter-type-fields" class="form-group pref-row">
             <label id="date-filter-type-label" class="form-label">{% translate "Filter type" %}</label>
-            {% for radio in preferences_form.date_filter_type %}
-              <label for="{{ radio.id_for_label }}" class="form-radio form-inline">
-                {{ radio.tag }}
-                <i class="form-icon"></i>
-                {{ radio.choice_label }}
-              </label>
-            {% endfor %}
+            <div class="pref-segment" role="radiogroup" aria-labelledby="date-filter-type-label">
+              {% for radio in preferences_form.date_filter_type %}
+                <label class="pref-segment-option">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+              {% endfor %}
+            </div>
           </div>
           <div id="date-filter-absolute-fields">
-            <div class="form-group">
-              <div class="form-row-inline">
-                <label for="{{ preferences_form.date_filter_start.id_for_label }}" class="form-label-inline">{% translate "Start date" %}</label>
-                {% formfield preferences_form.date_filter_start class="form-input input-sm" %}
-              </div>
+            <div class="form-group pref-row">
+              <label for="{{ preferences_form.date_filter_start.id_for_label }}" class="form-label">{% translate "Start date" %}</label>
+              {% formfield preferences_form.date_filter_start class="form-input input-sm" %}
             </div>
-            <div class="form-group">
-              <div class="form-row-inline">
-                <label for="{{ preferences_form.date_filter_end.id_for_label }}" class="form-label-inline">{% translate "End date" %}</label>
-                {% formfield preferences_form.date_filter_end class="form-input input-sm" %}
-              </div>
+            <div class="form-group pref-row">
+              <label for="{{ preferences_form.date_filter_end.id_for_label }}" class="form-label">{% translate "End date" %}</label>
+              {% formfield preferences_form.date_filter_end class="form-input input-sm" %}
             </div>
           </div>
           <div id="date-filter-relative-fields" class="form-group">
-            <div id="date-filter-relative-preset-fields" class="radio-group">
-              <label class="form-radio form-inline">
+            <div id="date-filter-relative-preset-fields" class="form-group pref-row">
+              <label class="form-radio form-inline pref-mode">
                 <input type="radio" name="relative_filter_mode" value="preset"{% if not date_filter_relative_value %} checked{% endif %}>
                 <i class="form-icon"></i>
                 <span>{% translate "Preset" %}</span>
@@ -185,14 +164,13 @@
                 <option value="this_year"{% if preferences_form.date_filter_relative_string.value == 'this_year' %} selected{% endif %}>{% translate "This year" %}</option>
               </select>
             </div>
-            <div id="date-filter-relative-custom-fields" class="form-group">
-              <label class="form-radio form-inline">
+            <div id="date-filter-relative-custom-fields" class="form-group pref-row">
+              <label class="form-radio form-inline pref-mode">
                 <input type="radio" name="relative_filter_mode" value="custom"{% if date_filter_relative_value %} checked{% endif %}>
                 <i class="form-icon"></i>
                 <span>{% translate "Custom" %}</span>
               </label>
-              <div class="form-row-inline">
-                <span>{% translate "Last" %}</span>
+              <div class="pref-inline-fields">
                 <input type="number" name="date_filter_relative_value" class="form-input input-sm" min="1" value="{{ date_filter_relative_value|default:'' }}">
                 <select name="date_filter_relative_unit" class="form-select select-sm">
                   <option value="days"{% if date_filter_relative_unit == 'days' %} selected{% endif %}>{% translate "days" %}</option>

@@ -837,26 +837,28 @@ class BookmarkSearchForm(forms.Form):
         (BookmarkSearch.SORT_MODIFIED_DESC, _("Modified ↓")),
         (BookmarkSearch.SORT_TITLE_ASC, _("Title ↑")),
         (BookmarkSearch.SORT_TITLE_DESC, _("Title ↓")),
-        (BookmarkSearch.SORT_HIGHLIGHTS_DESC, _("Highlights ↓")),
-        (BookmarkSearch.SORT_HIGHLIGHTS_ASC, _("Highlights ↑")),
-        (BookmarkSearch.SORT_ANNOTATIONS_DESC, _("Annotations ↓")),
-        (BookmarkSearch.SORT_ANNOTATIONS_ASC, _("Annotations ↑")),
+        (BookmarkSearch.SORT_HIGHLIGHTS_DESC, _("Highlight count ↓")),
+        (BookmarkSearch.SORT_HIGHLIGHTS_ASC, _("Highlight count ↑")),
+        (BookmarkSearch.SORT_ANNOTATIONS_DESC, _("Annotation count ↓")),
+        (BookmarkSearch.SORT_ANNOTATIONS_ASC, _("Annotation count ↑")),
         (BookmarkSearch.SORT_RANDOM, _("Random")),
     ]
+    # 筛选面板把这三态渲染成分段控件，标签只留「是/否」，
+    # 「不限」由分段控件的第一项表达。
     FILTER_SHARED_CHOICES = [
-        (BookmarkSearch.FILTER_SHARED_OFF, _("Off")),
-        (BookmarkSearch.FILTER_SHARED_SHARED, _("Shared")),
-        (BookmarkSearch.FILTER_SHARED_UNSHARED, _("Unshared")),
+        (BookmarkSearch.FILTER_SHARED_OFF, _("Any")),
+        (BookmarkSearch.FILTER_SHARED_SHARED, _("Yes")),
+        (BookmarkSearch.FILTER_SHARED_UNSHARED, _("No")),
     ]
     FILTER_UNREAD_CHOICES = [
-        (BookmarkSearch.FILTER_UNREAD_OFF, _("Off")),
-        (BookmarkSearch.FILTER_UNREAD_YES, pgettext_lazy("bookmark_status", "Unread")),
-        (BookmarkSearch.FILTER_UNREAD_NO, pgettext_lazy("bookmark_status", "Read")),
+        (BookmarkSearch.FILTER_UNREAD_OFF, _("Any")),
+        (BookmarkSearch.FILTER_UNREAD_YES, _("Yes")),
+        (BookmarkSearch.FILTER_UNREAD_NO, _("No")),
     ]
     FILTER_TAGGED_CHOICES = [
-        (BookmarkSearch.FILTER_TAGGED_OFF, _("Off")),
-        (BookmarkSearch.FILTER_TAGGED_TAGGED, _("Tagged")),
-        (BookmarkSearch.FILTER_TAGGED_UNTAGGED, _("Untagged")),
+        (BookmarkSearch.FILTER_TAGGED_OFF, _("Any")),
+        (BookmarkSearch.FILTER_TAGGED_TAGGED, _("Yes")),
+        (BookmarkSearch.FILTER_TAGGED_UNTAGGED, _("No")),
     ]
     FILTER_ASSET_CHOICES = [
         (BookmarkSearch.FILTER_ASSET_OFF, _("Off")),
@@ -864,17 +866,17 @@ class BookmarkSearchForm(forms.Form):
         (BookmarkSearch.FILTER_ASSET_NO, _("Missing")),
     ]
     FILTER_HIGHLIGHT_CHOICES = [
-        (BookmarkSearch.FILTER_HIGHLIGHT_OFF, _("Off")),
-        (BookmarkSearch.FILTER_HIGHLIGHT_YES, _("Has")),
-        (BookmarkSearch.FILTER_HIGHLIGHT_NO, _("None")),
+        (BookmarkSearch.FILTER_HIGHLIGHT_OFF, _("Any")),
+        (BookmarkSearch.FILTER_HIGHLIGHT_YES, _("Yes")),
+        (BookmarkSearch.FILTER_HIGHLIGHT_NO, _("No")),
     ]
     FILTER_ANNOTATION_CHOICES = [
-        (BookmarkSearch.FILTER_ANNOTATION_OFF, _("Off")),
+        (BookmarkSearch.FILTER_ANNOTATION_OFF, _("Any")),
         (BookmarkSearch.FILTER_ANNOTATION_YES, _("Has")),
         (BookmarkSearch.FILTER_ANNOTATION_NO, _("None")),
     ]
     FILTER_DATE_BY_CHOICES = [
-        (BookmarkSearch.FILTER_DATE_OFF, _("Off")),
+        (BookmarkSearch.FILTER_DATE_OFF, _("Any")),
         (BookmarkSearch.FILTER_DATE_BY_ADDED, pgettext_lazy("date_filter", "Added")),
         (BookmarkSearch.FILTER_DATE_BY_MODIFIED, pgettext_lazy("date_filter", "Modified")),
         (BookmarkSearch.FILTER_DATE_BY_HIGHLIGHT, _("Highlighted")),
@@ -897,7 +899,7 @@ class BookmarkSearchForm(forms.Form):
     added_since = forms.CharField(required=False)
     deleted_since = forms.CharField(required=False)
     date_filter_by = forms.ChoiceField(
-        choices=FILTER_DATE_BY_CHOICES, widget=forms.RadioSelect
+        choices=FILTER_DATE_BY_CHOICES, widget=forms.Select
     )
     date_filter_type = forms.ChoiceField(
         choices=FILTER_DATE_TYPE_CHOICES, widget=forms.RadioSelect

@@ -59,7 +59,7 @@
               <input type="hidden" name="bookmark_id" value="{{ bookmark_id }}">
 
               {# 排序依据 #}
-              <div class="form-group">
+              <div class="form-group pref-row">
                 <label class="form-label{% if sort != 'date_created' %} text-bold{% endif %}">{% translate "Sort by" %}</label>
                 <select name="sort" class="form-select select-sm">
                   {% for value, label in sort_choices %}
@@ -69,7 +69,7 @@
               </div>
 
               {# 聚合依据 #}
-              <div class="form-group">
+              <div class="form-group pref-row">
                 <label class="form-label{% if group_by != 'none' %} text-bold{% endif %}">{% translate "Group by" %}</label>
                 <select name="group_by" class="form-select select-sm">
                   {% for value, label in group_choices %}
@@ -79,18 +79,21 @@
               </div>
 
               {# 批注筛选 #}
-              <div class="form-group radio-group" role="radiogroup">
-                <label class="form-label{% if note_filter %} text-bold{% endif %}">{% translate "Annotation filter" %}</label>
-                {% for value, label in note_filter_choices %}
-                  <label class="form-radio form-inline">
-                    <input type="radio" name="note_filter" value="{{ value }}" {% if note_filter == value %}checked{% endif %}>
-                    <i class="form-icon"></i> {{ label }}
-                  </label>
-                {% endfor %}
+              <div class="form-group pref-row">
+                <label id="hl-note-filter-label"
+                       class="form-label{% if note_filter %} text-bold{% endif %}">{% translate "Has annotations" %}</label>
+                <div class="pref-segment" role="radiogroup" aria-labelledby="hl-note-filter-label">
+                  {% for value, label in note_filter_choices %}
+                    <label class="pref-segment-option">
+                      <input type="radio" name="note_filter" value="{{ value }}" {% if note_filter == value %}checked{% endif %}>
+                      <span>{{ label }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
               </div>
 
               {# 颜色筛选（圆点切换） #}
-              <div class="form-group">
+              <div class="form-group pref-row">
                 <label class="form-label{% if colors %} text-bold{% endif %}">{% translate "Color filter" %}</label>
                 <div class="highlights-color-dots-filter">
                   <span class="color-dot-filter all-colors {% if not colors %}active{% endif %}" data-color-value="" title="{% translate 'All' %}"></span>
@@ -104,27 +107,23 @@
               </div>
 
               {# 日期筛选 #}
-              <div class="form-group radio-group" role="radiogroup">
-                <label class="form-label{% if date_filter_by %} text-bold{% endif %}">{% translate "Date filter" %}</label>
-                {% for value, label in date_filter_choices %}
-                  <label class="form-radio form-inline">
-                    <input type="radio" name="date_filter_by" value="{{ value }}" {% if date_filter_by == value %}checked{% endif %}>
-                    <i class="form-icon"></i> {{ label }}
-                  </label>
-                {% endfor %}
+              <div class="form-group pref-row">
+                <label for="hl-date-filter-by"
+                       class="form-label{% if date_filter_by %} text-bold{% endif %}">{% translate "Date filter" %}</label>
+                <select id="hl-date-filter-by" name="date_filter_by" class="form-select select-sm">
+                  {% for value, label in date_filter_choices %}
+                    <option value="{{ value }}" {% if date_filter_by == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
               </div>
               <div id="date-filter-fields" class="form-group" style="display: {% if date_filter_by %}block{% else %}none{% endif %}">
-                <div class="form-group">
-                  <div class="form-row-inline">
-                    <label for="date-filter-start" class="form-label-inline">{% translate "Start date" %}</label>
-                    <input type="date" id="date-filter-start" name="date_filter_start" class="form-input input-sm" value="{{ date_filter_start }}">
-                  </div>
+                <div class="form-group pref-row">
+                  <label for="date-filter-start" class="form-label">{% translate "Start date" %}</label>
+                  <input type="date" id="date-filter-start" name="date_filter_start" class="form-input input-sm" value="{{ date_filter_start }}">
                 </div>
-                <div class="form-group">
-                  <div class="form-row-inline">
-                    <label for="date-filter-end" class="form-label-inline">{% translate "End date" %}</label>
-                    <input type="date" id="date-filter-end" name="date_filter_end" class="form-input input-sm" value="{{ date_filter_end }}">
-                  </div>
+                <div class="form-group pref-row">
+                  <label for="date-filter-end" class="form-label">{% translate "End date" %}</label>
+                  <input type="date" id="date-filter-end" name="date_filter_end" class="form-input input-sm" value="{{ date_filter_end }}">
                 </div>
               </div>
 
@@ -841,12 +840,12 @@
   }
 
   // --- Date filter UI: show/hide date range inputs ---
-  var dateFilterRadios = document.querySelectorAll('input[name="date_filter_by"]');
+  var dateFilterInputs = document.querySelectorAll('select[name="date_filter_by"], input[name="date_filter_by"]');
   var dateFilterFields = document.getElementById('date-filter-fields');
-  if (dateFilterRadios.length && dateFilterFields) {
-    dateFilterRadios.forEach(function(radio) {
-      radio.addEventListener('change', function() {
-        dateFilterFields.style.display = radio.value ? 'block' : 'none';
+  if (dateFilterInputs.length && dateFilterFields) {
+    dateFilterInputs.forEach(function(input) {
+      input.addEventListener('change', function() {
+        dateFilterFields.style.display = input.value ? 'block' : 'none';
       });
     });
   }

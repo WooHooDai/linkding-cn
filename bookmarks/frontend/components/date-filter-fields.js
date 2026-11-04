@@ -30,10 +30,12 @@ class DateFilterFieldsBehavior extends Behavior {
   }
 
   bindEventHandlers() {
-    // 监听日期筛选方式变化
-    const byRadios = this.element.querySelectorAll('input[name="date_filter_by"]');
-    byRadios.forEach(radio => {
-      radio.addEventListener('change', () => {
+    // 监听日期筛选方式变化（下拉框，兼容旧的单选实现）
+    const byInputs = this.element.querySelectorAll(
+      'select[name="date_filter_by"], input[name="date_filter_by"]',
+    );
+    byInputs.forEach((input) => {
+      input.addEventListener('change', () => {
         this.updateVisibility();
         this.updateRelativeString();
       });
@@ -74,8 +76,13 @@ class DateFilterFieldsBehavior extends Behavior {
     }
   }
 
-  // 获取选中的radio值
+  // 获取选中的值（下拉框或单选）
   getSelectedValue(name) {
+    const select = this.element.querySelector(`select[name="${name}"]`);
+    if (select) {
+      return select.value;
+    }
+
     const checked = this.element.querySelector(`input[name="${name}"]:checked`);
     return checked ? checked.value : null;
   }

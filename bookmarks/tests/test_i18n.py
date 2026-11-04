@@ -260,8 +260,10 @@ class I18nTestCase(TestCase, BookmarkFactoryMixin):
         html = response.content.decode()
         soup = BeautifulSoup(html, "html.parser")
         date_filter_options = [
-            label.get_text(strip=True)
-            for label in soup.select("#date-filter-by-group .form-radio")
+            option.get_text(strip=True)
+            for option in soup.select(
+                "#date-filter-by-group select[name='date_filter_by'] option"
+            )
         ]
 
         self.assertContains(response, "Date deleted ↑")

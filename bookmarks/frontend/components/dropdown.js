@@ -37,17 +37,21 @@ class Dropdown extends HeadlessElement {
     if (!this.positionController) {
       const menu = this.querySelector(".menu");
       if (!this.toggle || !menu) return;
+      // 搜索偏好面板拿整个搜索行当锚点：宽度来源是它，左右也对齐到搜索框，
+      // 按行尾的按钮对齐会贴到右边去
+      const searchContainer = this.closest(".search-container");
       this.positionController = new PositionController({
-        anchor: this.toggle,
+        anchor: searchContainer || this.toggle,
         overlay: menu,
         placement:
-          this.classList.contains("dropdown-right") || this.closest("header")
+          !searchContainer &&
+          (this.classList.contains("dropdown-right") || this.closest("header"))
             ? "bottom-end"
             : "bottom-start",
         autoWidth:
           menu.classList.contains("menu-panel") &&
           !menu.classList.contains("header-more-panel"),
-        widthAnchor: this.closest(".search-container") || this.toggle,
+        widthAnchor: searchContainer || this.toggle,
       });
     }
     this.positionController?.enable();

@@ -93,6 +93,8 @@ def bookmark_search(context, search: BookmarkSearch, mode: str = ""):
         "mode": mode,
         "date_filter_relative_value": date_filter_relative_value,
         "date_filter_relative_unit": date_filter_relative_unit,
+        # 健康状态收敛为「不筛选 / 筛选」两态，筛选态才展开多选勾选框
+        "health_filter_active": bool(search.health_status),
     }
 
 
