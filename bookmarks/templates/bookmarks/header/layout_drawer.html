@@ -14,20 +14,7 @@
        data-label-more-info="{% translate 'More info' %}"
        aria-label="{% translate 'Layout' %}"
        aria-hidden="true" inert>
-  <div class="layout-drawer-header">
-    <span class="layout-drawer-title">{% translate "Layout" %}</span>
-    <button type="button" class="btn btn-noborder layout-drawer-close"
-            data-layout-drawer-close
-            aria-label="{% translate 'Close' %}" title="{% translate 'Close' %}">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-           stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-           stroke-linejoin="round" aria-hidden="true">
-        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-        <path d="M18 6l-12 12"></path>
-        <path d="M6 6l12 12"></path>
-      </svg>
-    </button>
-  </div>
+  {% include 'bookmarks/header/layout_drawer_header.html' %}
 
   <div class="layout-drawer-tabs" role="tablist" aria-label="{% translate 'Layout' %}">
     <button type="button" role="tab" class="layout-drawer-tab is-active"

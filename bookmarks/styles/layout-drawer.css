@@ -256,6 +256,12 @@
   transform: rotate(45deg);
 }
 
+/* 只有一行内容的分组（入口类）：标签沿用分组标题的字号与颜色，和上方标题对齐 */
+.ld-group-row .ld-row-label {
+  font-size: var(--font-size-sm);
+  color: var(--secondary-text-color);
+}
+
 /* 语言行用一个独立表单提交，display:contents 让它不打断分组排版 */
 .ld-form {
   display: contents;

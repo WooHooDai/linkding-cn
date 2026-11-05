@@ -74,6 +74,55 @@ class LayoutDrawerViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         ]
         self.assertEqual(groups, ["Content", "Behavior", "Toolbar"])
 
+    def test_groups_are_collapsible_with_header_actions(self):
+        # 每个分组都是可折叠的 details，默认展开；批量开关在标题栏关闭按钮左侧
+        drawer = self.drawer()
+        for panel_name in ("page", "bookmark"):
+            panel = self.panel(panel_name)
+            groups = panel.select("details[data-drawer-group]")
+            self.assertGreater(len(groups), 1, panel_name)
+            for group in groups:
+                with self.subTest(panel=panel_name, group=group.get("data-drawer-group")):
+                    self.assertTrue(group.has_attr("open"))
+                    summary = group.select_one("summary.layout-drawer-group-label")
+                    self.assertIsNotNone(summary)
+                    self.assertIsNotNone(summary.select_one(".ld-chevron"))
+            self.assertIsNone(panel.select_one("[data-layout-groups-expand]"))
+
+        actions = drawer.select_one(".layout-drawer-header-actions")
+        self.assertIsNotNone(actions)
+        self.assertIsNotNone(actions.select_one("[data-layout-groups-expand]"))
+        self.assertIsNotNone(actions.select_one("[data-layout-groups-collapse]"))
+        self.assertIsNotNone(actions.select_one("[data-layout-drawer-close]"))
+
+        # 分组键跨页签不重名，折叠状态才不会互相覆盖
+        keys = [
+            group.get("data-drawer-group")
+            for group in drawer.select("details[data-drawer-group]")
+        ]
+        self.assertEqual(len(keys), len(set(keys)))
+
+    def test_other_settings_row_links_to_settings_page(self):
+        # 只是一行入口：不再套可折叠分组，免得为了点「前往」先展开一次
+        panel = self.panel("page")
+        row = panel.select_one('a[href="/settings/general"]').find_parent(class_="ld-row")
+        self.assertIsNone(row.find_parent("details"))
+        self.assertTrue(
+            row.select_one(".ld-row-label").get_text(" ", strip=True).startswith(
+                "Other settings"
+            )
+        )
+        self.assertIsNotNone(row.select_one(".ld-help .ld-help-button"))
+
+        link = row.select_one("a")
+        self.assertEqual(link.get_text(strip=True), "Go to")
+        # 抽屉里的入口按钮一律浅色，不抢主题色
+        self.assertNotIn("btn-primary", link.get("class"))
+        self.assertIn(
+            "Configure bookmark automation, sharing scope, health check",
+            panel.get_text(" ", strip=True),
+        )
+
     def test_every_row_is_label_plus_control(self):
         # 统一版式：每行都是「标签列 + 控件列」，说明文字压在标签下方
         drawer = self.drawer()
@@ -85,7 +134,7 @@ class LayoutDrawerViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             )
         helps = drawer.select(".ld-help")
         # 只保留指定的几项说明，其余不收
-        self.assertEqual(len(helps), 11)
+        self.assertEqual(len(helps), 12)
         for help_el in helps:
             self.assertTrue(help_el.select_one(".ld-help-button"))
             text = help_el.select_one(".ld-help-text")
@@ -113,6 +162,7 @@ class LayoutDrawerViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             "Module settings",
             "Quick edit",
             "Quick tags",
+            "Other settings",
         ]
         drawer = self.drawer()
         rows_with_help = [

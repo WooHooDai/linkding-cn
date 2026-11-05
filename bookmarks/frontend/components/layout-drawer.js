@@ -331,6 +331,7 @@ class LayoutDrawer extends Behavior {
       this.scroller.scrollTop = positions[name] || 0;
     }
     // 面板切换后内容高度变了，重算一下让位判据
+    this.syncGroupActions();
     syncPanelSpace();
   }
 
@@ -429,14 +430,24 @@ class LayoutDrawer extends Behavior {
 
   // ---------- 分组折叠 ----------
 
+  // 批量开关在标题栏，作用于当前页签的面板；高亮页只有一块面板
+  activePanel() {
+    const name = this.currentTab();
+    return this.element.querySelector(`[data-layout-panel="${name}"]`) || this.element;
+  }
+
   groups() {
+    return Array.from(this.activePanel().querySelectorAll("[data-drawer-group]"));
+  }
+
+  allGroups() {
     return Array.from(this.element.querySelectorAll("[data-drawer-group]"));
   }
 
   // 只记收起的组：新加的分组没有记录，按展开呈现
   initGroups() {
     const stored = readJSON(GROUPS_KEY, {});
-    this.groups().forEach((group) => {
+    this.allGroups().forEach((group) => {
       if (stored[group.dataset.drawerGroup]) group.open = false;
       group.addEventListener("toggle", () => {
         this.saveGroups();
@@ -448,7 +459,7 @@ class LayoutDrawer extends Behavior {
 
   saveGroups() {
     const collapsed = {};
-    this.groups().forEach((group) => {
+    this.allGroups().forEach((group) => {
       if (!group.open) collapsed[group.dataset.drawerGroup] = true;
     });
     try {

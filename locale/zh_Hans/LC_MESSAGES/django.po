@@ -1946,6 +1946,16 @@ msgstr "滚动跟随"
 msgid "More options"
 msgstr "更多选项"
 
+#: bookmarks/templates/bookmarks/header/layout_drawer_page.html:281
+msgid "Other settings"
+msgstr "其他设置"
+
+#: bookmarks/templates/bookmarks/header/layout_drawer_page.html:287
+msgid ""
+"Configure bookmark automation, sharing scope, health check and other "
+"miscellaneous settings."
+msgstr "配置书签自动化、分享范围、健康检查及其他杂项。"
+
 #: bookmarks/templates/bookmarks/header/more_menu.html:19
 #: bookmarks/templates/bookmarks/header/more_menu.html:22
 #: bookmarks/templates/bookmarks/highlights/index.html:179

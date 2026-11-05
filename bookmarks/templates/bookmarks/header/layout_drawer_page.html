@@ -1,13 +1,19 @@
 {% load i18n %}
 {% get_available_languages as LANGUAGES %}
-{# 页面页：界面 → 视图 → 工具栏 → 侧边栏。控件一律右对齐，说明收进标签旁的 info 图标。 #}
-<div class="ld-group">
-  <div class="layout-drawer-group-label">{% translate "Interface" %}</div>
-  {% include 'bookmarks/header/layout_drawer_interface.html' %}
-</div>
 
-<div class="ld-group">
-  <div class="layout-drawer-group-label">{% translate "View" context "layout drawer" %}</div>
+<details class="ld-group" data-drawer-group="interface" open>
+  <summary class="layout-drawer-group-label">
+    <span>{% translate "Interface" %}</span>
+    <span class="ld-chevron" aria-hidden="true"></span>
+  </summary>
+  {% include 'bookmarks/header/layout_drawer_interface.html' %}
+</details>
+
+<details class="ld-group" data-drawer-group="view" open>
+  <summary class="layout-drawer-group-label">
+    <span>{% translate "View" context "layout drawer" %}</span>
+    <span class="ld-chevron" aria-hidden="true"></span>
+  </summary>
 
   <div class="ld-row">
     <div class="ld-row-text">
@@ -81,10 +87,13 @@
     </div>
     <div class="field-errors" data-field-error-for="items_per_page"></div>
   </div>
-</div>
+</details>
 
-<div class="ld-group">
-  <div class="layout-drawer-group-label">{% translate "Toolbar" %}</div>
+<details class="ld-group" data-drawer-group="toolbar" open>
+  <summary class="layout-drawer-group-label">
+    <span>{% translate "Toolbar" %}</span>
+    <span class="ld-chevron" aria-hidden="true"></span>
+  </summary>
 
   <div class="ld-row">
     <div class="ld-row-text">
@@ -191,10 +200,13 @@
       </select>
     </div>
   </div>
-</div>
+</details>
 
-<div class="ld-group">
-  <div class="layout-drawer-group-label">{% translate "Sidebar" %}</div>
+<details class="ld-group" data-drawer-group="sidebar" open>
+  <summary class="layout-drawer-group-label">
+    <span>{% translate "Sidebar" %}</span>
+    <span class="ld-chevron" aria-hidden="true"></span>
+  </summary>
 
   <div class="ld-row">
     <div class="ld-row-text">
@@ -255,4 +267,21 @@
       {% endif %}
     {% endfor %}
   </ul>
+</details>
+
+<div class="ld-group ld-group-row">
+  <div class="ld-row">
+    <div class="ld-row-text">
+      <span class="ld-row-label">{% translate "Other settings" %}<span class="ld-help" data-drawer-help>
+              <button type="button" class="ld-help-button"
+                      aria-label="{% translate 'More info' %}" aria-expanded="false">
+                <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+              </button>
+              <span class="ld-help-text" hidden>{% translate "Configure bookmark automation, sharing scope, health check and other miscellaneous settings." %}</span>
+            </span></span>
+    </div>
+    <div class="ld-row-control">
+      <a class="btn btn-sm" href="{% url 'linkding:settings.general' %}">{% translate "Go to" %}</a>
+    </div>
+  </div>
 </div>

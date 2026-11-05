@@ -1,7 +1,14 @@
 {% load i18n %}
-{# 书签页：内容 → 行为 → 工具栏。工具栏里的模块关掉后，对应设置项一起收起；说明收进 info 图标。 #}
-<div class="ld-group">
-  <div class="layout-drawer-group-label">{% translate "Content" %}</div>
+{% comment %}
+书签页：内容 → 行为 → 工具栏。工具栏里的模块关掉后，对应设置项一起收起；说明收进 info 图标。
+每个分组标题就是折叠开关（默认展开，状态记在 localStorage）。
+{% endcomment %}
+
+<details class="ld-group" data-drawer-group="content" open>
+  <summary class="layout-drawer-group-label">
+    <span>{% translate "Content" %}</span>
+    <span class="ld-chevron" aria-hidden="true"></span>
+  </summary>
 
   <div class="ld-row">
     <div class="ld-row-text">
@@ -123,10 +130,13 @@
       </div>
     </div>
   </div>
-</div>
+</details>
 
-<div class="ld-group">
-  <div class="layout-drawer-group-label">{% translate "Behavior" %}</div>
+<details class="ld-group" data-drawer-group="behavior" open>
+  <summary class="layout-drawer-group-label">
+    <span>{% translate "Behavior" %}</span>
+    <span class="ld-chevron" aria-hidden="true"></span>
+  </summary>
 
   <div class="ld-row">
     <div class="ld-row-text">
@@ -194,10 +204,13 @@
            value="{{ global_settings_form.guest_profile_user.value|default_if_none:'' }}">
   </div>
   {% endif %}
-</div>
+</details>
 
-<div class="ld-group">
-  <div class="layout-drawer-group-label">{% translate "Toolbar" %}</div>
+<details class="ld-group" data-drawer-group="bookmark-toolbar" open>
+  <summary class="layout-drawer-group-label">
+    <span>{% translate "Toolbar" %}</span>
+    <span class="ld-chevron" aria-hidden="true"></span>
+  </summary>
 
   <div class="ld-row" data-drawer-row="toolbar_auto_hide" data-drawer-views="list"
        {% if request.user_profile.bookmark_view_mode != 'list' %}hidden{% endif %}>
@@ -416,4 +429,4 @@
       </ul>
     </div>
   </details>
-</div>
+</details>
