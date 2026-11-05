@@ -1,6 +1,9 @@
 {% load i18n %}
-{# 窄屏「更多」菜单：只放动作项。列表显示偏好统一在左侧「布局」抽屉里，不再重复一份。 #}
-{% if show_bulk or show_random %}{% if show_bulk or request.user_profile.enable_random_button %}
+{% comment %}
+窄屏「更多」菜单：随机按钮在窄屏常驻，批量编辑与布局没地方放，收进这里。
+菜单只常驻 DOM、由 .header-controls 的 has-random 决定显隐——抽屉里开关随机按钮后
+不用刷新就能在「窄屏三个按钮」与「随机 + 更多」之间切换。显示偏好仍统一在布局抽屉里。
+{% endcomment %}
 <ld-dropdown class="header-more dropdown dropdown-right" data-header-more
              data-save-url="{% url 'linkding:settings.save' %}">
   <button type="button" class="btn dropdown-toggle"
@@ -15,11 +18,11 @@
   </button>
   <div class="menu menu-panel header-more-panel" tabindex="0">
     {% if show_bulk %}
-      <div class="header-pref-row header-action-row">
+      {# 整行是按钮，图标只是装饰：点标签或空白处都算点击 #}
+      <button type="button" class="header-pref-row header-action-row header-menu-action"
+              data-menu-action="bulk-edit">
         <span class="header-pref-label">{% translate 'Bulk edit' %}</span>
-        <button type="button" class="btn header-action-btn header-menu-action"
-                data-menu-action="bulk-edit"
-                title="{% translate 'Bulk edit' %}">
+        <span class="header-action-btn" aria-hidden="true">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
@@ -27,26 +30,21 @@
             <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"></path>
             <path d="M16 5l3 3"></path>
           </svg>
-        </button>
-      </div>
+        </span>
+      </button>
     {% endif %}
-    {% if show_random and request.user_profile.enable_random_button %}
-      <div class="header-pref-row header-action-row">
-        <span class="header-pref-label">{% translate 'Random' %}</span>
-        <button type="button" class="btn header-action-btn header-menu-action"
-                data-menu-action="random-sort"
-                title="{% translate 'Random' %}">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-            <path d="M18 4l3 3l-3 3"></path>
-            <path d="M18 20l3 -3l-3 -3"></path>
-            <path d="M3 7h3a5 5 0 0 1 5 5a5 5 0 0 1 -5 5h-3"></path>
-            <path d="M21 7h-3a5 5 0 0 0 -5 5a5 5 0 0 0 5 5h3"></path>
-          </svg>
-        </button>
-      </div>
-    {% endif %}
+    <button type="button" class="header-pref-row header-action-row header-menu-action"
+            data-menu-action="layout">
+      <span class="header-pref-label">{% translate 'Layout' %}</span>
+      <span class="header-action-btn" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+          <line x1="9" y1="3" x2="9" y2="21"></line>
+          <line x1="9" y1="12" x2="21" y2="12"></line>
+        </svg>
+      </span>
+    </button>
   </div>
 </ld-dropdown>
-{% endif %}{% endif %}

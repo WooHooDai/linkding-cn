@@ -329,6 +329,9 @@ body.sidebar-push
   display: none;
   width: 320px;
   min-width: 320px;
+  /* 面板与触发按钮（= 工具栏那一行）之间要留出间距：浮层定位把 top 贴到锚点底边，
+     窄屏 theme 还会把 menu-panel 的 margin-top 归零，这里统一补回来 */
+  margin-top: var(--unit-2);
   /* 分组多了以后整份面板会超过一屏，窄屏上必须能滚 */
   max-height: min(70vh, 560px);
   overflow-y: auto;
@@ -418,6 +421,38 @@ body.sidebar-push
   }
 }
 
+/* 「更多」里的动作行整行都是按钮：悬停/聚焦高亮整行，图标只作装饰 */
+button.header-action-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--menu-item-color);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+
+  .header-pref-label {
+    /* 跟随行本身的颜色，悬停时才会一起变主题色 */
+    color: inherit;
+  }
+
+  .header-action-btn {
+    pointer-events: none;
+    color: inherit;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: var(--menu-item-hover-bg-color);
+    color: var(--menu-item-hover-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: -2px;
+  }
+}
+
 .header-pref-switch {
   --checkbox-checked-bg-color: color-mix(
     in srgb,
@@ -463,11 +498,18 @@ body.sidebar-push
 }
 
 @media (max-width: 600px) {
-  .hc-wide {
-    display: none !important;
+  /* 随机按钮在窄屏常驻：批量编辑与布局让位，改走「更多」菜单里的入口 */
+  .header-controls.has-random .bulk-edit-active-toggle,
+  .header-controls.has-random .header-layout-toggle {
+    display: none;
   }
 
+  /* 没有随机按钮时工具栏放得下三个按钮，不再出「更多」 */
   .header-more {
+    display: none;
+  }
+
+  .header-controls.has-random .header-more {
     display: inline-flex;
   }
 }

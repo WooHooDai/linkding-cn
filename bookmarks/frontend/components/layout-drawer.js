@@ -926,6 +926,11 @@ class LayoutDrawer extends Behavior {
       control.hidden = !enabled || (single ? mode !== "single" : mode === "single");
     });
 
+    // 窄屏工具栏按这个类在「随机 + 更多」与「批量编辑 / 布局 / 侧边栏」之间切换
+    document
+      .querySelector(".header-controls")
+      ?.classList.toggle("has-random", Boolean(enabled));
+
     const single = document.querySelector("[ld-random-single]");
     if (single) single.dataset.randomTarget = target;
   }

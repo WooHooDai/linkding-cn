@@ -44,7 +44,8 @@ class LayoutDrawerViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
                 button = soup.select_one("[data-layout-drawer-toggle]")
                 self.assertIsNotNone(button)
                 self.assertEqual(button.get("aria-controls"), "layout-drawer")
-                self.assertIsNone(button.find_parent(class_="hc-wide"))
+                # 按钮挂在工具栏下（窄屏由 .header-controls 的 has-random 决定显隐）
+                self.assertIsNotNone(button.find_parent(class_="header-controls"))
 
     def test_drawer_has_page_and_bookmark_tabs(self):
         drawer = self.drawer()

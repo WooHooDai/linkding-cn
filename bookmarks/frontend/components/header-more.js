@@ -127,17 +127,9 @@ class HeaderMoreMenu extends Behavior {
 
     if (action === "bulk-edit") {
       document.querySelector(".bulk-edit-active-toggle")?.click();
-    } else if (action === "random-sort") {
-      // 两种随机模式各有一份控件，点当前可见的那个；两个都隐藏说明随机按钮已关
-      const single = document.querySelector("[ld-random-single]:not([hidden])");
-      const form = document.querySelector(
-        "form[data-random-control]:not([hidden])",
-      );
-      if (single) {
-        single.click();
-      } else if (form) {
-        form.requestSubmit();
-      }
+    } else if (action === "layout") {
+      // 窄屏下布局按钮被藏起来了，点同名的触发按钮即可（隐藏元素也能程序化点击）
+      document.querySelector("[data-layout-drawer-toggle]")?.click();
     }
 
     this.element.closest("ld-dropdown")?.close?.();

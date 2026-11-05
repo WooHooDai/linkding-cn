@@ -20,10 +20,11 @@ class BookmarkHeaderMenuViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         panel = soup.select_one(".header-more .header-more-panel")
         self.assertIsNotNone(panel)
 
+        # 窄屏下随机按钮常驻，批量编辑与布局收进「更多」
         actions = panel.select(".header-menu-action")
         self.assertEqual(
             [action.get("data-menu-action") for action in actions],
-            ["bulk-edit", "random-sort"],
+            ["bulk-edit", "layout"],
         )
         # 显示偏好搬到左侧「布局」抽屉，菜单里不再有第二份
         self.assertIsNone(panel.select_one("[data-pref]"))
@@ -98,20 +99,25 @@ class BookmarkHeaderMenuViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
                 soup.select_one(".header-more .header-more-panel"), url_name
             )
 
-    def test_shared_menu_has_random_but_no_bulk_action(self):
+    def test_shared_menu_has_layout_but_no_bulk_action(self):
         soup = self.make_soup(
             self.client.get(reverse("linkding:bookmarks.shared")).content.decode()
         )
         actions = [a.get("data-menu-action") for a in soup.select(".header-menu-action")]
-        self.assertIn("random-sort", actions)
-        self.assertNotIn("bulk-edit", actions)
+        self.assertEqual(actions, ["layout"])
 
-    def test_more_menu_hidden_when_no_action_left(self):
+    def test_header_controls_flag_random_state_for_narrow_layout(self):
+        # 窄屏 CSS 靠这个类决定「随机 + 更多」还是三个按钮平铺
+        soup = self.render_index()
+        controls = soup.select_one(".header-controls")
+        self.assertIsNotNone(controls)
+        self.assertTrue("has-random" in controls.get("class"))
+        self.assertIsNotNone(soup.select_one(".header-more"))
+
         self.user.profile.enable_random_button = False
         self.user.profile.save()
-
-        # 共享页没有批量编辑；随机也关掉后菜单整个不渲染，不留空按钮
-        soup = self.make_soup(
-            self.client.get(reverse("linkding:bookmarks.shared")).content.decode()
-        )
-        self.assertIsNone(soup.select_one(".header-more"))
+        soup = self.render_index()
+        controls = soup.select_one(".header-controls")
+        self.assertNotIn("has-random", controls.get("class"))
+        # 菜单常驻 DOM：抽屉里重新打开随机按钮时不用刷新就能回来
+        self.assertIsNotNone(soup.select_one(".header-more"))
