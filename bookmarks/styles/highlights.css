@@ -13,6 +13,8 @@
 .highlights-toolbar {
   display: flex;
   align-items: center;
+  /* 按钮间距统一走 gap：以前靠零散的 ml-2，侧边栏按钮没有那段外边距就贴住了上一个 */
+  gap: var(--unit-2);
   margin-bottom: var(--unit-1);
   flex-wrap: wrap;
 
@@ -568,6 +570,7 @@
 .highlights-inline-filters {
   display: flex;
   align-items: center;
+  gap: var(--unit-2);
 }
 
 /* Hide Group by first when space tightens */
@@ -582,6 +585,11 @@
   .highlights-inline-sort {
     display: none;
   }
+
+  /* 两项都收起了：整块一起隐藏，否则这个空 flex 项会吃两段 gap，多出 8px 空当 */
+  .highlights-inline-filters {
+    display: none;
+  }
 }
 
 @media (max-width: 600px) {
@@ -594,6 +602,16 @@
       min-width: 0;
     }
 
+  }
+
+  /* 与书签列表同一套窄屏取舍：随机按钮常驻，批量编辑与布局收进「更多」 */
+  .highlights-toolbar.has-random .highlights-bulk-toggle,
+  .highlights-toolbar.has-random .header-layout-toggle {
+    display: none;
+  }
+
+  .highlights-toolbar.has-random .header-more {
+    display: inline-flex;
   }
 
   .highlights-card-view {

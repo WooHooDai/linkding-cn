@@ -826,6 +826,10 @@ class LayoutDrawer extends Behavior {
       document
         .querySelectorAll("[data-hl-random]")
         .forEach((el) => (el.hidden = !enabled));
+      // 与书签列表一致：窄屏工具栏按这个类在「随机 + 更多」与三个按钮平铺之间切换
+      document
+        .querySelector(".highlights-toolbar")
+        ?.classList.toggle("has-random", enabled);
       return;
     }
     // 复制设置只影响已渲染页面的复制行为，不必重载：通知页面就地换格式

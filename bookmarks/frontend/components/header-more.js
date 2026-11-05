@@ -126,7 +126,10 @@ class HeaderMoreMenu extends Behavior {
     const action = actionButton.dataset.menuAction;
 
     if (action === "bulk-edit") {
-      document.querySelector(".bulk-edit-active-toggle")?.click();
+      // 书签列表与高亮页各有一套批量编辑开关
+      document
+        .querySelector(".bulk-edit-active-toggle, .highlights-bulk-toggle")
+        ?.click();
     } else if (action === "layout") {
       // 窄屏下布局按钮被藏起来了，点同名的触发按钮即可（隐藏元素也能程序化点击）
       document.querySelector("[data-layout-drawer-toggle]")?.click();

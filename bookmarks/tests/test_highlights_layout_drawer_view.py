@@ -57,6 +57,24 @@ class HighlightsLayoutDrawerViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMix
         self.assertIsNotNone(panel)
         self.assertFalse(panel.has_attr("hidden"))
 
+    def test_toolbar_flags_random_state_for_narrow_layout(self):
+        # 窄屏工具栏靠这个类在「随机 + 更多」与三个按钮平铺之间切换
+        soup = self.render()
+        toolbar = soup.select_one(".highlights-toolbar")
+        self.assertIsNotNone(toolbar)
+        self.assertTrue("has-random" in toolbar.get("class"))
+        actions = [
+            action.get("data-menu-action")
+            for action in soup.select(".highlights-toolbar .header-more-panel .header-menu-action")
+        ]
+        self.assertEqual(actions, ["bulk-edit", "layout"])
+
+        self.user.profile.highlights_enable_random_button = False
+        self.user.profile.save()
+        soup = self.render()
+        toolbar = soup.select_one(".highlights-toolbar")
+        self.assertNotIn("has-random", toolbar.get("class"))
+
     def test_groups_order(self):
         drawer = self.drawer()
         labels = [
