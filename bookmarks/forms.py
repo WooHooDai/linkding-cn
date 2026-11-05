@@ -13,6 +13,7 @@ from bookmarks.models import (
     parse_tag_string,
     sanitize_tag_name,
 )
+from bookmarks.services import auto_tagging
 from bookmarks.services.bookmarks import create_bookmark, update_bookmark
 from bookmarks.type_defs import HttpRequest
 from bookmarks.utils import extract_url
@@ -21,6 +22,17 @@ from bookmarks.validators import BookmarkURLValidator
 
 class CustomErrorList(ErrorList):
     template_name = "shared/error_list.html"
+
+
+def _merge_tag_string(tag_string: str, tag_names: list[str]) -> str:
+    """按输入框的空格分隔语法拼接，与已有标签同名（忽略大小写）的不重复追加。"""
+    names = (tag_string or "").split()
+    seen = {name.lower() for name in names}
+    for tag_name in tag_names:
+        if tag_name.lower() not in seen:
+            names.append(tag_name)
+            seen.add(tag_name.lower())
+    return " ".join(names)
 
 
 class BookmarkForm(forms.ModelForm):
@@ -35,6 +47,8 @@ class BookmarkForm(forms.ModelForm):
     shared = forms.BooleanField(required=False)
     # Hidden field that determines whether to close window/tab after saving the bookmark
     auto_close = forms.CharField(required=False, widget=forms.HiddenInput())
+    # 表单里被取消勾选的规则标签，服务端据此跳过——API 传不了它，所以始终按规则补
+    excluded_auto_tags = forms.CharField(required=False, widget=forms.HiddenInput())
 
     class Meta:
         model = Bookmark
@@ -54,6 +68,26 @@ class BookmarkForm(forms.ModelForm):
     def __init__(self, request: HttpRequest, instance: Bookmark = None):
         self.request = request
 
+        # 命中自动标签规则的标签随首屏一起填进标签框：等 check 接口抓完网页元数据
+        # 再补，用户可能已经离开标签框，甚至已经提交
+        url = request.GET.get("url")
+        if request.method == "POST":
+            url = request.POST.get("url")
+        if not url and instance is not None:
+            url = instance.url
+        self.auto_tags = auto_tagging.get_tags_for_url(
+            request.user_profile.auto_tagging_rules, url
+        )
+        # 已经收藏过的 URL 只展示规则标签、不预填：保存时会走更新分支，标签应当以
+        # 书签原有标签为准，凭空多出来的规则标签会盖掉用户当初的选择
+        self.auto_tags_applied = []
+        if instance is None:
+            already_bookmarked = bool(url) and Bookmark.query_existing(
+                request.user, url
+            ).exists()
+            if not already_bookmarked:
+                self.auto_tags_applied = self.auto_tags
+
         initial = None
         if instance is None and request.method == "GET":
             initial = {
@@ -62,7 +96,9 @@ class BookmarkForm(forms.ModelForm):
                 "description": request.GET.get("description"),
                 "author": request.GET.get("author"),
                 "notes": request.GET.get("notes"),
-                "tag_string": request.GET.get("tags"),
+                "tag_string": _merge_tag_string(
+                    request.GET.get("tags"), self.auto_tags_applied
+                ),
                 "auto_close": "auto_close" in request.GET,
                 "unread": request.user_profile.default_mark_unread,
                 "shared": request.user_profile.default_mark_shared,
@@ -73,6 +109,13 @@ class BookmarkForm(forms.ModelForm):
         super().__init__(
             data, instance=instance, initial=initial, error_class=CustomErrorList
         )
+
+        # 首屏就把按钮的选中态渲染对，免得先按下去再被脚本改回来
+        tag_string = self["tag_string"].value() or ""
+        present = {name.lower() for name in tag_string.split()}
+        self.auto_tag_chips = [
+            (tag, tag.lower() in present) for tag in self.auto_tags
+        ]
 
     @property
     def is_auto_close(self):
@@ -88,15 +131,22 @@ class BookmarkForm(forms.ModelForm):
 
     def save(self, commit=False):
         tag_string = convert_tag_string(self.data["tag_string"])
+        excluded_auto_tags = self.data.get("excluded_auto_tags", "").split()
         bookmark = super().save(commit=False)
         if self.instance.pk:
-            return update_bookmark(bookmark, tag_string, self.request.user)
+            return update_bookmark(
+                bookmark,
+                tag_string,
+                self.request.user,
+                excluded_auto_tags=excluded_auto_tags,
+            )
         else:
             return create_bookmark(
                 bookmark,
                 tag_string,
                 self.request.user,
                 schedule_metadata_enrichment=True,
+                excluded_auto_tags=excluded_auto_tags,
             )
 
     def clean_url(self):

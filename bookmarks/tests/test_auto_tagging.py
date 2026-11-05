@@ -294,3 +294,29 @@ class AutoTaggingTestCase(TestCase):
         """
         tags = auto_tagging.get_tags(script, "https://example.com/")
         self.assertEqual(tags, {"match"})
+
+    def test_auto_tag_preserves_tag_case(self):
+        script = """
+            example.com Software
+        """
+        url = "https://example.com/"
+
+        self.assertEqual(auto_tagging.get_tags(script, url), {"Software"})
+        self.assertEqual(auto_tagging.get_tags_for_url(script, url), ["Software"])
+
+    def test_auto_tag_matches_pattern_ignoring_case(self):
+        script = """
+            EXAMPLE.com/Path Software
+        """
+        url = "https://example.com/path/"
+
+        self.assertEqual(auto_tagging.get_tags(script, url), {"Software"})
+
+    def test_get_tags_for_url_deduplicates_ignoring_case(self):
+        script = """
+            example.com Software
+            example.com software
+        """
+        url = "https://example.com/"
+
+        self.assertEqual(auto_tagging.get_tags_for_url(script, url), ["Software"])

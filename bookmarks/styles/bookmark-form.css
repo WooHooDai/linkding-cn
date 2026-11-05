@@ -50,9 +50,45 @@
     color: var(--warning-color);
   }
 
-  & .form-input-hint.auto-tags {
+  & .auto-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--unit-2);
+    margin-top: var(--unit-2);
+    font-size: var(--font-size-sm);
+  }
+
+  & .auto-tags[hidden] {
     display: none;
-    color: var(--success-color);
+  }
+
+  & .auto-tags-label {
+    color: var(--secondary-text-color);
+  }
+
+  /* 未选中的按钮只留虚线框：提示这个标签已经不在标签框里 */
+  & .auto-tag {
+    padding: 0 var(--unit-3);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    background: none;
+    color: var(--secondary-text-color);
+    font: inherit;
+    line-height: 1.8;
+    cursor: pointer;
+  }
+
+  & .auto-tag[aria-pressed="true"] {
+    border-style: solid;
+    border-color: var(--primary-color);
+    background: var(--primary-color-shade);
+    color: var(--primary-text-color);
+  }
+
+  & .auto-tag:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-text-color);
   }
 
   & details.notes textarea,

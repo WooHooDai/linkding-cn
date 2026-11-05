@@ -177,7 +177,27 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             page.get_by_label("URL").fill(bookmark.url)
             expect(details).to_have_attribute("open", value="")
 
-    def test_create_should_preview_auto_tags(self):
+    def test_create_should_not_prefill_auto_tags_for_existing_bookmark(self):
+        profile = self.get_or_create_test_user().profile
+        profile.auto_tagging_rules = "github.com dev github"
+        profile.save()
+        self.setup_bookmark(url="https://github.com/sissbruecker/linkding")
+
+        with sync_playwright() as p:
+            url = (
+                reverse("linkding:bookmarks.new")
+                + "?url=https%3A%2F%2Fgithub.com%2Fsissbruecker%2Flinkding"
+            )
+            page = self.open(url, p)
+
+            # 已收藏的 URL 只展示规则标签，不填进标签框
+            expect(page.get_by_label("Tags")).to_have_value("")
+            for tag in ("dev", "github"):
+                expect(
+                    page.get_by_role("button", name=tag, exact=True)
+                ).to_have_attribute("aria-pressed", "false")
+
+    def test_create_should_prefill_auto_tags(self):
         profile = self.get_or_create_test_user().profile
         profile.auto_tagging_rules = "github.com dev github"
         profile.save()
@@ -190,14 +210,26 @@ class BookmarkFormE2ETestCase(LinkdingE2ETestCase):
             )
             page = self.open(url, p)
 
-            auto_tags_hint = page.locator(".form-input-hint.auto-tags")
-            expect(auto_tags_hint).to_be_visible()
-            expect(auto_tags_hint).to_have_text("Auto tags: dev github")
+            tags_input = page.get_by_label("Tags")
+            expect(tags_input).to_have_value("dev github")
+
+            # 取消选中：标签从输入框移除，按钮变为未选中
+            # 标签框获得焦点时候选菜单会盖住按钮，先关掉再点
+            page.keyboard.press("Escape")
+            page.get_by_role("button", name="dev", exact=True).click()
+            expect(tags_input).to_have_value("github")
+            expect(page.get_by_role("button", name="dev", exact=True)).to_have_attribute(
+                "aria-pressed", "false"
+            )
+
+            # 重新选中：标签回到输入框
+            page.get_by_role("button", name="dev", exact=True).click()
+            expect(tags_input).to_have_value("github dev")
 
             # Change to URL without auto tags
             page.get_by_label("URL").fill("https://example.com")
 
-            expect(auto_tags_hint).to_be_hidden()
+            expect(tags_input).to_have_value("")
 
     def test_clear_buttons_only_shown_when_fields_have_content(self):
         with sync_playwright() as p:

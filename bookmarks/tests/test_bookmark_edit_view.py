@@ -154,6 +154,47 @@ class BookmarkEditViewTestCase(TestCase, BookmarkFactoryMixin):
             html,
         )
 
+    def test_should_show_auto_tags_as_toggles(self):
+        profile = self.get_or_create_test_user().profile
+        profile.auto_tagging_rules = "example.com auto1 auto2"
+        profile.save()
+        tag = self.setup_tag(name="auto1")
+        bookmark = self.setup_bookmark(url="https://example.com", tags=[tag])
+
+        response = self.client.get(
+            reverse("linkding:bookmarks.edit", args=[bookmark.id])
+        )
+        html = response.content.decode()
+
+        # 已有的规则标签按下、缺的留虚线：编辑页只提示，不替用户往书签里补
+        self.assertInHTML(
+            """
+            <div class="auto-tags">
+                <span class="auto-tags-label">Auto tags:</span>
+                <button type="button" class="auto-tag" data-tag="auto1" aria-pressed="true">auto1</button>
+                <button type="button" class="auto-tag" data-tag="auto2" aria-pressed="false">auto2</button>
+            </div>
+            """,
+            html,
+        )
+        self.assertNotIn("data-auto-tags-applied", html)
+
+    def test_should_not_apply_excluded_auto_tags(self):
+        profile = self.get_or_create_test_user().profile
+        profile.auto_tagging_rules = "example.com auto1"
+        profile.save()
+        bookmark = self.setup_bookmark(url="http://example.com/edited")
+
+        form_data = self.create_form_data(
+            {"id": bookmark.id, "tag_string": "mine", "excluded_auto_tags": "auto1"}
+        )
+        self.client.post(
+            reverse("linkding:bookmarks.edit", args=[bookmark.id]), form_data
+        )
+
+        bookmark.refresh_from_db()
+        self.assertCountEqual(bookmark.tag_names, ["mine"])
+
     def test_should_prevent_duplicate_urls(self):
         edited_bookmark = self.setup_bookmark(url="http://example.com/edited")
         existing_bookmark = self.setup_bookmark(url="http://example.com/existing")

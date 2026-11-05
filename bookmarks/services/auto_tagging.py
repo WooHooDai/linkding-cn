@@ -1,7 +1,29 @@
+import logging
 import re
 from urllib.parse import parse_qs, urlparse
 
 import idna
+
+logger = logging.getLogger(__name__)
+
+
+def get_tags_for_url(rules: str, url: str) -> list[str]:
+    """规则是用户手写的，写坏一行只该少打几个标签，不该让整个请求失败。"""
+    if not rules or not url:
+        return []
+    try:
+        tag_names = get_tags(rules, url)
+    except Exception:
+        logger.exception("Failed to auto-tag bookmark. url=%s", url)
+        return []
+    # 标签名大小写不敏感（Tag 用 name__iexact 复用），只留先出现的那份
+    names = []
+    seen = set()
+    for tag_name in sorted(tag_names):
+        if tag_name.lower() not in seen:
+            seen.add(tag_name.lower())
+            names.append(tag_name)
+    return names
 
 
 def get_tags(script: str, url: str):
@@ -11,7 +33,7 @@ def get_tags(script: str, url: str):
     if not parsed_url.hostname:
         return result
 
-    for line in script.lower().split("\n"):
+    for line in script.split("\n"):
         line = line.strip()
 
         # Skip empty lines or lines that start with a comment
@@ -29,7 +51,8 @@ def get_tags(script: str, url: str):
             continue
 
         # to parse a host name from the pattern URL, ensure it has a scheme
-        pattern_url = "//" + re.sub("^https?://", "", parts[0])
+        # 只有 URL 条件按小写比对，标签名保留规则里写的大小写
+        pattern_url = ("//" + re.sub("^https?://", "", parts[0])).lower()
         parsed_pattern = urlparse(pattern_url)
 
         if not _domains_matches(parsed_pattern.hostname, parsed_url.hostname):

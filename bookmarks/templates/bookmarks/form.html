@@ -2,7 +2,9 @@
 {% load static %}
 {% load shared %}
 
-<div class="bookmarks-form">
+<div class="bookmarks-form"
+     {% if form.auto_tags %}data-auto-tags="{{ form.auto_tags|join:' ' }}"{% endif %}
+     {% if form.auto_tags_applied %}data-auto-tags-applied="{{ form.auto_tags_applied|join:' ' }}"{% endif %}>
   {% csrf_token %}
   {{ form.auto_close }}
   <!-- 标题 -->
@@ -29,11 +31,15 @@
       input-value="{{ form.tag_string.value|default_if_none:'' }}"
       input-aria-describedby="{{ form.tag_string.auto_id }}_help"
     ></ld-tag-autocomplete>
+    <div class="auto-tags"{% if not form.auto_tag_chips %} hidden{% endif %}>
+      <span class="auto-tags-label">{% translate "Auto tags:" %}</span>
+      {% for tag, pressed in form.auto_tag_chips %}<button type="button" class="auto-tag" data-tag="{{ tag }}" aria-pressed="{% if pressed %}true{% else %}false{% endif %}">{{ tag }}</button>{% endfor %}
+    </div>
     <div id="{{ form.tag_string.auto_id }}_help" class="form-input-hint">
       {% translate "Enter tags separated by spaces and" %} <strong>{% translate "without" %}</strong>(#).
       {% translate "If a tag does not exist, it will be created automatically." %}
     </div>
-    <div class="form-input-hint auto-tags"></div>
+    {{ form.excluded_auto_tags }}
     {{ form.tag_string.errors }}
   </div>
 
@@ -385,6 +391,181 @@
         });
       }
 
+      // ---- 自动标签 ----
+      // 规则命中的标签填进标签框，并在框下列成可点选的标签：选中即保留、取消即从
+      // 框里移除。取消的会记进 excluded_auto_tags 一起提交，服务端保存时跳过；
+      // API 没有这个字段，所以那边始终按规则补齐。data-auto-tags 是首屏服务端
+      // 已经填好的那一份。
+      const autoTagsContainer = document.querySelector(".auto-tags");
+      const excludedAutoTagsInput = document.getElementById('{{ form.excluded_auto_tags.id_for_label }}');
+      const autoTagsForm = document.querySelector(".bookmarks-form")?.closest("form");
+      let autoTagNames = (
+        document.querySelector(".bookmarks-form")?.dataset.autoTags || ""
+      )
+        .split(/\s+/)
+        .filter(Boolean);
+      let appliedAutoTags = new Set(
+        (document.querySelector(".bookmarks-form")?.dataset.autoTagsApplied || "")
+          .split(/\s+/)
+          .filter(Boolean)
+          .map((name) => name.toLowerCase()),
+      );
+      // 只有换了 URL 才重新补默认值；同一 URL 的复核不把用户删掉的标签补回来
+      let autoTagsUrl = urlInput.value;
+      let autoTagRequestId = 0;
+      // 判定"已存在"时表单会被书签原有标签整体覆盖，先记下用户在这里点过的选择
+      const autoTagPicks = { added: new Set(), removed: new Set() };
+
+      function getTagInput() {
+        return document.getElementById('{{ form.tag_string.id_for_label }}');
+      }
+
+      function readTags() {
+        const input = getTagInput();
+        if (input) {
+          return input.value.split(/\s+/).filter(Boolean);
+        }
+        // lit 组件还没渲染出输入框时，退回服务端渲染的初始值
+        const host = document.querySelector("ld-tag-autocomplete");
+        return (host?.getAttribute("input-value") || "")
+          .split(/\s+/)
+          .filter(Boolean);
+      }
+
+      function tagPresent(names, name) {
+        const key = name.toLowerCase();
+        return names.some((tag) => tag.toLowerCase() === key);
+      }
+
+      function writeTags(names) {
+        const input = getTagInput();
+        if (!input) {
+          return;
+        }
+        const caret = input.selectionStart;
+        updateInput(input, names.join(" "));
+        // 补在末尾，别把正在输入的光标拽走
+        if (document.activeElement === input) {
+          const offset = Math.min(caret, input.value.length);
+          input.setSelectionRange(offset, offset);
+        }
+        syncAutoTags();
+      }
+
+      // 标签框内容变了：按钮的按下态、要排除的规则标签都跟着变
+      function syncAutoTags() {
+        const names = readTags();
+        autoTagsContainer?.querySelectorAll(".auto-tag").forEach((chip) => {
+          chip.setAttribute(
+            "aria-pressed",
+            tagPresent(names, chip.dataset.tag) ? "true" : "false",
+          );
+        });
+        if (excludedAutoTagsInput) {
+          excludedAutoTagsInput.value = autoTagNames
+            .filter((name) => !tagPresent(names, name))
+            .join(" ");
+        }
+      }
+
+      function renderAutoTags() {
+        if (autoTagsContainer) {
+          autoTagsContainer
+            .querySelectorAll(".auto-tag")
+            .forEach((chip) => chip.remove());
+          autoTagNames.forEach((name) => {
+            const chip = document.createElement("button");
+            chip.type = "button";
+            chip.className = "auto-tag";
+            chip.dataset.tag = name;
+            chip.textContent = name;
+            autoTagsContainer.append(chip);
+          });
+          autoTagsContainer.hidden = autoTagNames.length === 0;
+        }
+        syncAutoTags();
+      }
+
+      function toggleAutoTag(name) {
+        const names = readTags();
+        const key = name.toLowerCase();
+        if (tagPresent(names, name)) {
+          autoTagPicks.added.delete(key);
+          autoTagPicks.removed.add(key);
+          writeTags(names.filter((tag) => tag.toLowerCase() !== key));
+        } else {
+          autoTagPicks.removed.delete(key);
+          autoTagPicks.added.add(key);
+          writeTags(names.concat(name));
+        }
+      }
+
+      // 书签原有标签 + 用户点过的加减，避免"判定已存在"把刚点的选择抹掉
+      function mergeTagPicks(tagNames) {
+        const names = tagNames.slice();
+        const indexOf = (name) =>
+          names.findIndex((tag) => tag.toLowerCase() === name.toLowerCase());
+        autoTagNames.forEach((tag) => {
+          const key = tag.toLowerCase();
+          if (autoTagPicks.added.has(key) && indexOf(key) < 0) {
+            names.push(tag);
+          }
+          const index = autoTagPicks.removed.has(key) ? indexOf(key) : -1;
+          if (index >= 0) {
+            names.splice(index, 1);
+          }
+        });
+        autoTagPicks.added.clear();
+        autoTagPicks.removed.clear();
+        return names.join(" ");
+      }
+
+      function applyAutoTags(url, names, skipDefaults) {
+        const isNewUrl = url !== autoTagsUrl;
+        autoTagsUrl = url;
+        if (isNewUrl) {
+          autoTagPicks.added.clear();
+          autoTagPicks.removed.clear();
+        }
+        autoTagNames = names.slice().sort();
+        const nextAutoTags = new Set(names.map((name) => name.toLowerCase()));
+        const current = readTags();
+        // 上一次规则填进去、这次不再命中的撤掉，用户自己输入的一律不动
+        const kept = current.filter((name) => {
+          const key = name.toLowerCase();
+          return !appliedAutoTags.has(key) || nextAutoTags.has(key);
+        });
+        // 已收藏的 URL 只展示规则标签：保存走更新，标签应以书签原有标签为准
+        const added =
+          isNewUrl && !skipDefaults
+            ? autoTagNames.filter((name) => !tagPresent(kept, name))
+            : [];
+        appliedAutoTags = nextAutoTags;
+        renderAutoTags();
+        if (kept.length !== current.length || added.length > 0) {
+          writeTags(kept.concat(added));
+        }
+      }
+
+      // 规则只依赖 URL，单独问一次就能立刻更新标签，不必等网页抓取
+      // skipDefaults 用于编辑页：那里只该展示规则标签，不该替用户改动已有书签的标签
+      function checkAutoTags(url, skipDefaults) {
+        const requestId = ++autoTagRequestId;
+        const params = new URLSearchParams({ url });
+        fetch(`{% url 'linkding:api-root' %}bookmarks/auto-tags?${params.toString()}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (requestId !== autoTagRequestId) {
+              return;
+            }
+            applyAutoTags(
+              url,
+              data.auto_tags || [],
+              skipDefaults ?? data.bookmark_exists,
+            );
+          });
+      }
+
       function checkUrl(sendClientMetadata) {
         if (!urlInput.value) {
           return;
@@ -451,7 +632,7 @@
                 updateInput(authorInput, existingBookmark.author);
               }
               updateInput(notesInput, existingBookmark.notes);
-              updateInput(tagsInput, existingBookmark.tag_names.join(" "));
+              updateInput(tagsInput, mergeTagPicks(existingBookmark.tag_names));
               updateCheckbox(unreadCheckbox, existingBookmark.unread);
               updateCheckbox(sharedCheckbox, existingBookmark.shared);
               // 更新预览图：优先使用已存在书签的本地预览图文件 URL，其次使用远程 URL
@@ -487,17 +668,8 @@
               updatePreviewImageDisplay();
             }
 
-            // Preview auto tags
-            const autoTags = data.auto_tags;
-            const autoTagsHint = document.querySelector('.form-input-hint.auto-tags');
-
-            if (autoTags.length > 0) {
-              autoTags.sort();
-              autoTagsHint.style['display'] = 'block';
-              autoTagsHint.innerHTML = `{% translate 'Auto tags:' %} ${autoTags.join(" ")}`;
-            } else {
-              autoTagsHint.style['display'] = 'none';
-            }
+            // 自动标签并进标签框
+            applyAutoTags(currentUrl, data.auto_tags || [], !!data.bookmark);
           });
       }
 
@@ -567,6 +739,21 @@
 
       refreshButton?.addEventListener('click', refreshMetadata);
 
+      // 标签框（含自动补全组件写入的值）一变，自动标签按钮与排除清单就跟着同步
+      autoTagsForm?.addEventListener("input", syncAutoTags);
+      // chips 会被 renderAutoTags() 整批重建，逐个绑定会在重建后失效，用委托
+      autoTagsForm?.addEventListener("click", (event) => {
+        const chip = event.target.closest(".auto-tag");
+        if (chip) {
+          toggleAutoTag(chip.dataset.tag);
+        }
+      });
+      syncAutoTags();
+      // 标签框由 lit 组件渲染，组件就绪后再补一次，编辑页首次保存才不会漏掉排除项
+      customElements.whenDefined("ld-tag-autocomplete").then(() => {
+        requestAnimationFrame(syncAutoTags);
+      });
+
       // Extract URL from pasted text
       urlInput.addEventListener('paste', function(e) {
         const text = (e.clipboardData || window.clipboardData).getData('text');
@@ -586,7 +773,12 @@
           // 有 URL 就能重抓（不依赖是否已存在书签），空值时不显示死按钮
           setRefreshVisible(!!urlInput.value.trim());
           clearTimeout(checkUrlTimer);
-          checkUrlTimer = setTimeout(() => checkUrl(false), 300);
+          const url = urlInput.value;
+          // 规则标签不等元数据：先问一次轻量接口，标签立刻出现在框里
+          checkUrlTimer = setTimeout(() => {
+            checkAutoTags(url);
+            checkUrl(false);
+          }, 300);
         });
         titleInput.addEventListener('input', () => {
           isTitleModified = true;
@@ -599,6 +791,16 @@
         });
       } else {
         setRefreshVisible(true);
+        // 编辑页不重抓元数据，但 URL 一改规则标签就跟着变：只换下面的按钮，不碰标签框
+        urlInput.addEventListener("input", function () {
+          clearTimeout(checkUrlTimer);
+          const url = urlInput.value;
+          checkUrlTimer = setTimeout(() => {
+            if (url) {
+              checkAutoTags(url, true);
+            }
+          }, 300);
+        });
       }
     })();
 

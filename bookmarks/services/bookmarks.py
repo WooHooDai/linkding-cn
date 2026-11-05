@@ -1,5 +1,4 @@
 import json
-import logging
 import re
 
 from django.db import transaction
@@ -10,8 +9,6 @@ from bookmarks.services import auto_tagging, tasks, website_loader
 from bookmarks.services.tags import get_existing_tags, get_or_create_tags
 from bookmarks.utils import normalize_url
 
-logger = logging.getLogger(__name__)
-
 
 def create_bookmark(
     bookmark: Bookmark,
@@ -19,6 +16,7 @@ def create_bookmark(
     current_user: User,
     disable_html_snapshot: bool = False,
     schedule_metadata_enrichment: bool = False,
+    excluded_auto_tags: list[str] | None = None,
 ):
     from django.db.models import Q
 
@@ -41,7 +39,12 @@ def create_bookmark(
 
         if existing_bookmark is not None:
             _merge_bookmark_data(bookmark, existing_bookmark)
-            return update_bookmark(existing_bookmark, tag_string, current_user)
+            return update_bookmark(
+                existing_bookmark,
+                tag_string,
+                current_user,
+                excluded_auto_tags=excluded_auto_tags,
+            )
 
         # Set currently logged in user as owner
         bookmark.owner = current_user
@@ -51,7 +54,7 @@ def create_bookmark(
             bookmark.date_modified = timezone.now()
         bookmark.save()
         # Update tag list
-        _update_bookmark_tags(bookmark, tag_string, current_user)
+        _update_bookmark_tags(bookmark, tag_string, current_user, excluded_auto_tags)
         bookmark.save()
 
     # Tasks that don't need to be in the transaction
@@ -88,6 +91,7 @@ def update_bookmark(
     tag_string,
     current_user: User,
     tags_may_have_changed: bool = True,
+    excluded_auto_tags: list[str] | None = None,
 ):
     # Detect URL change
     original_bookmark = Bookmark.objects.get(id=bookmark.id)
@@ -114,7 +118,7 @@ def update_bookmark(
             else set(original_bookmark.tags.values_list("name", flat=True))
         )
         # Update tag list
-        _update_bookmark_tags(bookmark, tag_string, current_user)
+        _update_bookmark_tags(bookmark, tag_string, current_user, excluded_auto_tags)
         has_tags_changed = original_tag_names is not None and (
             set(bookmark.tags.values_list("name", flat=True)) != original_tag_names
         )
@@ -788,22 +792,27 @@ def _merge_bookmark_data(from_bookmark: Bookmark, to_bookmark: Bookmark):
     to_bookmark.shared = from_bookmark.shared
 
 
-def _update_bookmark_tags(bookmark: Bookmark, tag_string: str, user: User):
+def _update_bookmark_tags(
+    bookmark: Bookmark,
+    tag_string: str,
+    user: User,
+    excluded_auto_tags: list[str] | None = None,
+):
     tag_names = parse_tag_string(tag_string)
+    # 用户在表单里明确取消的规则标签不再补：自动标签是默认值，不是不可撤销的强制
+    excluded = {name.lower() for name in excluded_auto_tags or ()}
 
     if user.profile.auto_tagging_rules:
-        try:
-            auto_tag_names = auto_tagging.get_tags(
-                user.profile.auto_tagging_rules, bookmark.url
-            )
-            for auto_tag_name in auto_tag_names:
-                if auto_tag_name not in tag_names:
-                    tag_names.append(auto_tag_name)
-        except Exception as e:
-            logger.error(
-                f"Failed to auto-tag bookmark. url={bookmark.url}",
-                exc_info=e,
-            )
+        auto_tag_names = auto_tagging.get_tags_for_url(
+            user.profile.auto_tagging_rules, bookmark.url
+        )
+        existing = {name.lower() for name in tag_names}
+        for auto_tag_name in auto_tag_names:
+            key = auto_tag_name.lower()
+            if key in excluded or key in existing:
+                continue
+            tag_names.append(auto_tag_name)
+            existing.add(key)
 
     tags = get_or_create_tags(tag_names, user)
     bookmark.tags.set(tags)

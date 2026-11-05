@@ -1349,6 +1349,44 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
 
         self.assertCountEqual(auto_tags, ["tag1", "tag2"])
 
+    def test_auto_tags_returns_matching_tags_without_scraping(self):
+        self.authenticate()
+
+        profile = self.get_or_create_test_user().profile
+        profile.auto_tagging_rules = "example.com tag1 tag2"
+        profile.save()
+
+        url = reverse("linkding:bookmark-auto-tags")
+        response = self.get(
+            f"{url}?url={urllib.parse.quote_plus('https://example.com')}",
+            expected_status_code=status.HTTP_200_OK,
+        )
+
+        self.assertCountEqual(response.data["auto_tags"], ["tag1", "tag2"])
+        self.assertFalse(response.data["bookmark_exists"])
+
+    def test_auto_tags_reports_existing_bookmark(self):
+        self.authenticate()
+
+        profile = self.get_or_create_test_user().profile
+        profile.auto_tagging_rules = "example.com tag1"
+        profile.save()
+        self.setup_bookmark(url="https://example.com/existing")
+
+        url = reverse("linkding:bookmark-auto-tags")
+
+        response = self.get(
+            f"{url}?url={urllib.parse.quote_plus('https://example.com/existing')}",
+            expected_status_code=status.HTTP_200_OK,
+        )
+        self.assertTrue(response.data["bookmark_exists"])
+
+        response = self.get(
+            f"{url}?url={urllib.parse.quote_plus('https://example.com/new')}",
+            expected_status_code=status.HTTP_200_OK,
+        )
+        self.assertFalse(response.data["bookmark_exists"])
+
     def test_check_ignore_cache(self):
         self.authenticate()
 

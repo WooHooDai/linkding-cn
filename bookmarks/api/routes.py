@@ -213,22 +213,33 @@ class BookmarkViewSet(
         )
 
         # Return tags that would be automatically applied to the bookmark
-        profile = request.user.profile
-        auto_tags = []
-        if profile.auto_tagging_rules:
-            try:
-                auto_tags = auto_tagging.get_tags(profile.auto_tagging_rules, url)
-            except Exception as e:
-                logger.error(
-                    f"Failed to auto-tag bookmark. url={url}",
-                    exc_info=e,
-                )
+        auto_tags = auto_tagging.get_tags_for_url(
+            request.user.profile.auto_tagging_rules, url
+        )
 
         return Response(
             {
                 "bookmark": existing_bookmark_data,
                 "metadata": metadata.to_dict(),
                 "auto_tags": auto_tags,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(methods=["get"], detail=False, url_path="auto-tags")
+    def auto_tags(self, request: HttpRequest):
+        """只回答两个问题：规则会打哪些标签、这个 URL 是否已收藏。
+
+        表单改 URL 时用它可以立刻更新标签，不必等 check 那边抓完网页元数据。
+        """
+        url = request.GET.get("url")
+        return Response(
+            {
+                "auto_tags": auto_tagging.get_tags_for_url(
+                    request.user.profile.auto_tagging_rules, url
+                ),
+                "bookmark_exists": bool(url)
+                and Bookmark.query_existing(request.user, url).exists(),
             },
             status=status.HTTP_200_OK,
         )

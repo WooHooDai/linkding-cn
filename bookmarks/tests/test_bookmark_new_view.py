@@ -64,6 +64,7 @@ class BookmarkNewViewTestCase(TestCase, BookmarkFactoryMixin):
             "tag1,tag2",
             self.user,
             schedule_metadata_enrichment=True,
+            excluded_auto_tags=[],
         )
 
     def test_should_return_422_with_invalid_form(self):
@@ -144,6 +145,115 @@ class BookmarkNewViewTestCase(TestCase, BookmarkFactoryMixin):
             """,
             html,
         )
+
+    def test_should_prefill_auto_tags(self):
+        profile = self.get_or_create_test_user().profile
+        profile.auto_tagging_rules = "example.com auto1 auto2"
+        profile.save()
+
+        response = self.client.get(
+            reverse("linkding:bookmarks.new") + "?url=http%3A%2F%2Fexample.com"
+        )
+        html = response.content.decode()
+
+        self.assertIn('data-auto-tags="auto1 auto2"', html)
+        self.assertInHTML(
+            """
+            <ld-tag-autocomplete input-id="id_tag_string" input-name="tag_string" input-value="auto1 auto2"
+                                 input-aria-describedby="id_tag_string_help">
+            </ld-tag-autocomplete>
+            """,
+            html,
+        )
+
+    def test_should_merge_auto_tags_into_prefilled_tags(self):
+        profile = self.get_or_create_test_user().profile
+        profile.auto_tagging_rules = "example.com auto1"
+        profile.save()
+
+        response = self.client.get(
+            reverse("linkding:bookmarks.new")
+            + "?url=http%3A%2F%2Fexample.com&tags=mine"
+        )
+        html = response.content.decode()
+
+        self.assertInHTML(
+            """
+            <ld-tag-autocomplete input-id="id_tag_string" input-name="tag_string" input-value="mine auto1"
+                                 input-aria-describedby="id_tag_string_help">
+            </ld-tag-autocomplete>
+            """,
+            html,
+        )
+
+    def test_should_not_prefill_auto_tags_for_existing_bookmark(self):
+        profile = self.get_or_create_test_user().profile
+        profile.auto_tagging_rules = "example.com auto1"
+        profile.save()
+        self.setup_bookmark(url="https://example.com")
+
+        response = self.client.get(
+            reverse("linkding:bookmarks.new") + "?url=https%3A%2F%2Fexample.com"
+        )
+        html = response.content.decode()
+
+        # 标签框保持为空，规则标签只作为可点选提示
+        self.assertInHTML(
+            """
+            <ld-tag-autocomplete input-id="id_tag_string" input-name="tag_string" input-value=""
+                                 input-aria-describedby="id_tag_string_help">
+            </ld-tag-autocomplete>
+            """,
+            html,
+        )
+        self.assertInHTML(
+            """
+            <div class="auto-tags">
+                <span class="auto-tags-label">Auto tags:</span>
+                <button type="button" class="auto-tag" data-tag="auto1" aria-pressed="false">auto1</button>
+            </div>
+            """,
+            html,
+        )
+        self.assertNotIn("data-auto-tags-applied", html)
+
+    def test_should_render_auto_tags_as_toggles(self):
+        profile = self.get_or_create_test_user().profile
+        profile.auto_tagging_rules = "example.com auto1 auto2"
+        profile.save()
+
+        response = self.client.get(
+            reverse("linkding:bookmarks.new") + "?url=http%3A%2F%2Fexample.com"
+        )
+        html = response.content.decode()
+
+        self.assertInHTML(
+            """
+            <div class="auto-tags">
+                <span class="auto-tags-label">Auto tags:</span>
+                <button type="button" class="auto-tag" data-tag="auto1" aria-pressed="true">auto1</button>
+                <button type="button" class="auto-tag" data-tag="auto2" aria-pressed="true">auto2</button>
+            </div>
+            """,
+            html,
+        )
+
+    def test_should_not_apply_excluded_auto_tags(self):
+        profile = self.get_or_create_test_user().profile
+        profile.auto_tagging_rules = "example.com auto1 auto2"
+        profile.save()
+
+        form_data = self.create_form_data(
+            {
+                "url": "https://example.com",
+                "tag_string": "auto2",
+                "excluded_auto_tags": "auto1",
+            }
+        )
+        self.client.post(reverse("linkding:bookmarks.new"), form_data)
+
+        bookmark = Bookmark.objects.first()
+        self.assertCountEqual(bookmark.tag_names, ["auto2"])
 
     def test_should_prefill_notes_from_url_parameter(self):
         response = self.client.get(

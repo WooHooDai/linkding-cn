@@ -303,6 +303,20 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
 
         self.assertCountEqual(bookmark.tags.all(), [tag1, tag2])
 
+    def test_create_should_skip_excluded_auto_tags(self):
+        tag1 = self.setup_tag()
+        tag2 = self.setup_tag()
+        profile = self.get_or_create_test_user().profile
+        profile.auto_tagging_rules = f"example.com {tag2.name}"
+        profile.save()
+
+        bookmark_data = Bookmark(url="https://example.com")
+        bookmark = create_bookmark(
+            bookmark_data, tag1.name, self.user, excluded_auto_tags=[tag2.name]
+        )
+
+        self.assertCountEqual(bookmark.tags.all(), [tag1])
+
     def test_create_should_set_default_dates(self):
         with patch("bookmarks.services.bookmarks.timezone.now") as mock_now:
             fixed_time = timezone.make_aware(datetime.datetime(2024, 1, 15, 12, 0, 0))
@@ -513,6 +527,20 @@ class BookmarkServiceTestCase(TestCase, BookmarkFactoryMixin):
         update_bookmark(bookmark, tag1.name, self.user)
 
         self.assertCountEqual(bookmark.tags.all(), [tag1, tag2])
+
+    def test_update_should_skip_excluded_auto_tags(self):
+        tag1 = self.setup_tag()
+        tag2 = self.setup_tag()
+        profile = self.get_or_create_test_user().profile
+        profile.auto_tagging_rules = f"example.com {tag2.name}"
+        profile.save()
+        bookmark = self.setup_bookmark(url="https://example.com")
+
+        update_bookmark(
+            bookmark, tag1.name, self.user, excluded_auto_tags=[tag2.name]
+        )
+
+        self.assertCountEqual(bookmark.tags.all(), [tag1])
 
     def test_archive_bookmark(self):
         bookmark = Bookmark(
