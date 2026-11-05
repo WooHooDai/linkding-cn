@@ -879,6 +879,9 @@ def query_annotations(
     # 聚合排序：根据 group_by 决定主排序和次排序
     if group_by == "bookmark":
         order_fields = ["bookmark__title", sort]
+    elif group_by == "author":
+        # 按书签作者分组（空作者排在最后，由视图归入「未标注作者」组）
+        order_fields = ["bookmark__author", sort]
     elif group_by == "domain":
         # 按 URL 域名分组
         from django.db.models.functions import Lower

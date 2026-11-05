@@ -135,7 +135,7 @@ class HighlightsLayoutDrawerViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMix
         self.assertIsNotNone(select)
         self.assertEqual(
             [option.get("value") for option in select.select("option")],
-            ["none", "bookmark", "domain", "color"],
+            ["none", "bookmark", "author", "domain", "color"],
         )
         self.assertEqual(
             [option.get("value") for option in select.select("option[selected]")],
@@ -213,7 +213,7 @@ class HighlightsLayoutDrawerViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMix
             item.get("data-item-key")
             for item in module_list.select("[data-item-key]")
         ]
-        self.assertEqual(keys, ["colors", "domains", "tags"])
+        self.assertEqual(keys, ["colors", "domains", "tags", "authors"])
 
     # --- 高亮工具栏 ---
 

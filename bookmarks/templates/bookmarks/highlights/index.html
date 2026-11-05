@@ -285,6 +285,15 @@
                   {{ group_label }}
                 {% endif %}
               </h3>
+              {# 按书签分组时条目不再显示标题，作者跟着标题一起上提到组标题 #}
+              {% if group_by == 'bookmark' %}
+                {% with group_author=group_annotations.0.bookmark.author %}
+                  {% if group_author %}
+                    <span class="highlight-group-sep" aria-hidden="true">·</span>
+                    <span class="highlight-group-author" title="{% translate 'Author' %}">{{ group_author }}</span>
+                  {% endif %}
+                {% endwith %}
+              {% endif %}
               <span class="highlight-group-count">({{ group_annotations|length }})</span>
               <button type="button" class="highlight-group-toggle" title="{% translate 'Collapse' %}">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 9l6 6l6 -6"/></svg>
@@ -317,10 +326,15 @@
                             data-annotation-id="{{ ann.id }}"
                             {% if not ann.note_content %}data-empty{% endif %}>{{ ann.note_content }}</textarea>
 
-                  {# Actions row: date + action buttons #}
+                  {# Actions row: date + author + title + action buttons #}
                   <div class="highlight-meta">
                     <span class="highlight-date">{{ ann.date_created|date:"Y/m/d H:i" }}</span>
                     {% if group_by != 'bookmark' %}
+                      {# 分组为「作者」时组标题已经写着作者名，条目里不再重复 #}
+                      {% if group_by != 'author' and ann.bookmark.author %}
+                        <a class="highlight-author" href="?{% add_author_to_query ann.bookmark.author %}" title="{% translate 'Author' %}">{{ ann.bookmark.author }}</a>
+                        <span class="highlight-author-sep" aria-hidden="true">·</span>
+                      {% endif %}
                       <a class="highlight-bookmark-title" data-turbo="false" href="{% url 'linkding:bookmarks.read' ann.bookmark_id %}?from=highlights" title="{{ ann.bookmark.resolved_title }}">{{ ann.bookmark.resolved_title }}</a>
                     {% endif %}
                     <span class="highlight-actions">

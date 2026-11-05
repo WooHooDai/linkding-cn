@@ -264,6 +264,26 @@
     white-space: nowrap;
   }
 
+  /* 按书签分组时上提到组标题的作者：弱化文字，最长 10em 省略 */
+  .highlight-group-author {
+    flex: none;
+    max-width: 10em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+    color: var(--secondary-text-color);
+  }
+
+  .highlight-group-sep {
+    flex: none;
+    margin-inline: calc(-1 * var(--unit-1));
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+    color: var(--tertiary-text-color);
+  }
+
   .highlight-group-color-bar {
     width: 4px;
     align-self: stretch;
@@ -412,6 +432,32 @@
     font-size: var(--font-size-sm);
     color: var(--secondary-text-color);
     white-space: nowrap;
+  }
+
+  /* 作者（日期之后、标题之前）：弱化文字，最长 10em 省略；点击进入 author 搜索 */
+  .highlight-author {
+    flex: none;
+    display: inline-block;
+    max-width: 10em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--font-size-sm);
+    color: var(--secondary-text-color);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--primary-color);
+      text-decoration: underline;
+    }
+  }
+
+  /* 作者与标题之间的间隔点：吃掉两侧 gap 的一半，读起来像「鲁迅 · 朝花夕拾」 */
+  .highlight-author-sep {
+    flex: none;
+    margin-inline: calc(-1 * var(--unit-1));
+    font-size: var(--font-size-sm);
+    color: var(--tertiary-text-color);
   }
 
   /* Action buttons — collapse to 0 width when hidden, expand on hover */

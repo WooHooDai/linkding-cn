@@ -19,6 +19,7 @@ from bookmarks.models import (
 from bookmarks.type_defs import HttpRequest
 from bookmarks.views import turbo
 from bookmarks.views.contexts import (
+    HighlightAuthorCloudContext,
     HighlightDomainsContext,
     HighlightTagCloudContext,
 )
@@ -276,6 +277,9 @@ def _group_annotations(annotations, group_by):
         if group_by == "bookmark":
             key = ann.bookmark_id
             label = ann.bookmark.resolved_title
+        elif group_by == "author":
+            key = ann.bookmark.author or ""
+            label = key or str(_("No author"))
         elif group_by == "domain":
             parsed = urlparse(ann.bookmark.url)
             key = parsed.netloc or ann.bookmark.url
@@ -332,6 +336,7 @@ _HIGHLIGHTS_MODULE_WRAPPER_IDS = {
     UserProfile.SIDEBAR_MODULE_COLORS: "hl-colors-container",
     UserProfile.SIDEBAR_MODULE_DOMAINS: "hl-domains-container",
     UserProfile.SIDEBAR_MODULE_TAGS: "hl-tags-container",
+    UserProfile.SIDEBAR_MODULE_AUTHORS: "hl-authors-container",
 }
 
 
@@ -341,6 +346,7 @@ def _build_highlights_sidebar_modules(request: HttpRequest, context: dict) -> li
         UserProfile.SIDEBAR_MODULE_COLORS: True,
         UserProfile.SIDEBAR_MODULE_DOMAINS: context.get("domains") is not None,
         UserProfile.SIDEBAR_MODULE_TAGS: context.get("tag_cloud") is not None,
+        UserProfile.SIDEBAR_MODULE_AUTHORS: context.get("author_cloud") is not None,
     }
 
     modules = []
@@ -443,6 +449,7 @@ def _render_list(request, search: HighlightSearch, prefs=None, page_size=PAGE_SI
     # Build sidebar contexts (filtered by current search)
     domains = HighlightDomainsContext(request, search)
     tag_cloud = HighlightTagCloudContext(request, search)
+    author_cloud = HighlightAuthorCloudContext(request, search)
 
     # 复制格式表单的初始值（空值回落到默认格式），布局抽屉与设置页共用
     copy_format_form = UserProfileHighlightCopyFormatForm(instance=request.user_profile)
@@ -477,6 +484,7 @@ def _render_list(request, search: HighlightSearch, prefs=None, page_size=PAGE_SI
         # Sidebar
         "domains": domains,
         "tag_cloud": tag_cloud,
+        "author_cloud": author_cloud,
         "show_sidebar": request.user_profile.show_highlights_sidebar,
         "sticky_header_controls": request.user_profile.highlights_sticky_header_controls,
         "sticky_side_panel": request.user_profile.highlights_sticky_side_panel,
@@ -529,6 +537,12 @@ def _handle_preference_toggle(request: HttpRequest):
     elif action == "hl_toggle_tag_grouping":
         profile.highlights_tag_grouping = request.POST["value"]
         field = "highlights_tag_grouping"
+    elif action == "hl_toggle_author_mode":
+        value = request.POST.get("value", "")
+        if value not in dict(UserProfile.AUTHOR_MODE_CHOICES):
+            return HttpResponseRedirect(reverse("linkding:bookmarks.highlights"))
+        profile.highlights_author_mode = value
+        field = "highlights_author_mode"
     else:
         return HttpResponseRedirect(reverse("linkding:bookmarks.highlights"))
 
@@ -555,6 +569,14 @@ def _handle_preference_toggle(request: HttpRequest):
             "hl-tags-container",
             HIGHLIGHTS_SIDEBAR_MODULE_TEMPLATES[UserProfile.SIDEBAR_MODULE_TAGS],
             {"tag_cloud": tag_cloud},
+        )
+    elif action == "hl_toggle_author_mode":
+        author_cloud = HighlightAuthorCloudContext(request, search)
+        return turbo.update(
+            request,
+            "hl-authors-container",
+            HIGHLIGHTS_SIDEBAR_MODULE_TEMPLATES[UserProfile.SIDEBAR_MODULE_AUTHORS],
+            {"author_cloud": author_cloud},
         )
 
 

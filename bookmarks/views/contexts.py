@@ -2775,31 +2775,19 @@ class AuthorCloudContext:
     """侧边栏作者模块：当前搜索范围下按作者聚合计数；支持按计数/名称排序，按首字母分组或平铺"""
 
     request_context = RequestContext
+    # 聚合用的字段路径：书签页是 "author"，高亮页是 "bookmark__author"
+    author_field = "author"
 
-    def __init__(self, request: HttpRequest, search: BookmarkSearch) -> None:
+    def __init__(self, request: HttpRequest, search) -> None:
         self.request = request
         self.search = search
-        self.grouping = request.user_profile.author_grouping
-        self.sort = request.user_profile.author_sort
+        self.grouping, self.sort = self.resolve_mode(request)
         self.mode = UserProfile.author_mode_for(self.grouping, self.sort)
 
         request_context = self.request_context(request)
-        query_set = request_context.get_bookmark_query_set(search)
-
-        if self.sort == UserProfile.AUTHOR_SORT_NAME:
-            ordering = ("author",)
-        else:
-            ordering = ("-count", "author")
-        author_counts = (
-            query_set.exclude(author__isnull=True)
-            .exclude(author="")
-            .values("author")
-            .annotate(count=Count("id"))
-            .order_by(*ordering)
-        )
         items = [
-            AuthorItem(request_context, row["author"], row["count"])
-            for row in author_counts
+            AuthorItem(request_context, row[self.author_field], row["count"])
+            for row in self.get_author_counts(request_context, search)
         ]
 
         self.authors = items
@@ -2823,6 +2811,29 @@ class AuthorCloudContext:
                 self.mode == UserProfile.AUTHOR_MODE_DISABLED,
             ),
         ]
+
+    def resolve_mode(self, request: HttpRequest) -> tuple[str, str]:
+        """当前页面使用的 (grouping, sort)，各页面可覆盖成自己的偏好字段"""
+        return request.user_profile.author_grouping, request.user_profile.author_sort
+
+    def get_author_counts(self, request_context, search):
+        query_set = request_context.get_bookmark_query_set(search)
+        return self.annotate_author_counts(query_set)
+
+    def annotate_author_counts(self, query_set):
+        """按 author_field 聚合计数，并按当前排序方式排序"""
+        field = self.author_field
+        if self.sort == UserProfile.AUTHOR_SORT_NAME:
+            ordering = (field,)
+        else:
+            ordering = ("-count", field)
+        return (
+            query_set.exclude(**{f"{field}__isnull": True})
+            .exclude(**{field: ""})
+            .values(field)
+            .annotate(count=Count("id"))
+            .order_by(*ordering)
+        )
 
     def _build_groups(self, items: list[AuthorItem]) -> list[AuthorGroup]:
         if not items:
@@ -3157,3 +3168,20 @@ class HighlightTagCloudContext:
 
     def get_selected_tags(self):
         return []
+
+
+class HighlightAuthorCloudContext(AuthorCloudContext):
+    """侧边栏作者模块（高亮页）：在当前筛选结果上按作者聚合，计数单位是高亮条数"""
+
+    request_context = HighlightRequestContext
+    author_field = "bookmark__author"
+
+    def resolve_mode(self, request: HttpRequest) -> tuple[str, str]:
+        return UserProfile.author_grouping_sort_for(
+            request.user_profile.highlights_author_mode
+        )
+
+    def get_author_counts(self, request_context, search):
+        return self.annotate_author_counts(
+            _get_filtered_annotation_qs(request_context.request, search)
+        )

@@ -22,6 +22,7 @@ HIGHLIGHTS_SIDEBAR_MODULE_TEMPLATES = {
     UserProfile.SIDEBAR_MODULE_COLORS: "bookmarks/highlights/sidebar/modules/colors/index.html",
     UserProfile.SIDEBAR_MODULE_DOMAINS: "bookmarks/highlights/sidebar/modules/domains/index.html",
     UserProfile.SIDEBAR_MODULE_TAGS: "bookmarks/highlights/sidebar/modules/tags/index.html",
+    UserProfile.SIDEBAR_MODULE_AUTHORS: "bookmarks/highlights/sidebar/modules/authors/index.html",
 }
 
 
@@ -81,11 +82,21 @@ def sidebar_content(request):
         if name and name not in requested_modules:
             requested_modules.append(name)
 
-    search = BookmarkSearch.from_request(
-        request, request.GET, request.user_profile.search_preferences
-    )
-
     ctx_key = request.GET.get("ctx", "active")
+    is_highlights = ctx_key == SIDEBAR_SCOPE_HIGHLIGHTS
+    templates = module_templates_for(ctx_key)
+
+    if is_highlights:
+        # 高亮页的聚合口径是注记，与书签页的 BookmarkSearch 不通用
+        from bookmarks.views.highlights import HighlightSearch
+
+        search = HighlightSearch.from_request(
+            request, request.user_profile.highlights_search_preferences or {}
+        )
+    else:
+        search = BookmarkSearch.from_request(
+            request, request.GET, request.user_profile.search_preferences
+        )
 
     if "summary" in requested_modules:
         if ctx_key == "active":
@@ -97,41 +108,55 @@ def sidebar_content(request):
         template_context["bundles"] = contexts.BundlesContext(request)
 
     if "domains" in requested_modules:
-        domain_ctx_map = {
-            "active": contexts.ActiveDomainsContext,
-            "archived": contexts.ArchivedDomainsContext,
-            "shared": contexts.SharedDomainsContext,
-            "trash": contexts.TrashedDomainsContext,
-            "highlights": contexts.HighlightDomainsContext,
-        }
-        domain_ctx_cls = domain_ctx_map.get(ctx_key, contexts.ActiveDomainsContext)
-        template_context["domains"] = domain_ctx_cls(request, search)
+        if is_highlights:
+            template_context["domains"] = contexts.HighlightDomainsContext(
+                request, search
+            )
+        else:
+            domain_ctx_map = {
+                "active": contexts.ActiveDomainsContext,
+                "archived": contexts.ArchivedDomainsContext,
+                "shared": contexts.SharedDomainsContext,
+                "trash": contexts.TrashedDomainsContext,
+            }
+            domain_ctx_cls = domain_ctx_map.get(ctx_key, contexts.ActiveDomainsContext)
+            template_context["domains"] = domain_ctx_cls(request, search)
 
     if "tags" in requested_modules:
-        tag_ctx_map = {
-            "active": contexts.ActiveTagCloudContext,
-            "archived": contexts.ArchivedTagCloudContext,
-            "shared": contexts.SharedTagCloudContext,
-            "trash": contexts.TrashedTagCloudContext,
-            "highlights": contexts.HighlightTagCloudContext,
-        }
-        tag_ctx_cls = tag_ctx_map.get(ctx_key, contexts.ActiveTagCloudContext)
-        template_context["tag_cloud"] = tag_ctx_cls(request, search)
+        if is_highlights:
+            template_context["tag_cloud"] = contexts.HighlightTagCloudContext(
+                request, search
+            )
+        else:
+            tag_ctx_map = {
+                "active": contexts.ActiveTagCloudContext,
+                "archived": contexts.ArchivedTagCloudContext,
+                "shared": contexts.SharedTagCloudContext,
+                "trash": contexts.TrashedTagCloudContext,
+            }
+            tag_ctx_cls = tag_ctx_map.get(ctx_key, contexts.ActiveTagCloudContext)
+            template_context["tag_cloud"] = tag_ctx_cls(request, search)
 
     if "authors" in requested_modules:
-        author_ctx_map = {
-            "active": contexts.ActiveAuthorCloudContext,
-            "archived": contexts.ArchivedAuthorCloudContext,
-            "shared": contexts.SharedAuthorCloudContext,
-            "trash": contexts.TrashedAuthorCloudContext,
-            "highlights": contexts.ActiveAuthorCloudContext,
-        }
-        author_ctx_cls = author_ctx_map.get(ctx_key, contexts.ActiveAuthorCloudContext)
-        template_context["author_cloud"] = author_ctx_cls(request, search)
+        if is_highlights:
+            template_context["author_cloud"] = contexts.HighlightAuthorCloudContext(
+                request, search
+            )
+        else:
+            author_ctx_map = {
+                "active": contexts.ActiveAuthorCloudContext,
+                "archived": contexts.ArchivedAuthorCloudContext,
+                "shared": contexts.SharedAuthorCloudContext,
+                "trash": contexts.TrashedAuthorCloudContext,
+            }
+            author_ctx_cls = author_ctx_map.get(
+                ctx_key, contexts.ActiveAuthorCloudContext
+            )
+            template_context["author_cloud"] = author_ctx_cls(request, search)
 
     html_parts = []
     for module_name in requested_modules:
-        template_name = SIDEBAR_MODULE_TEMPLATES.get(module_name)
+        template_name = templates.get(module_name)
         if not template_name:
             continue
         template = loader.get_template(template_name)

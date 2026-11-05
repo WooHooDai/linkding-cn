@@ -1503,6 +1503,14 @@ class UserProfile(models.Model):
         blank=False,
         default=TAG_GROUPING_ALPHABETICAL,
     )
+    # 高亮页侧边栏「作者」模块的显示模式，与书签页的 author_grouping/author_sort 分开：
+    # 两个页面的作者聚合口径不同（书签条数 vs 高亮条数），改动其中一个不应影响另一个。
+    highlights_author_mode = models.CharField(
+        max_length=12,
+        choices=AUTHOR_MODE_CHOICES,
+        blank=False,
+        default=AUTHOR_MODE_ALPHABETICAL,
+    )
     show_highlights_sidebar = models.BooleanField(default=True, null=False)
     highlights_sticky_header_controls = models.BooleanField(default=True, null=False)
     highlights_sticky_pagination = models.BooleanField(default=True, null=False)
@@ -1515,11 +1523,13 @@ class UserProfile(models.Model):
     # 「保存为默认」共用同一份存储，避免同一个偏好有两处真相。
     HIGHLIGHT_GROUP_NONE = "none"
     HIGHLIGHT_GROUP_BOOKMARK = "bookmark"
+    HIGHLIGHT_GROUP_AUTHOR = "author"
     HIGHLIGHT_GROUP_DOMAIN = "domain"
     HIGHLIGHT_GROUP_COLOR = "color"
     HIGHLIGHT_GROUP_CHOICES = [
         (HIGHLIGHT_GROUP_NONE, _("None")),
         (HIGHLIGHT_GROUP_BOOKMARK, _("Bookmark")),
+        (HIGHLIGHT_GROUP_AUTHOR, _("Author")),
         (HIGHLIGHT_GROUP_DOMAIN, _("Domain")),
         (HIGHLIGHT_GROUP_COLOR, _("Color")),
     ]
@@ -1790,6 +1800,7 @@ class UserProfile(models.Model):
             {"key": cls.SIDEBAR_MODULE_COLORS, "enabled": True},
             {"key": cls.SIDEBAR_MODULE_DOMAINS, "enabled": True},
             {"key": cls.SIDEBAR_MODULE_TAGS, "enabled": True},
+            {"key": cls.SIDEBAR_MODULE_AUTHORS, "enabled": True},
         ]
 
     @staticmethod

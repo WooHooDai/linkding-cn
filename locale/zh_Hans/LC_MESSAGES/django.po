@@ -246,6 +246,10 @@ msgstr "未检查"
 msgid "Author"
 msgstr "作者"
 
+#: bookmarks/views/highlights.py
+msgid "No author"
+msgstr "未标注作者"
+
 #: bookmarks/models.py:317
 msgid "Yellow"
 msgstr "黄色"
