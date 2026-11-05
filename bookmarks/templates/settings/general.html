@@ -262,7 +262,8 @@
           <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card" data-settings-save-mode="instant">
             {% csrf_token %}
             <input type="hidden" name="form_id" value="profile_quick">
-            <input type="hidden" name="form_fields" value="legacy_search,tag_search">
+            <input type="hidden" name="form_fields" value="{% if legacy_search_enabled %}legacy_search,{% endif %}tag_search">
+            {% if legacy_search_enabled %}
             <div class="settings-row">
               <div class="settings-copy">
                 <label for="{{ profile_quick_form.legacy_search.id_for_label }}" class="settings-label">{% translate "Compatibility mode" %}</label>
@@ -275,6 +276,7 @@
                 <i class="form-icon"></i>
               </label>
             </div>
+            {% endif %}
             <div class="settings-row">
               <div class="settings-copy">
                 <label id="settings-tag-search-mode-label" class="settings-label">{% translate "Tag search mode" %}</label>

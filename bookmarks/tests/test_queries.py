@@ -1,5 +1,6 @@
 import datetime
 import operator
+from unittest.mock import patch
 
 from django.db.models import QuerySet
 from django.test import TestCase
@@ -2118,6 +2119,8 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         self.assertNotIn("deleted_desc", sort_choices)
         self.assertNotIn("deleted", date_filter_choices)
 
+    # 兼容模式默认停用，以下用例覆盖保留下来的旧引擎实现，按需手动打开总开关
+    @patch("bookmarks.models.LEGACY_SEARCH_ENABLED", True)
     def test_field_search_title_with_parentheses(self):
         """title:(...) 仅匹配标题，不匹配描述/笔记/URL (legacy search mode)"""
         self.profile.legacy_search = True
@@ -2132,6 +2135,7 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         )
         self.assertCountEqual(list(query), [bm_title])
 
+    @patch("bookmarks.models.LEGACY_SEARCH_ENABLED", True)
     def test_field_search_desc_and_notes_with_parentheses(self):
         """desc:(...) 与 notes:(...) 生效 (legacy search mode)"""
         self.profile.legacy_search = True
@@ -2182,6 +2186,24 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         )
         self.assertCountEqual(list(query), [both, only_desc, only_tag])
 
+    def test_legacy_search_setting_is_ignored(self):
+        """兼容模式停用：配置打开也仍按新版逻辑解析 or 与括号"""
+        self.profile.legacy_search = True
+        self.profile.save()
+
+        target_tag = self.setup_tag(name="高人")
+        both = self.setup_bookmark(description="观星入门", tags=[target_tag])
+        only_desc = self.setup_bookmark(description="观星进阶")
+        only_tag = self.setup_bookmark(tags=[target_tag])
+        self.setup_bookmark(description="航海")
+
+        query = queries.query_bookmarks(
+            self.user,
+            self.profile,
+            BookmarkSearch(q="desc:(星) or #高人"),
+        )
+        self.assertCountEqual(list(query), [both, only_desc, only_tag])
+
     def test_field_search_url_with_parentheses(self):
         """url:(...) 使用 url__icontains"""
         bm = self.setup_bookmark(url="https://example.com/path/to/hello")
@@ -2191,6 +2213,7 @@ class QueriesTestCase(TestCase, BookmarkFactoryMixin):
         )
         self.assertCountEqual(list(query), [bm])
 
+    @patch("bookmarks.models.LEGACY_SEARCH_ENABLED", True)
     def test_field_search_domain_strict_match(self):
         """domain:x.com 仅匹配 host 为 x.com，不匹配子域或相似域名 (legacy search mode)"""
         self.profile.legacy_search = True

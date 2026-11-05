@@ -458,7 +458,7 @@ def _apply_filters(
             query_set = query_set.filter(date_deleted__gt=search.deleted_since)
 
     # Filter by search query
-    if profile.legacy_search:
+    if profile.uses_legacy_search:
         parsed_query = parse_query_string(search.q)
         query_set = _filter_search_query_legacy(query_set, search.q, profile)
         # 在 legacy 模式下保留 field-term 查询能力

@@ -1279,7 +1279,7 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertInHTML('<p class="empty-title h5">Invalid search query</p>', html)
         self.assertIn("Expected RPAREN", html)
 
-    def test_empty_state_with_legacy_search(self):
+    def test_empty_state_ignores_legacy_search_setting(self):
         profile = self.get_or_create_test_user().profile
         profile.legacy_search = True
         profile.save()
@@ -1287,10 +1287,8 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.setup_bookmark()
         html = self.render_template(url="/bookmarks?q=(test")
 
-        # With legacy search, search queries are not validated
-        self.assertInHTML(
-            '<p class="empty-title h5">You have no bookmarks yet</p>', html
-        )
+        # 兼容模式已停用：配置为 True 也按新版引擎解析并校验查询
+        self.assertInHTML('<p class="empty-title h5">Invalid search query</p>', html)
 
     def test_pagination_is_sticky_by_default(self):
         self.setup_bookmark()

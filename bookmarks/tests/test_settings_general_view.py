@@ -251,6 +251,17 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         ]
         self.assertEqual(selected, [UserProfile.BOOKMARK_VIEW_MODE_LIST])
 
+    def test_compatibility_mode_setting_should_be_hidden(self):
+        # 兼容模式已停用：设置页不再提供开关，字段与旧引擎实现保留
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = self.make_soup(response.content.decode())
+
+        self.assertIsNone(soup.select_one('input[name="legacy_search"]'))
+
+        search_section = soup.select_one("section#settings-search")
+        self.assertIsNotNone(search_section)
+        self.assertNotIn("Compatibility mode", search_section.get_text())
+
     def test_search_and_tag_cards_should_render_in_expected_sections(self):
         response = self.client.get(reverse("linkding:settings.general"))
         soup = self.make_soup(response.content.decode())
@@ -261,11 +272,12 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
                 "section#settings-search input[name='form_fields']"
             )
         ]
-        self.assertEqual(search_form_fields, ["legacy_search,tag_search"])
+        # 兼容模式行已隐藏，分节里只剩标签搜索模式
+        self.assertEqual(search_form_fields, ["tag_search"])
 
         search_section = soup.select_one("section#settings-search")
         self.assertIsNotNone(search_section)
-        self.assertIn("Compatibility mode", search_section.get_text())
+        self.assertNotIn("Compatibility mode", search_section.get_text())
         self.assertIn("Tag search mode", search_section.get_text())
 
         sidebar_section = soup.select_one("section#settings-sidebar")

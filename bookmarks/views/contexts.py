@@ -174,7 +174,7 @@ class RequestContext:
         self.query_is_valid = True
         self.query_error_message = None
         self.search_expression = None
-        if not request.user_profile.legacy_search:
+        if not request.user_profile.uses_legacy_search:
             try:
                 self.search_expression = parse_search_query(request.GET.get("q"))
             except SearchQueryParseError as e:
@@ -1732,7 +1732,7 @@ class AddTagItem:
         self.tag = tag
         self.name = tag.name
 
-        if context.request.user_profile.legacy_search:
+        if context.request.user_profile.uses_legacy_search:
             self.query_string = self._generate_query_string_legacy(context, tag)
         else:
             self.query_string = self._generate_query_string(context, tag)
@@ -1786,7 +1786,7 @@ class RemoveTagItem:
         self.tag = tag
         self.name = tag.name
 
-        if context.request.user_profile.legacy_search:
+        if context.request.user_profile.uses_legacy_search:
             self.query_string = self._generate_query_string_legacy(context, tag)
         else:
             self.query_string = self._generate_query_string(context, tag)

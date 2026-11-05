@@ -979,6 +979,11 @@ class BookmarkSearchForm(forms.Form):
                 self.fields[param].widget = forms.HiddenInput()
 
 
+# 搜索「兼容模式」（旧版搜索引擎）总开关。停用期间无论 legacy_search 配置为何，一律按新版
+# 逻辑解析查询；字段、表单与旧的解析实现全部保留，后续要恢复只需把此值改回 True。
+LEGACY_SEARCH_ENABLED = False
+
+
 class UserProfile(models.Model):
     LANGUAGE_EN = "en"
     LANGUAGE_ZH_HANS = "zh-hans"
@@ -1938,6 +1943,11 @@ class UserProfile(models.Model):
         if self.health_max_age_days is not None:
             return self.health_max_age_days
         return getattr(settings, "LINK_HEALTH_MAX_AGE_DAYS", 15)
+
+    @property
+    def uses_legacy_search(self) -> bool:
+        """实际生效的搜索模式：兼容模式总开关关闭时，用户配置被忽略。"""
+        return self.legacy_search and LEGACY_SEARCH_ENABLED
 
     @classmethod
     def default_bookmark_statuses(cls) -> list[dict]:

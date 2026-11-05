@@ -25,6 +25,7 @@ from django.views.i18n import LANGUAGE_QUERY_PARAMETER
 from bookmarks.services.icon_loader import PRESET_ICON_NAMES
 
 from bookmarks.models import (
+    LEGACY_SEARCH_ENABLED,
     ApiToken,
     Bookmark,
     FeedToken,
@@ -220,6 +221,7 @@ def general(request: HttpRequest, status=200, context_overrides=None):
             "settings_general_url": reverse("linkding:settings.general"),
             "enable_refresh_favicons": enable_refresh_favicons,
             "has_snapshot_support": has_snapshot_support,
+            "legacy_search_enabled": LEGACY_SEARCH_ENABLED,
             **quick_tag_icons,
             "success_message": success_message,
             "error_message": error_message,
