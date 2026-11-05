@@ -964,8 +964,6 @@ function getSidebarStateKey() {
   return "ld:sidebar-state:bookmarks";
 }
 
-let sidebarJustToggled = false;
-
 function saveSidebarState(isOpen) {
   try {
     localStorage.setItem(getSidebarStateKey(), isOpen ? "1" : "0");
@@ -1059,11 +1057,7 @@ function openSidebar(page) {
     document.body.classList.add("sidebar-overlay-active");
     page.classList.add("sidebar-animate");
     requestAnimationFrame(() => page.classList.add("sidebar-visible"));
-    sidebarJustToggled = true;
-    setTimeout(() => {
-      sidebarJustToggled = false;
-      page.classList.remove("sidebar-animate");
-    }, 400);
+    setTimeout(() => page.classList.remove("sidebar-animate"), 400);
   }
 }
 
@@ -1123,18 +1117,7 @@ function handleSidebarInteraction(e) {
     saveSidebarState(false);
     return;
   }
-
-  // 遮罩点击（移动端 sidebar 外部区域）
-  if (
-    e.type === "click" &&
-    !sidebarJustToggled &&
-    page.classList.contains("sidebar-visible") &&
-    !e.target.closest(".sidebar") &&
-    isMobile()
-  ) {
-    closeSidebar(page);
-    saveSidebarState(false);
-  }
+  // 点侧边栏以外不关闭：面板常驻更利于边看边改，收起只走关闭按钮 / 触发按钮
 }
 document.addEventListener("click", handleSidebarInteraction);
 document.addEventListener("touchstart", handleSidebarInteraction, {

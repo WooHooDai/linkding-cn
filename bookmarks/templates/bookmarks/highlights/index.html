@@ -187,7 +187,8 @@
       </button>
 
       {# Random sort button #}
-      <a class="btn ml-2" title="{% translate 'Random sort' %}"
+      <a class="btn ml-2" title="{% translate 'Random sort' %}" data-hl-random
+         {% if not request.user_profile.highlights_enable_random_button %}hidden{% endif %}
          href="{% url 'linkding:bookmarks.highlights' %}?{% if search_q %}q={{ search_q|urlencode }}&{% endif %}{% if colors_raw %}colors={{ colors_raw|urlencode }}&{% endif %}{% if note_filter %}note_filter={{ note_filter }}&{% endif %}sort=random{% if group_by != 'none' %}&group_by={{ group_by }}{% endif %}{% if date_filter_by %}&date_filter_by={{ date_filter_by }}{% endif %}{% if date_filter_start %}&date_filter_start={{ date_filter_start }}{% endif %}{% if date_filter_end %}&date_filter_end={{ date_filter_end }}{% endif %}{% if bookmark_id %}&bookmark_id={{ bookmark_id }}{% endif %}">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" stroke-width="2"
              stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -198,6 +199,7 @@
           <path d="M21 7h-3a5 5 0 0 0 -5 5a5 5 0 0 0 5 5h3"></path>
         </svg>
       </a>
+      <span class="ml-2">{% include 'bookmarks/header/layout_menu.html' %}</span>
       {% include 'bookmarks/sidebar/components/toggle_button.html' %}
     </div>
 
@@ -383,7 +385,7 @@
 
     {# Pagination #}
     {% if annotations_page.object_list %}
-      <div class="highlights-pagination"{% if sticky_pagination %} data-sticky-on="true"{% endif %}>
+      <div class="highlights-pagination" data-sticky-on="{{ sticky_pagination|yesno:'true,false' }}">
         {% pagination annotations_page %}
       </div>
     {% endif %}
@@ -391,13 +393,15 @@
 
   {# Sidebar #}
   <div class="scrollbar sidebar col-1{% if sticky_pagination %} paginate-sticky{% endif %}" data-sticky-on="{{ sticky_side_panel|yesno:'true,false' }}"
-         data-sidebar-scope="highlights"
-         data-sidebar-save-url="{% url 'linkding:settings.save' %}"
-         data-sidebar-module-state="{{ sidebar_module_state }}">
+       data-sidebar-scope="highlights"
+       data-sidebar-save-url="{% url 'linkding:settings.save' %}"
+       data-sidebar-module-state="{{ sidebar_module_state }}">
     {% include 'bookmarks/sidebar/components/close_button.html' %}
     {% include 'bookmarks/highlights/sidebar/index.html' %}
   </div>
 </div>
+
+{% include 'bookmarks/highlights/layout_drawer.html' %}
 
 {# ── Inline JS for interactions ── #}
 {% if hl_copy_item_format %}{{ hl_copy_item_format|json_script:"ld-hl-item-format" }}{% endif %}
@@ -406,11 +410,26 @@
 (function() {
   'use strict';
 
-  var ITEM_FORMAT = '> ${highlight}\n\n${annotation}';
-  var SEPARATOR = '\n\n---\n\n';
+  // 复制格式/分隔符为空表示「回落到默认值」
+  var DEFAULT_ITEM_FORMAT = '> ${highlight}\n\n${annotation}';
+  var DEFAULT_SEPARATOR = '\n\n---\n\n';
+  var ITEM_FORMAT = DEFAULT_ITEM_FORMAT;
+  var SEPARATOR = DEFAULT_SEPARATOR;
   {% if hl_copy_item_format %}try { var _f = JSON.parse(document.getElementById('ld-hl-item-format').textContent); if (_f) ITEM_FORMAT = _f; } catch(e) {}{% endif %}
   {% if hl_copy_separator %}try { var _s = JSON.parse(document.getElementById('ld-hl-separator').textContent); if (_s) SEPARATOR = _s; } catch(e) {}{% endif %}
   var COPY_DEFAULT_ACTION = "{{ highlight_copy_default_action|default:'both' }}";
+
+  // 布局抽屉里改了复制设置：就地更新，不必重载整页
+  document.addEventListener('highlights-copy-settings', function(e) {
+    var detail = e.detail || {};
+    if (detail.field === 'highlight_copy_default_action') {
+      COPY_DEFAULT_ACTION = detail.value || COPY_DEFAULT_ACTION;
+    } else if (detail.field === 'item_format') {
+      ITEM_FORMAT = detail.value || DEFAULT_ITEM_FORMAT;
+    } else if (detail.field === 'separator') {
+      SEPARATOR = detail.value || DEFAULT_SEPARATOR;
+    }
+  });
 
   // --- Note auto-save on blur ---
   document.querySelectorAll('.highlight-note-textarea').forEach(function(ta) {
@@ -476,6 +495,29 @@
   });
 
   // --- Group collapse/expand ---
+  function groupParts() {
+    var headers = Array.prototype.slice.call(document.querySelectorAll('.highlight-group-header'));
+    return {
+      headers: headers,
+      lists: headers.map(function(h) { return h.nextElementSibling; }),
+    };
+  }
+
+  // 抽屉里的「分组折叠」按钮：还有展开的组就全折，否则全展开
+  function refreshGroupToggleAll() {
+    var headers = groupParts().headers;
+    if (!headers.length) return;
+    var anyExpanded = headers.some(function(h) {
+      return !h.classList.contains('collapsed');
+    });
+    document.querySelectorAll('[data-hl-group-toggle-all]').forEach(function(btn) {
+      var label = anyExpanded ? btn.dataset.labelCollapse : btn.dataset.labelExpand;
+      if (!label) return;
+      btn.textContent = label;
+      btn.setAttribute('aria-label', label);
+    });
+  }
+
   document.querySelectorAll('.highlight-group-toggle').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var header = btn.closest('.highlight-group-header');
@@ -483,8 +525,29 @@
       if (!list || !list.classList.contains('highlights-list')) return;
       var collapsed = list.classList.toggle('collapsed');
       header.classList.toggle('collapsed', collapsed);
+      refreshGroupToggleAll();
     });
   });
+
+  document.querySelectorAll('[data-hl-group-toggle-all]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var parts = groupParts();
+      var collapseAll = parts.headers.some(function(h) {
+        return !h.classList.contains('collapsed');
+      });
+      parts.headers.forEach(function(h) {
+        h.classList.toggle('collapsed', collapseAll);
+      });
+      parts.lists.forEach(function(list) {
+        if (list && list.classList.contains('highlights-list')) {
+          list.classList.toggle('collapsed', collapseAll);
+        }
+      });
+      refreshGroupToggleAll();
+    });
+  });
+
+  refreshGroupToggleAll();
 
   // --- Inline filter auto-submit ---
   document.querySelectorAll('[data-submit-on-change]').forEach(function(el) {

@@ -534,31 +534,10 @@ def render_bookmarks_view(request: HttpRequest, template_name, context):
 
     profile = request.user_profile
     # 抽屉里的语言分段控件：与设置页同一套「常用语言 + 其他」逻辑
-    from bookmarks.views.settings import (
-        LANGUAGE_OTHER_SENTINEL,
-        _get_other_language_choices,
-        _get_primary_language_choices,
-        _normalize_language_code,
-    )
+    from bookmarks.views.settings import build_language_segment_context
 
-    primary_language_choices = _get_primary_language_choices()
-    other_language_choices = _get_other_language_choices()
-    current_language = _normalize_language_code(
-        profile.language or settings.LANGUAGE_CODE
-    )
-    primary_codes = {code for code, _ in primary_language_choices}
-    other_codes = {code for code, _ in other_language_choices}
-    context.setdefault("primary_language_choices", primary_language_choices)
-    context.setdefault("other_language_choices", other_language_choices)
-    context.setdefault(
-        "language_segment_value",
-        current_language if current_language in primary_codes else LANGUAGE_OTHER_SENTINEL,
-    )
-    context.setdefault("language_other_sentinel", LANGUAGE_OTHER_SENTINEL)
-    context.setdefault(
-        "language_other_current_code",
-        current_language if current_language in other_codes else "",
-    )
+    for key, value in build_language_segment_context(profile).items():
+        context.setdefault(key, value)
 
     # 抽屉「预取内部链接」是全局设置，只有超级管理员能改
     if request.user.is_superuser:

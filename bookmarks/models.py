@@ -1502,7 +1502,22 @@ class UserProfile(models.Model):
     highlights_sticky_header_controls = models.BooleanField(default=True, null=False)
     highlights_sticky_pagination = models.BooleanField(default=True, null=False)
     highlights_sticky_side_panel = models.BooleanField(default=True, null=False)
+    highlights_enable_random_button = models.BooleanField(default=True, null=False)
     highlight_copy_format = models.JSONField(default=dict, blank=True, null=False)
+
+    # 高亮列表的聚合方式（布局抽屉里的「高亮分组」）：
+    # 值存进 highlights_search_preferences["group_by"]，与筛选面板的
+    # 「保存为默认」共用同一份存储，避免同一个偏好有两处真相。
+    HIGHLIGHT_GROUP_NONE = "none"
+    HIGHLIGHT_GROUP_BOOKMARK = "bookmark"
+    HIGHLIGHT_GROUP_DOMAIN = "domain"
+    HIGHLIGHT_GROUP_COLOR = "color"
+    HIGHLIGHT_GROUP_CHOICES = [
+        (HIGHLIGHT_GROUP_NONE, _("None")),
+        (HIGHLIGHT_GROUP_BOOKMARK, _("Bookmark")),
+        (HIGHLIGHT_GROUP_DOMAIN, _("Domain")),
+        (HIGHLIGHT_GROUP_COLOR, _("Color")),
+    ]
 
     HIGHLIGHT_COPY_ACTION_BOTH = "both"
     HIGHLIGHT_COPY_ACTION_HIGHLIGHT = "highlight"
@@ -2177,6 +2192,7 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
             "highlights_sticky_header_controls",
             "highlights_sticky_pagination",
             "highlights_sticky_side_panel",
+            "highlights_enable_random_button",
             "sticky_header_controls",
             "sticky_pagination",
             "sticky_side_panel",

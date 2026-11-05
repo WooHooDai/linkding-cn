@@ -20,12 +20,27 @@ const SCROLL_KEY = "ld:layout-drawer:scroll";
 const REOPEN_KEY = "ld:layout-drawer:reopen";
 // 「模块设置」这类可折叠列表的开合记忆
 const PANELS_KEY = "ld:layout-drawer:panels";
+// 分组（界面 / 视图 / …）的折叠记忆：只记收起的，未记录的按展开算
+const GROUPS_KEY = "ld:layout-drawer:groups";
 // 抽屉是否开着：刷新后保持
 const OPEN_KEY = "ld:layout-drawer:open";
 const MOBILE_QUERY = "(max-width: 840px)";
 // 连点多个开关时合并成一次片段请求
 const REFRESH_DELAY = 120;
 const LEGACY_TABS = { view: "page", toolbar: "bookmark" };
+// 吸顶/吸底开关对应的容器：书签列表页与高亮页各一套
+const STICKY_SELECTORS = {
+  sticky_header_controls: ".section-header[data-sticky-on]",
+  sticky_pagination: ".bookmark-pagination[data-sticky-on]",
+  highlights_sticky_header_controls:
+    ".highlights-sticky-header[data-sticky-on]",
+  highlights_sticky_pagination: ".highlights-pagination[data-sticky-on]",
+};
+// 改完要整页重载的偏好：高亮页的分页大小与分组都会改变服务端渲染的列表结构
+const HIGHLIGHTS_RELOAD_FIELDS = {
+  highlights_per_page: ["page"],
+  highlights_group_by: ["page", "group_by"],
+};
 
 function isMobile() {
   return window.matchMedia(MOBILE_QUERY).matches;
@@ -45,7 +60,7 @@ class LayoutDrawer extends Behavior {
     this.url = element.dataset.saveUrl;
     this.fragmentUrl = element.dataset.fragmentUrl;
     this.quickTagsUrl = element.dataset.quickTagsUrl;
-    this.page = document.querySelector(".bookmarks-page");
+    this.page = document.querySelector(".bookmarks-page, .highlights-page");
     this.scroller = element.querySelector("[data-layout-scroll]");
     this.sortables = [];
     this.refreshTimer = null;
@@ -107,6 +122,7 @@ class LayoutDrawer extends Behavior {
 
     this.initSortables();
     this.restorePanels();
+    this.initGroups();
     this.selectTab(this.readSavedTab(), { focus: false });
 
     // 深链：?layout=page / ?layout=bookmark（兼容旧的 view / toolbar）
@@ -213,21 +229,8 @@ class LayoutDrawer extends Behavior {
       this.close();
       return;
     }
-    // 桌面没有遮罩：点抽屉以外即关闭。另一个面板（侧边栏）不算「点外面」——
-    // 两个面板可以同时开着，一起参与让位判断。
-    if (
-      this.isOpen() &&
-      // 弹窗开着时，弹窗内的任何点击都不该顺手把抽屉关掉
-      !document.querySelector(".modals .modal") &&
-      !event.target.closest(
-        "[data-layout-drawer], [data-layout-drawer-toggle], " +
-          "[data-sidebar-toggle], [data-sidebar-close], .sidebar, " +
-          // 抽屉里打开的弹窗（快捷标签）与说明浮层不算「点外面」
-          ".modal, ld-modal, .ld-help-popover",
-      )
-    ) {
-      this.close({ restoreFocus: false });
-    }
+    // 点抽屉以外不关闭：抽屉常驻在页面上，方便边看列表边改偏好；
+    // 只有关闭按钮（以及触发按钮、Esc）会收起来。
   }
 
   onKeydown(event) {
@@ -259,6 +262,14 @@ class LayoutDrawer extends Behavior {
     const disclosure = event.target.closest("[data-drawer-disclosure]");
     if (disclosure) {
       this.togglePanel(disclosure);
+      return;
+    }
+    if (event.target.closest("[data-layout-groups-expand]")) {
+      this.setAllGroups(true);
+      return;
+    }
+    if (event.target.closest("[data-layout-groups-collapse]")) {
+      this.setAllGroups(false);
       return;
     }
     if (event.target.closest("[data-drawer-quick-tags]")) {
@@ -416,6 +427,54 @@ class LayoutDrawer extends Behavior {
     this.closeHelpTimer = setTimeout(() => this.closeHelp(), 120);
   }
 
+  // ---------- 分组折叠 ----------
+
+  groups() {
+    return Array.from(this.element.querySelectorAll("[data-drawer-group]"));
+  }
+
+  // 只记收起的组：新加的分组没有记录，按展开呈现
+  initGroups() {
+    const stored = readJSON(GROUPS_KEY, {});
+    this.groups().forEach((group) => {
+      if (stored[group.dataset.drawerGroup]) group.open = false;
+      group.addEventListener("toggle", () => {
+        this.saveGroups();
+        this.syncGroupActions();
+      });
+    });
+    this.syncGroupActions();
+  }
+
+  saveGroups() {
+    const collapsed = {};
+    this.groups().forEach((group) => {
+      if (!group.open) collapsed[group.dataset.drawerGroup] = true;
+    });
+    try {
+      localStorage.setItem(GROUPS_KEY, JSON.stringify(collapsed));
+    } catch {
+      // 隐私模式下不可用，忽略
+    }
+  }
+
+  setAllGroups(open) {
+    this.groups().forEach((group) => {
+      group.open = open;
+    });
+    this.saveGroups();
+    this.syncGroupActions();
+  }
+
+  // 全部展开 / 全部折叠按钮：没有可做的动作时置灰
+  syncGroupActions() {
+    const groups = this.groups();
+    const expand = this.element.querySelector("[data-layout-groups-expand]");
+    const collapse = this.element.querySelector("[data-layout-groups-collapse]");
+    if (expand) expand.disabled = groups.every((group) => group.open);
+    if (collapse) collapse.disabled = groups.every((group) => !group.open);
+  }
+
   toggleHelp(button) {
     if (this.helpTrigger === button && !this.helpPopover?.hidden) {
       this.closeHelp();
@@ -487,7 +546,7 @@ class LayoutDrawer extends Behavior {
           onEnd: () => {
             const field = list.dataset.drawerList;
             this.save(field, this.serializeList(list), "fragment");
-            if (field === "sidebar_modules") this.syncSidebarModules();
+            if (field.endsWith("sidebar_modules")) this.syncSidebarModules();
           },
         }),
       );
@@ -646,22 +705,44 @@ class LayoutDrawer extends Behavior {
     this.applyDomPref(field, value);
 
     if (apply === "reload") {
+      this.prepareReload(field);
       this.reloadKeepingDrawer();
       return;
     }
-    if (field === "sidebar_modules") this.syncSidebarModules();
+    if (field.endsWith("sidebar_modules")) this.syncSidebarModules();
     if (apply === "fragment") {
       // 每页数量变了还停在原页号会落到越界页
-      if (field === "items_per_page") this.resetPage = true;
+      if (field === "items_per_page" || field === "highlights_per_page") {
+        this.resetPage = true;
+      }
       this.scheduleListRefresh();
     }
   }
 
+  // 整页重载前先清掉会被新偏好覆盖的 URL 参数：
+  // 页号会越界；分组留在 URL 里会顶掉刚改的默认值。
+  prepareReload(field) {
+    const drop = HIGHLIGHTS_RELOAD_FIELDS[field];
+    if (!drop) return;
+    const params = new URLSearchParams(window.location.search);
+    if (!drop.some((name) => params.has(name))) return;
+    drop.forEach((name) => params.delete(name));
+    const rest = params.toString();
+    window.history.replaceState(
+      {},
+      "",
+      `${window.location.pathname}${rest ? `?${rest}` : ""}`,
+    );
+  }
+
+  // 侧边栏模块列表：书签页是 sidebar_modules，高亮页是 highlights_sidebar_modules
+  sidebarModulesList() {
+    return this.element.querySelector('[data-drawer-list$="sidebar_modules"]');
+  }
+
   // 侧边栏模块顺序/开关变了：就地改侧边栏里的 section，不重新取内容
   syncSidebarModules() {
-    const list = this.element.querySelector(
-      '[data-drawer-list="sidebar_modules"]',
-    );
+    const list = this.sidebarModulesList();
     const sidebar = document.querySelector(".sidebar");
     if (!list || !sidebar) return;
 
@@ -696,13 +777,10 @@ class LayoutDrawer extends Behavior {
   applyDomPref(field, value) {
     const enabled = Boolean(value);
 
-    if (field === "sticky_header_controls" || field === "sticky_pagination") {
-      const selector =
-        field === "sticky_header_controls"
-          ? ".section-header[data-sticky-on]"
-          : ".bookmark-pagination[data-sticky-on]";
+    const stickySelector = STICKY_SELECTORS[field];
+    if (stickySelector) {
       document
-        .querySelectorAll(selector)
+        .querySelectorAll(stickySelector)
         .forEach((el) =>
           el.setAttribute("data-sticky-on", enabled ? "true" : "false"),
         );
@@ -717,16 +795,39 @@ class LayoutDrawer extends Behavior {
       if (single) single.dataset.linkTarget = value;
       return;
     }
-    if (field === "show_sidebar" && this.page) {
+    if (field === "show_sidebar" || field === "show_highlights_sidebar") {
       // 「常驻显示」存的是默认值：同步 cookie 与开合记忆，页面按新默认切换
+      if (!this.page) return;
       this.page.dataset.sidebarDefault = enabled ? "1" : "0";
       syncSidebarStateCache(getSidebarScope(), enabled);
       syncPanelSpace();
       return;
     }
-    if (field === "sticky_side_panel") {
+    if (
+      field === "sticky_side_panel" ||
+      field === "highlights_sticky_side_panel"
+    ) {
       const sidebar = document.querySelector(".sidebar");
       if (sidebar) sidebar.dataset.stickyOn = enabled ? "true" : "false";
+      return;
+    }
+    if (field === "highlights_enable_random_button") {
+      document
+        .querySelectorAll("[data-hl-random]")
+        .forEach((el) => (el.hidden = !enabled));
+      return;
+    }
+    // 复制设置只影响已渲染页面的复制行为，不必重载：通知页面就地换格式
+    if (
+      field === "highlight_copy_default_action" ||
+      field === "item_format" ||
+      field === "separator"
+    ) {
+      document.dispatchEvent(
+        new CustomEvent("highlights-copy-settings", {
+          detail: { field, value },
+        }),
+      );
       return;
     }
     if (
@@ -896,6 +997,8 @@ class LayoutDrawer extends Behavior {
   }
 
   async refreshList() {
+    // 高亮页没有列表片段通道（改完直接重载），没有 URL 就什么都不做
+    if (!this.fragmentUrl) return;
     const container = document.getElementById("bookmark-list-container");
     if (!container) return;
 

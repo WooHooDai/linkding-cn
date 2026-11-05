@@ -398,6 +398,28 @@ def _build_profile_quick_form_data(profile, request_post) -> dict:
     return form_data
 
 
+def _save_highlights_group_by(request: HttpRequest, profile) -> JsonResponse:
+    """把「高亮分组」写进高亮筛选偏好里的 group_by。"""
+    from bookmarks.views.highlights import GROUP_CHOICES
+
+    field = "highlights_group_by"
+    value = request.POST.get(field, "")
+    if value not in dict(GROUP_CHOICES):
+        return JsonResponse(
+            {
+                "status": "error",
+                "errors": {field: [{"message": _("Please review the highlighted fields.")}]},
+            },
+            status=HTTPStatus.UNPROCESSABLE_ENTITY,
+        )
+
+    preferences = dict(profile.highlights_search_preferences or {})
+    preferences["group_by"] = value
+    profile.highlights_search_preferences = preferences
+    profile.save(update_fields=["highlights_search_preferences"])
+    return JsonResponse({"status": "ok"})
+
+
 @login_required
 def save(request: HttpRequest):
     if request.method != "POST":
@@ -408,6 +430,12 @@ def save(request: HttpRequest):
 
     form_id = request.POST.get("form_id")
     profile = request.user.profile
+
+    # 高亮分组不是独立字段：抽屉里的「高亮分组」写的是筛选偏好里的 group_by，
+    # 与筛选面板的「保存为默认」共享同一份存储。
+    if form_id == "profile_highlights_group_by":
+        return _save_highlights_group_by(request, profile)
+
     profile_before = {
         "enable_favicons": profile.enable_favicons,
         "enable_preview_images": profile.enable_preview_images,
@@ -438,10 +466,16 @@ def save(request: HttpRequest):
     elif form_id in ("profile_highlight_copy_format", "profile_hl_item_format", "profile_hl_separator"):
         submitted_fields = _parse_form_fields(request.POST.get("form_fields"))
         existing_fmt = profile.highlight_copy_format or {}
+        # 只提交一个字段时，其余字段要带上现值；从未设置过就填默认值，
+        # 否则单独改分隔符会把格式一并清成空串
         form_data = {
             "highlight_copy_default_action": profile.highlight_copy_default_action,
-            "item_format": existing_fmt.get("item_format", ""),
-            "separator": existing_fmt.get("separator", ""),
+            "item_format": existing_fmt.get(
+                "item_format", UserProfileHighlightCopyFormatForm.DEFAULT_ITEM_FORMAT
+            ),
+            "separator": existing_fmt.get(
+                "separator", UserProfileHighlightCopyFormatForm.DEFAULT_SEPARATOR
+            ),
         }
         for field_name in submitted_fields:
             if field_name in request.POST:
@@ -741,6 +775,31 @@ def _get_language_display_name(language_code: str, fallback: str) -> str:
         return fallback
 
     return language_info.get("name_local") or language_info.get("name") or fallback
+
+
+def build_language_segment_context(profile) -> dict:
+    """语言分段控件的上下文：设置页与列表页的「布局」抽屉共用一套逻辑。"""
+    primary_language_choices = _get_primary_language_choices()
+    other_language_choices = _get_other_language_choices()
+    current_language = _normalize_language_code(
+        profile.language or django_settings.LANGUAGE_CODE
+    )
+    primary_codes = {code for code, _label in primary_language_choices}
+    other_codes = {code for code, _label in other_language_choices}
+
+    return {
+        "primary_language_choices": primary_language_choices,
+        "other_language_choices": other_language_choices,
+        "language_segment_value": (
+            current_language
+            if current_language in primary_codes
+            else LANGUAGE_OTHER_SENTINEL
+        ),
+        "language_other_sentinel": LANGUAGE_OTHER_SENTINEL,
+        "language_other_current_code": (
+            current_language if current_language in other_codes else ""
+        ),
+    }
 
 
 def _get_supported_interface_languages():

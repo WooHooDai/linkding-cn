@@ -98,6 +98,37 @@
   color: var(--text-color);
 }
 
+/* 标题栏右侧动作：全部展开 / 全部折叠 / 关闭 */
+.layout-drawer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--unit-1);
+}
+
+.layout-drawer-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+
+  &:hover:not([disabled]) {
+    color: var(--text-color);
+  }
+
+  /* 已经全部展开/全部折叠时没有可做的动作 */
+  &[disabled] {
+    opacity: 0.3;
+    cursor: default;
+  }
+}
+
 .layout-drawer-close {
   flex: none;
   color: var(--secondary-text-color);
@@ -198,10 +229,31 @@
   }
 }
 
+/* 分组标题同时也是折叠开关：整行可点，右侧箭头表示当前状态 */
 .layout-drawer-group-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--unit-2);
   padding: var(--unit-2) var(--unit-4) var(--unit-1);
   font-size: var(--font-size-sm);
   color: var(--secondary-text-color);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:hover {
+    color: var(--text-color);
+  }
+}
+
+/* 收起时箭头朝右，展开时朝下（与 .ld-details 同一套箭头语言） */
+[data-drawer-group][open] > .layout-drawer-group-label .ld-chevron {
+  transform: rotate(45deg);
 }
 
 /* 语言行用一个独立表单提交，display:contents 让它不打断分组排版 */
@@ -310,11 +362,33 @@
   width: 150px;
 }
 
+/* 选项文案偏长（如复制按钮操作），单独放宽 */
+.ld-control-wide {
+  width: 168px;
+}
+
 .ld-control-number {
   width: 64px;
   height: var(--control-size-sm);
   padding-block: 0;
   text-align: right;
+}
+
+/* 折叠区里的整行表单（复制格式 / 分隔符）：展开后才编辑 */
+.ld-sub-form {
+  display: grid;
+  gap: var(--unit-2);
+  padding: 0 var(--unit-4) var(--unit-3);
+}
+
+.ld-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: calc(var(--control-size) * 2);
+  resize: vertical;
+  font-family: var(--mono-font-family);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
 }
 
 /* 开关：滑轨贴行尾 */

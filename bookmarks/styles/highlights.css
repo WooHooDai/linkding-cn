@@ -5,6 +5,11 @@
 
 /* ── Toolbar ── */
 
+/* 随机按钮由布局抽屉控制显隐；.btn 自身的 display 会盖掉 [hidden] */
+[data-hl-random][hidden] {
+  display: none;
+}
+
 .highlights-toolbar {
   display: flex;
   align-items: center;

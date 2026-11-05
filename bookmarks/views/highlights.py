@@ -11,7 +11,11 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from bookmarks import queries, utils
-from bookmarks.models import Annotation, UserProfile
+from bookmarks.models import (
+    Annotation,
+    UserProfile,
+    UserProfileHighlightCopyFormatForm,
+)
 from bookmarks.type_defs import HttpRequest
 from bookmarks.views import turbo
 from bookmarks.views.contexts import (
@@ -34,12 +38,7 @@ SORT_CHOICES = [
     ("random", _("Random")),
 ]
 
-GROUP_CHOICES = [
-    ("none", _("None")),
-    ("bookmark", _("Bookmark")),
-    ("domain", _("Domain")),
-    ("color", _("Color")),
-]
+GROUP_CHOICES = UserProfile.HIGHLIGHT_GROUP_CHOICES
 
 NOTE_FILTER_CHOICES = [
     ("", _("Any")),
@@ -445,6 +444,9 @@ def _render_list(request, search: HighlightSearch, prefs=None, page_size=PAGE_SI
     domains = HighlightDomainsContext(request, search)
     tag_cloud = HighlightTagCloudContext(request, search)
 
+    # 复制格式表单的初始值（空值回落到默认格式），布局抽屉与设置页共用
+    copy_format_form = UserProfileHighlightCopyFormatForm(instance=request.user_profile)
+
     context = {
         "page_title": _("Highlights & Annotations - Linkding"),
         "annotations_page": page,
@@ -483,7 +485,16 @@ def _render_list(request, search: HighlightSearch, prefs=None, page_size=PAGE_SI
         "hl_copy_item_format": (request.user_profile.highlight_copy_format or {}).get("item_format", ""),
         "hl_copy_separator": (request.user_profile.highlight_copy_format or {}).get("separator", ""),
         "highlight_copy_default_action": request.user_profile.highlight_copy_default_action,
+        # 布局抽屉：分组用当前生效值，复制设置用表单初始值（空走默认）
+        "highlights_group_by": search.group_by,
+        "highlight_copy_action_choices": UserProfile.HIGHLIGHT_COPY_ACTION_CHOICES,
+        "hl_item_format_value": copy_format_form.fields["item_format"].initial,
+        "hl_separator_value": copy_format_form.fields["separator"].initial,
     }
+    # 语言分段控件：与设置页共用（settings 视图在此处延迟导入，避免与包初始化互相牵制）
+    from bookmarks.views.settings import build_language_segment_context
+
+    context.update(build_language_segment_context(request.user_profile))
     context["sidebar_modules"] = _build_highlights_sidebar_modules(request, context)
     context["sidebar_module_state"] = sidebar_module_state(
         request.user_profile, SIDEBAR_SCOPE_HIGHLIGHTS

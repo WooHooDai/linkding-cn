@@ -1,0 +1,316 @@
+{% load i18n %}
+{% comment %}
+高亮页的「布局」抽屉：与书签列表同一套版式，但偏好项不多，不再分页签，
+按「界面 / 视图 / 页面工具栏 / 侧边栏 / 高亮工具栏」一屏铺开。
+每个分组可折叠（默认展开，状态记在 localStorage），标题栏提供全部展开 / 全部折叠。
+行一律 label 与控件同行、控件右对齐，说明收进标签旁的 info 图标。
+{% endcomment %}
+<aside id="layout-drawer" class="layout-drawer" data-layout-drawer
+       data-save-url="{% url 'linkding:settings.save' %}"
+       data-label-close="{% translate 'Close' %}"
+       data-label-more-info="{% translate 'More info' %}"
+       aria-label="{% translate 'Layout' %}"
+       aria-hidden="true" inert>
+  <div class="layout-drawer-header">
+    <span class="layout-drawer-title">{% translate "Layout" %}</span>
+    <div class="layout-drawer-header-actions">
+      <button type="button" class="layout-drawer-icon-btn"
+              data-layout-groups-expand
+              aria-label="{% translate 'Expand all' %}" title="{% translate 'Expand all' %}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+          <path d="M7 6l5 5l5 -5"></path>
+          <path d="M7 12l5 5l5 -5"></path>
+        </svg>
+      </button>
+      <button type="button" class="layout-drawer-icon-btn"
+              data-layout-groups-collapse
+              aria-label="{% translate 'Collapse all' %}" title="{% translate 'Collapse all' %}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+          <path d="M7 11l5 -5l5 5"></path>
+          <path d="M7 17l5 -5l5 5"></path>
+        </svg>
+      </button>
+      <button type="button" class="btn btn-noborder layout-drawer-close"
+              data-layout-drawer-close
+              aria-label="{% translate 'Close' %}" title="{% translate 'Close' %}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+             stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+          <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+          <path d="M18 6l-12 12"></path>
+          <path d="M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="layout-drawer-body" data-layout-scroll>
+    <div class="layout-drawer-panel" data-layout-panel="page">
+
+      <details class="ld-group" data-drawer-group="interface" open>
+        <summary class="layout-drawer-group-label">
+          <span>{% translate "Interface" %}</span>
+          <span class="ld-chevron" aria-hidden="true"></span>
+        </summary>
+        {% include 'bookmarks/header/layout_drawer_interface.html' %}
+      </details>
+
+      <details class="ld-group" data-drawer-group="view" open>
+        <summary class="layout-drawer-group-label">
+          <span>{% translate "View" context "layout drawer" %}</span>
+          <span class="ld-chevron" aria-hidden="true"></span>
+        </summary>
+
+        <div class="ld-row">
+          <div class="ld-row-text">
+            <span class="ld-row-label">{% translate "Highlights per page" %}</span>
+          </div>
+          <div class="ld-row-control">
+            <input type="number" min="1" inputmode="numeric"
+                   class="form-input input-sm ld-control-number"
+                   name="highlights_per_page" data-pref="highlights_per_page"
+                   data-pref-apply="reload"
+                   value="{{ request.user_profile.highlights_per_page }}">
+          </div>
+          <div class="field-errors" data-field-error-for="highlights_per_page"></div>
+        </div>
+
+        <div class="ld-row">
+          <div class="ld-row-text">
+            <span class="ld-row-label">{% translate "Group by" %}<span class="ld-help" data-drawer-help>
+                    <button type="button" class="ld-help-button"
+                            aria-label="{% translate 'More info' %}" aria-expanded="false">
+                      <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+                    </button>
+                    <span class="ld-help-text" hidden>{% translate "Group highlights by bookmark, by website domain, or by highlight color." %} {% translate "This is the default for the list; the filter panel can still override it for the current view." %}</span>
+                  </span></span>
+          </div>
+          <div class="ld-row-control">
+            <select class="form-select input-sm ld-control-select"
+                    name="highlights_group_by" aria-label="{% translate 'Group by' %}"
+                    data-pref="highlights_group_by"
+                    data-pref-form="profile_highlights_group_by"
+                    data-pref-apply="reload">
+              {% for value, label in group_choices %}
+                <option value="{{ value }}"
+                        {% if highlights_group_by == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        {# 分组折叠：只在真的分组时才有意义，和书签列表页的「分组折叠」同一套行为 #}
+        {% if highlights_group_by != 'none' %}
+          <div class="ld-row">
+            <div class="ld-row-text">
+              <span class="ld-row-label">{% translate "Collapse groups" %}</span>
+            </div>
+            <div class="ld-row-control">
+              <button type="button" class="btn btn-primary btn-sm" data-hl-group-toggle-all
+                      data-label-collapse="{% translate 'Collapse' %}"
+                      data-label-expand="{% translate 'Expand' %}">{% translate "Collapse" %}</button>
+            </div>
+          </div>
+        {% endif %}
+      </details>
+
+      <details class="ld-group" data-drawer-group="toolbar" open>
+        <summary class="layout-drawer-group-label">
+          <span>{% translate "Page toolbar" %}</span>
+          <span class="ld-chevron" aria-hidden="true"></span>
+        </summary>
+
+        <div class="ld-row">
+          <div class="ld-row-text">
+            <span class="ld-row-label">{% translate "Sticky search bar" %}</span>
+          </div>
+          <div class="ld-row-control">
+            <label class="form-switch ld-switch">
+              <input type="checkbox" name="highlights_sticky_header_controls"
+                     data-pref="highlights_sticky_header_controls" data-pref-apply="dom"
+                     {% if request.user_profile.highlights_sticky_header_controls %}checked{% endif %}>
+              <i class="form-icon"></i>
+            </label>
+          </div>
+        </div>
+
+        <div class="ld-row">
+          <div class="ld-row-text">
+            <span class="ld-row-label">{% translate "Sticky pagination" %}</span>
+          </div>
+          <div class="ld-row-control">
+            <label class="form-switch ld-switch">
+              <input type="checkbox" name="highlights_sticky_pagination"
+                     data-pref="highlights_sticky_pagination" data-pref-apply="dom"
+                     {% if request.user_profile.highlights_sticky_pagination %}checked{% endif %}>
+              <i class="form-icon"></i>
+            </label>
+          </div>
+        </div>
+
+        <div class="ld-row">
+          <div class="ld-row-text">
+            <span class="ld-row-label">{% translate "Random button" %}<span class="ld-help" data-drawer-help>
+                    <button type="button" class="ld-help-button"
+                            aria-label="{% translate 'More info' %}" aria-expanded="false">
+                      <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+                    </button>
+                    <span class="ld-help-text" hidden>{% translate "Whether to show a random sort button in the highlights toolbar." %}</span>
+                  </span></span>
+          </div>
+          <div class="ld-row-control">
+            <label class="form-switch ld-switch">
+              <input type="checkbox" name="highlights_enable_random_button"
+                     data-pref="highlights_enable_random_button" data-pref-apply="dom"
+                     {% if request.user_profile.highlights_enable_random_button %}checked{% endif %}>
+              <i class="form-icon"></i>
+            </label>
+          </div>
+        </div>
+      </details>
+
+      <details class="ld-group" data-drawer-group="sidebar" open>
+        <summary class="layout-drawer-group-label">
+          <span>{% translate "Sidebar" %}</span>
+          <span class="ld-chevron" aria-hidden="true"></span>
+        </summary>
+
+        <div class="ld-row">
+          <div class="ld-row-text">
+            <span class="ld-row-label">{% translate "Always visible" %}</span>
+          </div>
+          <div class="ld-row-control">
+            <label class="form-switch ld-switch">
+              <input type="checkbox" name="show_highlights_sidebar"
+                     data-pref="show_highlights_sidebar" data-pref-apply="dom"
+                     {% if request.user_profile.show_highlights_sidebar %}checked{% endif %}>
+              <i class="form-icon"></i>
+            </label>
+          </div>
+        </div>
+
+        <div class="ld-row">
+          <div class="ld-row-text">
+            <span class="ld-row-label">{% translate "Follow on scroll" %}</span>
+          </div>
+          <div class="ld-row-control">
+            <label class="form-switch ld-switch">
+              <input type="checkbox" name="highlights_sticky_side_panel"
+                     data-pref="highlights_sticky_side_panel" data-pref-apply="dom"
+                     {% if request.user_profile.highlights_sticky_side_panel %}checked{% endif %}>
+              <i class="form-icon"></i>
+            </label>
+          </div>
+        </div>
+
+        <div class="ld-row">
+          <div class="ld-row-text">
+            <span class="ld-row-label">{% translate "Module settings" %}</span>
+          </div>
+          <div class="ld-row-control">
+            <button type="button" class="ld-disclosure" data-drawer-disclosure="hl-sidebar-modules"
+                    aria-expanded="false" aria-controls="drawer-hl-sidebar-modules"
+                    aria-label="{% translate 'Expand' %}">
+              <span class="ld-chevron" aria-hidden="true"></span>
+            </button>
+          </div>
+        </div>
+        <ul class="ld-module-list" id="drawer-hl-sidebar-modules"
+            data-drawer-panel="hl-sidebar-modules"
+            data-drawer-list="highlights_sidebar_modules" hidden>
+          {% for item in request.user_profile.get_highlights_sidebar_module_items %}
+            <li class="ld-module-item" data-item-key="{{ item.key }}">
+              <button type="button" class="ld-module-handle"
+                      aria-label="{% translate 'Drag to reorder' %}" tabindex="-1">
+                <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-grip"></use></svg>
+              </button>
+              <span class="ld-module-name">{{ item.label }}</span>
+              <label class="form-switch ld-switch">
+                <input type="checkbox" data-item-enabled {% if item.enabled %}checked{% endif %}>
+                <i class="form-icon"></i>
+              </label>
+            </li>
+          {% endfor %}
+        </ul>
+      </details>
+
+      <details class="ld-group" data-drawer-group="highlight-toolbar" open>
+        <summary class="layout-drawer-group-label">
+          <span>{% translate "Highlight toolbar" %}</span>
+          <span class="ld-chevron" aria-hidden="true"></span>
+        </summary>
+
+        <div class="ld-row">
+          <div class="ld-row-text">
+            <span class="ld-row-label">{% translate "Copy button action" %}</span>
+          </div>
+          <div class="ld-row-control">
+            <select class="form-select input-sm ld-control-select ld-control-wide"
+                    name="highlight_copy_default_action"
+                    data-pref="highlight_copy_default_action"
+                    data-pref-form="profile_highlight_copy_format"
+                    data-pref-apply="dom">
+              {% for value, label in highlight_copy_action_choices %}
+                <option value="{{ value }}"
+                        {% if highlight_copy_default_action == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        {# 两段长文本默认收起：抽屉里一屏放不下，展开才编辑 #}
+        <details class="ld-details">
+          <summary class="ld-row ld-row-summary">
+            <div class="ld-row-text">
+              <span class="ld-row-label">{% translate "Copy single item format" %}<span class="ld-help" data-drawer-help>
+                      <button type="button" class="ld-help-button"
+                              aria-label="{% translate 'More info' %}" aria-expanded="false">
+                        <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+                      </button>
+                      <span class="ld-help-text" hidden>{% translate "Content format when copying a single highlight and/or annotation." %} {% blocktranslate trimmed %}<code>${highlight}</code> as highlight placeholder, <code>${annotation}</code> as annotation placeholder.{% endblocktranslate %} {% translate "Leave empty to use the default format." %}</span>
+                    </span></span>
+            </div>
+            <span class="ld-chevron" aria-hidden="true"></span>
+          </summary>
+          <div class="ld-sub ld-sub-form">
+            <textarea class="form-input ld-textarea" rows="3"
+                      name="item_format" data-pref="item_format"
+                      data-pref-form="profile_hl_item_format"
+                      data-pref-apply="dom" aria-label="{% translate 'Copy single item format' %}"
+                      placeholder="> ${highlight}&#10;&#10;${annotation}">{{ hl_item_format_value }}</textarea>
+            <div class="field-errors" data-field-error-for="item_format"></div>
+          </div>
+        </details>
+
+        <details class="ld-details">
+          <summary class="ld-row ld-row-summary">
+            <div class="ld-row-text">
+              <span class="ld-row-label">{% translate "Copy multi-item separator" %}<span class="ld-help" data-drawer-help>
+                      <button type="button" class="ld-help-button"
+                              aria-label="{% translate 'More info' %}" aria-expanded="false">
+                        <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+                      </button>
+                      <span class="ld-help-text" hidden>{% translate "Separator between items when batch copying multiple highlights." %} {% translate "Leave empty to use the default separator." %}</span>
+                    </span></span>
+            </div>
+            <span class="ld-chevron" aria-hidden="true"></span>
+          </summary>
+          <div class="ld-sub ld-sub-form">
+            <textarea class="form-input ld-textarea" rows="2"
+                      name="separator" data-pref="separator"
+                      data-pref-form="profile_hl_separator"
+                      data-pref-apply="dom" aria-label="{% translate 'Copy multi-item separator' %}">{{ hl_separator_value }}</textarea>
+            <div class="field-errors" data-field-error-for="separator"></div>
+          </div>
+        </details>
+      </details>
+
+    </div>
+  </div>
+</aside>
+{# 遮罩只在窄屏出现；点它不关闭抽屉，关闭只走标题栏的关闭按钮 #}
+<div class="layout-drawer-scrim" aria-hidden="true"></div>
