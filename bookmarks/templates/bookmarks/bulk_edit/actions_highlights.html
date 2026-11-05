@@ -1,0 +1,20 @@
+{% load i18n %}
+{% comment %}
+  高亮页的批量动作：都是对已存数据的一次性改动，没有需要现场填参数的动作。
+  「复制」不提交表单，由前端取回选中项文本后写剪贴板。
+{% endcomment %}
+<select name="bulk_action" class="form-select select-sm">
+  <option value="bulk_delete">{% translate "Delete highlights" %}</option>
+  <option value="bulk_clear_note">{% translate "Clear annotations" %}</option>
+  <option value="bulk_change_color">{% translate "Change color" %}</option>
+  <option value="bulk_copy_highlight">{% translate "Copy highlights" %}</option>
+  <option value="bulk_copy_note">{% translate "Copy annotations" %}</option>
+  <option value="bulk_copy_all">{% translate "Copy all" %}</option>
+</select>
+
+{# 颜色选择器只在「更改颜色」下出现；hidden 属性由批量组件切换 #}
+<select name="bulk_new_color" class="form-select select-sm" data-bulk-color hidden>
+  {% for color_key, color_label in color_choices %}
+    <option value="{{ color_key }}">{{ color_label }}</option>
+  {% endfor %}
+</select>

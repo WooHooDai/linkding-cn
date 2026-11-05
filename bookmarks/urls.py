@@ -94,6 +94,11 @@ urlpatterns = [
         views.highlights.index,
         name="bookmarks.highlights",
     ),
+    path(
+        "bookmarks/highlights/copy-payload",
+        views.highlights.copy_payload,
+        name="bookmarks.highlights_copy_payload",
+    ),
     # Bookmark health check（任务进度与单条检查 API；页面/入口已并入书签列表与 bundle 列表）
     path(
         "bookmarks/health/<int:job_id>/status",

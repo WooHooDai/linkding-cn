@@ -7,7 +7,8 @@
 
 {% block content %}
   <div ld-bulk-edit
-       data-ctx="active" class="bookmarks-page grid columns-md-1 sidebar-closed"
+       data-ctx="active" class="bookmarks-page bulk-edit-root grid columns-md-1 sidebar-closed"
+       data-bulk-storage="active"
        data-sidebar-default="{{ show_sidebar|yesno:'1,0' }}">
 
     {# Bookmark list #}
@@ -30,6 +31,7 @@
       </div>
 
       <form class="bookmark-actions"
+            data-bulk-form
             action="{{ bookmark_list.action_url|safe }}"
             method="post" autocomplete="off">
         {% csrf_token %}

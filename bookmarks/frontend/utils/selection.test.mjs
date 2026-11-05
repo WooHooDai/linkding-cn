@@ -97,3 +97,10 @@ test("state survives a JSON round trip", () => {
   assert.equal(restored.count(10), 9);
   assert.equal(Selection.from(null).isEmpty, true);
 });
+
+test("legacy highlight state with ids is migrated", () => {
+  const restored = Selection.from({ selectAll: false, ids: ["3", "5"] });
+  assert.equal(restored.selectAll, false);
+  assert.equal(restored.count(10), 2);
+  assert.equal(restored.isSelected("3"), true);
+});

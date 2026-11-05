@@ -1274,9 +1274,11 @@ ul.bookmark-list {
   }
 }
 
-/* Bookmark bulk edit */
+/* Bookmark bulk edit
+   两页共用，用类名而不是行为属性做根：书签挂 ld-bulk-edit，高亮挂
+   ld-highlights-bulk-edit（同一个组件的子类），属性名对不上。 */
 
-[ld-bulk-edit] {
+.bulk-edit-root {
   /* 隐藏原本的头部控件 */
   &.active .header-controls {
     display: none !important;
@@ -1354,8 +1356,15 @@ ul.bookmark-list {
     }
   }
 
+  /* 高亮页：颜色选择器只在「更改颜色」下出现（Spectre 给 .form-select 定了
+     display，光靠 [hidden] 盖不住） */
+  & [data-bulk-color][hidden] {
+    display: none;
+  }
+
   /* 列表项的 Checkbox 显示逻辑 */
-  & li[ld-bookmark-item] .form-checkbox.bulk-edit-checkbox {
+  & li[ld-bookmark-item] .form-checkbox.bulk-edit-checkbox,
+  & li.highlight-item .form-checkbox.bulk-edit-checkbox {
     display: none;
     padding: 0;
     margin: 0;
@@ -1371,7 +1380,8 @@ ul.bookmark-list {
     }
   }
 
-  &.active li[ld-bookmark-item] .form-checkbox.bulk-edit-checkbox {
+  &.active li[ld-bookmark-item] .form-checkbox.bulk-edit-checkbox,
+  &.active li.highlight-item .form-checkbox.bulk-edit-checkbox {
     display: inline-flex;
     align-items: center;
   }
@@ -1395,6 +1405,7 @@ ul.bookmark-list {
      刻意不改布局占位——一旦放大盒子，图标会贴着盒子上沿、标题被推远 */
   @media (pointer: coarse) {
     &.active li[ld-bookmark-item] .form-checkbox.bulk-edit-checkbox,
+    &.active li.highlight-item .form-checkbox.bulk-edit-checkbox,
     &.active .bulk-group-checkbox {
       position: relative;
       -webkit-touch-callout: none;

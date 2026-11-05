@@ -104,7 +104,8 @@ export class Selection {
     if (!raw || typeof raw !== "object") return new Selection();
     return new Selection({
       selectAll: !!raw.selectAll,
-      selectedIds: raw.selectedIds || [],
+      // `ids` 是旧的高亮页批量格式，迁移一次即可，之后统一用 selectedIds
+      selectedIds: raw.selectedIds || raw.ids || [],
       excludedIds: raw.excludedIds || [],
     });
   }

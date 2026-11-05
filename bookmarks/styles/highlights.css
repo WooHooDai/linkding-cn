@@ -137,65 +137,13 @@
   filter: drop-shadow(0 0 1px rgba(0,0,0,0.5));
 }
 
-/* ── Bulk edit bar ── */
+/* ── Bulk edit ──
+   条与条目复选框的显隐来自 .bulk-edit-root 的通用规则（bookmark-page.css），
+   这里只补高亮页自己的骨架：分组头按 baseline 对齐，复选框要单独居中。 */
 
-.highlights-bulk-bar {
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.2s, opacity 0.2s;
-  margin-bottom: 0;
-}
-
-.highlights-page.bulk-active .highlights-bulk-bar {
-  max-height: 100px;
-  opacity: 1;
-  border-bottom: solid 1px var(--secondary-border-color);
-  margin-bottom: var(--unit-4);
-  padding: var(--unit-2) 0;
-}
-
-.highlights-bulk-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--unit-2);
-  flex-wrap: wrap;
-
-  .form-select {
-    width: auto;
-    max-width: 180px;
-  }
-
-  .bulk-edit-checkbox.all {
-    display: inline-flex;
-    align-items: center;
-    margin: 0;
-    padding: var(--unit-2);
-  }
-}
-
-.highlights-bulk-msg {
-  font-size: var(--font-size-sm);
-  transition: opacity 0.3s;
-
-  &.success {
-    color: var(--success-color);
-  }
-
-  &.error {
-    color: var(--error-color);
-  }
-}
-
-/* Hide bulk checkboxes by default */
-.highlights-page .bulk-edit-checkbox:not(.all) {
-  display: none;
-  padding: 0;
-  min-width: 16px;
-}
-.highlights-page.bulk-active .bulk-edit-checkbox:not(.all) {
-  display: inline-flex;
-  align-items: center;
+.highlight-group-header .bulk-group-checkbox {
+  align-self: center;
+  margin-right: var(--unit-2);
 }
 
 /* ── Search summary ── */
@@ -473,7 +421,7 @@
     transition: opacity 0.15s;
 
     .highlight-item:hover &,
-    .highlights-page.bulk-active & {
+    .highlights-page.active & {
       opacity: 1;
       width: auto;
       gap: var(--unit-2);
@@ -651,7 +599,7 @@
   }
 
   /* 与书签列表同一套窄屏取舍：随机按钮常驻，批量编辑与布局收进「更多」 */
-  .highlights-toolbar.has-random .highlights-bulk-toggle,
+  .highlights-toolbar.has-random .bulk-edit-active-toggle,
   .highlights-toolbar.has-random .header-layout-toggle {
     display: none;
   }

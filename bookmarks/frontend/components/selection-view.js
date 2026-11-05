@@ -1,6 +1,6 @@
 import { gettext, interpolate } from "../utils/i18n.js";
 import { sliceRange } from "../utils/selection.js";
-import { queryBookmarkList } from "../utils/bookmark-list.js";
+import { BOOKMARK_LIST_SELECTOR } from "../utils/bookmark-list.js";
 
 // Binds bulk-selection state to the bookmark list DOM: renders the state onto
 // the checkboxes (items, groups, page header, "All pages") and translates
@@ -17,12 +17,23 @@ import { queryBookmarkList } from "../utils/bookmark-list.js";
 const LONG_PRESS_MS = 500;
 const MOVE_TOLERANCE_PX = 10;
 
+// 页面差异只在这一组选择器里：列表容器、条目、条目 id、分组头、总数属性。
+// 高亮页的条目与分组头不是列表的子元素，所以布局按文档序遍历而不是走 children。
+const DEFAULT_SELECTORS = {
+  container: BOOKMARK_LIST_SELECTOR,
+  item: "li[ld-bookmark-item]",
+  itemId: "bookmarkId",
+  group: ".group-header",
+  totalAttr: "bookmarksTotal",
+};
+
 export class SelectionView {
-  constructor(root, { getSelection, isActive, onChange }) {
+  constructor(root, { getSelection, isActive, onChange, selectors = {} }) {
     this.root = root;
     this.getSelection = getSelection;
     this.isActive = isActive;
     this.onChange = onChange || (() => {});
+    this.selectors = { ...DEFAULT_SELECTORS, ...selectors };
 
     // Empty layout until readLayout() runs, so run() is always safe.
     this.order = [];
@@ -49,8 +60,8 @@ export class SelectionView {
   // Display order and group membership come from the rendered list only, so
   // grouping never has to be mirrored in JS state.
   readLayout() {
-    const list = queryBookmarkList(this.root);
-    this.list = list;
+    const container = this.root.querySelector(this.selectors.container);
+    this.list = container;
     this.order = [];
     this.items = new Map();
     this.groups = [];
@@ -63,28 +74,38 @@ export class SelectionView {
     this.executeButton = this.root.querySelector("button[name='bulk_execute']");
     this.hint = this.root.querySelector(".selection-hint");
 
-    if (list) {
-      this.total = Number(list.dataset.bookmarksTotal || 0);
+    if (container) {
+      // 总数优先取根节点（高亮页的列表容器是 form，没有 data 属性）
+      this.total =
+        Number(
+          this.root.dataset.bulkTotal ??
+            container.dataset[this.selectors.totalAttr] ??
+            0,
+        ) || 0;
+
       let group = null;
-      for (const li of Array.from(list.children)) {
-        if (li.classList.contains("group-header")) {
+      const rows = container.querySelectorAll(
+        `${this.selectors.item}, ${this.selectors.group}`,
+      );
+      for (const row of Array.from(rows)) {
+        if (row.matches(this.selectors.group)) {
           group = {
-            key: li.dataset.groupKey,
+            key: row.dataset.groupKey,
             ids: [],
-            label: li.querySelector(".bulk-group-checkbox"),
-            input: li.querySelector(".bulk-group-checkbox input"),
+            label: row.querySelector(".bulk-group-checkbox"),
+            input: row.querySelector(".bulk-group-checkbox input"),
           };
           this.groups.push(group);
           continue;
         }
-        if (!li.hasAttribute("ld-bookmark-item")) {
+        const id = row.dataset[this.selectors.itemId];
+        if (!id) {
           continue;
         }
-        const id = li.dataset.bookmarkId;
         this.order.push(id);
         this.items.set(id, {
-          el: li,
-          checkbox: li.querySelector(".bulk-edit-checkbox input"),
+          el: row,
+          checkbox: row.querySelector(".bulk-edit-checkbox input"),
         });
         if (group) {
           group.ids.push(id);
@@ -237,11 +258,15 @@ export class SelectionView {
       return;
     }
 
-    const item = target.closest("li[ld-bookmark-item]");
+    const item = target.closest(this.selectors.item);
     if (!item) {
       return;
     }
-    this._toggleItem(item.dataset.bookmarkId, target.checked, event.shiftKey);
+    this._toggleItem(
+      item.dataset[this.selectors.itemId],
+      target.checked,
+      event.shiftKey,
+    );
   }
 
   _toggleItem(id, checked, shiftKey) {
@@ -281,12 +306,12 @@ export class SelectionView {
     if (!label || label.classList.contains("all")) {
       return;
     }
-    const item = label.closest("li[ld-bookmark-item]");
+    const item = label.closest(this.selectors.item);
     if (!item) {
       return;
     }
     this.press = {
-      id: item.dataset.bookmarkId,
+      id: item.dataset[this.selectors.itemId],
       x: event.clientX,
       y: event.clientY,
     };
@@ -347,7 +372,7 @@ export class SelectionView {
   }
 
   _groupFor(input) {
-    const key = input.closest(".group-header")?.dataset.groupKey;
+    const key = input.closest(this.selectors.group)?.dataset.groupKey;
     return this.groups.find((group) => group.key === key);
   }
 

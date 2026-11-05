@@ -1,3 +1,5 @@
+import os
+
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from playwright.sync_api import BrowserContext, Page, Playwright, expect
 
@@ -10,7 +12,12 @@ class LinkdingE2ETestCase(StaticLiveServerTestCase, BookmarkFactoryMixin):
         self.cookie = self.client.cookies["ld_sessionid"]
 
     def setup_browser(self, playwright) -> BrowserContext:
-        browser = playwright.chromium.launch(headless=True)
+        # 允许指向已下载的 Chromium：Playwright 版本升级后缓存目录里的构建号会变，
+        # 不重新下载浏览器时用 LD_E2E_CHROMIUM 指定可执行文件即可
+        executable_path = os.environ.get("LD_E2E_CHROMIUM") or None
+        browser = playwright.chromium.launch(
+            headless=True, executable_path=executable_path
+        )
         context = browser.new_context()
         context.add_cookies(
             [

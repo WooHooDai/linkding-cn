@@ -4456,6 +4456,37 @@ msgid ""
 "set in the layout sidebar on the bookmarks page."
 msgstr "在后台下载缺失的图标。是否显示图标在书签页面的「布局」侧边栏里设置。"
 
+#: bookmarks/templates/bookmarks/bulk_edit/bar.html
+msgid "highlights"
+msgstr "高亮"
+
+#: bookmarks/views/highlights.py
+msgid "No highlights selected."
+msgstr "未选中任何高亮。"
+
+#: bookmarks/views/highlights.py
+#, python-format
+msgid "Deleted %(count)s highlights."
+msgstr "已删除 %(count)s 条高亮。"
+
+#: bookmarks/views/highlights.py
+#, python-format
+msgid "Cleared annotations on %(count)s highlights."
+msgstr "已清空 %(count)s 条高亮的批注。"
+
+#: bookmarks/views/highlights.py
+#, python-format
+msgid "Changed the color of %(count)s highlights."
+msgstr "已更改 %(count)s 条高亮的颜色。"
+
+#: bookmarks/views/highlights.py
+msgid "Unknown color."
+msgstr "未知颜色。"
+
+#: bookmarks/views/highlights.py
+msgid "No highlights were changed."
+msgstr "没有高亮被修改。"
+
 #~ msgid "Highlight grouping"
 #~ msgstr "高亮分组"
 

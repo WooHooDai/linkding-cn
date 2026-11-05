@@ -1,4 +1,9 @@
 {% load i18n shared %}
+{% comment %}
+  批量编辑条的外壳：全选、执行/取消、计数、跨页选择。
+  动作下拉由各页面通过 action_template 传入——书签的动作多且与视图权限相关，
+  高亮页则多一个颜色选择器，放在外壳里只会互相牵制。
+{% endcomment %}
 {% htmlmin %}
   <div class="bulk-edit-bar">
     <div class="bulk-edit-actions">
@@ -6,75 +11,9 @@
         <input type="checkbox">
         <i class="form-icon"></i>
       </label>
-      <select name="bulk_action" class="form-select select-sm">
 
-        {% if not 'bulk_read' in disable_actions %}
-          <option value="bulk_read">{% translate "Mark as read" %}</option>
-        {% endif %}
-        {% if not 'bulk_unread' in disable_actions %}
-        <option value="bulk_unread">{% translate "Mark as unread" %}</option>
-      {% endif %}
-      {% if request.user_profile.enable_sharing %}
-        {% if not 'bulk_share' in disable_actions %}
-          <option value="bulk_share">{% translate "Share" %}</option>
-        {% endif %}
-        {% if not 'bulk_unshare' in disable_actions %}  
-          <option value="bulk_unshare">{% translate "Unshare" %}</option>
-        {% endif %}
-      {% endif %}
+      {% include action_template|default:'bookmarks/bulk_edit/actions_bookmarks.html' %}
 
-      <hr>
-      {% if not 'bulk_check_health' in disable_actions %}
-        <option value="bulk_check_health">{% translate "Check health" %}</option>
-
-      {% endif %}
-      {% if not 'bulk_edit_metadata' in disable_actions %}
-        <option value="bulk_edit_metadata">{% translate "Edit metadata" %}</option>
-      {% endif %}
-      {% if not 'bulk_enrich_metadata' in disable_actions %}
-        <option value="bulk_enrich_metadata">{% translate "Fetch metadata" %}</option>
-      {% endif %}
-      {% if not 'bulk_refresh_metadata' in disable_actions %}
-        <option value="bulk_refresh_metadata">{% translate "Refresh metadata" %}</option>
-      {% endif %}
-      {% if not 'bulk_refresh_favicon' in disable_actions %}
-        <option value="bulk_refresh_favicon">{% translate "Refresh favicon" %}</option>
-      {% endif %}
-      {% if bookmark_list.snapshot_feature_enabled %}
-        {% if not 'bulk_snapshot' in disable_actions %}
-          <option value="bulk_snapshot">{% translate "Create snapshot" %}</option>
-        {% endif %}
-      {% endif %}
-      {% if not 'bulk_remove_snapshot' in disable_actions %}
-        <option value="bulk_remove_snapshot">{% translate "Remove all snapshots" %}</option>
-      {% endif %}
-      {% if not 'bulk_article' in disable_actions %}
-        <option value="bulk_article">{% translate "Create HTML article" %}</option>
-      {% endif %}
-      {% if not 'bulk_remove_article' in disable_actions %}
-        <option value="bulk_remove_article">{% translate "Remove all articles" %}</option>
-      {% endif %}
-
-      <hr>
-      {% if not 'bulk_archive' in disable_actions %}
-        <option value="bulk_archive">{% translate "Archive" %}</option>
-      {% endif %}
-      {% if not 'bulk_unarchive' in disable_actions %}
-        <option value="bulk_unarchive">{% translate "Unarchive" %}</option>
-      {% endif %}
-      {% if not 'bulk_restore' in disable_actions %}
-        <option value="bulk_restore"
-          {% if default_bulk_action == 'bulk_restore' %}selected{% endif %}>
-          {% translate "Restore bookmarks" %}
-        </option>
-      {% endif %}
-      {% if not 'bulk_trash' in disable_actions %}
-        <option value="bulk_trash">{% translate "Move to trash" %}</option>
-      {% endif %}
-        {% if not 'bulk_delete' in disable_actions %}
-          <option value="bulk_delete">{% translate "Delete permanently" %}</option>
-        {% endif %}
-      </select>
       <button ld-confirm-button type="submit" name="bulk_execute" class="btn btn-link btn-sm" disabled>
         <span>{% translate "Execute" %}</span>
       </button>
@@ -87,9 +26,13 @@
       <label class="form-checkbox select-across d-none">
         <input type="checkbox" name="bulk_select_across">
         <i class="form-icon"></i>
-        {% translate "All pages" %} (<span class="total">{{ bookmark_list.bookmarks_total }}</span> {% translate "bookmarks" %})
+        {% if bulk_unit == 'highlights' %}
+          {% translate "All pages" %} (<span class="total">{{ bulk_total }}</span> {% translate "highlights" %})
+        {% else %}
+          {% translate "All pages" %} (<span class="total">{{ bulk_total|default:bookmark_list.bookmarks_total }}</span> {% translate "bookmarks" %})
+        {% endif %}
       </label>
     </div>
   </div>
 {% endhtmlmin %}
-{% include 'bookmarks/bulk_edit/metadata_panel.html' %}
+{% if not omit_metadata_panel %}{% include 'bookmarks/bulk_edit/metadata_panel.html' %}{% endif %}

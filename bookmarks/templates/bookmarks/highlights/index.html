@@ -4,9 +4,20 @@
 {% block title %}{% translate "Highlights - Linkding" %}{% endblock %}
 
 {% block content %}
-<div data-ctx="highlights" class="highlights-page crud-page grid columns-md-1 sidebar-closed"
+<div data-ctx="highlights" class="highlights-page bulk-edit-root crud-page grid columns-md-1 sidebar-closed"
      data-sidebar-default="{{ show_sidebar|yesno:'1,0' }}"
-     ld-highlights-bulk-edit>
+     ld-highlights-bulk-edit
+     data-bulk-storage="highlights"
+     data-bulk-field="annotation_id"
+     data-bulk-action-field="action"
+     data-bulk-panel-action=""
+     data-bulk-removing="bulk_delete"
+     data-bulk-total="{{ summary.total_annotations }}"
+     data-bulk-container=".highlights-main-form"
+     data-bulk-item="li.highlight-item"
+     data-bulk-item-id="annotationId"
+     data-bulk-group=".highlight-group-header"
+     data-bulk-copy-url="{% url 'linkding:bookmarks.highlights_copy_payload' %}">
 
   {# ── Header ── #}
   <main class="main col-2" aria-labelledby="main-heading">
@@ -176,15 +187,7 @@
       </form>
 
       {# Bulk edit toggle #}
-      <button class="btn highlights-bulk-toggle" title="{% translate 'Bulk edit' %}">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-          <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/>
-          <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/>
-          <path d="M16 5l3 3"/>
-        </svg>
-      </button>
+      {% include 'bookmarks/bulk_edit/toggle.html' %}
 
       {# Random sort button #}
       <a class="btn" title="{% translate 'Random sort' %}" data-hl-random
@@ -213,51 +216,13 @@
     </div>
 
     {# ── Main form: bulk bar + list (single form so bulk checkboxes are submitted) ── #}
-    <form class="highlights-main-form" method="post" action="?{{ query_string }}">
+    <form class="highlights-main-form" data-bulk-form method="post" action="?{{ query_string }}">
       {% csrf_token %}
       <input type="hidden" name="action" value="">
       <input type="hidden" name="return_url" value="{{ request.get_full_path }}">
 
       {# ── Bulk edit bar ── #}
-      <div class="highlights-bulk-bar">
-        <div class="highlights-bulk-actions">
-          <label class="form-checkbox bulk-edit-checkbox all">
-            <input type="checkbox" data-bulk-all>
-            <i class="form-icon"></i>
-          </label>
-          <select name="bulk_action" class="form-select select-sm">
-            <option value="bulk_delete">{% translate "Delete highlights" %}</option>
-            <option value="bulk_clear_note">{% translate "Clear annotations" %}</option>
-            <option value="bulk_change_color">{% translate "Change color" %}</option>
-            <option value="bulk_copy_highlight">{% translate "Copy highlights" %}</option>
-            <option value="bulk_copy_note">{% translate "Copy annotations" %}</option>
-            <option value="bulk_copy_all">{% translate "Copy all" %}</option>
-          </select>
-          {# Color picker for bulk_change_color #}
-          <select name="bulk_new_color" class="form-select select-sm highlights-bulk-color-select" style="display:none;">
-            {% for color_key, color_label in color_choices %}
-              <option value="{{ color_key }}">{{ color_label }}</option>
-            {% endfor %}
-          </select>
-          <button type="submit" name="bulk_execute" class="btn btn-link btn-sm"
-                  ld-confirm-danger
-                  ld-confirm-question="{% translate 'Are you sure?' %}"
-                  onclick="this.closest('form').querySelector('input[name=action]').value='bulk_execute';"
-                  disabled>
-            {% translate "Execute" %}
-          </button>
-          <button type="button" class="btn btn-link btn-sm highlights-bulk-cancel">
-            {% translate "Cancel" %}
-          </button>
-          <span class="highlights-bulk-msg d-none"></span>
-          <span class="highlights-bulk-count d-none" data-total="{{ summary.total_annotations }}"></span>
-          <label class="form-checkbox select-across d-none">
-            <input type="checkbox" name="bulk_select_across">
-            <i class="form-icon"></i>
-            {% translate "All pages" %} (<span class="total">{{ summary.total_annotations }}</span>)
-          </label>
-        </div>
-      </div>
+      {% include 'bookmarks/bulk_edit/bar.html' with action_template='bookmarks/bulk_edit/actions_highlights.html' bulk_total=summary.total_annotations bulk_unit='highlights' omit_metadata_panel=True %}
 
       {# ── Annotation list ── #}
       {% if not annotations_page.object_list %}
@@ -273,7 +238,11 @@
       {% else %}
         {% for group_label, color_key, bookmark_id, group_annotations in groups %}
           {% if group_by != 'none' and group_label %}
-            <div class="highlight-group-header">
+            <div class="highlight-group-header" data-group-key="g{{ forloop.counter }}">
+              <label class="form-checkbox bulk-group-checkbox" aria-label="{% translate 'Select group' %}">
+                <input type="checkbox">
+                <i class="form-icon"></i>
+              </label>
               {% if group_by == 'color' and color_key %}
                 <span class="highlight-group-color-bar"
                       style="background-color: {% if color_key == 'yellow' %}rgba(255,235,0,0.7){% elif color_key == 'green' %}rgba(0,200,83,0.7){% elif color_key == 'blue' %}rgba(66,165,245,0.7){% elif color_key == 'pink' %}rgba(236,64,122,0.7){% else %}var(--primary-color){% endif %};"></span>
@@ -306,7 +275,7 @@
               <li class="highlight-item" data-annotation-id="{{ ann.id }}">
                 {# Checkbox (hidden until bulk mode) #}
                 <label class="form-checkbox bulk-edit-checkbox">
-                  <input type="checkbox" name="annotation_id" value="{{ ann.id }}" data-bulk-item>
+                  <input type="checkbox" name="annotation_id" value="{{ ann.id }}">
                   <i class="form-icon"></i>
                 </label>
 
@@ -384,7 +353,7 @@
                               ld-confirm-button ld-confirm-danger
                               ld-confirm-question="{% translate 'Delete this highlight?' %}"
                               title="{% translate 'Delete' %}"
-                              name="annotation_id" value="{{ ann.id }}"
+                              name="delete" value="{{ ann.id }}"
                               onclick="this.closest('form').querySelector('input[name=action]').value='delete';">
                         <svg width="16" height="16"><use href="#ld-icon-remove"></use></svg>
                       </button>
@@ -680,245 +649,6 @@
       updateColorsFromDots();
     });
   });
-
-  // --- Bulk edit with cross-page sessionStorage support ---
-  var BULK_STORAGE_KEY = 'linkding:highlights-bulk-edit';
-  var page = document.querySelector('.highlights-page');
-  var bulkToggle = document.querySelector('.highlights-bulk-toggle');
-  var bulkCancel = document.querySelector('.highlights-bulk-cancel');
-  var bulkAllCheckbox = document.querySelector('[data-bulk-all]');
-  var bulkItemCheckboxes = document.querySelectorAll('[data-bulk-item]');
-  var bulkExecuteBtn = document.querySelector('button[name="bulk_execute"]');
-  var bulkCountEl = document.querySelector('.highlights-bulk-count');
-  var bulkMsgEl = document.querySelector('.highlights-bulk-msg');
-  var bulkSelectAcross = document.querySelector('label.select-across');
-  var bulkActionSelect = document.querySelector('select[name="bulk_action"]');
-  var bulkColorSelect = document.querySelector('.highlights-bulk-color-select');
-  var mainForm = document.querySelector('.highlights-main-form');
-
-  // --- sessionStorage helpers ---
-  function loadBulkState() {
-    try { var r = sessionStorage.getItem(BULK_STORAGE_KEY); return r ? JSON.parse(r) : null; } catch(e) { return null; }
-  }
-  function saveBulkState(state) {
-    try { sessionStorage.setItem(BULK_STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
-  }
-  function clearBulkState() {
-    sessionStorage.removeItem(BULK_STORAGE_KEY);
-  }
-  function addBulkId(id) {
-    var s = loadBulkState() || { selectAll: false, ids: [] };
-    if (!s.ids.includes(id)) s.ids.push(id);
-    saveBulkState(s);
-  }
-  function removeBulkId(id) {
-    var s = loadBulkState(); if (!s || !s.ids) return;
-    s.ids = s.ids.filter(function(x) { return x !== id; });
-    s.selectAll = false;
-    saveBulkState(s);
-  }
-
-  function showBulkMsg(text, isError) {
-    if (!bulkMsgEl) return;
-    bulkMsgEl.textContent = text;
-    bulkMsgEl.className = 'highlights-bulk-msg' + (isError ? ' error' : ' success');
-    clearTimeout(bulkMsgEl._timer);
-    bulkMsgEl._timer = setTimeout(function() {
-      bulkMsgEl.className = 'highlights-bulk-msg d-none';
-    }, 2000);
-  }
-
-  function updateBulkState() {
-    var s = loadBulkState();
-    var pageChecked = document.querySelectorAll('[data-bulk-item]:checked').length;
-    var totalCount = 0;
-    if (s && s.selectAll) {
-      totalCount = parseInt(document.querySelector('.highlights-bulk-count')?.dataset?.total || '{{ summary.total_annotations }}', 10) || 0;
-    } else if (s && s.ids) {
-      totalCount = s.ids.length;
-    }
-    var hasSelection = totalCount > 0 || pageChecked > 0;
-
-    var allChecked = bulkItemCheckboxes.length > 0 && Array.from(bulkItemCheckboxes).every(function(cb) { return cb.checked; });
-    bulkAllCheckbox.checked = allChecked;
-    if (bulkExecuteBtn) bulkExecuteBtn.disabled = !hasSelection;
-
-    if (bulkCountEl) {
-      var displayCount = totalCount > 0 ? totalCount : pageChecked;
-      if (displayCount > 0) {
-        bulkCountEl.textContent = 'Selected(' + displayCount + ')';
-        bulkCountEl.classList.remove('d-none');
-      } else {
-        bulkCountEl.classList.add('d-none');
-      }
-    }
-    if (bulkSelectAcross) {
-      if (s && s.selectAll) {
-        bulkSelectAcross.classList.remove('d-none');
-        bulkSelectAcross.querySelector('input').checked = true;
-      } else if (allChecked) {
-        bulkSelectAcross.classList.remove('d-none');
-      } else {
-        bulkSelectAcross.classList.add('d-none');
-        bulkSelectAcross.querySelector('input').checked = false;
-      }
-    }
-  }
-
-  function restoreBulkState() {
-    var s = loadBulkState();
-    if (!s || (!s.selectAll && (!s.ids || s.ids.length === 0))) return;
-
-    // Activate bulk mode
-    page.classList.add('bulk-active');
-
-    if (s.selectAll) {
-      bulkItemCheckboxes.forEach(function(cb) { cb.checked = true; });
-      bulkAllCheckbox.checked = true;
-    } else {
-      var idSet = new Set(s.ids.map(String));
-      bulkItemCheckboxes.forEach(function(cb) { cb.checked = idSet.has(cb.value); });
-      var allChecked = bulkItemCheckboxes.length > 0 && Array.from(bulkItemCheckboxes).every(function(cb) { return cb.checked; });
-      bulkAllCheckbox.checked = allChecked;
-    }
-    updateBulkState();
-  }
-
-  // Restore on page load
-  restoreBulkState();
-
-  // Toggle / Cancel
-  if (bulkToggle) {
-    bulkToggle.addEventListener('click', function() {
-      page.classList.toggle('bulk-active');
-      if (!page.classList.contains('bulk-active')) {
-        clearBulkState();
-        bulkItemCheckboxes.forEach(function(cb) { cb.checked = false; });
-        if (bulkAllCheckbox) bulkAllCheckbox.checked = false;
-        updateBulkState();
-      }
-    });
-  }
-
-  if (bulkCancel) {
-    bulkCancel.addEventListener('click', function() {
-      page.classList.remove('bulk-active');
-      clearBulkState();
-      bulkItemCheckboxes.forEach(function(cb) { cb.checked = false; });
-      if (bulkAllCheckbox) bulkAllCheckbox.checked = false;
-      updateBulkState();
-    });
-  }
-
-  // Select all on current page
-  if (bulkAllCheckbox) {
-    bulkAllCheckbox.addEventListener('change', function() {
-      var checked = bulkAllCheckbox.checked;
-      bulkItemCheckboxes.forEach(function(cb) { cb.checked = checked; });
-      if (checked) {
-        saveBulkState({ selectAll: true, ids: [] });
-      } else {
-        saveBulkState({ selectAll: false, ids: [] });
-      }
-      updateBulkState();
-    });
-  }
-
-  // Individual checkbox change
-  bulkItemCheckboxes.forEach(function(cb) {
-    cb.addEventListener('change', function() {
-      var s = loadBulkState();
-      if (s && s.selectAll) {
-        // Was selectAll, now toggling individual: collect currently checked
-        var selectedIds = [];
-        bulkItemCheckboxes.forEach(function(c) { if (c.checked) selectedIds.push(c.value); });
-        saveBulkState({ selectAll: false, ids: selectedIds });
-      } else if (cb.checked) {
-        addBulkId(cb.value);
-      } else {
-        removeBulkId(cb.value);
-      }
-      var allChecked = bulkItemCheckboxes.length > 0 && Array.from(bulkItemCheckboxes).every(function(c) { return c.checked; });
-      bulkAllCheckbox.checked = allChecked;
-      updateBulkState();
-    });
-  });
-
-  // Show color select when bulk_change_color is chosen
-  if (bulkActionSelect && bulkColorSelect) {
-    bulkActionSelect.addEventListener('change', function() {
-      bulkColorSelect.style.display = bulkActionSelect.value === 'bulk_change_color' ? '' : 'none';
-    });
-  }
-
-  // --- Form submit: inject cross-page IDs + handle copy/destructive ---
-  var bulkConfirmed = false;
-  if (mainForm) {
-    mainForm.addEventListener('submit', function(e) {
-      var action = bulkActionSelect ? bulkActionSelect.value : '';
-      var actionInput = mainForm.querySelector('input[name=action]');
-      if (!actionInput || actionInput.value !== 'bulk_execute') return;
-
-      // Already confirmed via popup — let it through
-      if (bulkConfirmed) { bulkConfirmed = false; return; }
-
-      // Remove any previously injected hidden inputs
-      mainForm.querySelectorAll('input[name="bulk_session_ids"]').forEach(function(el) { el.remove(); });
-
-      var s = loadBulkState();
-      if (s && s.selectAll) {
-        // selectAll: let select_across checkbox handle it on the server
-      } else if (s && s.ids && s.ids.length > 0) {
-        // Inject all selected IDs (including from other pages) as hidden inputs
-        s.ids.forEach(function(id) {
-          var inp = document.createElement('input');
-          inp.type = 'hidden';
-          inp.name = 'bulk_session_ids';
-          inp.value = id;
-          mainForm.appendChild(inp);
-        });
-      }
-
-      // Copy operations: execute directly without confirm
-      if (action.startsWith('bulk_copy_')) {
-        e.preventDefault();
-        var checked = document.querySelectorAll('[data-bulk-item]:checked');
-        var hasHL = ITEM_FORMAT.indexOf('${highlight}') !== -1;
-        var hasAnn = ITEM_FORMAT.indexOf('${annotation}') !== -1;
-        var parts = [];
-        checked.forEach(function(cb) {
-          var item = cb.closest('.highlight-item');
-          if (!item) return;
-          var text = item.querySelector('.highlight-text').textContent.trim();
-          var note = item.querySelector('.highlight-note-textarea').value.trim();
-          if (action === 'bulk_copy_highlight') {
-            parts.push(linkding.renderCopyText(hasAnn ? '> ${highlight}' : ITEM_FORMAT, text, ''));
-          } else if (action === 'bulk_copy_note') {
-            parts.push(linkding.renderCopyText(hasHL ? '${annotation}' : ITEM_FORMAT, '', note));
-          } else {
-            parts.push(linkding.renderCopyText(ITEM_FORMAT, text, note));
-          }
-        });
-        navigator.clipboard.writeText(parts.join(SEPARATOR)).then(function() {
-          showBulkMsg('{% translate "Copied!" %}', false);
-        }).catch(function() {
-          showBulkMsg('{% translate "Copy failed" %}', true);
-        });
-        return;
-      }
-
-      // Destructive operations: show ld-confirm-popup
-      e.preventDefault();
-      var popup = document.createElement('ld-confirm-popup');
-      popup._button = bulkExecuteBtn;
-      popup._onConfirm = function() {
-        bulkConfirmed = true;
-        clearBulkState();
-        mainForm.requestSubmit(bulkExecuteBtn);
-      };
-      document.body.appendChild(popup);
-    });
-  }
 
   // --- Date filter UI: show/hide date range inputs ---
   var dateFilterInputs = document.querySelectorAll('select[name="date_filter_by"], input[name="date_filter_by"]');

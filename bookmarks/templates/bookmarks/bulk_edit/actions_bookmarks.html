@@ -1,0 +1,70 @@
+{% load i18n %}
+<select name="bulk_action" class="form-select select-sm">
+
+  {% if not 'bulk_read' in disable_actions %}
+    <option value="bulk_read">{% translate "Mark as read" %}</option>
+  {% endif %}
+  {% if not 'bulk_unread' in disable_actions %}
+  <option value="bulk_unread">{% translate "Mark as unread" %}</option>
+{% endif %}
+{% if request.user_profile.enable_sharing %}
+  {% if not 'bulk_share' in disable_actions %}
+    <option value="bulk_share">{% translate "Share" %}</option>
+  {% endif %}
+  {% if not 'bulk_unshare' in disable_actions %}  
+    <option value="bulk_unshare">{% translate "Unshare" %}</option>
+  {% endif %}
+{% endif %}
+
+<hr>
+{% if not 'bulk_check_health' in disable_actions %}
+  <option value="bulk_check_health">{% translate "Check health" %}</option>
+
+{% endif %}
+{% if not 'bulk_edit_metadata' in disable_actions %}
+  <option value="bulk_edit_metadata">{% translate "Edit metadata" %}</option>
+{% endif %}
+{% if not 'bulk_enrich_metadata' in disable_actions %}
+  <option value="bulk_enrich_metadata">{% translate "Fetch metadata" %}</option>
+{% endif %}
+{% if not 'bulk_refresh_metadata' in disable_actions %}
+  <option value="bulk_refresh_metadata">{% translate "Refresh metadata" %}</option>
+{% endif %}
+{% if not 'bulk_refresh_favicon' in disable_actions %}
+  <option value="bulk_refresh_favicon">{% translate "Refresh favicon" %}</option>
+{% endif %}
+{% if bookmark_list.snapshot_feature_enabled %}
+  {% if not 'bulk_snapshot' in disable_actions %}
+    <option value="bulk_snapshot">{% translate "Create snapshot" %}</option>
+  {% endif %}
+{% endif %}
+{% if not 'bulk_remove_snapshot' in disable_actions %}
+  <option value="bulk_remove_snapshot">{% translate "Remove all snapshots" %}</option>
+{% endif %}
+{% if not 'bulk_article' in disable_actions %}
+  <option value="bulk_article">{% translate "Create HTML article" %}</option>
+{% endif %}
+{% if not 'bulk_remove_article' in disable_actions %}
+  <option value="bulk_remove_article">{% translate "Remove all articles" %}</option>
+{% endif %}
+
+<hr>
+{% if not 'bulk_archive' in disable_actions %}
+  <option value="bulk_archive">{% translate "Archive" %}</option>
+{% endif %}
+{% if not 'bulk_unarchive' in disable_actions %}
+  <option value="bulk_unarchive">{% translate "Unarchive" %}</option>
+{% endif %}
+{% if not 'bulk_restore' in disable_actions %}
+  <option value="bulk_restore"
+    {% if default_bulk_action == 'bulk_restore' %}selected{% endif %}>
+    {% translate "Restore bookmarks" %}
+  </option>
+{% endif %}
+{% if not 'bulk_trash' in disable_actions %}
+  <option value="bulk_trash">{% translate "Move to trash" %}</option>
+{% endif %}
+  {% if not 'bulk_delete' in disable_actions %}
+    <option value="bulk_delete">{% translate "Delete permanently" %}</option>
+  {% endif %}
+</select>

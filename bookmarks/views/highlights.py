@@ -1,7 +1,9 @@
+import logging
 import urllib.parse
 from collections import OrderedDict
 from urllib.parse import urlparse
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count as DbCount, Q
@@ -9,12 +11,20 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
+from django.views.decorators.http import require_POST
 
 from bookmarks import queries, utils
 from bookmarks.models import (
     Annotation,
     UserProfile,
     UserProfileHighlightCopyFormatForm,
+)
+from bookmarks.services.annotations import (
+    clear_annotation_notes,
+    copy_annotations,
+    delete_annotations,
+    sanitize_annotation_ids,
+    set_annotation_color,
 )
 from bookmarks.type_defs import HttpRequest
 from bookmarks.views import turbo
@@ -28,6 +38,8 @@ from bookmarks.views.sidebar_content import (
     SIDEBAR_SCOPE_HIGHLIGHTS,
     sidebar_module_state,
 )
+
+logger = logging.getLogger(__name__)
 
 PAGE_SIZE = 50  # fallback, actual value from user_profile.highlights_per_page
 
@@ -385,19 +397,24 @@ def index(request: HttpRequest):
     return _render_list(request, search, prefs, page_size)
 
 
-def _render_list(request, search: HighlightSearch, prefs=None, page_size=PAGE_SIZE):
-    annotations = queries.query_annotations(
+def _query_annotations(request, search: HighlightSearch, group_by="none", sort=None):
+    """按当前筛选取批注查询集。批量选择与列表共用一处参数拼装，避免两套口径。"""
+    return queries.query_annotations(
         user=request.user,
         search_q=search.q,
         colors=search.colors_list or None,
         note_filter=search.note_filter,
-        sort=search.sort_orm,
-        group_by=search.group_by,
+        sort=search.sort_orm if sort is None else sort,
+        group_by=group_by,
         date_filter_by=search.date_filter_by,
         date_filter_start=search.date_filter_start,
         date_filter_end=search.date_filter_end,
         bookmark_id=search.bookmark_id_int,
     )
+
+
+def _render_list(request, search: HighlightSearch, prefs=None, page_size=PAGE_SIZE):
+    annotations = _query_annotations(request, search, group_by=search.group_by)
 
     paginator = Paginator(annotations, page_size)
     page = paginator.get_page(search.page)
@@ -602,7 +619,9 @@ def _handle_action(request: HttpRequest):
 
 
 def _action_delete_single(request):
-    ann_id = request.POST.get("annotation_id")
+    # 单条删除走按钮自己的 name=delete：批量复选框也叫 annotation_id，
+    # 用同一个名字取首个值会在勾选状态下删错条目
+    ann_id = request.POST.get("delete")
     ann = Annotation.objects.filter(pk=ann_id, bookmark__owner=request.user).first()
     if ann:
         ann.delete()
@@ -635,47 +654,95 @@ def _action_change_color_single(request):
     return _redirect_back(request)
 
 
+def _resolve_bulk_selection(request, annotations) -> list[int]:
+    """把表单里的选区解析成 id 列表。
+
+    「全站」只提交一个复选框，真正的集合要在服务端按当前 URL 的筛选取；
+    被单独取消勾选的条目以 bulk_exclude_id 排除。
+    """
+    if request.POST.get("bulk_select_across") == "on":
+        annotation_ids = list(
+            annotations.order_by().only("id").values_list("id", flat=True)
+        )
+        excluded = {
+            int(value)
+            for value in request.POST.getlist("bulk_exclude_id")
+            if str(value).lstrip("-").isdigit()
+        }
+        if excluded:
+            annotation_ids = [i for i in annotation_ids if i not in excluded]
+        return annotation_ids
+
+    return sanitize_annotation_ids(request.POST.getlist("annotation_id"))
+
+
 def _action_bulk(request):
     bulk_action = request.POST.get("bulk_action", "")
-    annotation_ids = request.POST.getlist("annotation_id")
-    # Cross-page IDs from sessionStorage
-    session_ids = request.POST.getlist("bulk_session_ids")
-    if session_ids:
-        annotation_ids = list(set(annotation_ids) | set(session_ids))
-    select_across = request.POST.get("bulk_select_across") == "on"
-
-    if select_across:
-        search = HighlightSearch.from_post(request)
-        qs = queries.query_annotations(
-            user=request.user,
-            search_q=search.q,
-            colors=search.colors_list or None,
-            note_filter=search.note_filter,
-            sort=search.sort_orm,
-            group_by="none",
-            date_filter_by=search.date_filter_by,
-            date_filter_start=search.date_filter_start,
-            date_filter_end=search.date_filter_end,
-        )
-        annotation_ids = list(qs.values_list("id", flat=True))
+    search = HighlightSearch.from_request(
+        request, preferences=request.user_profile.highlights_search_preferences or {}
+    )
+    # 选区复用列表的筛选条件：排序与分组与选择无关，留空让查询集最轻
+    annotations = _query_annotations(request, search, group_by="none", sort="")
+    annotation_ids = _resolve_bulk_selection(request, annotations)
 
     if not annotation_ids:
+        messages.info(request, _("No highlights selected."))
         return _redirect_back(request)
 
-    annotations = Annotation.objects.filter(
-        pk__in=annotation_ids, bookmark__owner=request.user
-    )
-
     if bulk_action == "bulk_delete":
-        annotations.delete()
+        count = delete_annotations(annotation_ids, request.user)
+        _report_bulk_result(request, count, _("Deleted %(count)s highlights."))
     elif bulk_action == "bulk_clear_note":
-        annotations.update(note_content="")
+        count = clear_annotation_notes(annotation_ids, request.user)
+        _report_bulk_result(
+            request, count, _("Cleared annotations on %(count)s highlights.")
+        )
     elif bulk_action == "bulk_change_color":
         new_color = request.POST.get("bulk_new_color", "")
-        if new_color in dict(Annotation.COLOR_CHOICES):
-            annotations.update(color=new_color)
+        count = set_annotation_color(annotation_ids, request.user, new_color)
+        if not count and new_color not in dict(Annotation.COLOR_CHOICES):
+            messages.error(request, _("Unknown color."))
+        else:
+            _report_bulk_result(
+                request, count, _("Changed the color of %(count)s highlights.")
+            )
+    else:
+        logger.warning(
+            "Ignoring unknown highlight bulk action. action=%s user=%s count=%s",
+            bulk_action,
+            request.user.username,
+            len(annotation_ids),
+        )
 
     return _redirect_back(request)
+
+
+def _report_bulk_result(request, count, message):
+    if count:
+        messages.success(request, message % {"count": count})
+    else:
+        messages.info(request, _("No highlights were changed."))
+
+
+@login_required
+@require_POST
+def copy_payload(request: HttpRequest):
+    """批量复制的取数接口：选中的条目可能散在多页，只有服务端知道全集。"""
+    search = HighlightSearch.from_request(
+        request, preferences=request.user_profile.highlights_search_preferences or {}
+    )
+    annotations = _query_annotations(request, search, group_by="none", sort="")
+    annotation_ids = _resolve_bulk_selection(request, annotations)
+    items = copy_annotations(annotation_ids, request.user)
+
+    return JsonResponse(
+        {
+            "items": [
+                {"text": item["selected_text"], "note": item["note_content"] or ""}
+                for item in items
+            ]
+        }
+    )
 
 
 def _redirect_back(request):

@@ -9,6 +9,7 @@ import "./components/bookmark-list-page.js";
 import "./components/bookmark-compact.js";
 import "./components/bookmark-table.js";
 import "./components/bulk-edit.js";
+import "./components/highlights-bulk.js";
 import "./components/asset-rename.js";
 import "./components/sidebar-user-summary.js";
 import "./components/date-filter-fields.js";

@@ -1135,3 +1135,42 @@ msgstr "已选中 %(count)s 个书签，超过单次上限 %(limit)s。请缩小
 #, python-format
 msgid "%(rules)s matched nothing"
 msgstr "%(rules)s 未命中"
+
+#: bookmarks/frontend/components/highlights-bulk.js
+msgid "Copied!"
+msgstr "已复制！"
+
+#: bookmarks/frontend/components/highlights-bulk.js
+msgid "Copy failed"
+msgstr "复制失败"
+
+#: bookmarks/frontend/components/highlights-bulk.js
+msgid "Nothing to copy"
+msgstr "没有可复制的内容"
+
+#: bookmarks/frontend/components/highlights-bulk.js
+msgid "Delete this highlight?"
+msgstr "删除此高亮？"
+
+#: bookmarks/frontend/components/highlights-bulk.js
+#, python-format
+msgid "Delete %(count)s highlights?"
+msgstr "删除 %(count)s 条高亮？"
+
+#: bookmarks/frontend/components/highlights-bulk.js
+msgid "Clear the annotation of this highlight?"
+msgstr "清空此高亮的批注？"
+
+#: bookmarks/frontend/components/highlights-bulk.js
+#, python-format
+msgid "Clear the annotations of %(count)s highlights?"
+msgstr "清空 %(count)s 条高亮的批注？"
+
+#: bookmarks/frontend/components/highlights-bulk.js
+msgid "Change the color of this highlight?"
+msgstr "更改此高亮的颜色？"
+
+#: bookmarks/frontend/components/highlights-bulk.js
+#, python-format
+msgid "Change the color of %(count)s highlights?"
+msgstr "更改 %(count)s 条高亮的颜色？"
