@@ -110,30 +110,6 @@
   gap: var(--unit-1);
 }
 
-.layout-drawer-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--secondary-text-color);
-  cursor: pointer;
-
-  &:hover:not([disabled]) {
-    color: var(--text-color);
-  }
-
-  /* 已经全部展开/全部折叠时没有可做的动作 */
-  &[disabled] {
-    opacity: 0.3;
-    cursor: default;
-  }
-}
-
 .layout-drawer-close {
   flex: none;
   color: var(--secondary-text-color);

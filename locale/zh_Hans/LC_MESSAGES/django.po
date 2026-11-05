@@ -1594,7 +1594,7 @@ msgstr "你可以用英文关键词搜索来找到更相关的图标。"
 #: bookmarks/templates/bookmarks/header/layout_drawer.html:21
 #: bookmarks/templates/bookmarks/highlights/layout_drawer.html:10
 #: bookmarks/templates/bookmarks/highlights/layout_drawer.html:39
-#: bookmarks/templates/bookmarks/sidebar/components/close_button.html:4
+#: bookmarks/templates/bookmarks/sidebar/components/sidebar_bar.html:4
 #: bookmarks/templates/settings/credentials_manage.html:73
 #: site_adapters/templates/site_adapters/site_adapters.html:134
 msgid "Close"
@@ -1930,7 +1930,7 @@ msgstr "随机目标"
 
 #: bookmarks/templates/bookmarks/header/layout_drawer_page.html:197
 #: bookmarks/templates/bookmarks/highlights/layout_drawer.html:178
-#: bookmarks/templates/bookmarks/sidebar/components/close_button.html:3
+#: bookmarks/templates/bookmarks/sidebar/components/sidebar_bar.html:3
 #: bookmarks/templates/bookmarks/sidebar/components/toggle_button.html:2
 msgid "Sidebar"
 msgstr "侧边栏"

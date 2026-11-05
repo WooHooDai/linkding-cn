@@ -31,6 +31,31 @@
   }
 }
 
+/* 面板标题栏里的图标按钮（布局抽屉与右侧边栏的批量开合共用） */
+.ld-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--secondary-text-color);
+  cursor: pointer;
+
+  &:hover:not([disabled]) {
+    color: var(--text-color);
+  }
+
+  /* 已经全部展开/全部折叠时没有可做的动作 */
+  &[disabled] {
+    opacity: 0.3;
+    cursor: default;
+  }
+}
+
 /* Section header component */
 .section-header {
   border-bottom: solid 1px var(--secondary-border-color);

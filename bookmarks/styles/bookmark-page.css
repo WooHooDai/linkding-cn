@@ -16,11 +16,6 @@
     grid-gap: var(--unit-9);
   }
 
-  /* sidebar-close-btn: desktop always hidden, mobile shown via sidebar-visible */
-  .sidebar-close-btn {
-    display: none;
-  }
-
   /* 侧边栏关闭 */
   &.sidebar-closed {
     main {
@@ -43,9 +38,9 @@
       grid-column: span var(--grid-columns);
     }
 
-    /* 打开时显示 close bar（含关闭按钮） */
-    &.sidebar-open .sidebar-close-bar {
-      display: flex;
+    /* 浮层模式下没别处可关，顶栏才给关闭按钮 */
+    &.sidebar-open .sidebar-bar .sidebar-close-btn {
+      display: inline-flex;
     }
 
     &.sidebar-open .sidebar {
@@ -192,8 +187,9 @@ body.sidebar-push
       transition: opacity var(--ld-panel-anim-duration) ease;
     }
 
-    .sidebar-close-bar {
-      display: flex;
+    /* 窄屏没有常驻形态，关闭按钮始终给 */
+    .sidebar-bar .sidebar-close-btn {
+      display: inline-flex;
     }
   }
 
@@ -202,24 +198,30 @@ body.sidebar-push
   }
 }
 
-/* 移动端关闭栏 */
-.sidebar-close-bar {
-  display: none;
+/* 侧边栏顶栏：标题 + 全部展开 / 全部折叠（+ 窄屏与浮层下的关闭） */
+.sidebar-bar {
+  display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--unit-2);
   margin-bottom: var(--unit-4);
 }
-.sidebar-close-label {
+.sidebar-bar-label {
   font-size: var(--font-size-lg);
   font-weight: 600;
 }
-.sidebar-close-bar .sidebar-close-btn {
+.sidebar-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--unit-1);
+}
+.sidebar-bar .sidebar-close-btn {
+  display: none;
   padding: 0;
   height: auto;
   border: none;
   background: none;
   box-shadow: none;
-  display: inline-flex;
 }
 
 /* Bookmark area header controls */

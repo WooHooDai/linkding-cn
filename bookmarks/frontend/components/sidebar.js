@@ -15,6 +15,7 @@ import { panelsFitTogether, syncPanelSpace } from "../utils/panel-space.js";
 // ==========================================
 
 // 模板 data-toggle-storage-key → ld:sidebar:collapse JSON 字段名
+// 高亮页各模块单开一套字段：同一页面上的同名模块不跟着书签页一起收
 const COLLAPSE_KEY_MAP = {
   userSummarySectionState: "summary",
   userSummaryActivityState: "activity",
@@ -22,6 +23,10 @@ const COLLAPSE_KEY_MAP = {
   authorSectionState: "authors",
   domainSectionState: "domains",
   bundleSectionState: "bundles",
+  highlightsTagSectionState: "hlTags",
+  highlightsColorsSectionState: "hlColors",
+  highlightsAuthorSectionState: "hlAuthors",
+  highlightsDomainSectionState: "hlDomains",
 };
 
 const COLLAPSE_STORAGE_KEY = "ld:sidebar:collapse";
@@ -85,6 +90,43 @@ class CollapseButtonBehavior extends Behavior {
   }
 }
 registerBehavior("ld-collapse-button", CollapseButtonBehavior);
+
+// ==========================================
+// 全部展开 / 全部折叠
+// ==========================================
+
+function sidebarSectionToggles() {
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar) return [];
+  return Array.from(
+    sidebar.querySelectorAll(
+      "[data-sidebar-module] > section > .section-header .section-toggle",
+    ),
+  );
+}
+
+// 没有可做的动作时置灰，与布局抽屉标题栏那两颗一致
+function syncSidebarGroupActions() {
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar) return;
+
+  const states = sidebarSectionToggles().map(
+    (toggle) => toggle.getAttribute("aria-expanded") === "true",
+  );
+  const expand = sidebar.querySelector("[data-sidebar-expand-all]");
+  const collapse = sidebar.querySelector("[data-sidebar-collapse-all]");
+  if (expand) expand.disabled = states.every((open) => open);
+  if (collapse) collapse.disabled = states.every((open) => !open);
+}
+
+// 逐个点各自的按钮：开合状态与记忆都留在 CollapseButtonBehavior 里
+function setAllSidebarSections(expanded) {
+  sidebarSectionToggles().forEach((toggle) => {
+    if ((toggle.getAttribute("aria-expanded") === "true") === expanded) return;
+    toggle.click();
+  });
+  syncSidebarGroupActions();
+}
 
 class BundleCollapseButton extends Behavior {
   constructor(element) {
@@ -603,6 +645,10 @@ function setupSidebarContentObserver() {
   prevSidebarScrollHeight = el.scrollHeight;
 
   sidebarContentObserver = new MutationObserver(() => {
+    // 模块增删（懒加载、从布局抽屉里重新启用）后，批量按钮的可点状态要跟上；
+    // 等一帧让新模块的 CollapseButtonBehavior 先恢复自己的开合状态
+    requestAnimationFrame(syncSidebarGroupActions);
+
     const newHeight = el.scrollHeight;
     const prevHeight = prevSidebarScrollHeight;
     prevSidebarScrollHeight = newHeight;
@@ -1179,6 +1225,16 @@ function handleSidebarInteraction(e) {
     return;
   }
 
+  // 顶栏的全部展开 / 全部折叠
+  if (e.target.closest("[data-sidebar-expand-all]")) {
+    if (e.type === "click") setAllSidebarSections(true);
+    return;
+  }
+  if (e.target.closest("[data-sidebar-collapse-all]")) {
+    if (e.type === "click") setAllSidebarSections(false);
+    return;
+  }
+
   // 关闭按钮（移动端）
   if (e.target.closest("[data-sidebar-close]")) {
     if (e.type === "touchstart") {
@@ -1189,6 +1245,9 @@ function handleSidebarInteraction(e) {
     return;
   }
   // 点侧边栏以外不关闭：面板常驻更利于边看边改，收起只走关闭按钮 / 触发按钮
+
+  // 单个分组开合后，两颗批量按钮的可点状态跟着变
+  if (e.target.closest(".sidebar")) syncSidebarGroupActions();
 }
 document.addEventListener("click", handleSidebarInteraction);
 document.addEventListener("touchstart", handleSidebarInteraction, {
@@ -1207,10 +1266,13 @@ document.addEventListener("turbo:load", () => {
   setupSidebarContentObserver();
   restoreSidebar();
   setupSidebarModules();
+  // 各模块自己的开合状态由 Behavior 恢复，晚一帧才读到
+  requestAnimationFrame(syncSidebarGroupActions);
 });
 document.addEventListener("DOMContentLoaded", () => {
   bindSidebarScrollListener();
   setupSidebarContentObserver();
   restoreSidebar();
   setupSidebarModules();
+  requestAnimationFrame(syncSidebarGroupActions);
 });
