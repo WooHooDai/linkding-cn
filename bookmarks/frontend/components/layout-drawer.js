@@ -80,6 +80,7 @@ class LayoutDrawer extends Behavior {
     this.onScroll = this.onScroll.bind(this);
     this.onPointerOver = this.onPointerOver.bind(this);
     this.onPointerOut = this.onPointerOut.bind(this);
+    this.onSidebarModulesReordered = this.onSidebarModulesReordered.bind(this);
     this.closeHelpTimer = null;
     // 收起动画期间还要锁着页面滚动，等面板滑出去再解锁
     this.unlockTimer = null;
@@ -99,6 +100,10 @@ class LayoutDrawer extends Behavior {
     this.scroller?.removeEventListener("scroll", this.onScroll);
     document.removeEventListener("pointerover", this.onPointerOver);
     document.removeEventListener("pointerout", this.onPointerOut);
+    document.removeEventListener(
+      "sidebar-modules-reordered",
+      this.onSidebarModulesReordered,
+    );
     clearTimeout(this.closeHelpTimer);
     clearTimeout(this.unlockTimer);
     this.sortables.forEach((instance) => instance.destroy());
@@ -122,6 +127,10 @@ class LayoutDrawer extends Behavior {
     this.scroller?.addEventListener("scroll", this.onScroll, { passive: true });
     document.addEventListener("pointerover", this.onPointerOver);
     document.addEventListener("pointerout", this.onPointerOut);
+    document.addEventListener(
+      "sidebar-modules-reordered",
+      this.onSidebarModulesReordered,
+    );
 
     this.initSortables();
     this.restorePanels();
@@ -290,9 +299,6 @@ class LayoutDrawer extends Behavior {
     if (event.target.closest("[data-drawer-quick-tags]")) {
       this.openQuickTags();
       return;
-    }
-    if (event.target.closest("[data-drawer-sidebar-modules]")) {
-      this.openSidebarModules();
     }
   }
 
@@ -791,6 +797,23 @@ class LayoutDrawer extends Behavior {
     sections.forEach((section) => parent.appendChild(section));
   }
 
+  // 反过来：在侧边栏里直接拖了模块，抽屉里的同一份列表要跟着换顺序，
+  // 否则在这里动一个开关会把旧顺序写回去
+  onSidebarModulesReordered(event) {
+    const list = this.sidebarModulesList();
+    if (!list) return;
+    const items = new Map(
+      Array.from(list.querySelectorAll("[data-item-key]")).map((item) => [
+        item.dataset.itemKey,
+        item,
+      ]),
+    );
+    (event.detail?.keys || []).forEach((key) => {
+      const item = items.get(key);
+      if (item) list.appendChild(item);
+    });
+  }
+
   reloadKeepingDrawer() {
     try {
       sessionStorage.setItem(REOPEN_KEY, this.currentTab());
@@ -1011,17 +1034,6 @@ class LayoutDrawer extends Behavior {
     });
     // 关掉弹窗后刷新列表，快捷标签改动才会出现在行工具栏上
     modal.addEventListener("modal:close", () => this.scheduleListRefresh());
-  }
-
-  openSidebarModules() {
-    const page = this.page;
-    if (!page) return;
-    if (!page.classList.contains("sidebar-open")) {
-      document.querySelector("[data-sidebar-toggle]")?.click();
-    }
-    page
-      .querySelector("[data-sidebar-settings]")
-      ?.scrollIntoView({ block: "center", behavior: "smooth" });
   }
 
   // ---------- 列表局部刷新 ----------
