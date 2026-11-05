@@ -63,8 +63,17 @@ export class TagAutocomplete extends TurboLitElement {
     this.close();
   }
 
-  handleFocus() {
+  handleFocus(event) {
     this.isFocus = true;
+    // 失焦会清空候选，重新聚焦时光标前可能已经是一个完整的词（例如
+    // "Sof" 想补成 "Software"），这时按输入时的同一套规则重建候选
+    this.input = event.target;
+    // focus 事件里浏览器还没把光标落到点击位置（selectionStart 仍是 0），
+    // 此刻取词必然为空，等一帧再算
+    requestAnimationFrame(() => {
+      if (!this.isFocus) return;
+      this.refreshSuggestions();
+    });
   }
 
   /** 多行模式下让 textarea 高度跟随内容：软换行后 scrollHeight 增长，手动撑开 */
@@ -79,12 +88,26 @@ export class TagAutocomplete extends TurboLitElement {
     this.close();
   }
 
+  /** 同一次聚焦内点击换光标位置不会再触发 focus，这里补一次重建 */
+  handleClick() {
+    this.refreshSuggestions();
+  }
+
   async handleInput(event) {
     this.input = event.target;
 
     if (this.multiline) this.autoResize();
 
+    await this.refreshSuggestions();
+  }
+
+  async refreshSuggestions() {
+    if (!this.input) return;
+
     const tags = await cache.getTags();
+    // 取标签是异步的，等待期间可能已经失焦，此时不能再把面板拉回来
+    if (!this.isFocus) return;
+
     const word = getCurrentWord(this.input);
 
     const search = word.toLowerCase();
@@ -98,7 +121,12 @@ export class TagAutocomplete extends TurboLitElement {
           .map((entry) => entry.tag)
       : [];
 
-    if (word && this.suggestions.length > 0) {
+    // 唯一候选与当前词一模一样时没有可补的内容，弹出来只是挡视线；
+    // 大小写不同仍要弹，补全能顺带修正成标签的大小写
+    const nothingToComplete =
+      this.suggestions.length === 1 && this.suggestions[0].name === word;
+
+    if (word && this.suggestions.length > 0 && !nothingToComplete) {
       this.open();
     } else {
       this.close();
@@ -197,6 +225,7 @@ export class TagAutocomplete extends TurboLitElement {
                   @keydown=${this.handleKeyDown}
                   @focus=${this.handleFocus}
                   @blur=${this.handleBlur}
+                  @click=${this.handleClick}
                 ></textarea>
               `
             : html`
@@ -214,6 +243,7 @@ export class TagAutocomplete extends TurboLitElement {
                   @keydown=${this.handleKeyDown}
                   @focus=${this.handleFocus}
                   @blur=${this.handleBlur}
+                  @click=${this.handleClick}
                 />
               `}
         </div>
