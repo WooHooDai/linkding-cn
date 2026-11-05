@@ -956,6 +956,19 @@ function isMobile() {
   return window.innerWidth <= 840;
 }
 
+// 面板是不是「浮层」：窄屏一律是；宽屏只有「不常驻」才是。
+// 常驻模式下侧边栏是网格列、一直在位，没有开合，也就不该演滑动。
+function isSidebarOverlay(page) {
+  if (!page) return false;
+  return isMobile() || page.dataset.sidebarDefault === "0";
+}
+
+// 开合动画的计时器与待执行帧：连点时只让最后一次生效
+let sidebarCloseTimer = null;
+let sidebarOpenFrame = null;
+let sidebarAnimateTimer = null;
+let sidebarCloseToken = 0;
+
 // localStorage key 按页面区分：书签页和高亮页各自独立
 function getSidebarStateKey() {
   const page = getSidebarPage();
@@ -1036,6 +1049,15 @@ async function loadSidebarContent(page) {
 window.loadSidebarContent = loadSidebarContent;
 
 function openSidebar(page) {
+  // 上一次收起动画还没收尾就又被打开：作废它，否则收尾会把刚打开的面板切成关闭态
+  sidebarCloseToken += 1;
+  clearTimeout(sidebarCloseTimer);
+  clearTimeout(sidebarAnimateTimer);
+  cancelAnimationFrame(sidebarOpenFrame);
+  sidebarOpenFrame = null;
+
+  // 收起动画跑到一半又被打开：先留着 sidebar-closing（它提供 transform 过渡），
+  // 等下一帧和 sidebar-visible 同一批摘掉/加上，过渡才不会断档回跳
   page.classList.remove("sidebar-closed");
   page.classList.add("sidebar-open");
   loadSidebarContent(page);
@@ -1051,45 +1073,90 @@ function openSidebar(page) {
 
   // 记住这次开合，刷新后照旧
   setSidebarState(getSidebarScope(), true);
-  // 宽度够就让位（内容平移不重排），不够就浮层覆盖
-  syncPanelSpace();
-  if (isMobile()) {
-    document.body.classList.add("sidebar-overlay-active");
-    page.classList.add("sidebar-animate");
-    requestAnimationFrame(() => page.classList.add("sidebar-visible"));
-    setTimeout(() => page.classList.remove("sidebar-animate"), 400);
+
+  if (!isSidebarOverlay(page)) {
+    // 常驻模式：侧边栏本来就在位，只重算让位
+    syncPanelSpace();
+    return;
   }
+
+  // 先把「停在贴边外」这一帧真正画出来，再开始过渡；
+  // 否则首帧直接从「没有面板」跳到「已在位」，看起来是凭空出现而不是滑入
+  void page.offsetWidth;
+  page.classList.add("sidebar-animate");
+  sidebarOpenFrame = requestAnimationFrame(() => {
+    sidebarOpenFrame = null;
+    // 让位与滑入同一帧起步，两段过渡才能同进同退
+    syncPanelSpace();
+    page.classList.remove("sidebar-closing");
+    page.classList.add("sidebar-visible");
+    if (isMobile()) document.body.classList.add("sidebar-overlay-active");
+  });
+  sidebarAnimateTimer = setTimeout(
+    () => page.classList.remove("sidebar-animate"),
+    400,
+  );
 }
 
 function closeSidebar(page) {
-  if (page.classList.contains("sidebar-open") && isMobile()) {
-    page.classList.add("sidebar-closing");
-    void page.offsetWidth;
-    page.classList.remove("sidebar-visible");
-
-    const sidebar = page.querySelector(".sidebar");
-    if (sidebar) {
-      let done = false;
-      const finalize = () => {
-        if (done) return;
-        done = true;
-        page.classList.remove("sidebar-open", "sidebar-closing");
-        page.classList.add("sidebar-closed");
-        document.body.classList.remove("sidebar-overlay-active");
-        setSidebarState(getSidebarScope(), false);
-        syncPanelSpace();
-      };
-      sidebar.addEventListener("transitionend", finalize, { once: true });
-      setTimeout(finalize, 300);
-      return;
-    }
+  if (!isSidebarOverlay(page)) {
+    // 常驻模式：不走动画，侧边栏本来也不会真的消失
+    page.classList.remove("sidebar-open", "sidebar-visible");
+    page.classList.add("sidebar-closed");
+    document.body.classList.remove("sidebar-overlay-active");
+    setSidebarState(getSidebarScope(), false);
+    syncPanelSpace();
+    return;
   }
 
-  page.classList.remove("sidebar-open", "sidebar-visible");
-  page.classList.add("sidebar-closed");
-  document.body.classList.remove("sidebar-overlay-active");
-  setSidebarState(getSidebarScope(), false);
+  // 已经收起来了，或者收起动画正在跑：别重入
+  if (
+    !page.classList.contains("sidebar-open") ||
+    page.classList.contains("sidebar-closing")
+  ) {
+    return;
+  }
+
+  cancelAnimationFrame(sidebarOpenFrame);
+  sidebarOpenFrame = null;
+  clearTimeout(sidebarAnimateTimer);
+  clearTimeout(sidebarCloseTimer);
+
+  const token = ++sidebarCloseToken;
+  const sidebar = page.querySelector(".sidebar");
+
+  // 保留 sidebar-open：面板还在屏幕上，靠过渡滑回右侧边缘，
+  // 过渡走完才切成 sidebar-closed 让它真正消失
+  page.classList.add("sidebar-closing");
+  page.classList.remove("sidebar-visible");
+  void page.offsetWidth;
+  // 让位立刻还回去，内容与面板同帧回收
   syncPanelSpace();
+
+  let done = false;
+  const finalize = () => {
+    if (done || token !== sidebarCloseToken) return;
+    done = true;
+    clearTimeout(sidebarCloseTimer);
+    page.classList.remove("sidebar-open", "sidebar-closing", "sidebar-animate");
+    page.classList.add("sidebar-closed");
+    document.body.classList.remove("sidebar-overlay-active");
+    setSidebarState(getSidebarScope(), false);
+    syncPanelSpace();
+  };
+
+  // 子元素自己的过渡也会冒泡上来，只认面板本身的 transform
+  const onTransitionEnd = (event) => {
+    if (event.target !== sidebar || event.propertyName !== "transform") return;
+    sidebar.removeEventListener("transitionend", onTransitionEnd);
+    finalize();
+  };
+  sidebar?.addEventListener("transitionend", onTransitionEnd);
+  // 过渡没有发生（减弱动态 / 时长被跳过）时不触发 transitionend，兜一个超时
+  sidebarCloseTimer = setTimeout(() => {
+    sidebar?.removeEventListener("transitionend", onTransitionEnd);
+    finalize();
+  }, 300);
 }
 
 // 交互 handler
@@ -1102,7 +1169,11 @@ function handleSidebarInteraction(e) {
     if (e.type === "touchstart") {
       e.preventDefault();
     }
-    const wasOpen = page.classList.contains("sidebar-open");
+    // 收起动画进行中面板已经「算关上」了：这时再点应当是重新打开，
+    // 否则连点会卡在 closing 态上无响应
+    const wasOpen =
+      page.classList.contains("sidebar-open") &&
+      !page.classList.contains("sidebar-closing");
     wasOpen ? closeSidebar(page) : openSidebar(page);
     saveSidebarState(!wasOpen);
     return;

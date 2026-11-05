@@ -8,6 +8,11 @@
   --layout-drawer-width: 360px;
   --ld-sidebar-width: 340px;
   --ld-panel-gutter: 12px;
+  /* 两个面板的开合时长统一，面板滑动与内容让位才能同进同退 */
+  --ld-panel-anim-duration: 0.2s;
+  /* 窄屏抽屉是全宽面板，位移距离 = 整屏宽度；时长按位移等比放大，
+     否则同样 0.2s 要扫过整屏，每帧走 1/6 屏，看起来是「刷」一下而不是滑进来 */
+  --ld-drawer-narrow-duration: 0.3s;
 }
 
 .layout-drawer {
@@ -640,14 +645,49 @@
     width: 100%;
     max-width: 100%;
     border-inline-end: 0;
+    transition:
+      transform var(--ld-drawer-narrow-duration) ease,
+      visibility var(--ld-drawer-narrow-duration) ease;
+  }
+
+  /* 遮罩跟着面板的 is-open 淡入淡出，不再用 display 切换：
+     切换那一帧面板还在屏幕外，整屏先黑一下，看着就是闪一下。
+     进出必须用两套时序（transition-timing-function 取「变化后」那份样式）：
+     展开时先慢后快，别让整屏在面板只占一半时先变暗；
+     收回时干脆不淡出——面板是全宽的，收起的头几帧它还盖着整屏，
+     这时撤掉遮罩看不见；要是跟着 0.3s 淡出，面板让开的地方先露出
+     压着遮罩的暗背景、再慢慢回亮，看着就是一整块灰先刷上来再褪掉 */
+  .layout-drawer-scrim {
+    display: block;
+    opacity: 0;
+    pointer-events: none;
+    transition: none;
+  }
+
+  .layout-drawer.is-open ~ .layout-drawer-scrim {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity var(--ld-drawer-narrow-duration)
+      cubic-bezier(0.42, 0, 1, 1);
   }
 
   body.layout-drawer-open {
     overflow: hidden;
+    /* 锁滚动后滚动条消失会带走它的宽度，列表会横向跳一下；
+       预留同一段槽位，内容原地不动（滚动条是浮层时槽位为 0，无副作用） */
+    scrollbar-gutter: stable;
   }
 
-  body.layout-drawer-open .layout-drawer-scrim {
-    display: block;
+  @media (prefers-reduced-motion: reduce) {
+    /* 窄屏这套时长写在后面，会盖掉上面那条全局的 transition: none，得再关一次 */
+    .layout-drawer {
+      transition: none;
+    }
+
+    .layout-drawer-scrim,
+    .layout-drawer.is-open ~ .layout-drawer-scrim {
+      transition: none;
+    }
   }
 }
 

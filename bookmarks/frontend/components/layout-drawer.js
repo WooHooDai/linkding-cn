@@ -81,6 +81,8 @@ class LayoutDrawer extends Behavior {
     this.onPointerOver = this.onPointerOver.bind(this);
     this.onPointerOut = this.onPointerOut.bind(this);
     this.closeHelpTimer = null;
+    // 收起动画期间还要锁着页面滚动，等面板滑出去再解锁
+    this.unlockTimer = null;
 
     this.init();
   }
@@ -98,6 +100,7 @@ class LayoutDrawer extends Behavior {
     document.removeEventListener("pointerover", this.onPointerOver);
     document.removeEventListener("pointerout", this.onPointerOut);
     clearTimeout(this.closeHelpTimer);
+    clearTimeout(this.unlockTimer);
     this.sortables.forEach((instance) => instance.destroy());
     this.sortables = [];
     this.helpPopover?.remove();
@@ -166,6 +169,8 @@ class LayoutDrawer extends Behavior {
     this.element.classList.add("is-open");
     this.element.removeAttribute("inert");
     this.element.setAttribute("aria-hidden", "false");
+    // 上一次收起的解锁计时器作废，否则会在这次展开中途把滚动放回去
+    clearTimeout(this.unlockTimer);
     document.body.classList.add("layout-drawer-open");
     this.toggleButtons().forEach((button) =>
       button.setAttribute("aria-expanded", "true"),
@@ -199,7 +204,17 @@ class LayoutDrawer extends Behavior {
     this.element.classList.remove("is-open");
     this.element.setAttribute("inert", "");
     this.element.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("layout-drawer-open");
+    // 抽屉还在滑出去：这时候把滚动解锁，滚动条会突然回来、列表跟着横向跳一下，
+    // 所以等过渡走完再解锁；期间可能又被打开，解锁前再确认一次是收着的。
+    // 时长从实际样式里取（窄屏全宽面板比宽屏走得久），减弱动态时取到 0 就立即解锁
+    clearTimeout(this.unlockTimer);
+    const transitionMs = parseFloat(
+      getComputedStyle(this.element).transitionDuration,
+    );
+    const unlockDelay = Number.isFinite(transitionMs) ? transitionMs * 1000 + 20 : 220;
+    this.unlockTimer = setTimeout(() => {
+      if (!this.isOpen()) document.body.classList.remove("layout-drawer-open");
+    }, unlockDelay);
     this.toggleButtons().forEach((button) =>
       button.setAttribute("aria-expanded", "false"),
     );

@@ -62,10 +62,13 @@ export function syncPanelSpace() {
   }
   body.classList.toggle("layout-drawer-push", drawerPush);
 
-  // 「常驻侧边栏」本来就是网格列，不走这套；只有按需打开的浮层模式需要判断
+  // 「常驻侧边栏」本来就是网格列，不走这套；只有按需打开的浮层模式需要判断。
+  // 收起动画期间 sidebar-open 还没撤（面板还在屏幕上滑出），但让位要立刻还回去，
+  // 所以在 closing 阶段也算「已收起」。
   const sidebarOpen = Boolean(
     page?.dataset.sidebarDefault === "0" &&
-      page.classList.contains("sidebar-open"),
+      page.classList.contains("sidebar-open") &&
+      !page.classList.contains("sidebar-closing"),
   );
   let sidebarPush = false;
   if (sidebarOpen && !isMobile()) {

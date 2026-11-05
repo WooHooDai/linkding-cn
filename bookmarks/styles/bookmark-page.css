@@ -68,6 +68,25 @@
       box-shadow: -2px 0 12px rgba(0, 0, 0, 0.15);
       padding: var(--unit-4);
       scrollbar-gutter: auto;
+      /* 默认停在视口右侧之外，等 sidebar-visible 才滑进来：
+         与左侧布局抽屉同一条语言——面板从自己贴的那条边进退 */
+      transform: translateX(100%);
+    }
+
+    /* 就位态：首帧就位（页面加载 / Turbo 导航恢复状态时不演动画） */
+    &.sidebar-visible .sidebar {
+      transform: translateX(0);
+      transition: none;
+    }
+
+    /* 只有用户点击开合时才带过渡，specificity 0-5-0 压过 sidebar-visible 的 0-4-0 */
+    &.sidebar-animate.sidebar-visible .sidebar {
+      transition: transform var(--ld-panel-anim-duration) ease;
+    }
+
+    /* 收起期间保留 sidebar-open（面板仍在屏幕上），靠过渡滑回右侧边缘 */
+    &.sidebar-closing .sidebar {
+      transition: transform var(--ld-panel-anim-duration) ease;
     }
   }
 
@@ -156,21 +175,21 @@ body.sidebar-push
     /* 开启动画：仅用户点击 toggle 时由 openSidebar() 添加
        specificity 0-4-1 > sidebar-visible 的 0-3-1，覆盖 transition: none */
     &.sidebar-animate.sidebar-visible .sidebar {
-      transition: transform 0.25s ease;
+      transition: transform var(--ld-panel-anim-duration) ease;
     }
 
     &.sidebar-animate.sidebar-visible::after {
-      transition: opacity 0.25s ease;
+      transition: opacity var(--ld-panel-anim-duration) ease;
     }
 
     /* 关闭动画：closing 期间保留 transition，允许 sidebar 滑出 */
     &.sidebar-closing .sidebar {
-      transition: transform 0.25s ease;
+      transition: transform var(--ld-panel-anim-duration) ease;
     }
 
     &.sidebar-closing::after {
       pointer-events: auto;
-      transition: opacity 0.25s ease;
+      transition: opacity var(--ld-panel-anim-duration) ease;
     }
 
     .sidebar-close-bar {
