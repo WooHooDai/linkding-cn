@@ -68,7 +68,7 @@ export const bookmarkRowActions = {
     }
   },
 
-  // ---- 图标替换 ----
+  // ---- 图标 / 文案替换 ----
 
   _setIcon(button, href) {
     const oldUse = button.querySelector("svg.action-icon use");
@@ -82,15 +82,34 @@ export const bookmarkRowActions = {
     }
   },
 
+  /* 文字模式的按钮没有 svg，只靠文案表达状态：模板把「另一种状态」的文案放在
+     data-toggle-label 上，这里把两份文案对调（回滚时再对调一次即还原） */
+  _setLabel(button) {
+    if (button.querySelector("svg.action-icon")) return;
+    const next = button.dataset.toggleLabel;
+    if (!next) return;
+    button.dataset.toggleLabel = button.textContent.trim();
+    button.textContent = next;
+  },
+
   _toggleShareButton(button, isShared) {
     this._setIcon(button, isShared ? "#ld-icon-share" : "#ld-icon-share-x");
+    this._setLabel(button);
     button.name = isShared ? "unshare" : "share";
     button.dataset.action = isShared ? "unshare" : "share";
     button.title = isShared ? gettext("Shared") : gettext("Share");
+    // 确认文案跟着按钮语义走，否则点过一次后再点会弹出去向相反的问题
+    if (button.hasAttribute("ld-confirm-question")) {
+      button.setAttribute(
+        "ld-confirm-question",
+        isShared ? gettext("Unshare?") : gettext("Share?"),
+      );
+    }
   },
 
   _toggleReadButton(button, isRead) {
     this._setIcon(button, isRead ? "#ld-icon-read-check" : "#ld-icon-unread-x");
+    this._setLabel(button);
     button.dataset.action = isRead ? "mark_as_unread" : "mark_as_read";
     button.title = isRead ? gettext("Mark as unread") : gettext("Mark as read");
     this.element.classList.toggle("unread", !isRead);

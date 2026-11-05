@@ -307,3 +307,97 @@ test("标题编辑保存时发出 PATCH 并就地更新显示", async () => {
     "保存后应就地更新标题",
   );
 });
+
+/** 文字模式的状态按钮：没有 svg，文案表示当前状态，另一状态的文案存在 data-toggle-label */
+function statusTextRowHtml() {
+  return `
+    <ul class="bookmark-list view-list">
+      <li ld-bookmark-item data-bookmark-id="1" class="unread">
+        <div class="content">
+          <div class="actions">
+            <button ld-confirm-button ld-confirm-question="Share?" type="submit" name="share"
+                    data-action="share" class="btn btn-link btn-sm"
+                    data-toggle-label="Shared">Share</button>
+            <button type="button" data-action="mark_as_read" class="btn btn-link btn-sm"
+                    data-toggle-label="Read">Unread</button>
+          </div>
+        </div>
+      </li>
+    </ul>`;
+}
+
+test("文字模式下未读按钮点后即时换文案与动作，失败回滚", async () => {
+  const mod = await setupDom(statusTextRowHtml());
+  const api = trackFetch();
+  const li = document.querySelector("li[ld-bookmark-item]");
+  const item = mountRow(mod);
+  const readButton = li.querySelector('[data-action="mark_as_read"]');
+
+  // 失败回滚：文案、动作、行上的 unread 类都要回到原样
+  api.failOnce();
+  readButton.click();
+  assert.equal(readButton.textContent.trim(), "Read", "点后应先换成已读文案");
+  assert.equal(readButton.dataset.action, "mark_as_unread");
+  assert.equal(readButton.dataset.toggleLabel, "Unread");
+  assert.equal(li.classList.contains("unread"), false);
+  await tick(10);
+  assert.equal(readButton.textContent.trim(), "Unread", "失败后应还原文案");
+  assert.equal(readButton.dataset.action, "mark_as_read");
+  assert.equal(li.classList.contains("unread"), true);
+
+  // 成功路径：文案保持切换后的状态
+  readButton.click();
+  assert.equal(readButton.textContent.trim(), "Read");
+  await tick(10);
+  assert.equal(readButton.textContent.trim(), "Read");
+});
+
+test("文字模式下分享按钮点后即时换文案与确认语", async () => {
+  const mod = await setupDom(statusTextRowHtml());
+  const li = document.querySelector("li[ld-bookmark-item]");
+  const item = mountRow(mod);
+  const shareButton = li.querySelector('[data-action="share"]');
+
+  // 分享按钮走确认弹窗，直接驱动行行为的乐观更新/回滚
+  item._applyStateToRow("share", true);
+  assert.equal(shareButton.textContent.trim(), "Shared");
+  assert.equal(shareButton.dataset.action, "unshare");
+  assert.equal(shareButton.dataset.toggleLabel, "Share");
+  assert.equal(
+    shareButton.getAttribute("ld-confirm-question"),
+    "Unshare?",
+    "确认语应跟着按钮语义走",
+  );
+
+  item._applyStateToRow("share", false);
+  assert.equal(shareButton.textContent.trim(), "Share");
+  assert.equal(shareButton.dataset.action, "share");
+  assert.equal(shareButton.getAttribute("ld-confirm-question"), "Share?");
+});
+
+test("图标模式的状态按钮不会被写入文案", async () => {
+  const html = `
+    <ul class="bookmark-list view-list">
+      <li ld-bookmark-item data-bookmark-id="1">
+        <div class="content">
+          <div class="actions">
+            <button type="button" data-action="mark_as_read" class="btn btn-link btn-sm" title="Mark as read">
+              <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-unread-x"></use></svg>
+            </button>
+          </div>
+        </div>
+      </li>
+    </ul>`;
+  const mod = await setupDom(html);
+  const li = document.querySelector("li[ld-bookmark-item]");
+  const item = mountRow(mod);
+  const button = li.querySelector('[data-action="mark_as_read"]');
+
+  item._applyStateToRow("mark_as_read", true);
+  assert.equal(button.textContent.trim(), "", "图标模式不应插入文案");
+  assert.equal(
+    button.querySelector("svg.action-icon use").getAttribute("href"),
+    "#ld-icon-read-check",
+    "图标模式应换成已读图标",
+  );
+});

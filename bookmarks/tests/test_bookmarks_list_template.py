@@ -1423,6 +1423,58 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertIsNotNone(indicator.select_one(".health-dot--blocked"))
         self.assertIsNone(indicator.select_one(".health-text"))
 
+    # ---- 状态显示模式：文字模式文案 ----
+
+    def test_status_text_mode_labels_follow_state(self):
+        """文字模式：文案表示当前状态，另一状态的文案放在 data-toggle-label 供脚本对调"""
+        profile = self.get_or_create_test_user().profile
+        profile.bookmark_status_display_mode = UserProfile.ACTION_DISPLAY_MODE_TEXT
+        profile.enable_sharing = True
+        profile.save()
+
+        bookmark = self.setup_bookmark(unread=True, shared=True)
+        soup = self.make_soup(self.render_template())
+
+        share_button = soup.select_one('button[data-action="unshare"]')
+        self.assertIsNotNone(share_button)
+        self.assertEqual(share_button.get_text(strip=True), "Shared")
+        self.assertEqual(share_button["data-toggle-label"], "Share")
+
+        read_button = soup.select_one('button[data-action="mark_as_read"]')
+        self.assertIsNotNone(read_button)
+        self.assertEqual(read_button.get_text(strip=True), "Unread")
+        self.assertEqual(read_button["data-toggle-label"], "Read")
+
+        # 已读 + 未分享：文案与待切换文案整体反过来
+        bookmark.unread = False
+        bookmark.shared = False
+        bookmark.save()
+        soup = self.make_soup(self.render_template())
+
+        share_button = soup.select_one('button[data-action="share"]')
+        self.assertIsNotNone(share_button)
+        self.assertEqual(share_button.get_text(strip=True), "Share")
+        self.assertEqual(share_button["data-toggle-label"], "Shared")
+
+        read_button = soup.select_one('button[data-action="mark_as_unread"]')
+        self.assertIsNotNone(read_button)
+        self.assertEqual(read_button.get_text(strip=True), "Read")
+        self.assertEqual(read_button["data-toggle-label"], "Unread")
+
+    def test_status_icon_mode_has_no_toggle_label(self):
+        """图标模式靠换图标表达状态，不需要待切换文案"""
+        profile = self.get_or_create_test_user().profile
+        profile.enable_sharing = True
+        profile.save()
+
+        self.setup_bookmark(unread=True)
+        soup = self.make_soup(self.render_template())
+
+        read_button = soup.select_one('button[data-action="mark_as_read"]')
+        self.assertIsNotNone(read_button)
+        self.assertIsNone(read_button.get("data-toggle-label"))
+        self.assertIsNotNone(read_button.select_one("svg.action-icon"))
+
     def test_compact_view_renders_compact_row_without_expanded_blocks(self):
         user = self.get_or_create_test_user()
         user.profile.bookmark_view_mode = UserProfile.BOOKMARK_VIEW_MODE_COMPACT
