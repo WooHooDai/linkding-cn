@@ -4388,6 +4388,60 @@ msgstr "图片过大"
 msgid "Invalid image size"
 msgstr "图片尺寸无效"
 
+#: bookmarks/templates/settings/general.html
+msgid "Automation"
+msgstr "自动化"
+
+#: bookmarks/templates/settings/general.html
+msgid "Misc"
+msgstr "杂项"
+
+#: bookmarks/templates/settings/general.html
+msgid "Go to"
+msgstr "前往"
+
+#: bookmarks/templates/settings/general.html
+msgid "Configure it in the layout sidebar on the bookmarks page."
+msgstr "请前往书签页面布局侧边栏配置"
+
+#: bookmarks/templates/settings/general.html
+msgid "Automatic snapshots"
+msgstr "自动创建快照"
+
+#: bookmarks/templates/settings/general.html
+msgid "Automatic Internet Archive"
+msgstr "自动互联网存档"
+
+#: bookmarks/templates/settings/general.html
+msgid "Sharing scope"
+msgstr "分享范围"
+
+#: bookmarks/templates/settings/general.html
+msgid "Set the sharing scope of your <a href=\"%(shared_bookmarks_url)s\">shared bookmarks</a>:"
+msgstr "设置你<a href=\"%(shared_bookmarks_url)s\">已分享书签</a>的分享范围："
+
+#: bookmarks/templates/settings/general.html
+msgid "Disabled: no one but you can access them."
+msgstr "禁用：除了你任何人都不能访问"
+
+#: bookmarks/templates/settings/general.html
+msgid "Private: only registered accounts on this instance can access them."
+msgstr "私密：仅本实例的注册账户可以访问"
+
+#: bookmarks/templates/settings/general.html
+msgid "Public: anyone can access them."
+msgstr "公开：任何人都可以访问"
+
+#: bookmarks/templates/settings/general.html
+msgid "Queue snapshot creation for bookmarks that do not have one yet."
+msgstr "为还没有快照的书签排队创建快照。"
+
+#: bookmarks/templates/settings/general.html
+msgid ""
+"Download missing favicons in the background. Whether favicons are shown is "
+"set in the layout sidebar on the bookmarks page."
+msgstr "在后台下载缺失的图标。是否显示图标在书签页面的「布局」侧边栏里设置。"
+
 #~ msgid "Highlight grouping"
 #~ msgstr "高亮分组"
 

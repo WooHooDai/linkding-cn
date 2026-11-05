@@ -44,9 +44,6 @@
               <div class="settings-row">
                 <div class="settings-copy">
                   <label id="settings-language-label" class="settings-label">{% translate "Language" %}</label>
-                  <div class="form-input-hint">
-                    {% translate "Choose the interface language. After saving, the selected language takes precedence over the browser language." %}
-                  </div>
                 </div>
                 <div class="settings-control settings-control-stack">
                   <div class="settings-segmented" role="radiogroup" aria-labelledby="settings-language-label">
@@ -96,9 +93,6 @@
               <div class="settings-row">
                 <div class="settings-copy">
                   <label id="settings-theme-label" class="settings-label">{% translate "Theme" %}</label>
-                  <div class="form-input-hint">
-                    {% translate "Choose a light or dark theme, or automatically follow your system setting." %}
-                  </div>
                 </div>
                 <div class="settings-control">
                   <div class="settings-segmented" role="radiogroup" aria-labelledby="settings-theme-label">
@@ -164,228 +158,6 @@
               </div>
             </form>
           </div>
-
-          <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card" data-settings-save-mode="instant">
-            {% csrf_token %}
-            <input type="hidden" name="form_id" value="profile_quick">
-            <input type="hidden" name="form_fields" value="bookmark_view_mode,group_by_date,items_per_page,sticky_header_controls,sticky_pagination">
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.bookmark_view_mode.id_for_label }}" class="settings-label">{% translate "List view" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Choose how bookmarks are arranged in the list." %}
-                </div>
-              </div>
-              <div class="settings-control">
-                {% formfield profile_quick_form.bookmark_view_mode class="form-select settings-select-input" %}
-                <div class="field-errors" data-field-error-for="bookmark_view_mode"></div>
-              </div>
-            </div>
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.group_by_date.id_for_label }}" class="settings-label">{% translate "Group by date" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Group bookmarks by when they were added: today, yesterday, this week, this month, by month." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.group_by_date.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.group_by_date }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.items_per_page.id_for_label }}" class="settings-label">{% translate "Bookmarks per page" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Choose how many bookmarks are shown on each page." %}
-                </div>
-              </div>
-              <div class="settings-control">
-                {% formfield profile_quick_form.items_per_page class="form-input settings-number-input settings-number-input-compact" min="10" %}
-                <div class="field-errors" data-field-error-for="items_per_page"></div>
-              </div>
-            </div>
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.sticky_header_controls.id_for_label }}" class="settings-label">{% translate "Search bar follows" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Keep the search and action controls pinned to the top while you scroll." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.sticky_header_controls.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.sticky_header_controls }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.sticky_pagination.id_for_label }}" class="settings-label">{% translate "Paginator follows" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Keep pagination controls pinned to the bottom while you scroll." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.sticky_pagination.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.sticky_pagination }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-          </form>
-
-          {% if global_settings_form %}
-            <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card" data-settings-save-mode="instant">
-              {% csrf_token %}
-              <input type="hidden" name="form_id" value="global_quick">
-              <input type="hidden" name="{{ global_settings_form.landing_page.html_name }}" value="{{ global_settings_form.landing_page.value }}">
-              <input type="hidden" name="{{ global_settings_form.guest_profile_user.html_name }}" value="{{ global_settings_form.guest_profile_user.value|default_if_none:'' }}">
-              <div class="settings-row">
-                <div class="settings-copy">
-                  <label for="{{ global_settings_form.enable_link_prefetch.id_for_label }}" class="settings-label">{% translate "Prefetch internal links" %}</label>
-                  <div class="form-input-hint">
-                    {% translate "Prefetch internal links when users hover over them. This improves perceived speed, but increases server load." %}
-                  </div>
-                </div>
-                <label for="{{ global_settings_form.enable_link_prefetch.id_for_label }}" class="form-switch settings-switch">
-                  {{ global_settings_form.enable_link_prefetch }}
-                  <i class="form-icon"></i>
-                </label>
-              </div>
-            </form>
-          {% endif %}
-
-        </section>
-
-        <section id="settings-search" class="settings-section" aria-labelledby="settings-search-heading">
-          <div class="settings-section-heading">
-            <h2 id="settings-search-heading">{% translate "Search" %}</h2>
-          </div>
-
-          <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card" data-settings-save-mode="instant">
-            {% csrf_token %}
-            <input type="hidden" name="form_id" value="profile_quick">
-            <input type="hidden" name="form_fields" value="{% if legacy_search_enabled %}legacy_search,{% endif %}tag_search">
-            {% if legacy_search_enabled %}
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.legacy_search.id_for_label }}" class="settings-label">{% translate "Compatibility mode" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Enable the old search behavior if the new logical search syntax causes unexpected results." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.legacy_search.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.legacy_search }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-            {% endif %}
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label id="settings-tag-search-mode-label" class="settings-label">{% translate "Tag search mode" %}</label>
-                <div class="form-input-hint">
-                  {% translate "In strict mode, tags must be prefixed with a hash character (#)." %}
-                  {% translate "In lax mode, tags can also be found without the hash character." %}
-                  {% translate "Without the hash character, tags are harder to distinguish from ordinary search terms, so unrelated results may also match." %}
-                </div>
-              </div>
-              <div class="settings-control">
-                <div class="settings-segmented" role="radiogroup" aria-labelledby="settings-tag-search-mode-label">
-                  {% for value, label in profile_quick_form.tag_search.field.choices %}
-                    <label class="settings-segmented-option">
-                      <input type="radio"
-                             name="{{ profile_quick_form.tag_search.html_name }}"
-                             value="{{ value }}"
-                             {% if profile_quick_form.tag_search.value == value %}checked{% endif %}>
-                      <span>{{ label }}</span>
-                    </label>
-                  {% endfor %}
-                </div>
-              </div>
-            </div>
-          </form>
-        </section>
-
-        <section id="settings-sidebar" class="settings-section" aria-labelledby="settings-sidebar-heading">
-          <div class="settings-section-heading">
-            <h2 id="settings-sidebar-heading">{% translate "Sidebar" %}</h2>
-          </div>
-
-          <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card settings-card-stack" data-settings-save-mode="instant" data-sidebar-modules-form>
-            {% csrf_token %}
-            <input type="hidden" name="form_id" value="profile_quick">
-            <input type="hidden" name="form_fields" value="show_sidebar,sticky_side_panel,sidebar_modules">
-            {{ profile_quick_form.sidebar_modules.as_hidden }}
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.show_sidebar.id_for_label }}" class="settings-label">{% translate "Show sidebar" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Turn this off to collapse the sidebar by default and give the bookmark list more room." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.show_sidebar.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.show_sidebar }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-            <div class="settings-row{% if not request.user_profile.show_sidebar %} is-hidden{% endif %}" data-setting-row="sticky_side_panel"{% if not request.user_profile.show_sidebar %} hidden aria-hidden="true"{% endif %}>
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.sticky_side_panel.id_for_label }}" class="settings-label">{% translate "Sidebar follows" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Keep the sidebar visible while scrolling on wider screens." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.sticky_side_panel.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.sticky_side_panel }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-
-            <div class="settings-card-stack" data-setting-row="sidebar_modules">
-              <div class="settings-stack settings-modules-stack">
-                <div class="settings-stack-header">
-                  <div>
-                    <label class="settings-label">{% translate "Sidebar modules" %}</label>
-                    <div class="form-input-hint">
-                      {% translate "Drag to reorder modules and toggle whether they are shown in the sidebar." %}
-                    </div>
-                  </div>
-                  <div class="settings-stack-actions">
-                    <button type="button"
-                            class="settings-panel-toggle"
-                            data-settings-panel-toggle
-                            data-settings-panel-expanded-label="{% translate 'Collapse' %}"
-                            data-settings-panel-collapsed-label="{% translate 'Expand' %}"
-                            aria-controls="settings-sidebar-modules-panel"
-                            aria-label="{% translate 'Expand' %}"
-                            aria-expanded="false">
-                      <span class="text-assistive" data-settings-panel-toggle-label>
-                        {% translate "Expand" %}
-                      </span>
-                      <svg viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M6 4l4 4l-4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div id="settings-sidebar-modules-panel" data-settings-panel-body hidden>
-                  <ul class="settings-modules-list" data-sidebar-modules-list>
-                    {% for item in profile_quick_form.sidebar_module_items %}
-                      <li class="settings-module-item" data-module-key="{{ item.key }}">
-                        <button type="button" class="settings-module-handle" aria-label="{% translate 'Drag to reorder' %}">
-                          <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-grip"></use></svg>
-                        </button>
-                        <div class="settings-module-name">{{ item.label }}</div>
-                        <label class="form-switch settings-switch">
-                          <input type="checkbox" data-module-enabled {% if item.enabled %}checked{% endif %}>
-                          <i class="form-icon"></i>
-                        </label>
-                      </li>
-                    {% endfor %}
-                  </ul>
-                  <div class="field-errors" data-field-error-for="sidebar_modules"></div>
-                </div>
-              </div>
-            </div>
-
-          </form>
         </section>
 
         <section id="settings-bookmarks" class="settings-section" aria-labelledby="settings-bookmarks-heading">
@@ -393,1273 +165,357 @@
             <h2 id="settings-bookmarks-heading">{% translate "Bookmarks" %}</h2>
           </div>
 
-          <div class="settings-card settings-card-stack">
-            <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-subform" data-settings-save-mode="instant">
-              {% csrf_token %}
-              <input type="hidden" name="form_id" value="profile_quick">
-              <input type="hidden" name="form_fields" value="bookmark_link_target,default_mark_unread">
+          {# 列表页的显示偏好只在书签列表页的「布局」侧边栏里调，这里只留入口 #}
+          <div class="settings-subsection" id="settings-bookmark-layout">
+            <h3 class="settings-subsection-heading">{% translate "Layout" %}</h3>
+            <div class="settings-card">
               <div class="settings-row">
                 <div class="settings-copy">
-                  <label id="settings-link-target-label" class="settings-label">{% translate "Open mode" %}</label>
                   <div class="form-input-hint">
-                    {% translate "Open bookmarks in the current page or in a new page." %}
+                    {% translate "Configure it in the layout sidebar on the bookmarks page." %}
+                  </div>
+                </div>
+                <div class="settings-inline-action">
+                  <a class="btn btn-primary"
+                     href="{% url 'linkding:bookmarks.index' %}?layout=page">{% translate "Go to" %}</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-subsection" id="settings-bookmark-automation">
+            <h3 class="settings-subsection-heading">{% translate "Automation" %}</h3>
+            <div class="settings-card settings-card-stack">
+              <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-subform" data-settings-save-mode="instant">
+                {% csrf_token %}
+                <input type="hidden" name="form_id" value="profile_quick">
+                <input type="hidden" name="form_fields" value="default_mark_unread">
+                <div class="settings-row">
+                  <div class="settings-copy">
+                    <label for="{{ profile_quick_form.default_mark_unread.id_for_label }}" class="settings-label">{% translate "Default unread" %}</label>
+                    <div class="form-input-hint">
+                      {% translate "Set newly created bookmarks to unread by default." %}
+                    </div>
+                  </div>
+                  <label for="{{ profile_quick_form.default_mark_unread.id_for_label }}" class="form-switch settings-switch">
+                    {{ profile_quick_form.default_mark_unread }}
+                    <i class="form-icon"></i>
+                  </label>
+                </div>
+              </form>
+
+              <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-subform settings-long-form" data-settings-save-mode="explicit" data-settings-draft-form>
+                {% csrf_token %}
+                <input type="hidden" name="form_id" value="profile_auto_tagging_rules">
+                <div class="settings-stack-header">
+                  <div>
+                    <label for="{{ auto_tagging_rules_form.auto_tagging_rules.id_for_label }}" class="settings-label">{% translate "Auto tagging" %}</label>
+                    <div class="form-input-hint">
+                      {% translate "Automatically add tags to bookmarks based on custom rules." %}
+                      {% translate "Each line is one rule that maps a URL to one or more tags. For example:" %}
+                      <pre>youtube.com video
+reddit.com/r/Music music reddit</pre>
+                    </div>
+                  </div>
+                  <div class="settings-stack-actions">
+                    <button type="button"
+                            class="settings-panel-toggle"
+                            data-settings-panel-toggle
+                            data-settings-panel-expanded-label="{% translate 'Collapse' %}"
+                            data-settings-panel-collapsed-label="{% translate 'Expand' %}"
+                            aria-controls="settings-auto-tagging-panel"
+                            aria-label="{% translate 'Expand' %}"
+                            aria-expanded="false">
+                      <span class="text-assistive" data-settings-panel-toggle-label>
+                        {% translate "Expand" %}
+                      </span>
+                      <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-chevron-right"></use></svg>
+                    </button>
+                  </div>
+                </div>
+                <div id="settings-auto-tagging-panel" data-settings-panel-body hidden>
+                  {% formfield auto_tagging_rules_form.auto_tagging_rules class="form-input settings-textarea monospace" rows="8" data_settings_draft_input="" %}
+                  <div class="field-errors" data-field-error-for="auto_tagging_rules"></div>
+                  <div class="settings-panel-footer">
+                    <button type="button"
+                            class="btn settings-draft-button"
+                            data-settings-restore-draft
+                            data-settings-restore-label="{% translate 'Restore draft' %}"
+                            data-settings-discard-label="{% translate 'Discard draft' %}"
+                            data-settings-restore-state="restore"
+                            hidden>
+                      <span class="settings-draft-button-icon" data-settings-draft-button-icon hidden aria-hidden="true">
+                        <svg width="16" height="16"><use href="#ld-icon-remove"></use></svg>
+                      </span>
+                      <span data-settings-draft-button-label>{% translate "Restore draft" %}</span>
+                    </button>
+                    <div class="settings-form-status" data-settings-form-status aria-live="polite"></div>
+                    <button type="submit" class="btn btn-primary" data-explicit-save-button>{% translate "Save" %}</button>
+                  </div>
+                </div>
+              </form>
+
+              <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-subform" data-settings-save-mode="instant">
+                {% csrf_token %}
+                <input type="hidden" name="form_id" value="profile_quick">
+                <input type="hidden" name="form_fields" value="enable_automatic_html_snapshots,enable_web_archive">
+                <div class="settings-row">
+                  <div class="settings-copy">
+                    <label for="{{ profile_quick_form.enable_automatic_html_snapshots.id_for_label }}" class="settings-label">{% translate "Automatic snapshots" %}</label>
+                    <div class="form-input-hint">
+                      {% if has_snapshot_support %}
+                        {% translate "Automatically create snapshots when adding new bookmarks." %}
+                        {% translate "If disabled, snapshots can still be created manually from the bookmark details view." %}
+                      {% else %}
+                        {% translate "This instance does not currently support snapshots." %}
+                      {% endif %}
+                    </div>
+                  </div>
+                  {% if has_snapshot_support %}
+                    <label for="{{ profile_quick_form.enable_automatic_html_snapshots.id_for_label }}" class="form-switch settings-switch">
+                      {{ profile_quick_form.enable_automatic_html_snapshots }}
+                      <i class="form-icon"></i>
+                    </label>
+                  {% else %}
+                    <label class="form-switch settings-switch">
+                      <input type="checkbox" disabled>
+                      <i class="form-icon"></i>
+                    </label>
+                  {% endif %}
+                </div>
+                <div class="settings-row">
+                  <div class="settings-copy">
+                    <label id="settings-archive-label" class="settings-label">{% translate "Automatic Internet Archive" %}</label>
+                    <div class="form-input-hint">
+                      {% translate "When enabled, snapshots of bookmarked websites are automatically created on the Internet Archive Wayback Machine." %}
+                      {% translate "This helps preserve websites as they looked when you bookmarked them." %}
+                      {% translate "Please consider supporting the Internet Archive if you rely on this feature." %}
+                    </div>
+                  </div>
+                  <label for="{{ profile_quick_form.enable_web_archive.id_for_label }}" class="form-switch settings-switch">
+                    {{ profile_quick_form.enable_web_archive }}
+                    <i class="form-icon"></i>
+                  </label>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="settings-subsection" id="settings-bookmark-sharing">
+            <h3 class="settings-subsection-heading">{% translate "Sharing" %}</h3>
+            {% url 'linkding:bookmarks.shared' as shared_bookmarks_url %}
+            <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card" data-settings-save-mode="instant" data-sharing-settings-form>
+              {% csrf_token %}
+              <input type="hidden" name="form_id" value="profile_quick">
+              <input type="hidden" name="form_fields" value="sharing_mode,default_mark_shared">
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <label id="settings-sharing-mode-label" class="settings-label">{% translate "Sharing scope" %}</label>
+                  <div class="form-input-hint">
+                    {% blocktranslate %}Set the sharing scope of your <a href="{{ shared_bookmarks_url }}">shared bookmarks</a>:{% endblocktranslate %}
+                    <ul class="settings-hint-list">
+                      <li>{% translate "Disabled: no one but you can access them." %}</li>
+                      <li>{% translate "Private: only registered accounts on this instance can access them." %}</li>
+                      <li>{% translate "Public: anyone can access them." %}</li>
+                    </ul>
                   </div>
                 </div>
                 <div class="settings-control">
-                  <div class="settings-segmented" role="radiogroup" aria-labelledby="settings-link-target-label">
-                    {% for value, label in profile_quick_form.bookmark_link_target.field.choices %}
+                  <div class="settings-segmented" role="radiogroup" aria-labelledby="settings-sharing-mode-label">
+                    {% for value, label in profile_quick_form.sharing_mode.field.choices %}
                       <label class="settings-segmented-option">
                         <input type="radio"
-                               name="{{ profile_quick_form.bookmark_link_target.html_name }}"
+                               name="{{ profile_quick_form.sharing_mode.html_name }}"
                                value="{{ value }}"
-                               {% if profile_quick_form.bookmark_link_target.value == value %}checked{% endif %}>
+                               {% if profile_quick_form.sharing_mode.value == value %}checked{% endif %}>
                         <span>{{ label }}</span>
                       </label>
                     {% endfor %}
                   </div>
                 </div>
               </div>
-
-              <div class="settings-row">
+              <div class="settings-row{% if not request.user_profile.enable_sharing %} is-hidden{% endif %}" data-setting-row="default_mark_shared"{% if not request.user_profile.enable_sharing %} hidden aria-hidden="true"{% endif %}>
                 <div class="settings-copy">
-                  <label for="{{ profile_quick_form.default_mark_unread.id_for_label }}" class="settings-label">{% translate "Default unread" %}</label>
+                  <label for="{{ profile_quick_form.default_mark_shared.id_for_label }}" class="settings-label">{% translate "Default sharing" %}</label>
                   <div class="form-input-hint">
-                    {% translate "Set newly created bookmarks to unread by default." %}
+                    {% translate "Set newly created bookmarks to shared by default." %}
                   </div>
                 </div>
-                <label for="{{ profile_quick_form.default_mark_unread.id_for_label }}" class="form-switch settings-switch">
-                  {{ profile_quick_form.default_mark_unread }}
+                <label for="{{ profile_quick_form.default_mark_shared.id_for_label }}" class="form-switch settings-switch">
+                  {{ profile_quick_form.default_mark_shared }}
                   <i class="form-icon"></i>
                 </label>
               </div>
             </form>
+          </div>
 
-            <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-subform settings-long-form" data-settings-save-mode="explicit" data-settings-draft-form>
+          <div class="settings-subsection" id="settings-bookmark-health">
+            <h3 class="settings-subsection-heading">{% translate "Health Check" %}</h3>
+            <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card settings-card-stack"
+                  data-settings-save-mode="instant">
               {% csrf_token %}
-              <input type="hidden" name="form_id" value="profile_auto_tagging_rules">
-              <div class="settings-stack-header">
-                <div>
-                  <label for="{{ auto_tagging_rules_form.auto_tagging_rules.id_for_label }}" class="settings-label">{% translate "Auto tagging" %}</label>
+              <input type="hidden" name="form_id" value="profile_health">
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <label for="{{ health_form.health_check_workers.id_for_label }}" class="settings-label">
+                    {% translate "Check concurrency" %}
+                  </label>
                   <div class="form-input-hint">
-                    {% translate "Automatically add tags to bookmarks based on custom rules." %}
-                    {% translate "Each line is one rule that maps a URL to one or more tags. For example:" %}
-                    <pre>youtube.com video
-reddit.com/r/Music music reddit</pre>
-                  </div>
-                </div>
-                <div class="settings-stack-actions">
-                  <button type="button"
-                          class="settings-panel-toggle"
-                          data-settings-panel-toggle
-                          data-settings-panel-expanded-label="{% translate 'Collapse' %}"
-                          data-settings-panel-collapsed-label="{% translate 'Expand' %}"
-                          aria-controls="settings-auto-tagging-panel"
-                          aria-label="{% translate 'Expand' %}"
-                          aria-expanded="false">
-                    <span class="text-assistive" data-settings-panel-toggle-label>
-                      {% translate "Expand" %}
-                    </span>
-                    <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-chevron-right"></use></svg>
-                  </button>
-                </div>
-              </div>
-              <div id="settings-auto-tagging-panel" data-settings-panel-body hidden>
-                {% formfield auto_tagging_rules_form.auto_tagging_rules class="form-input settings-textarea monospace" rows="8" data_settings_draft_input="" %}
-                <div class="field-errors" data-field-error-for="auto_tagging_rules"></div>
-                <div class="settings-panel-footer">
-                  <button type="button"
-                          class="btn settings-draft-button"
-                          data-settings-restore-draft
-                          data-settings-restore-label="{% translate 'Restore draft' %}"
-                          data-settings-discard-label="{% translate 'Discard draft' %}"
-                          data-settings-restore-state="restore"
-                          hidden>
-                    <span class="settings-draft-button-icon" data-settings-draft-button-icon hidden aria-hidden="true">
-                      <svg width="16" height="16"><use href="#ld-icon-remove"></use></svg>
-                    </span>
-                    <span data-settings-draft-button-label>{% translate "Restore draft" %}</span>
-                  </button>
-                  <div class="settings-form-status" data-settings-form-status aria-live="polite"></div>
-                  <button type="submit" class="btn btn-primary" data-explicit-save-button>{% translate "Save" %}</button>
-                </div>
-              </div>
-            </form>
-
-            <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-subform settings-long-form" data-settings-save-mode="explicit" data-settings-draft-form>
-              {% csrf_token %}
-              <input type="hidden" name="form_id" value="profile_custom_domain_root">
-              <div class="settings-stack-header">
-                <div>
-                  <label for="{{ custom_domain_root_form.custom_domain_root.id_for_label }}" class="settings-label">{% translate "Custom domain normalization" %}</label>
-                  <div class="form-input-hint">
-                    {% blocktranslate trimmed %}
-                      1. Rules affect domain filtering logic, reflected in the sidebar "Domains" module and favicon-based domain filtering.<br>
-                      2. Each line configures one rule. There are two types of rules:<br>
-                      (1) Subdomain normalization: e.g., <code>a.com</code> normalizes <code>1.a.com</code> and <code>2.a.com</code> under <code>a.com</code><br>
-                      (2) Cross-domain mapping: e.g., <code>b.com -> a.com</code> normalizes <code>1.b.com</code> and <code>2.b.com</code> under <code>a.com</code><br>
-                      3. After configuring a subdomain normalization rule like <code>a.com</code>, adding a subdomain like <code>3.a.com</code> keeps <code>3.a.com</code> unnormalized:<br>
-                      (1) In the sidebar "Domains" module, <code>a.com</code> expands to show <code>3.a.com</code> separately<br>
-                      (2) Clicking the favicon of <code>3.a.com</code> bookmarks will not force filtering by <code>a.com</code><br>
-                      4. After configuring a cross-domain mapping rule like <code>b.com -> a.com</code>, adding a rule like <code>b.com</code> keeps <code>b.com</code> unnormalized:<br>
-                      (1) In the sidebar "Domains" module, <code>a.com</code> expands to show <code>b.com</code> separately<br>
-                      (2) Clicking the favicon of <code>b.com</code> bookmarks will not force filtering by <code>a.com</code>
+                    {% blocktranslate trimmed with default=health_defaults.workers %}
+                      Number of parallel health check workers. Leave empty to use the global default ({{ default }}).
                     {% endblocktranslate %}
                   </div>
                 </div>
-                <div class="settings-stack-actions">
-                  <button type="button"
-                          class="settings-panel-toggle"
-                          data-settings-panel-toggle
-                          data-settings-panel-expanded-label="{% translate 'Collapse' %}"
-                          data-settings-panel-collapsed-label="{% translate 'Expand' %}"
-                          aria-controls="settings-custom-domain-panel"
-                          aria-label="{% translate 'Expand' %}"
-                          aria-expanded="false">
-                    <span class="text-assistive" data-settings-panel-toggle-label>
-                      {% translate "Expand" %}
-                    </span>
-                    <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-chevron-right"></use></svg>
-                  </button>
-                </div>
-              </div>
-              <div id="settings-custom-domain-panel" data-settings-panel-body hidden>
-                {% formfield custom_domain_root_form.custom_domain_root class="form-input settings-textarea monospace" rows="8" data_settings_draft_input="" %}
-                <div class="field-errors" data-field-error-for="custom_domain_root"></div>
-                <div class="settings-panel-footer">
-                  <button type="button"
-                          class="btn settings-draft-button"
-                          data-settings-restore-draft
-                          data-settings-restore-label="{% translate 'Restore draft' %}"
-                          data-settings-discard-label="{% translate 'Discard draft' %}"
-                          data-settings-restore-state="restore"
-                          hidden>
-                    <span class="settings-draft-button-icon" data-settings-draft-button-icon hidden aria-hidden="true">
-                      <svg width="16" height="16"><use href="#ld-icon-remove"></use></svg>
-                    </span>
-                    <span data-settings-draft-button-label>{% translate "Restore draft" %}</span>
-                  </button>
-                  <div class="settings-form-status" data-settings-form-status aria-live="polite"></div>
-                  <button type="submit" class="btn btn-primary" data-explicit-save-button>{% translate "Save" %}</button>
-                </div>
-              </div>
-            </form>
-          </div>
-
-          <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card" data-settings-save-mode="instant">
-            {% csrf_token %}
-            <input type="hidden" name="form_id" value="profile_quick">
-            <input type="hidden" name="form_fields" value="display_url,bookmark_description_display,bookmark_description_max_lines,enable_favicons,enable_preview_images,enable_preview_image_placeholders,permanent_notes">
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.display_url.id_for_label }}" class="settings-label">{% translate "Show URL" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Display the bookmark URL below the title." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.display_url.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.display_url }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label id="settings-bookmark-description-label" class="settings-label">{% translate "Description style" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Show bookmark descriptions and tags in one line, or render them in separate blocks." %}
-                </div>
-              </div>
-              <div class="settings-control">
-                <div class="settings-segmented" role="radiogroup" aria-labelledby="settings-bookmark-description-label">
-                  {% for value, label in profile_quick_form.bookmark_description_display.field.choices %}
-                    <label class="settings-segmented-option">
-                      <input type="radio"
-                             name="{{ profile_quick_form.bookmark_description_display.html_name }}"
-                             value="{{ value }}"
-                             {% if profile_quick_form.bookmark_description_display.value == value %}checked{% endif %}>
-                      <span>{{ label }}</span>
-                    </label>
-                  {% endfor %}
-                </div>
-              </div>
-            </div>
-
-            <div class="settings-row{% if profile_quick_form.bookmark_description_display.value == 'inline' %} is-hidden{% endif %}" data-setting-row="bookmark_description_max_lines"{% if profile_quick_form.bookmark_description_display.value == 'inline' %} hidden aria-hidden="true"{% endif %}>
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.bookmark_description_max_lines.id_for_label }}" class="settings-label">{% translate "Description max lines" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Limit how many lines are shown for bookmark descriptions." %}
-                </div>
-              </div>
-              <div class="settings-control">
-                {% formfield profile_quick_form.bookmark_description_max_lines class="form-input settings-number-input" min="1" %}
-                <div class="field-errors" data-field-error-for="bookmark_description_max_lines"></div>
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.enable_favicons.id_for_label }}" class="settings-label">{% translate "Display Favicons" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Automatically load favicons for bookmarked websites and display them next to each bookmark." %}
-                  {% translate "Enabling this feature downloads all missing favicons in the background." %}
-                  {% translate "By default, this feature uses a Google service to fetch favicons." %}
-                  {% translate "If you prefer a different provider, check the" %} <a href="https://linkding.link/options/#ld_favicon_provider" target="_blank" rel="noopener">{% translate "options documentation" %}</a>.
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.enable_favicons.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.enable_favicons }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-
-            {% if enable_refresh_favicons %}
-              <div class="settings-row{% if not request.user_profile.enable_favicons %} is-hidden{% endif %}"
-                   data-setting-row="refresh_favicons"
-                   {% if not request.user_profile.enable_favicons %}hidden aria-hidden="true"{% endif %}>
-                <div class="settings-copy">
-                  <label class="settings-label">{% translate "Refresh Favicons" %}</label>
-                </div>
-                <div class="settings-inline-action">
-                  <button class="btn btn-primary"
-                          formaction="{% url 'linkding:settings.update' %}"
-                          formmethod="post"
-                          name="refresh_favicons"
-                          data-settings-bypass-ajax>{% translate "Refresh" %}</button>
-                </div>
-              </div>
-            {% endif %}
-
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.enable_preview_images.id_for_label }}" class="settings-label">{% translate "Display preview images" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Automatically load preview images for bookmarked websites and display them next to each bookmark." %}
-                  {% translate "Enabling this feature downloads missing preview images in the background." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.enable_preview_images.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.enable_preview_images }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-
-            <div class="settings-row{% if not request.user_profile.enable_preview_images %} is-hidden{% endif %}" data-setting-row="preview_image_placeholders"{% if not request.user_profile.enable_preview_images %} hidden aria-hidden="true"{% endif %}>
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.enable_preview_image_placeholders.id_for_label }}" class="settings-label">{% translate "Display preview image placeholders" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Show a placeholder image when a bookmark has no preview image or the preview image cannot be loaded." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.enable_preview_image_placeholders.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.enable_preview_image_placeholders }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.permanent_notes.id_for_label }}" class="settings-label">{% translate "Expand notes" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Keep notes expanded by default instead of toggling them individually." %}
-                  {% translate "You can also temporarily show all notes with the keyboard shortcut" %} <code>e</code>.
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.permanent_notes.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.permanent_notes }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-          </form>
-
-          <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card" data-settings-save-mode="instant">
-            {% csrf_token %}
-            <input type="hidden" name="form_id" value="profile_quick">
-            <input type="hidden" name="form_fields" value="enable_automatic_html_snapshots,enable_web_archive">
-            {% if has_snapshot_support %}
-              <div class="settings-row">
-                <div class="settings-copy">
-                  <label for="{{ profile_quick_form.enable_automatic_html_snapshots.id_for_label }}" class="settings-label">{% translate "Snapshots" %}</label>
-                  <div class="form-input-hint">
-                    {% translate "Automatically create snapshots when adding new bookmarks." %}
-                    {% translate "If disabled, snapshots can still be created manually from the bookmark details view." %}
-                  </div>
-                </div>
-                <label for="{{ profile_quick_form.enable_automatic_html_snapshots.id_for_label }}" class="form-switch settings-switch">
-                  {{ profile_quick_form.enable_automatic_html_snapshots }}
-                  <i class="form-icon"></i>
-                </label>
-              </div>
-              <div class="settings-row">
-                <div class="settings-copy">
-                  <label class="settings-label">{% translate "Create missing snapshots" %}</label>
-                </div>
-                <div class="settings-inline-action">
-                  <button class="btn btn-primary"
-                          formaction="{% url 'linkding:settings.update' %}"
-                          formmethod="post"
-                          name="create_missing_html_snapshots"
-                          data-settings-bypass-ajax>{% translate "Create" %}</button>
-                </div>
-              </div>
-            {% else %}
-              <div class="settings-row is-disabled">
-                <div class="settings-copy">
-                  <label class="settings-label">{% translate "Snapshots" %}</label>
-                  <div class="form-input-hint">
-                    {% translate "This instance does not currently support snapshots." %}
-                  </div>
-                </div>
-                <label class="form-switch settings-switch">
-                  <input type="checkbox" disabled>
-                  <i class="form-icon"></i>
-                </label>
-              </div>
-            {% endif %}
-
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label id="settings-archive-label" class="settings-label">{% translate "Internet Archive" %}</label>
-                <div class="form-input-hint">
-                  {% translate "When enabled, snapshots of bookmarked websites are automatically created on the Internet Archive Wayback Machine." %}
-                  {% translate "This helps preserve websites as they looked when you bookmarked them." %}
-                  {% translate "Please consider supporting the Internet Archive if you rely on this feature." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.enable_web_archive.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.enable_web_archive }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-          </form>
-
-          <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card" data-settings-save-mode="instant">
-            {% csrf_token %}
-            <input type="hidden" name="form_id" value="profile_quick">
-            <input type="hidden" name="form_fields" value="enable_random_button,random_mode,random_target">
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.enable_random_button.id_for_label }}" class="settings-label">{% translate "Random button" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Show or hide the random button in the bookmark list toolbar." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.enable_random_button.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.enable_random_button }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-
-            <div class="settings-row{% if not profile_quick_form.enable_random_button.value %} is-hidden{% endif %}" data-setting-row="random_mode"{% if not profile_quick_form.enable_random_button.value %} hidden aria-hidden="true"{% endif %}>
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.random_mode.id_for_label }}" class="settings-label">{% translate "Random mode" %}</label>
-                <div class="form-input-hint hint-bullet">
-                  {% translate "List: shuffle all bookmarks randomly." %}
-                </div>
-                <div class="form-input-hint hint-bullet">
-                  {% translate "Single: pick one random bookmark." %}
-                </div>
-              </div>
-              <div class="settings-control">
-                <div class="settings-segmented" role="radiogroup" aria-labelledby="settings-random-mode-label">
-                  {% for value, label in profile_quick_form.random_mode.field.choices %}
-                    <label class="settings-segmented-option">
-                      <input type="radio"
-                             name="{{ profile_quick_form.random_mode.html_name }}"
-                             value="{{ value }}"
-                             {% if profile_quick_form.random_mode.value == value %}checked{% endif %}>
-                      <span>{{ label }}</span>
-                    </label>
-                  {% endfor %}
-                </div>
-              </div>
-            </div>
-
-            <div class="settings-row{% if profile_quick_form.random_mode.value != 'single' or not profile_quick_form.enable_random_button.value %} is-hidden{% endif %}" data-setting-row="random_target"{% if profile_quick_form.random_mode.value != 'single' or not profile_quick_form.enable_random_button.value %} hidden aria-hidden="true"{% endif %}>
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.random_target.id_for_label }}" class="settings-label">{% translate "Random target" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Choose what happens when a single random bookmark is picked." %}
-                </div>
-              </div>
-              <div class="settings-control">
-                {% formfield profile_quick_form.random_target class="form-select settings-select-input" %}
-              </div>
-            </div>
-          </form>
-        </section>
-
-        <section id="settings-bookmark-toolbar" class="settings-section" aria-labelledby="settings-bookmark-toolbar-heading">
-          <div class="settings-section-heading">
-            <h2 id="settings-bookmark-toolbar-heading">{% translate "Bookmark toolbar" %}</h2>
-          </div>
-
-          <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card-stack" data-settings-save-mode="instant" data-bookmark-toolbar-form>
-            {% csrf_token %}
-            <input type="hidden" name="form_id" value="profile_quick">
-            <input type="hidden" name="form_fields" value="bookmark_toolbar_modules,bookmark_toolbar_auto_hide,bookmark_date_display,bookmark_date_route,bookmark_actions,bookmark_statuses,bookmark_quick_edits,bookmark_quick_tags,bookmark_action_display_mode,bookmark_status_display_mode,bookmark_quick_edit_display_mode">
-            {{ profile_quick_form.bookmark_toolbar_modules.as_hidden }}
-            {{ profile_quick_form.bookmark_actions.as_hidden }}
-            {{ profile_quick_form.bookmark_statuses.as_hidden }}
-            {{ profile_quick_form.bookmark_quick_edits.as_hidden }}
-            {{ profile_quick_form.bookmark_quick_tags.as_hidden }}
-
-
-            {# 自动隐藏工具栏开关 #}
-            <div class="settings-card">
-              <div class="settings-row">
-                <div class="settings-copy">
-                  <label class="settings-label">{% translate "Auto-hide toolbar" %}</label>
-                  <div class="form-input-hint">
-                    {% blocktranslate trimmed %}
-· When enabled, toolbar items (except date) are hidden by default and only shown on hover (PC) or tap on empty area (mobile).<br>
-· When enabled, "Bookmark date" is forced on and cannot be disabled.<br>
-· Recommended: place "Bookmark date" first for the best experience.
-{% endblocktranslate %}
-                  </div>
-                </div>
                 <div class="settings-control">
-                  <label class="form-switch settings-switch">
-                    <input type="checkbox"
-                           data-toolbar-auto-hide
-                           name="{{ profile_quick_form.bookmark_toolbar_auto_hide.html_name }}"
-                           {% if profile_quick_form.bookmark_toolbar_auto_hide.value %}checked{% endif %}>
-                    <i class="form-icon"></i>
+                  {% formfield health_form.health_check_workers class="form-input settings-number-input" min="1" placeholder=health_defaults.workers %}
+                  <div class="field-errors" data-field-error-for="health_check_workers"></div>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <label for="{{ health_form.health_domain_interval.id_for_label }}" class="settings-label">
+                    {% translate "Per-domain interval (seconds)" %}
                   </label>
-                </div>
-              </div>
-            </div>
-            {# 工具栏模块列表（可拖拽排序，独立卡片） #}
-            <div class="settings-card">
-              <div class="settings-stack settings-modules-stack">
-                <div class="settings-stack-header">
-                  <div>
-                    <label class="settings-label">{% translate "Toolbar modules" %}</label>
-                    <div class="form-input-hint">
-                      {% translate "Drag to reorder modules and toggle whether they are shown in the bookmark toolbar." %}
-                    </div>
-                  </div>
-                  <div class="settings-stack-actions">
-                    <button type="button"
-                            class="settings-panel-toggle"
-                            data-settings-panel-toggle
-                            data-settings-panel-expanded-label="{% translate 'Collapse' %}"
-                            data-settings-panel-collapsed-label="{% translate 'Expand' %}"
-                            aria-controls="settings-bookmark-toolbar-modules-panel"
-                            aria-label="{% translate 'Expand' %}"
-                            aria-expanded="false">
-                      <span class="text-assistive" data-settings-panel-toggle-label>
-                        {% translate "Expand" %}
-                      </span>
-                      <svg viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M6 4l4 4l-4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div id="settings-bookmark-toolbar-modules-panel" data-settings-panel-body hidden>
-                <ul class="settings-modules-list" data-bookmark-toolbar-list>
-                  {% for module in profile_quick_form.bookmark_toolbar_module_items %}
-                    <li class="settings-module-item" data-toolbar-module-key="{{ module.key }}">
-                      <button type="button" class="settings-module-handle" aria-label="{% translate 'Drag to reorder' %}">
-                        <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-grip"></use></svg>
-                      </button>
-                      <div class="settings-module-name">{{ module.label }}</div>
-                      <label class="form-switch settings-switch">
-                        <input type="checkbox" data-toolbar-module-enabled {% if module.enabled %}checked{% endif %}>
-                        <i class="form-icon"></i>
-                      </label>
-                    </li>
-                  {% endfor %}
-                </ul>
-                </div>
-              </div>
-            </div>
-
-            {# 各模块详细配置面板（独立卡片） #}
-            <div class="settings-card settings-card-stack" data-toolbar-config-card>
-
-            {# === 日期配置面板 === #}
-            <div class="settings-card-stack" data-toolbar-config-panel="date">
-              <div class="settings-stack settings-modules-stack">
-                <div class="settings-stack-header">
-                  <div>
-                    <label class="settings-label">{% translate "Bookmark date" %}</label>
-                    <div class="form-input-hint">
-                      {% translate "Configure how bookmark dates are displayed and what happens when clicking them." %}
-                    </div>
-                  </div>
-                  <div class="settings-stack-actions">
-                    <button type="button"
-                            class="settings-panel-toggle"
-                            data-settings-panel-toggle
-                            data-settings-panel-expanded-label="{% translate 'Collapse' %}"
-                            data-settings-panel-collapsed-label="{% translate 'Expand' %}"
-                            aria-controls="settings-toolbar-date-panel"
-                            aria-label="{% translate 'Expand' %}"
-                            aria-expanded="false">
-                      <span class="text-assistive" data-settings-panel-toggle-label>
-                        {% translate "Expand" %}
-                      </span>
-                      <svg viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M6 4l4 4l-4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div id="settings-toolbar-date-panel" data-settings-panel-body hidden style="padding-top: var(--unit-2);">
-                  <div class="settings-row settings-row-card">
-                    <div class="settings-copy">
-                      <label class="settings-label">{% translate "Date format" %}</label>
-                      <div class="form-input-hint">
-                        {% translate "Show bookmark dates as relative dates or absolute dates." %}
-                      </div>
-                    </div>
-                    <div class="settings-control">
-                      <div class="settings-segmented" role="radiogroup">
-                        {% for value, label in profile_quick_form.bookmark_date_display.field.choices %}
-                          {% if value != "hidden" %}
-                            <label class="settings-segmented-option">
-                              <input type="radio"
-                                     name="{{ profile_quick_form.bookmark_date_display.html_name }}"
-                                     value="{{ value }}"
-                                     {% if profile_quick_form.bookmark_date_display.value == value %}checked{% endif %}>
-                              <span>{{ label }}</span>
-                            </label>
-                          {% endif %}
-                        {% endfor %}
-                      </div>
-                    </div>
-                  </div>
-                  <div class="settings-row settings-row-card">
-                    <div class="settings-copy">
-                      <label class="settings-label">{% translate "Click navigation" %}</label>
-                      <div class="form-input-hint">
-                        {% translate "Choose what happens when clicking the date. When the target exists, the date is highlighted in green." %}
-                      </div>
-                    </div>
-                    <div class="settings-control">
-                      {% formfield profile_quick_form.bookmark_date_route class="form-select settings-select-input" %}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {# === 书签动作配置面板 === #}
-            <div class="settings-card-stack" data-toolbar-config-panel="actions">
-              <div class="settings-stack settings-modules-stack">
-                <div class="settings-stack-header">
-                  <div>
-                    <label class="settings-label">{% translate "Bookmark actions" %}</label>
-                    <div class="form-input-hint">
-                      · {% translate "Bookmark actions allow quick operations on bookmarks." %}<br>
-                      · {% translate "Actions can be displayed as text or icons." %}<br>
-                      · {% translate "Action order can be changed by dragging below." %}<br>
-                      · {% translate "Each action can be independently enabled or disabled below." %}
-                    </div>
-                  </div>
-                  <div class="settings-stack-actions">
-                    <div class="settings-segmented" role="radiogroup">
-                      {% for value, label in profile_quick_form.bookmark_action_display_mode.field.choices %}
-                        <label class="settings-segmented-option">
-                          <input type="radio"
-                                 name="{{ profile_quick_form.bookmark_action_display_mode.html_name }}"
-                                 value="{{ value }}"
-                                 {% if profile_quick_form.bookmark_action_display_mode.value == value %}checked{% endif %}>
-                          <span>{{ label }}</span>
-                        </label>
-                      {% endfor %}
-                    </div>
-                    <button type="button"
-                            class="settings-panel-toggle"
-                            data-settings-panel-toggle
-                            data-settings-panel-expanded-label="{% translate 'Collapse' %}"
-                            data-settings-panel-collapsed-label="{% translate 'Expand' %}"
-                            aria-controls="settings-bookmark-actions-panel"
-                            aria-label="{% translate 'Expand' %}"
-                            aria-expanded="false">
-                      <span class="text-assistive" data-settings-panel-toggle-label>
-                        {% translate "Expand" %}
-                      </span>
-                      <svg viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M6 4l4 4l-4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div id="settings-bookmark-actions-panel" data-settings-panel-body hidden>
-                  <ul class="settings-modules-list" data-bookmark-actions-list>
-                    {% for item in profile_quick_form.bookmark_action_items %}
-                      <li class="settings-module-item" data-action-key="{{ item.key }}">
-                        <button type="button" class="settings-module-handle" aria-label="{% translate 'Drag to reorder' %}">
-                          <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-grip"></use></svg>
-                        </button>
-                        <div class="settings-module-name">
-                          {% if item.key == "read" %}
-                            <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-unread"></use></svg>
-                          {% elif item.key == "view" %}
-                            <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-view"></use></svg>
-                          {% elif item.key == "highlight" %}
-                            <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-highlight"></use></svg>
-                          {% elif item.key == "edit" %}
-                            <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-edit"></use></svg>
-                          {% elif item.key == "archive" %}
-                            <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-archive"></use></svg>
-                          {% elif item.key == "remove" %}
-                            <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-remove"></use></svg>
-                          {% endif %}
-                          {{ item.label }}
-                        </div>
-                        <label class="form-switch settings-switch">
-                          <input type="checkbox" data-action-enabled {% if item.enabled %}checked{% endif %}>
-                          <i class="form-icon"></i>
-                        </label>
-                      </li>
-                    {% endfor %}
-                  </ul>
-                  <div class="field-errors" data-field-error-for="bookmark_actions"></div>
-                </div>
-              </div>
-            </div>
-
-            {# === 快捷编辑配置面板 === #}
-            <div class="settings-card-stack" data-toolbar-config-panel="quick_edits">
-              <div class="settings-stack settings-modules-stack">
-                <div class="settings-stack-header">
-                  <div>
-                    <label class="settings-label">{% translate "Quick edit" %}</label>
-                    <div class="form-input-hint">
-                      · {% translate "Quick edit buttons allow inline editing of bookmark fields." %}<br>
-                      · {% translate "Buttons can be displayed as text or icons." %}<br>
-                      · {% translate "Button order can be changed by dragging below." %}<br>
-                      · {% translate "Each button can be independently enabled or disabled below." %}
-                    </div>
-                  </div>
-                  <div class="settings-stack-actions">
-                    <div class="settings-segmented" role="radiogroup">
-                      {% for value, label in profile_quick_form.bookmark_quick_edit_display_mode.field.choices %}
-                        <label class="settings-segmented-option">
-                          <input type="radio"
-                                 name="{{ profile_quick_form.bookmark_quick_edit_display_mode.html_name }}"
-                                 value="{{ value }}"
-                                 {% if profile_quick_form.bookmark_quick_edit_display_mode.value == value %}checked{% endif %}>
-                          <span>{{ label }}</span>
-                        </label>
-                      {% endfor %}
-                    </div>
-                    <button type="button"
-                            class="settings-panel-toggle"
-                            data-settings-panel-toggle
-                            data-settings-panel-expanded-label="{% translate 'Collapse' %}"
-                            data-settings-panel-collapsed-label="{% translate 'Expand' %}"
-                            aria-controls="settings-bookmark-quick-edits-panel"
-                            aria-label="{% translate 'Expand' %}"
-                            aria-expanded="false">
-                      <span class="text-assistive" data-settings-panel-toggle-label>
-                        {% translate "Expand" %}
-                      </span>
-                      <svg viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M6 4l4 4l-4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div id="settings-bookmark-quick-edits-panel" data-settings-panel-body hidden>
-                  <ul class="settings-modules-list" data-bookmark-quick-edits-list>
-                    {% for item in profile_quick_form.bookmark_quick_edit_items %}
-                      <li class="settings-module-item" data-quick-edit-key="{{ item.key }}">
-                        <button type="button" class="settings-module-handle" aria-label="{% translate 'Drag to reorder' %}">
-                          <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-grip"></use></svg>
-                        </button>
-                        <div class="settings-module-name">
-                          {% if item.key == "title" %}
-                            <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-edit-title"></use></svg>
-                          {% elif item.key == "description" %}
-                            <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-edit-description"></use></svg>
-                          {% elif item.key == "author" %}
-                            <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-edit-author"></use></svg>
-                          {% elif item.key == "notes" %}
-                            <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-note"></use></svg>
-                          {% elif item.key == "tags" %}
-                            <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-tag"></use></svg>
-                          {% endif %}
-                          {{ item.label }}
-                        </div>
-                        <label class="form-switch settings-switch">
-                          <input type="checkbox" data-quick-edit-enabled {% if item.enabled %}checked{% endif %}>
-                          <i class="form-icon"></i>
-                        </label>
-                      </li>
-                    {% endfor %}
-                  </ul>
-                  <div class="field-errors" data-field-error-for="bookmark_quick_edits"></div>
-                </div>
-              </div>
-            </div>
-
-            {# === 书签状态配置面板 === #}
-            <div class="settings-card-stack" data-toolbar-config-panel="statuses">
-              <div class="settings-stack settings-modules-stack">
-                <div class="settings-stack-header">
-                  <div>
-                    <label class="settings-label">{% translate "Bookmark status" %}</label>
-                    <div class="form-input-hint">
-                      · {% translate "Bookmark status displays the current state of a bookmark." %}<br>
-                      · {% translate "Clicking a status icon toggles the state." %}<br>
-                      · {% translate "Status order can be changed by dragging below." %}<br>
-                      · {% translate "Each status can be independently enabled or disabled below. When disabled, it is never shown regardless of state." %}
-                    </div>
-                  </div>
-                  <div class="settings-stack-actions">
-                    <div class="settings-segmented" role="radiogroup">
-                      {% for value, label in profile_quick_form.bookmark_status_display_mode.field.choices %}
-                        <label class="settings-segmented-option">
-                          <input type="radio"
-                                 name="{{ profile_quick_form.bookmark_status_display_mode.html_name }}"
-                                 value="{{ value }}"
-                                 {% if profile_quick_form.bookmark_status_display_mode.value == value %}checked{% endif %}>
-                          <span>{{ label }}</span>
-                        </label>
-                      {% endfor %}
-                    </div>
-                    <button type="button"
-                            class="settings-panel-toggle"
-                            data-settings-panel-toggle
-                            data-settings-panel-expanded-label="{% translate 'Collapse' %}"
-                            data-settings-panel-collapsed-label="{% translate 'Expand' %}"
-                            aria-controls="settings-bookmark-statuses-panel"
-                            aria-label="{% translate 'Expand' %}"
-                            aria-expanded="false">
-                      <span class="text-assistive" data-settings-panel-toggle-label>
-                        {% translate "Expand" %}
-                      </span>
-                      <svg viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M6 4l4 4l-4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div id="settings-bookmark-statuses-panel" data-settings-panel-body hidden>
-                  <ul class="settings-modules-list" data-bookmark-statuses-list>
-                    {% for item in profile_quick_form.bookmark_status_items %}
-                      <li class="settings-module-item" data-status-key="{{ item.key }}">
-                        <button type="button" class="settings-module-handle" aria-label="{% translate 'Drag to reorder' %}">
-                          <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-grip"></use></svg>
-                        </button>
-                        <div class="settings-module-name">
-                          {% if item.key == "notes" %}
-                            <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-note"></use></svg>
-                          {% elif item.key == "share" %}
-                            <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-share"></use></svg>
-                          {% elif item.key == "unread" %}
-                            <svg class="settings-action-preview" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-read-check"></use></svg>
-                          {% elif item.key == "health" %}
-                            <span class="health-status-preview settings-action-preview" aria-hidden="true">
-                              <span class="health-status-preview-ring"></span>
-                              <span class="health-status-preview-dot"></span>
-                            </span>
-                          {% endif %}
-                          {{ item.label }}
-                        </div>
-                        <label class="form-switch settings-switch">
-                          <input type="checkbox" data-status-enabled {% if item.enabled %}checked{% endif %}>
-                          <i class="form-icon"></i>
-                        </label>
-                      </li>
-                    {% endfor %}
-                  </ul>
-                  <div class="field-errors" data-field-error-for="bookmark_statuses"></div>
-                </div>
-              </div>
-            </div>
-
-            {% if quick_tag_icon_data_json %}
-            <script>
-              window.__ldIconData = {{ quick_tag_icon_data_json|safe }};
-            </script>
-            {% endif %}
-
-            {# === 快捷标签配置面板 === #}
-            <div class="settings-card-stack" data-toolbar-config-panel="quick_tags">
-              <div class="settings-stack settings-modules-stack">
-                <div class="settings-stack-header">
-                  <div>
-                    <label class="settings-label">{% translate "Quick tags" %}</label>
-                    <div class="form-input-hint">
-                      · {% translate "Quick tags allow adding one or more specified tags to a bookmark with a single click." %}<br>
-                      · {% translate "Quick tags can be displayed directly on the bookmark action bar, or collected in a quick tags submenu." %}<br>
-                      · {% translate "When displayed directly, quick tags can be shown as icons or text." %}<br>
-                      · {% translate "You can search with English keywords to find more relevant icons." %}
-                    </div>
-                  </div>
-                  <div class="settings-stack-actions">
-                    <button type="button" class="btn btn-primary btn-sm" data-qt-add>
-                      {% translate "Add" %}
-                    </button>
-                    <button type="button"
-                            class="settings-panel-toggle"
-                            data-settings-panel-toggle
-                            data-settings-panel-expanded-label="{% translate 'Collapse' %}"
-                            data-settings-panel-collapsed-label="{% translate 'Expand' %}"
-                            aria-controls="settings-bookmark-quick-tags-panel"
-                            aria-label="{% translate 'Expand' %}"
-                            {% if not profile_quick_form.bookmark_quick_tag_items %}hidden{% endif %}
-                            aria-expanded="false">
-                      <span class="text-assistive" data-settings-panel-toggle-label>
-                        {% translate "Expand" %}
-                      </span>
-                      <svg viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M6 4l4 4l-4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div id="settings-bookmark-quick-tags-panel" data-settings-panel-body hidden>
-                  <ul class="settings-modules-list" data-bookmark-quick-tags-list>
-                    {% for qt in profile_quick_form.bookmark_quick_tag_items %}
-                      <li class="settings-module-item settings-qt-row" data-qt-index="{{ forloop.counter0 }}">
-                        <button type="button" class="settings-module-handle" aria-label="{% translate 'Drag to reorder' %}">
-                          <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-grip"></use></svg>
-                        </button>
-                        <div class="settings-qt-controls">
-                          <button type="button" class="settings-qt-chip-btn" data-qt-field="display_position" data-qt-value="{{ qt.display_position }}" title="{% translate 'Click to toggle' %}">
-                            {% if qt.display_position == "direct" %}{% translate "direct" %}{% else %}{% translate "submenu" %}{% endif %}
-                          </button>
-                          <button type="button" class="settings-qt-chip-btn" data-qt-field="display_mode" data-qt-value="{{ qt.display_mode }}" title="{% translate 'Click to toggle' %}">
-                            {% if qt.display_mode == "icon" %}{% translate "icon" %}{% else %}{% translate "text" %}{% endif %}
-                          </button>
-                          <button type="button" class="settings-qt-delete-btn" title="{% translate 'Delete' %}">
-                            <svg width="14" height="14"><use href="#ld-icon-remove"></use></svg>
-                          </button>
-                        </div>
-                        <label class="form-switch settings-switch">
-                          <input type="checkbox" data-qt-enabled {% if qt.enabled %}checked{% endif %}>
-                          <i class="form-icon"></i>
-                        </label>
-                        <div class="settings-qt-main">
-                          <button type="button" class="settings-qt-icon-btn" data-qt-icon="{{ qt.icon_name }}" title="{% translate 'Pick icon' %}">
-                            {% if qt.icon_data %}
-                              <svg class="settings-qt-icon-placeholder" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 {{ qt.icon_data.width }} {{ qt.icon_data.height }}">{{ qt.icon_data.body|sanitize_svg }}</svg>
-                            {% elif qt.icon_name %}
-                              <iconify-icon icon="{{ qt.icon_name }}" width="16" height="16"></iconify-icon>
-                            {% else %}
-                              <svg class="settings-qt-icon-placeholder" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
-                            {% endif %}
-                          </button>
-                          <span class="settings-qt-label-view{% if not qt.label %} is-empty{% endif %}" title="{% translate 'Click to edit name' %}">{% if qt.label %}{{ qt.label }}{% else %}{% translate "Name" %}{% endif %}</span>
-                          <input type="text" class="settings-qt-label-input form-input" value="{{ qt.label }}" placeholder="{% translate 'Name' %}">
-                        </div>
-                        <div class="settings-qt-sub">
-                          <div class="settings-qt-tags-wrapper">
-                            <span class="settings-qt-tags-view{% if not qt.tag_names %} is-empty{% endif %}">
-                              {% for tn in qt.tag_names %}
-                                <span class="qt-tag">{{ tn }}</span>
-                              {% empty %}
-                                {% translate "tag1 tag2" %}
-                              {% endfor %}
-                            </span>
-                          </div>
-                        </div>
-                      </li>
-                    {% endfor %}
-                  </ul>
-                  <div class="field-errors" data-field-error-for="bookmark_quick_tags"></div>
-                </div>
-              </div>
-            </div>
-            </div>
-          </form>
-        </section>
-
-    <script>
-      window.__ldPresetIconNames = {{ preset_icon_names_json|safe }};
-    </script>
-
-        <section id="settings-health" class="settings-section" aria-labelledby="settings-health-heading">
-          <div class="settings-section-heading">
-            <h2 id="settings-health-heading">{% translate "Health Check" %}</h2>
-          </div>
-          <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card settings-card-stack"
-                data-settings-save-mode="instant">
-            {% csrf_token %}
-            <input type="hidden" name="form_id" value="profile_health">
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ health_form.health_max_age_days.id_for_label }}" class="settings-label">
-                  {% translate "Result validity (days)" %}
-                </label>
-                <div class="form-input-hint">
-                  {% blocktranslate trimmed with default=health_defaults.max_age_days %}
-                    How long a health check result stays valid before it is considered expired. Set to 0 to never expire. Leave empty to use the global default ({{ default }} days).
-                  {% endblocktranslate %}
-                </div>
-              </div>
-              <div class="settings-control">
-                {% formfield health_form.health_max_age_days class="form-input settings-number-input" min="0" placeholder=health_defaults.max_age_days %}
-                <div class="field-errors" data-field-error-for="health_max_age_days"></div>
-              </div>
-            </div>
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ health_form.health_check_workers.id_for_label }}" class="settings-label">
-                  {% translate "Check concurrency" %}
-                </label>
-                <div class="form-input-hint">
-                  {% blocktranslate trimmed with default=health_defaults.workers %}
-                    Number of parallel health check workers. Leave empty to use the global default ({{ default }}).
-                  {% endblocktranslate %}
-                </div>
-              </div>
-              <div class="settings-control">
-                {% formfield health_form.health_check_workers class="form-input settings-number-input" min="1" placeholder=health_defaults.workers %}
-                <div class="field-errors" data-field-error-for="health_check_workers"></div>
-              </div>
-            </div>
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ health_form.health_domain_interval.id_for_label }}" class="settings-label">
-                  {% translate "Per-domain interval (seconds)" %}
-                </label>
-                <div class="form-input-hint">
-                  {% blocktranslate trimmed with default=health_defaults.domain_interval %}
-                    Minimum interval between requests to the same domain. Leave empty to use the global default ({{ default }}s; 0 means no rate limiting).
-                  {% endblocktranslate %}
-                </div>
-              </div>
-              <div class="settings-control">
-                {% formfield health_form.health_domain_interval class="form-input settings-number-input" min="0" step="0.5" placeholder=health_defaults.domain_interval %}
-                <div class="field-errors" data-field-error-for="health_domain_interval"></div>
-              </div>
-            </div>
-          </form>
-        </section>
-
-        <section id="settings-sharing" class="settings-section" aria-labelledby="settings-sharing-heading">
-          <div class="settings-section-heading">
-            <h2 id="settings-sharing-heading">{% translate "Sharing" %}</h2>
-          </div>
-
-          <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card" data-settings-save-mode="instant" data-sharing-settings-form>
-            {% csrf_token %}
-            <input type="hidden" name="form_id" value="profile_quick">
-            <input type="hidden" name="form_fields" value="sharing_mode,default_mark_shared">
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label id="settings-sharing-mode-label" class="settings-label">{% translate "Bookmark sharing" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Allow bookmarks to be shared with other users and allow viewing bookmarks shared by others." %}
-                  {% translate "Make shared bookmarks visible without requiring a login." %}
-                  {% translate "Anyone who can access this instance can then browse the" %} <a href="{% url 'linkding:bookmarks.shared' %}">{% translate "shared bookmarks page" %}</a>.
-                </div>
-              </div>
-              <div class="settings-control">
-                <div class="settings-segmented" role="radiogroup" aria-labelledby="settings-sharing-mode-label">
-                  {% for value, label in profile_quick_form.sharing_mode.field.choices %}
-                    <label class="settings-segmented-option">
-                      <input type="radio"
-                             name="{{ profile_quick_form.sharing_mode.html_name }}"
-                             value="{{ value }}"
-                             {% if profile_quick_form.sharing_mode.value == value %}checked{% endif %}>
-                      <span>{{ label }}</span>
-                    </label>
-                  {% endfor %}
-                </div>
-              </div>
-            </div>
-            <div class="settings-row{% if not request.user_profile.enable_sharing %} is-hidden{% endif %}" data-setting-row="default_mark_shared"{% if not request.user_profile.enable_sharing %} hidden aria-hidden="true"{% endif %}>
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.default_mark_shared.id_for_label }}" class="settings-label">{% translate "Default sharing" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Set newly created bookmarks to shared by default." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.default_mark_shared.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.default_mark_shared }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-          </form>
-        </section>
-
-        <section id="settings-highlights" class="settings-section" aria-labelledby="settings-highlights-heading">
-          <div class="settings-section-heading">
-            <h2 id="settings-highlights-heading">{% translate "Highlights" %}</h2>
-          </div>
-
-          {# ── Per page + sticky ── #}
-          <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card settings-card-stack" data-settings-save-mode="instant">
-            {% csrf_token %}
-            <input type="hidden" name="form_id" value="profile_quick">
-            <input type="hidden" name="form_fields" value="highlights_per_page,highlights_sticky_header_controls,highlights_sticky_pagination,highlights_sticky_side_panel">
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.highlights_per_page.id_for_label }}" class="settings-label">{% translate "Highlights per page" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Choose how many highlights are shown on each page." %}
-                </div>
-              </div>
-              <div class="settings-control">
-                {% formfield profile_quick_form.highlights_per_page class="form-input settings-number-input settings-number-input-compact" min="1" %}
-                <div class="field-errors" data-field-error-for="highlights_per_page"></div>
-              </div>
-            </div>
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.highlights_sticky_header_controls.id_for_label }}" class="settings-label">{% translate "Search bar follows" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Keep the search and action controls pinned to the top while you scroll." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.highlights_sticky_header_controls.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.highlights_sticky_header_controls }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.highlights_sticky_pagination.id_for_label }}" class="settings-label">{% translate "Paginator follows" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Keep pagination controls pinned to the bottom while you scroll." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.highlights_sticky_pagination.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.highlights_sticky_pagination }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="{{ profile_quick_form.highlights_sticky_side_panel.id_for_label }}" class="settings-label">{% translate "Sidebar follows" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Keep the sidebar visible while scrolling on wider screens." %}
-                </div>
-              </div>
-              <label for="{{ profile_quick_form.highlights_sticky_side_panel.id_for_label }}" class="form-switch settings-switch">
-                {{ profile_quick_form.highlights_sticky_side_panel }}
-                <i class="form-icon"></i>
-              </label>
-            </div>
-          </form>
-
-          {# ── Sidebar ── #}
-          <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card settings-card-stack" data-settings-save-mode="instant" data-sidebar-modules-form>
-            {% csrf_token %}
-            <input type="hidden" name="form_id" value="profile_quick">
-            <input type="hidden" name="form_fields" value="show_highlights_sidebar,highlights_sidebar_modules">
-            {{ profile_quick_form.highlights_sidebar_modules.as_hidden }}
-
-            <div class="settings-row">
-              <div class="settings-copy">
-                <label for="id_show_highlights_sidebar" class="settings-label">{% translate "Show sidebar" %}</label>
-                <div class="form-input-hint">
-                  {% translate "Turn this off to collapse the highlights sidebar by default." %}
-                </div>
-              </div>
-              <label for="id_show_highlights_sidebar" class="form-switch settings-switch">
-                <input type="checkbox" name="show_highlights_sidebar" id="id_show_highlights_sidebar"
-                       {% if request.user_profile.show_highlights_sidebar %}checked{% endif %}>
-                <i class="form-icon"></i>
-              </label>
-            </div>
-
-            <div class="settings-card-stack" data-setting-row="highlights_sidebar_modules">
-              <div class="settings-stack settings-modules-stack">
-                <div class="settings-stack-header">
-                  <div>
-                    <label class="settings-label">{% translate "Sidebar modules" %}</label>
-                    <div class="form-input-hint">
-                      {% translate "Drag to reorder modules and toggle whether they are shown in the highlights sidebar." %}
-                    </div>
-                  </div>
-                  <div class="settings-stack-actions">
-                    <button type="button"
-                            class="settings-panel-toggle"
-                            data-settings-panel-toggle
-                            data-settings-panel-expanded-label="{% translate 'Collapse' %}"
-                            data-settings-panel-collapsed-label="{% translate 'Expand' %}"
-                            aria-controls="settings-highlights-sidebar-modules-panel"
-                            aria-label="{% translate 'Expand' %}"
-                            aria-expanded="false">
-                      <span class="text-assistive" data-settings-panel-toggle-label>
-                        {% translate "Expand" %}
-                      </span>
-                      <svg viewBox="0 0 16 16" aria-hidden="true">
-                        <path d="M6 4l4 4l-4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div id="settings-highlights-sidebar-modules-panel" data-settings-panel-body hidden>
-                  <ul class="settings-modules-list" data-sidebar-modules-list>
-                    {% for item in profile_quick_form.highlights_sidebar_module_items %}
-                      <li class="settings-module-item" data-module-key="{{ item.key }}">
-                        <button type="button" class="settings-module-handle" aria-label="{% translate 'Drag to reorder' %}">
-                          <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-grip"></use></svg>
-                        </button>
-                        <div class="settings-module-name">{{ item.label }}</div>
-                        <label class="form-switch settings-switch">
-                          <input type="checkbox" data-module-enabled {% if item.enabled %}checked{% endif %}>
-                          <i class="form-icon"></i>
-                        </label>
-                      </li>
-                    {% endfor %}
-                  </ul>
-                  <div class="field-errors" data-field-error-for="highlights_sidebar_modules"></div>
-                </div>
-              </div>
-            </div>
-          </form>
-
-          {# ── Highlight copy settings ── #}
-          <div class="settings-card settings-card-stack">
-            {# Copy button action — instant save, always visible #}
-            <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-subform" data-settings-save-mode="instant">
-              {% csrf_token %}
-              <input type="hidden" name="form_id" value="profile_highlight_copy_format">
-              <input type="hidden" name="form_fields" value="highlight_copy_default_action">
-              <div class="settings-row">
-                <div class="settings-copy">
-                  <label for="{{ highlight_copy_format_form.highlight_copy_default_action.id_for_label }}" class="settings-label">{% translate "Copy button action" %}</label>
                   <div class="form-input-hint">
-                    {% translate "Set what the highlight copy button copies." %}
+                    {% blocktranslate trimmed with default=health_defaults.domain_interval %}
+                      Minimum interval between requests to the same domain. Leave empty to use the global default ({{ default }}s; 0 means no rate limiting).
+                    {% endblocktranslate %}
                   </div>
                 </div>
                 <div class="settings-control">
-                  {% formfield highlight_copy_format_form.highlight_copy_default_action class="form-select settings-select-input" %}
+                  {% formfield health_form.health_domain_interval class="form-input settings-number-input" min="0" step="0.5" placeholder=health_defaults.domain_interval %}
+                  <div class="field-errors" data-field-error-for="health_domain_interval"></div>
                 </div>
               </div>
-            </form>
-
-            {# Item format — collapsible, explicit save #}
-            <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-subform settings-long-form" data-settings-save-mode="explicit" data-settings-draft-form>
-              {% csrf_token %}
-              <input type="hidden" name="form_id" value="profile_hl_item_format">
-              <input type="hidden" name="form_fields" value="item_format">
-              <div class="settings-stack-header">
-                <div>
-                  <label for="id_item_format" class="settings-label">{% translate "Copy single item format" %}</label>
+              <div class="settings-row">
+                <div class="settings-copy">
+                  <label for="{{ health_form.health_max_age_days.id_for_label }}" class="settings-label">
+                    {% translate "Result validity (days)" %}
+                  </label>
                   <div class="form-input-hint">
-                    · {% translate "Content format when copying a single highlight and/or annotation." %}<br>
-                    · {% blocktranslate trimmed %}
-                      <code>${highlight}</code> as highlight placeholder, <code>${annotation}</code> as annotation placeholder.
-                    {% endblocktranslate %}<br>
-                    · {% translate "Leave empty to use the default format." %}
+                    {% blocktranslate trimmed with default=health_defaults.max_age_days %}
+                      How long a health check result stays valid before it is considered expired. Set to 0 to never expire. Leave empty to use the global default ({{ default }} days).
+                    {% endblocktranslate %}
                   </div>
                 </div>
-                <div class="settings-stack-actions">
-                  <button type="button"
-                          class="settings-panel-toggle"
-                          data-settings-panel-toggle
-                          data-settings-panel-expanded-label="{% translate 'Collapse' %}"
-                          data-settings-panel-collapsed-label="{% translate 'Expand' %}"
-                          aria-controls="settings-hl-item-format-panel"
-                          aria-label="{% translate 'Expand' %}"
-                          aria-expanded="false">
-                    <span class="text-assistive" data-settings-panel-toggle-label>
-                      {% translate "Expand" %}
-                    </span>
-                    <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-chevron-right"></use></svg>
-                  </button>
-                </div>
-              </div>
-              <div id="settings-hl-item-format-panel" data-settings-panel-body hidden>
-                {% formfield highlight_copy_format_form.item_format class="form-input settings-textarea monospace" rows="4" data_settings_draft_input="" data_hl_copy_preview_input="" %}
-                <div class="field-errors" data-field-error-for="item_format"></div>
-                <div class="settings-panel-footer">
-                  <button type="button"
-                          class="btn settings-draft-button"
-                          data-settings-restore-draft
-                          data-settings-restore-label="{% translate 'Restore draft' %}"
-                          data-settings-discard-label="{% translate 'Discard draft' %}"
-                          data-settings-restore-state="restore"
-                          hidden>
-                    <span class="settings-draft-button-icon" data-settings-draft-button-icon hidden aria-hidden="true">
-                      <svg width="16" height="16"><use href="#ld-icon-remove"></use></svg>
-                    </span>
-                    <span data-settings-draft-button-label>{% translate "Restore draft" %}</span>
-                  </button>
-                  <div class="settings-form-status" data-settings-form-status aria-live="polite"></div>
-                  <button type="submit" class="btn btn-primary" data-explicit-save-button>{% translate "Save" %}</button>
-                </div>
-                {# Item format preview #}
-                <div class="settings-hl-copy-preview" data-hl-copy-preview>
-                  <label class="settings-label" style="margin-bottom: var(--unit-1);">{% translate "Preview" %}</label>
-                  <div class="settings-hl-copy-preview-grid">
-                    <div class="settings-hl-copy-preview-item">
-                      <span class="settings-hl-copy-preview-label">{% translate "Highlight only" %}</span>
-                      <pre class="settings-hl-copy-preview-content" data-preview="highlight"></pre>
-                    </div>
-                    <div class="settings-hl-copy-preview-item">
-                      <span class="settings-hl-copy-preview-label">{% translate "Annotation only" %}</span>
-                      <pre class="settings-hl-copy-preview-content" data-preview="note"></pre>
-                    </div>
-                    <div class="settings-hl-copy-preview-item" style="grid-column: 1 / -1;">
-                      <span class="settings-hl-copy-preview-label">{% translate "Highlight + Annotation" %}</span>
-                      <pre class="settings-hl-copy-preview-content" data-preview="both"></pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </form>
-
-            {# Separator — collapsible, explicit save #}
-            <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-subform settings-long-form" data-settings-save-mode="explicit" data-settings-draft-form>
-              {% csrf_token %}
-              <input type="hidden" name="form_id" value="profile_hl_separator">
-              <input type="hidden" name="form_fields" value="separator">
-              <div class="settings-stack-header">
-                <div>
-                  <label for="id_separator" class="settings-label">{% translate "Copy multi-item separator" %}</label>
-                  <div class="form-input-hint">
-                    {% translate "Separator between items when batch copying multiple highlights." %}
-                  </div>
-                </div>
-                <div class="settings-stack-actions">
-                  <button type="button"
-                          class="settings-panel-toggle"
-                          data-settings-panel-toggle
-                          data-settings-panel-expanded-label="{% translate 'Collapse' %}"
-                          data-settings-panel-collapsed-label="{% translate 'Expand' %}"
-                          aria-controls="settings-hl-separator-panel"
-                          aria-label="{% translate 'Expand' %}"
-                          aria-expanded="false">
-                    <span class="text-assistive" data-settings-panel-toggle-label>
-                      {% translate "Expand" %}
-                    </span>
-                    <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-chevron-right"></use></svg>
-                  </button>
-                </div>
-              </div>
-              <div id="settings-hl-separator-panel" data-settings-panel-body hidden>
-                {% formfield highlight_copy_format_form.separator class="form-input settings-textarea monospace" rows="3" data_settings_draft_input="" data_hl_sep_preview_input="" %}
-                <div class="field-errors" data-field-error-for="separator"></div>
-                <div class="settings-panel-footer">
-                  <button type="button"
-                          class="btn settings-draft-button"
-                          data-settings-restore-draft
-                          data-settings-restore-label="{% translate 'Restore draft' %}"
-                          data-settings-discard-label="{% translate 'Discard draft' %}"
-                          data-settings-restore-state="restore"
-                          hidden>
-                    <span class="settings-draft-button-icon" data-settings-draft-button-icon hidden aria-hidden="true">
-                      <svg width="16" height="16"><use href="#ld-icon-remove"></use></svg>
-                    </span>
-                    <span data-settings-draft-button-label>{% translate "Restore draft" %}</span>
-                  </button>
-                  <div class="settings-form-status" data-settings-form-status aria-live="polite"></div>
-                  <button type="submit" class="btn btn-primary" data-explicit-save-button>{% translate "Save" %}</button>
-                </div>
-                {# Batch preview #}
-                <div class="settings-hl-copy-preview" data-hl-sep-preview>
-                  <label class="settings-label" style="margin-bottom: var(--unit-1);">{% translate "Preview" %}</label>
-                  <pre class="settings-hl-copy-preview-content" data-preview="batch"></pre>
+                <div class="settings-control">
+                  {% formfield health_form.health_max_age_days class="form-input settings-number-input" min="0" placeholder=health_defaults.max_age_days %}
+                  <div class="field-errors" data-field-error-for="health_max_age_days"></div>
                 </div>
               </div>
             </form>
           </div>
+
+          <div class="settings-subsection" id="settings-bookmark-misc">
+            <h3 class="settings-subsection-heading">{% translate "Misc" %}</h3>
+            <div class="settings-card settings-card-stack">
+              {% if enable_refresh_favicons %}
+                <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-subform" data-settings-save-mode="instant">
+                  {% csrf_token %}
+                  <input type="hidden" name="form_id" value="profile_quick">
+                  <div class="settings-row">
+                    <div class="settings-copy">
+                      <label class="settings-label">{% translate "Refresh Favicons" %}</label>
+                      <div class="form-input-hint">
+                        {% translate "Download missing favicons in the background. Whether favicons are shown is set in the layout sidebar on the bookmarks page." %}
+                      </div>
+                    </div>
+                    <div class="settings-inline-action">
+                      <button class="btn btn-primary"
+                              formaction="{% url 'linkding:settings.update' %}"
+                              formmethod="post"
+                              name="refresh_favicons"
+                              data-settings-bypass-ajax>{% translate "Refresh" %}</button>
+                    </div>
+                  </div>
+                </form>
+              {% endif %}
+
+              {% if has_snapshot_support %}
+                <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-subform" data-settings-save-mode="instant">
+                  {% csrf_token %}
+                  <input type="hidden" name="form_id" value="profile_quick">
+                  <div class="settings-row">
+                    <div class="settings-copy">
+                      <label class="settings-label">{% translate "Create missing snapshots" %}</label>
+                      <div class="form-input-hint">
+                        {% translate "Queue snapshot creation for bookmarks that do not have one yet." %}
+                      </div>
+                    </div>
+                    <div class="settings-inline-action">
+                      <button class="btn btn-primary"
+                              formaction="{% url 'linkding:settings.update' %}"
+                              formmethod="post"
+                              name="create_missing_html_snapshots"
+                              data-settings-bypass-ajax>{% translate "Create" %}</button>
+                    </div>
+                  </div>
+                </form>
+              {% endif %}
+
+              <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-subform settings-long-form" data-settings-save-mode="explicit" data-settings-draft-form>
+                {% csrf_token %}
+                <input type="hidden" name="form_id" value="profile_custom_domain_root">
+                <div class="settings-stack-header">
+                  <div>
+                    <label for="{{ custom_domain_root_form.custom_domain_root.id_for_label }}" class="settings-label">{% translate "Custom domain normalization" %}</label>
+                    <div class="form-input-hint">
+                      {% blocktranslate trimmed %}
+                        1. Rules affect domain filtering logic, reflected in the sidebar "Domains" module and favicon-based domain filtering.<br>
+                        2. Each line configures one rule. There are two types of rules:<br>
+                        (1) Subdomain normalization: e.g., <code>a.com</code> normalizes <code>1.a.com</code> and <code>2.a.com</code> under <code>a.com</code><br>
+                        (2) Cross-domain mapping: e.g., <code>b.com -> a.com</code> normalizes <code>1.b.com</code> and <code>2.b.com</code> under <code>a.com</code><br>
+                        3. After configuring a subdomain normalization rule like <code>a.com</code>, adding a subdomain like <code>3.a.com</code> keeps <code>3.a.com</code> unnormalized:<br>
+                        (1) In the sidebar "Domains" module, <code>a.com</code> expands to show <code>3.a.com</code> separately<br>
+                        (2) Clicking the favicon of <code>3.a.com</code> bookmarks will not force filtering by <code>a.com</code><br>
+                        4. After configuring a cross-domain mapping rule like <code>b.com -> a.com</code>, adding a rule like <code>b.com</code> keeps <code>b.com</code> unnormalized:<br>
+                        (1) In the sidebar "Domains" module, <code>a.com</code> expands to show <code>b.com</code> separately<br>
+                        (2) Clicking the favicon of <code>b.com</code> bookmarks will not force filtering by <code>a.com</code>
+                      {% endblocktranslate %}
+                    </div>
+                  </div>
+                  <div class="settings-stack-actions">
+                    <button type="button"
+                            class="settings-panel-toggle"
+                            data-settings-panel-toggle
+                            data-settings-panel-expanded-label="{% translate 'Collapse' %}"
+                            data-settings-panel-collapsed-label="{% translate 'Expand' %}"
+                            aria-controls="settings-custom-domain-panel"
+                            aria-label="{% translate 'Expand' %}"
+                            aria-expanded="false">
+                      <span class="text-assistive" data-settings-panel-toggle-label>
+                        {% translate "Expand" %}
+                      </span>
+                      <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-chevron-right"></use></svg>
+                    </button>
+                  </div>
+                </div>
+                <div id="settings-custom-domain-panel" data-settings-panel-body hidden>
+                  {% formfield custom_domain_root_form.custom_domain_root class="form-input settings-textarea monospace" rows="8" data_settings_draft_input="" %}
+                  <div class="field-errors" data-field-error-for="custom_domain_root"></div>
+                  <div class="settings-panel-footer">
+                    <button type="button"
+                            class="btn settings-draft-button"
+                            data-settings-restore-draft
+                            data-settings-restore-label="{% translate 'Restore draft' %}"
+                            data-settings-discard-label="{% translate 'Discard draft' %}"
+                            data-settings-restore-state="restore"
+                            hidden>
+                      <span class="settings-draft-button-icon" data-settings-draft-button-icon hidden aria-hidden="true">
+                        <svg width="16" height="16"><use href="#ld-icon-remove"></use></svg>
+                      </span>
+                      <span data-settings-draft-button-label>{% translate "Restore draft" %}</span>
+                    </button>
+                    <div class="settings-form-status" data-settings-form-status aria-live="polite"></div>
+                    <button type="submit" class="btn btn-primary" data-explicit-save-button>{% translate "Save" %}</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
         </section>
 
+        {# 「快捷键」沿用书签列表页的同一套快捷键配置，这里作为独立一级分区 #}
         <section id="settings-shortcuts" class="settings-section" aria-labelledby="settings-shortcuts-heading">
           <div class="settings-section-heading">
             <div class="settings-label-row">
@@ -1721,7 +577,7 @@ reddit.com/r/Music music reddit</pre>
 
         <section id="settings-user" class="settings-section" aria-labelledby="settings-user-heading">
           <div class="settings-section-heading">
-            <h2 id="settings-user-heading">{% translate "User & Visitors" %}</h2>
+            <h2 id="settings-user-heading">{% translate "User" %}</h2>
           </div>
           <div class="settings-card">
             <div class="settings-row">
@@ -1890,15 +746,18 @@ reddit.com/r/Music music reddit</pre>
 
       <aside class="settings-directory" aria-label="{% translate 'General sections' %}" data-settings-directory>
         <button type="button" class="settings-directory-link is-active" data-settings-section-target="settings-interface" aria-controls="settings-interface">{% translate "Interface" %}</button>
-        <button type="button" class="settings-directory-link" data-settings-section-target="settings-sidebar" aria-controls="settings-sidebar">{% translate "Sidebar" %}</button>
-        <button type="button" class="settings-directory-link" data-settings-section-target="settings-search" aria-controls="settings-search">{% translate "Search" %}</button>
-        <button type="button" class="settings-directory-link" data-settings-section-target="settings-bookmarks" aria-controls="settings-bookmarks">{% translate "Bookmarks" %}</button>
-        <button type="button" class="settings-directory-link" data-settings-section-target="settings-bookmark-toolbar" aria-controls="settings-bookmark-toolbar">{% translate "Bookmark toolbar" %}</button>
-        <button type="button" class="settings-directory-link" data-settings-section-target="settings-health" aria-controls="settings-health">{% translate "Health Check" %}</button>
-        <button type="button" class="settings-directory-link" data-settings-section-target="settings-sharing" aria-controls="settings-sharing">{% translate "Sharing" %}</button>
-        <button type="button" class="settings-directory-link" data-settings-section-target="settings-highlights" aria-controls="settings-highlights">{% translate "Highlights" %}</button>
+        <div class="settings-directory-group" data-settings-directory-group>
+          <button type="button" class="settings-directory-link" data-settings-section-target="settings-bookmarks" aria-controls="settings-bookmarks">{% translate "Bookmarks" %}</button>
+          <div class="settings-directory-sublist" data-settings-directory-sublist>
+            <button type="button" class="settings-directory-link settings-directory-sub-link" data-settings-section-target="settings-bookmark-layout" aria-controls="settings-bookmark-layout">{% translate "Layout" %}</button>
+            <button type="button" class="settings-directory-link settings-directory-sub-link" data-settings-section-target="settings-bookmark-automation" aria-controls="settings-bookmark-automation">{% translate "Automation" %}</button>
+            <button type="button" class="settings-directory-link settings-directory-sub-link" data-settings-section-target="settings-bookmark-sharing" aria-controls="settings-bookmark-sharing">{% translate "Sharing" %}</button>
+            <button type="button" class="settings-directory-link settings-directory-sub-link" data-settings-section-target="settings-bookmark-health" aria-controls="settings-bookmark-health">{% translate "Health Check" %}</button>
+            <button type="button" class="settings-directory-link settings-directory-sub-link" data-settings-section-target="settings-bookmark-misc" aria-controls="settings-bookmark-misc">{% translate "Misc" %}</button>
+          </div>
+        </div>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-shortcuts" aria-controls="settings-shortcuts">{% translate "Shortcuts" %}</button>
-        <button type="button" class="settings-directory-link" data-settings-section-target="settings-user" aria-controls="settings-user">{% translate "User & Visitors" %}</button>
+        <button type="button" class="settings-directory-link" data-settings-section-target="settings-user" aria-controls="settings-user">{% translate "User" %}</button>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-import-export" aria-controls="settings-import-export">{% translate "Import & Export" %}</button>
         <button type="button" class="settings-directory-link" data-settings-section-target="settings-about" aria-controls="settings-about">{% translate "About" %}</button>
       </aside>

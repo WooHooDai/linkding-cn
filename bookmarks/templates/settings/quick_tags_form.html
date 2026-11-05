@@ -1,6 +1,14 @@
 {% load i18n %}
 {% load shared %}
-{# 快捷标签编辑器：设置页与列表页抽屉的弹窗共用，挂 ld-settings-page 后由设置页脚本接管 #}
+{# 快捷标签编辑器只在列表页「布局」抽屉的弹窗里出现，挂 ld-settings-page 后由设置页脚本接管 #}
+{% if quick_tag_icon_data_json %}
+  <script>
+    window.__ldIconData = {{ quick_tag_icon_data_json|safe }};
+  </script>
+{% endif %}
+<script>
+  window.__ldPresetIconNames = {{ preset_icon_names_json|default:"[]"|safe }};
+</script>
 <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-card settings-card-stack" data-settings-save-mode="instant">
   {% csrf_token %}
   <input type="hidden" name="form_id" value="profile_quick">

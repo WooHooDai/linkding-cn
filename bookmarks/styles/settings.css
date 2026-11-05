@@ -87,52 +87,23 @@
     gap: var(--unit-8);
   }
 
-  .settings-content > #settings-interface {
-    order: 10;
+  /* 「书签」一节按分组铺开，分组标题是二级导航的落点 */
+  .settings-subsection {
+    min-width: 0;
+    display: grid;
+    gap: var(--unit-3);
   }
 
-  .settings-content > #settings-sidebar {
-    order: 20;
+  .settings-subsection-heading {
+    margin: 0;
+    font-size: var(--font-size);
+    font-weight: 600;
+    line-height: 1.4;
   }
 
-  .settings-content > #settings-search {
-    order: 30;
-  }
-
-  .settings-content > #settings-bookmarks {
-    order: 40;
-  }
-
-  .settings-content > #settings-bookmark-toolbar {
-    order: 45;
-  }
-
-  .settings-content > #settings-health {
-    order: 48;
-  }
-
-  .settings-content > #settings-sharing {
-    order: 50;
-  }
-
-  .settings-content > #settings-highlights {
-    order: 55;
-  }
-
-  .settings-content > #settings-shortcuts {
-    order: 56;
-  }
-
-  .settings-content > #settings-user {
-    order: 60;
-  }
-
-  .settings-content > #settings-import-export {
-    order: 70;
-  }
-
-  .settings-content > #settings-about {
-    order: 80;
+  .settings-hint-list {
+    margin: var(--unit-1) 0 0;
+    padding-left: var(--unit-4);
   }
 
   .settings-directory {
@@ -183,6 +154,37 @@
       border-color: var(--settings-directory-active-border);
       color: var(--settings-directory-active-color);
       font-weight: 600;
+    }
+  }
+
+  /* 一级项带着二级项时只加重文字，避免和二级项的选中态抢眼 */
+  .settings-directory-group {
+    display: grid;
+    gap: var(--unit-1);
+
+    &.has-active > .settings-directory-link {
+      color: var(--text-color);
+      font-weight: 600;
+    }
+  }
+
+  .settings-directory-sublist {
+    display: grid;
+    gap: var(--unit-1);
+    margin: 0 0 var(--unit-1) var(--unit-4);
+    padding-left: var(--unit-2);
+    border-left: var(--border-width) solid var(--settings-surface-border);
+  }
+
+  .settings-directory-sub-link {
+    min-height: calc(var(--control-size) - var(--unit-2));
+    padding: 0 var(--unit-3);
+    font-size: var(--font-size-sm);
+
+    &.is-active {
+      background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+      border-color: transparent;
+      color: var(--primary-color);
     }
   }
 
@@ -950,6 +952,21 @@
       min-height: var(--control-size);
       padding: 0 var(--unit-3);
     }
+
+    /* 窄屏一栏只放一级项：二级项收进抽屉式的纵向空间并不存在，改由父项承接选中态 */
+    .settings-directory-group {
+      display: contents;
+    }
+
+    .settings-directory-sublist {
+      display: none;
+    }
+
+    .settings-directory-group.has-active > .settings-directory-link {
+      background: var(--settings-directory-active-bg);
+      border-color: var(--settings-directory-active-border);
+      color: var(--settings-directory-active-color);
+    }
   }
 
   @media (max-width: 720px) {
@@ -1553,56 +1570,6 @@
   text-align: center;
   color: var(--secondary-text-color);
   padding: var(--unit-4);
-  font-size: var(--font-size-sm);
-}
-
-/* Highlight copy format preview */
-.settings-hl-copy-preview {
-  margin-top: var(--unit-2);
-}
-
-.settings-hl-copy-preview-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--unit-2);
-}
-
-@media (max-width: 600px) {
-  .settings-hl-copy-preview-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.settings-hl-copy-preview-item {
-  border: 1px solid var(--secondary-border-color);
-  border-radius: var(--border-radius);
-  overflow: hidden;
-}
-
-.settings-hl-copy-preview-label {
-  display: block;
-  padding: var(--unit-1) var(--unit-2);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--secondary-text-color);
-  background: var(--secondary-bg);
-  border-bottom: 1px solid var(--secondary-border-color);
-}
-
-.settings-hl-copy-preview-content {
-  margin: 0;
-  padding: var(--unit-2);
-  font-size: var(--font-size-sm);
-  font-family: var(--mono-font-family);
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: var(--body-font-color);
-  background: transparent;
-}
-
-.hl-copy-warn {
-  color: var(--error-color, #e8595f);
-  font-weight: 600;
   font-size: var(--font-size-sm);
 }
 

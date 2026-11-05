@@ -143,13 +143,7 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         soup = self.make_soup(response.content.decode())
         section_ids = [
             "settings-interface",
-            "settings-sidebar",
-            "settings-search",
             "settings-bookmarks",
-            "settings-bookmark-toolbar",
-            "settings-health",
-            "settings-sharing",
-            "settings-highlights",
             "settings-shortcuts",
             "settings-user",
             "settings-import-export",
@@ -157,6 +151,24 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         ]
         for section_id in section_ids:
             self.assertIsNotNone(soup.select_one(f"section#{section_id}"))
+
+        # 「快捷键」是与「书签」同级的独立分区，位于「书签」和「用户」之间
+        shortcuts_section = soup.select_one("section#settings-shortcuts")
+        self.assertIsNotNone(shortcuts_section)
+        self.assertIsNotNone(shortcuts_section.select_one("h2"))
+
+        # 「书签」一节的二级分组，既是页面结构也是右侧目录的二级项
+        bookmark_group_ids = [
+            "settings-bookmark-layout",
+            "settings-bookmark-automation",
+            "settings-bookmark-sharing",
+            "settings-bookmark-health",
+            "settings-bookmark-misc",
+        ]
+        for group_id in bookmark_group_ids:
+            group = soup.select_one(f"#settings-bookmarks #{group_id}")
+            self.assertIsNotNone(group)
+            self.assertIsNotNone(group.select_one("h3"))
 
         nav_targets = [
             link.get("data-settings-section-target")
@@ -166,22 +178,22 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         ]
         self.assertEqual(
             nav_targets,
-            [
-                "settings-interface",
-                "settings-sidebar",
-                "settings-search",
-                "settings-bookmarks",
-                "settings-bookmark-toolbar",
-                "settings-health",
-                "settings-sharing",
-                "settings-highlights",
-                "settings-shortcuts",
-                "settings-user",
-                "settings-import-export",
-                "settings-about",
-            ],
+            ["settings-interface", "settings-bookmarks"]
+            + bookmark_group_ids
+            + ["settings-shortcuts", "settings-user", "settings-import-export", "settings-about"],
         )
-        self.assertIsNone(soup.select_one("section#settings-bookmark-list"))
+        # 二级项目录挂在「书签」一级项下面
+        self.assertEqual(
+            len(soup.select(".settings-directory-sublist [data-settings-section-target]")),
+            len(bookmark_group_ids),
+        )
+
+        # 快捷标签与高亮已分别迁到列表页、高亮页的布局侧边栏
+        self.assertIsNone(soup.select_one("section#settings-quick-tags"))
+        self.assertIsNone(soup.select_one("section#settings-highlights"))
+        self.assertIsNone(soup.select_one("section#settings-search"))
+        self.assertIsNone(soup.select_one("section#settings-sidebar"))
+        self.assertIsNone(soup.select_one("section#settings-bookmark-toolbar"))
 
         username_value = soup.select_one("[data-setting-username]")
         self.assertIsNotNone(username_value)
@@ -213,14 +225,6 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         self.assertEqual(other_language_options, ["No other languages"])
         self.assertTrue(other_language_select.has_attr("disabled"))
 
-        date_format_labels = [
-            option.get_text(strip=True)
-            for option in soup.select(
-                '[data-toolbar-config-panel="date"] .settings-segmented-option span'
-            )
-        ]
-        self.assertEqual(date_format_labels, ["Relative", "Absolute"])
-
         landing_page_labels = [
             option.get_text(strip=True)
             for option in soup.select(
@@ -229,63 +233,53 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
         ]
         self.assertEqual(landing_page_labels, ["Login page", "Shared page"])
 
-    def test_should_render_bookmark_view_mode_select_options(self):
+    def test_list_appearance_points_to_layout_drawer(self):
         response = self.client.get(reverse("linkding:settings.general"))
         soup = self.make_soup(response.content.decode())
 
-        select = soup.select_one('select[name="bookmark_view_mode"]')
-        self.assertIsNotNone(select)
-        values = [option.get("value") for option in select.select("option")]
+        # 视图模式等改在列表页的抽屉里调，设置页不再有第二份控件
+        self.assertIsNone(soup.select_one('select[name="bookmark_view_mode"]'))
+        self.assertIsNone(soup.select_one('input[name="items_per_page"]'))
+        self.assertIsNone(soup.select_one('input[name="sticky_header_controls"]'))
+
+        group = soup.select_one("#settings-bookmark-layout")
+        self.assertIsNotNone(group)
+        link = group.select_one("a.btn")
+        self.assertIsNotNone(link)
         self.assertEqual(
-            values,
-            [
-                UserProfile.BOOKMARK_VIEW_MODE_LIST,
-                UserProfile.BOOKMARK_VIEW_MODE_COMPACT,
-                UserProfile.BOOKMARK_VIEW_MODE_TABLE,
-            ],
+            link.get("href"),
+            reverse("linkding:bookmarks.index") + "?layout=page",
         )
-        selected = [
-            option.get("value")
-            for option in select.select("option")
-            if option.has_attr("selected")
-        ]
-        self.assertEqual(selected, [UserProfile.BOOKMARK_VIEW_MODE_LIST])
+
+    def test_language_and_theme_rows_have_no_hint(self):
+        response = self.client.get(reverse("linkding:settings.general"))
+        soup = self.make_soup(response.content.decode())
+
+        for label_id in ("settings-language-label", "settings-theme-label"):
+            row = soup.select_one(f'[aria-labelledby="{label_id}"]').find_parent(
+                "div", class_="settings-row"
+            )
+            self.assertIsNone(row.select_one(".form-input-hint"))
 
     def test_compatibility_mode_setting_should_be_hidden(self):
-        # 兼容模式已停用：设置页不再提供开关，字段与旧引擎实现保留
+        # 兼容模式已停用：设置页既不给开关，也不留空分节和悬空的导航项
         response = self.client.get(reverse("linkding:settings.general"))
         soup = self.make_soup(response.content.decode())
 
+        self.assertIsNone(soup.select_one("section#settings-search"))
+        self.assertIsNone(
+            soup.select_one('[data-settings-section-target="settings-search"]')
+        )
         self.assertIsNone(soup.select_one('input[name="legacy_search"]'))
 
-        search_section = soup.select_one("section#settings-search")
-        self.assertIsNotNone(search_section)
-        self.assertNotIn("Compatibility mode", search_section.get_text())
-
-    def test_search_and_tag_cards_should_render_in_expected_sections(self):
+    def test_quick_tags_editor_moved_out_of_general_settings(self):
         response = self.client.get(reverse("linkding:settings.general"))
         soup = self.make_soup(response.content.decode())
 
-        search_form_fields = [
-            hidden_field.get("value")
-            for hidden_field in soup.select(
-                "section#settings-search input[name='form_fields']"
-            )
-        ]
-        # 兼容模式行已隐藏，分节里只剩标签搜索模式
-        self.assertEqual(search_form_fields, ["tag_search"])
-
-        search_section = soup.select_one("section#settings-search")
-        self.assertIsNotNone(search_section)
-        self.assertNotIn("Compatibility mode", search_section.get_text())
-        self.assertIn("Tag search mode", search_section.get_text())
-
-        sidebar_section = soup.select_one("section#settings-sidebar")
-        self.assertIsNotNone(sidebar_section)
-        self.assertIsNotNone(
-            sidebar_section.select_one(
-                "input[name='form_fields'][value='show_sidebar,sticky_side_panel,sidebar_modules']"
-            )
+        # 快捷标签编辑器只在列表页「布局」抽屉的弹窗里出现
+        self.assertIsNone(soup.select_one("[data-bookmark-quick-tags-list]"))
+        self.assertIsNone(
+            soup.select_one("input[name='form_fields'][value='bookmark_quick_tags']")
         )
 
         bookmarks_section = soup.select_one("section#settings-bookmarks")
@@ -301,40 +295,31 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
             )
         )
 
-    def test_prefetch_internal_links_should_render_in_interface_section(self):
+    def test_prefetch_internal_links_moved_to_layout_drawer(self):
         superuser = self.setup_superuser()
         self.client.force_login(superuser)
 
         response = self.client.get(reverse("linkding:settings.general"))
         soup = self.make_soup(response.content.decode())
-
-        interface_section = soup.select_one("section#settings-interface")
-        self.assertIsNotNone(interface_section)
-        self.assertIsNotNone(
-            interface_section.select_one(
-                "input[type='checkbox'][name='enable_link_prefetch']"
-            )
-        )
-
-        user_section = soup.select_one("section#settings-user")
-        self.assertIsNotNone(user_section)
+        # 预取内部链接已进列表页抽屉，设置页不再有同名开关
         self.assertIsNone(
-            user_section.select_one(
-                "input[type='checkbox'][name='enable_link_prefetch']"
-            )
+            soup.select_one("input[type='checkbox'][name='enable_link_prefetch']")
         )
 
-    def test_show_sidebar_should_render_in_sidebar_section(self):
+        # 「用户与访客」里保存落地页时仍要带上它，不能被清空
+        user_section = soup.select_one("section#settings-user")
+        self.assertIsNotNone(
+            user_section.select_one("input[type='hidden'][name='enable_link_prefetch']")
+        )
+
+    def test_sidebar_options_only_live_in_the_sidebar_module(self):
         response = self.client.get(reverse("linkding:settings.general"))
         soup = self.make_soup(response.content.decode())
 
-        interface_section = soup.select_one("section#settings-interface")
-        self.assertIsNotNone(interface_section)
-        self.assertIsNone(interface_section.select_one("input[name='show_sidebar']"))
-
-        sidebar_section = soup.select_one("section#settings-sidebar")
-        self.assertIsNotNone(sidebar_section)
-        self.assertIsNotNone(sidebar_section.select_one("input[name='show_sidebar']"))
+        # 侧边栏的常驻/跟随/模块顺序在侧边栏自带的「设置」模块里调
+        self.assertIsNone(soup.select_one("input[name='show_sidebar']"))
+        self.assertIsNone(soup.select_one("input[name='sticky_side_panel']"))
+        self.assertIsNone(soup.select_one("input[name='sidebar_modules']"))
 
     @patch(
         "bookmarks.views.settings._get_other_language_choices",
@@ -397,7 +382,6 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
 
         section = soup.select_one("section#settings-user")
         self.assertIsNotNone(section)
-        self.assertIn("User & Visitors", section.get_text())
         self.assertIn("Default page for visitors", section.get_text())
         self.assertIn("Anonymous visitor profile", section.get_text())
 
@@ -744,7 +728,6 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
 
         for panel_id in (
             "settings-custom-css-panel",
-            "settings-sidebar-modules-panel",
             "settings-auto-tagging-panel",
             "settings-custom-domain-panel",
         ):
@@ -754,7 +737,6 @@ class SettingsGeneralViewTestCase(TestCase, BookmarkFactoryMixin):
 
         for control_id in (
             "settings-custom-css-panel",
-            "settings-sidebar-modules-panel",
             "settings-auto-tagging-panel",
             "settings-custom-domain-panel",
         ):

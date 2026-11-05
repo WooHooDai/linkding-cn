@@ -25,7 +25,6 @@ from django.views.i18n import LANGUAGE_QUERY_PARAMETER
 from bookmarks.services.icon_loader import PRESET_ICON_NAMES
 
 from bookmarks.models import (
-    LEGACY_SEARCH_ENABLED,
     ApiToken,
     Bookmark,
     FeedToken,
@@ -144,7 +143,6 @@ def general(request: HttpRequest, status=200, context_overrides=None):
     version_info = get_version_info(get_ttl_hash())
 
     profile_quick_form = UserProfileQuickSettingsForm(instance=request.user_profile)
-    quick_tag_icons = _build_quick_tag_icon_context(profile_quick_form)
     custom_css_form = UserProfileCustomCssForm(instance=request.user_profile)
     # 全局默认值（环境变量），供设置页帮助文案动态展示
     health_defaults = {
@@ -167,9 +165,6 @@ def general(request: HttpRequest, status=200, context_overrides=None):
         instance=request.user_profile
     )
     custom_domain_root_form = UserProfileCustomDomainRootForm(
-        instance=request.user_profile
-    )
-    highlight_copy_format_form = UserProfileHighlightCopyFormatForm(
         instance=request.user_profile
     )
     shortcuts_form = UserProfileShortcutsForm(instance=request.user_profile)
@@ -207,7 +202,6 @@ def general(request: HttpRequest, status=200, context_overrides=None):
             "health_defaults": health_defaults,
             "auto_tagging_rules_form": auto_tagging_rules_form,
             "custom_domain_root_form": custom_domain_root_form,
-            "highlight_copy_format_form": highlight_copy_format_form,
             "shortcuts_form": shortcuts_form,
             "global_settings_form": global_settings_form,
             "primary_language_choices": primary_language_choices,
@@ -221,8 +215,6 @@ def general(request: HttpRequest, status=200, context_overrides=None):
             "settings_general_url": reverse("linkding:settings.general"),
             "enable_refresh_favicons": enable_refresh_favicons,
             "has_snapshot_support": has_snapshot_support,
-            "legacy_search_enabled": LEGACY_SEARCH_ENABLED,
-            **quick_tag_icons,
             "success_message": success_message,
             "error_message": error_message,
             "version_info": version_info,
