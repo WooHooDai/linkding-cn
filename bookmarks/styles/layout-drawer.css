@@ -234,7 +234,7 @@
 
 /* 收起时箭头朝右，展开时朝下（与 .ld-details 同一套箭头语言） */
 [data-drawer-group][open] > .layout-drawer-group-label .ld-chevron {
-  transform: rotate(45deg);
+  transform: rotate(0deg);
 }
 
 /* 只有一行内容的分组（入口类）：标签沿用分组标题的字号与颜色，和上方标题对齐 */
@@ -435,19 +435,8 @@
   }
 }
 
-.ld-chevron {
-  flex: none;
-  width: 6px;
-  height: 6px;
-  margin-inline-end: var(--unit-1);
-  border-right: 1.5px solid var(--secondary-text-color);
-  border-bottom: 1.5px solid var(--secondary-text-color);
-  transform: rotate(-45deg);
-  transition: transform 0.15s ease;
-}
-
 .ld-details[open] > .ld-row-summary .ld-chevron {
-  transform: rotate(45deg);
+  transform: rotate(0deg);
 }
 
 .ld-sub {
@@ -555,7 +544,7 @@
   }
 
   &[aria-expanded="true"] .ld-chevron {
-    transform: rotate(45deg);
+    transform: rotate(0deg);
   }
 }
 

@@ -2616,6 +2616,10 @@ msgstr "管理过滤器"
 msgid "Create bundle from search"
 msgstr "从搜索创建智能过滤器"
 
+#: bookmarks/templates/bookmarks/sidebar/modules/summary/index.html:20
+msgid "User data"
+msgstr "用户数据"
+
 #: bookmarks/templates/bookmarks/sidebar/modules/summary/index.html:22
 msgid "User summary menu"
 msgstr "用户概览菜单"

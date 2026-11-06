@@ -1,8 +1,8 @@
 {% load i18n %}
 {% with toggle_class=toggle_class|default:"folder-toggle" %}
 <button class="{{ toggle_class }}" aria-expanded="true" type="button" title="{% translate 'Expand or collapse' %}">
-  <svg class="icon" width="14" height="14" viewBox="0 0 20 20" fill="none">
-    <polyline points="6 8 10 12 14 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <svg class="ld-chevron icon" width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+    <polyline points="6 8 10 12 14 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
 </button>
 {% endwith %}

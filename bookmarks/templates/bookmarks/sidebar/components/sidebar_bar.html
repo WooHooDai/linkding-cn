@@ -1,11 +1,11 @@
 {% load i18n %}
 {% comment %}
-侧边栏顶栏：全部展开 / 全部折叠（与「布局」抽屉标题栏同一对按钮）+ 关闭。
+侧边栏顶栏：左侧当前用户，右侧全部展开 / 全部折叠（与「布局」抽屉标题栏同一对按钮）+ 关闭。
 关闭按钮只在窄屏与宽屏浮层模式下出现，常驻模式下侧边栏没有可关的东西。
 {% endcomment %}
 <div class="sidebar-bar">
-  <span class="sidebar-bar-label">{% translate "Sidebar" %}</span>
-  <div class="sidebar-bar-actions">
+  <span class="sidebar-bar-user" title="{{ request.user.username }}">{{ request.user.username }}</span>
+  <div class="sidebar-bar-actions ld-icon-btn-group">
     <button type="button" class="ld-icon-btn"
             data-sidebar-expand-all disabled
             aria-label="{% translate 'Expand all' %}" title="{% translate 'Expand all' %}">
@@ -26,16 +26,16 @@
         <path d="M7 17l5 -5l5 5"></path>
       </svg>
     </button>
-    <button type="button" class="btn btn-noborder sidebar-close-btn"
-            data-sidebar-close
-            aria-label="{% translate 'Close' %}" title="{% translate 'Close' %}">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-           stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-           stroke-linejoin="round" aria-hidden="true">
-        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-        <path d="M18 6l-12 12"/>
-        <path d="M6 6l12 12"/>
-      </svg>
-    </button>
   </div>
+  <button type="button" class="btn btn-noborder sidebar-close-btn"
+          data-sidebar-close
+          aria-label="{% translate 'Close' %}" title="{% translate 'Close' %}">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+         stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+         stroke-linejoin="round" aria-hidden="true">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <path d="M18 6l-12 12"/>
+      <path d="M6 6l12 12"/>
+    </svg>
+  </button>
 </div>

@@ -1,30 +1,33 @@
 {% load i18n %}
 {% comment %}
 抽屉标题栏：全部展开 / 全部折叠（作用于当前页签的分组）+ 关闭。
+批量按钮与右侧边栏顶栏共用 .ld-icon-btn-group；关闭留在组外，和批量操作分开。
 {% endcomment %}
 <div class="layout-drawer-header">
   <span class="layout-drawer-title">{% translate "Layout" %}</span>
   <div class="layout-drawer-header-actions">
-    <button type="button" class="ld-icon-btn"
-            data-layout-groups-expand
-            aria-label="{% translate 'Expand all' %}" title="{% translate 'Expand all' %}">
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-           stroke-linejoin="round" aria-hidden="true">
-        <path d="M7 6l5 5l5 -5"></path>
-        <path d="M7 12l5 5l5 -5"></path>
-      </svg>
-    </button>
-    <button type="button" class="ld-icon-btn"
-            data-layout-groups-collapse
-            aria-label="{% translate 'Collapse all' %}" title="{% translate 'Collapse all' %}">
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-           stroke-linejoin="round" aria-hidden="true">
-        <path d="M7 11l5 -5l5 5"></path>
-        <path d="M7 17l5 -5l5 5"></path>
-      </svg>
-    </button>
+    <div class="ld-icon-btn-group">
+      <button type="button" class="ld-icon-btn"
+              data-layout-groups-expand
+              aria-label="{% translate 'Expand all' %}" title="{% translate 'Expand all' %}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+          <path d="M7 6l5 5l5 -5"></path>
+          <path d="M7 12l5 5l5 -5"></path>
+        </svg>
+      </button>
+      <button type="button" class="ld-icon-btn"
+              data-layout-groups-collapse
+              aria-label="{% translate 'Collapse all' %}" title="{% translate 'Collapse all' %}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+          <path d="M7 11l5 -5l5 5"></path>
+          <path d="M7 17l5 -5l5 5"></path>
+        </svg>
+      </button>
+    </div>
     <button type="button" class="btn btn-noborder layout-drawer-close"
             data-layout-drawer-close
             aria-label="{% translate 'Close' %}" title="{% translate 'Close' %}">

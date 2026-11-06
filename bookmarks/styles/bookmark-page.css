@@ -62,6 +62,8 @@
       background: var(--body-color);
       box-shadow: -2px 0 12px rgba(0, 0, 0, 0.15);
       padding: var(--unit-4);
+      padding-top: 0;
+      margin-top: 0;
       scrollbar-gutter: auto;
       /* 默认停在视口右侧之外，等 sidebar-visible 才滑进来：
          与左侧布局抽屉同一条语言——面板从自己贴的那条边进退 */
@@ -140,6 +142,7 @@ body.sidebar-push
       box-shadow: -2px 0 12px rgba(0, 0, 0, 0.15);
       transform: translateX(100%);
       padding: var(--unit-4);
+      margin-top: 0;
       scrollbar-gutter: auto;
       padding-right: var(--unit-4);
     }
@@ -198,23 +201,53 @@ body.sidebar-push
   }
 }
 
-/* 侧边栏顶栏：标题 + 全部展开 / 全部折叠（+ 窄屏与浮层下的关闭） */
+/* 侧边栏顶栏：两颗批量按钮并成一组贴右；关闭（窄屏与浮层下才有）在它外侧。
+   整条吸顶——侧边栏展开后很长，全部折叠要随时够得着；下面一条细线与模块标题同一语言，
+   让它读作面板工具条，而不是一枚孤零零漂在顶上的控件 */
 .sidebar-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--unit-2);
-  margin-bottom: var(--unit-4);
+  background: var(--body-color);
+  /* 与左侧书签工具栏同规格：36 标题行 + 上下各 8 + 1 边框，内容在其中垂直居中 */
+  height: calc(var(--control-size-lg) + 2 * var(--unit-2) + var(--border-width));
+  /* 工具条与内容的分界；第一个模块上方不再另画上线，中间不留空白 */
+  margin-bottom: 0;
+  border-bottom: var(--border-width) solid var(--sidebar-divider-color);
+
+  /* 浮层模式的内边距不随吸顶走，用同色底盖住；常驻模式没有这段 padding，
+     溢出的部分会被 .sidebar 的滚动容器裁掉 */
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: var(--unit-6);
+    background: inherit;
+  }
 }
-.sidebar-bar-label {
+
+/* 高亮页没有左侧标题栏，顶栏不必与它对高，用矮一档的工具条 */
+.highlights-page .sidebar-bar {
+  height: calc(var(--control-size) + 2 * var(--unit-2) + var(--border-width));
+}
+
+/* 用户名：这一行本来只有右侧两颗按钮，左侧靠它变成真正的面板标题 */
+.sidebar-bar-user {
+  margin-right: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--font-size-lg);
   font-weight: 600;
 }
-.sidebar-bar-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--unit-1);
-}
+
 .sidebar-bar .sidebar-close-btn {
   display: none;
   padding: 0;
@@ -660,7 +693,8 @@ button.btn-link.quick-tag-btn.active:focus {
 }
 
 .folder-toggle,
-.folder-toggle-placeholder {
+.folder-toggle-placeholder,
+.section-toggle {
   width: 22px;
   display: inline-flex;
   flex-shrink: 0;
@@ -676,26 +710,31 @@ button.btn-link.quick-tag-btn.active:focus {
   vertical-align: middle;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   transition: color 0.2s;
-  color: #888;
+  color: var(--secondary-text-color);
 
   &:hover {
-    color: #333;
+    color: var(--text-color);
+
+    & .ld-chevron {
+      stroke: var(--text-color);
+    }
   }
 
   &:focus {
     outline: none;
   }
 
-  & .icon {
-    transition: transform 0.2s;
+  & .ld-chevron {
+    margin: 0;
   }
 
-  &[aria-expanded="false"] .icon {
+  &[aria-expanded="false"] .ld-chevron {
     transform: rotate(-90deg);
   }
 
-  &[aria-expanded="true"] .icon {
+  &[aria-expanded="true"] .ld-chevron {
     transform: rotate(0deg);
   }
 }
@@ -1438,11 +1477,6 @@ ul.bookmark-list {
   --summary-panel-separator-size: 1rem;
   --summary-heatmap-visible-columns: 15;
   --summary-heatmap-min-column-width: 1.05rem;
-  margin-bottom: var(--unit-4);
-
-  & .section-header {
-    margin-bottom: var(--unit-3);
-  }
 
   & .section-title {
     align-items: center;
@@ -2093,6 +2127,14 @@ ul.bookmark-list {
 
 
 .sidebar {
+  /* 侧边栏里的横向分隔线（顶栏工具条、相邻模块之间）共用一个色。
+     直接用 --secondary-border-color 会比页面里其他细线重一档，顶栏那条尤其显眼 */
+  --sidebar-divider-color: color-mix(
+    in srgb,
+    var(--secondary-border-color) 55%,
+    var(--body-color)
+  );
+
   & .section-title .dropdown-toggle {
     padding: 0;
     border: 0;
@@ -2112,11 +2154,16 @@ ul.bookmark-list {
   }
   &[data-sticky-on="true"] {
     position: sticky;
+    /* 顶栏和左侧标题行同高，就得从上边缘起重合：列表标题行靠 margin-top: -8px 上移，
+       侧边栏跟着上移 8px、并让顶栏贴着容器顶（静止 80、吸顶 0 都与它一致）。
+       浮层模式会把 margin-top 覆盖回 0 */
     top: 0;
+    margin-top: calc(-1 * var(--unit-2));
+    max-height: var(--app-viewport-height);
     align-self: flex-start;
     z-index: 10;
     background: var(--body-color);
-    padding-top: var(--unit-2);
+    padding-top: 0;
     padding-bottom: var(--unit-2);
     margin-bottom: var(--unit-4);
     overflow-y: auto;

@@ -48,7 +48,10 @@ class CollapseButtonBehavior extends Behavior {
       COLLAPSE_KEY_MAP[element.dataset.toggleStorageKey] || null;
     this.targetSelector =
       element.dataset.toggleTargetSelector || ".section-content";
-    this.toggleBtn = element.querySelector("button");
+    // 标题行里设置菜单可能排在开合按钮前面，不能按「第一个按钮」认
+    this.toggleBtn =
+      element.querySelector(".section-toggle") ||
+      element.querySelector("button");
     this.content = element.querySelector(this.targetSelector);
 
     this.onClick = this.onClick.bind(this);

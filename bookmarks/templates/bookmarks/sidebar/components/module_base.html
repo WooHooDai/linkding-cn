@@ -10,11 +10,8 @@ Use via `{% extends "bookmarks/sidebar/components/module_base.html" %}` and impl
   <div class="section-header no-wrap">
     <div class="section-title">
       <h2 id="{% block heading_id %}section-heading{% endblock %}">{% block title %}{% endblock %}</h2>
-      {% block collapse_button %}
-        {% include "bookmarks/sidebar/components/collapsed_button.html" with toggle_class="section-toggle" %}
-      {% endblock %}
       {% block menu %}
-        <ld-dropdown class="dropdown dropdown-right ml-auto">
+        <ld-dropdown class="dropdown dropdown-right">
           <button class="btn btn-noborder dropdown-toggle" 
                   aria-label="{% block dropdown_label %}{% endblock %}">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -27,6 +24,9 @@ Use via `{% extends "bookmarks/sidebar/components/module_base.html" %}` and impl
             {% block dropdown_items %}{% endblock %}
           </ul>
         </ld-dropdown>
+      {% endblock %}
+      {% block collapse_button %}
+        {% include "bookmarks/sidebar/components/collapsed_button.html" with toggle_class="section-toggle" %}
       {% endblock %}
     </div>
   </div>

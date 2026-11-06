@@ -56,6 +56,31 @@
   }
 }
 
+/* 24 + 4 的排布让两颗按钮的中心落在下方模块标题行的设置/开合按钮上，形成两列；
+   高度沿用列表工具栏按钮的 32px */
+.ld-icon-btn-group {
+  display: flex;
+  align-items: center;
+  gap: var(--unit-1);
+
+  & .ld-icon-btn {
+    width: 24px;
+    height: 32px;
+  }
+}
+
+/* 折叠箭头是右侧侧边栏原来的圆头 V 形 SVG；收起朝右、展开朝下 */
+.ld-chevron {
+  flex: none;
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  margin-inline-end: var(--unit-1);
+  stroke: var(--secondary-text-color);
+  transform: rotate(-90deg);
+  transition: transform 0.15s ease;
+}
+
 /* Section header component */
 .section-header {
   border-bottom: solid 1px var(--secondary-border-color);

@@ -1,5 +1,45 @@
 /* 侧边栏模块：拖拽排序 */
 
+/* 分组形式与左侧布局抽屉一致：只在相邻模块之间画一条淡线，每个模块上下各 8px。
+   标题行不画线、也不被上下线夹住，靠对称留白分组，线少才轻 */
+.sidebar > [data-sidebar-module] {
+  /* 内容区收尾的外边距不许外泄，否则会顶开模块的对称留白 */
+  display: flow-root;
+  padding-block: var(--unit-2);
+}
+
+.sidebar > [data-sidebar-module] + [data-sidebar-module] {
+  border-top: var(--border-width) solid var(--sidebar-divider-color);
+}
+
+.sidebar > [data-sidebar-module] > section {
+  /* 标题与内容收尾的外边距留在 section 内，不会折叠出去变成容器里
+     section 之外的空白；容器上下 8px 才始终对称，折叠态也一样 */
+  display: flow-root;
+  border-top: 0;
+  margin-bottom: 0;
+}
+
+.sidebar > [data-sidebar-module] > section > .section-header {
+  border-bottom: 0;
+  height: auto;
+  padding: 0;
+  margin: 0;
+}
+
+/* 标题与内容的间距挂在内容自己身上：折叠时内容 display:none，这段空白跟着消失。
+   挂成标题的下外边距，折叠后那 8px 仍留在 section 里（flow-root 收着不外泄），
+   模块就成了「上 8 下 16」，标题必然偏上 */
+.sidebar > [data-sidebar-module] > section > .section-content {
+  margin-top: var(--unit-2);
+}
+
+/* 内容列表末尾的外边距会留在模块内，破坏上下 8px 的对称留白 */
+.sidebar .section-content > :last-child,
+.sidebar .section-content > :last-child > :last-child {
+  margin-bottom: 0;
+}
+
 /* 模块被关闭时只在 DOM 上隐藏，重新打开无需重载 */
 .sidebar > [data-sidebar-module][hidden] {
   display: none;
@@ -8,6 +48,15 @@
 /* 模块标题行就是拖拽区域，不再放图标，标题与内容才能左对齐 */
 .sidebar > [data-sidebar-module] > section > .section-header {
   cursor: grab;
+}
+
+/* 标题吃掉行内空白：设置菜单与开合按钮一起贴右，开合按钮排在最外侧 */
+.sidebar .section-title h2 {
+  margin-right: auto;
+}
+
+.sidebar .section-toggle {
+  margin-left: 0;
 }
 
 .sidebar.is-sorting-modules > [data-sidebar-module] > section > .section-header {

@@ -1330,7 +1330,8 @@ class BookmarkIndexViewTestCase(
 
             heading = summary.select_one("#sidebar-user-summary-heading")
             self.assertIsNotNone(heading)
-            self.assertEqual(heading.text.strip(), self.user.username)
+            # 用户名挪到了侧边栏顶栏，模块标题固定为「用户数据」
+            self.assertEqual(heading.text.strip(), "用户数据")
             self.assertIsNotNone(summary.select_one(".section-header .section-toggle"))
             self.assertIsNotNone(summary.select_one(".section-header .dropdown"))
             self.assertIsNone(summary.select_one(".summary-avatar"))
