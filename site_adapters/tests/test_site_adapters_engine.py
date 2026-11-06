@@ -181,6 +181,16 @@ class SiteAdaptersEngineTestCase(TestCase):
 
         self.assertEqual(config["process_carousels"], ["faceplate-carousel"])
 
+    def test_snapshot_resolver_includes_precheck_health(self):
+        self.setup_adapter("example.com", {
+            "snapshot": {"precheck_health": True}
+        })
+
+        with override_settings(LD_SITE_ADAPTERS_DIR=self.base_dir):
+            config = get_snapshot_config("https://example.com/post")
+
+        self.assertIs(config["precheck_health"], True)
+
     def test_snapshot_resolver_includes_raw_xml_request_url(self):
         self.setup_adapter("www.reddit.com", {
             "snapshot": {

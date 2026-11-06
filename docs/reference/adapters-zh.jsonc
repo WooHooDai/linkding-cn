@@ -1,6 +1,6 @@
 // ==========================================================================
 //  Site Adapters — 完整字段参考
-//  由 fields.py 自动生成（单一信源）  |  2026-10-26 22:57:21
+//  由 fields.py 自动生成（单一信源）  |  2026-11-06 23:48:54
 //
 //  Re-generate: python scripts/generate-adapters-reference.py
 //  Guide:       docs/site-adapters.md
@@ -197,6 +197,7 @@
         "set_styles": {},                                  // 设置指定元素的内联样式。格式：{"selector": {"prop": "value"}}。支持 !important 和 CSS 自定义属性（--var）。":root" 选择器指向 documentElement。
         "wait_elements": [".notion-scroller"],             // 捕获前等待元素出现。每个条目是一个选择器，"|" 分隔 OR 关系。如 [".a | .b", ".c"] 等待 (".a" 或 ".b") 且 ".c" 同时存在。未匹配的选择器超时后降级执行。
         "wait_elements_timeout": 10,                       // wait_elements 的超时时间（秒）。省略时默认取 min(timeout, 30)。
+        "precheck_health": true,                           // 在启动任何浏览器前先按该域名的 health 配置（http_head_probe + content_check + reason）做一次检查；blocked / dead / missing 即拒绝快照，并把 health 的 reason 作为拒绝原因显示在测试面板。ok、skipped 与探测失败都放行。页面特征只在 health 段声明一次，snapshot 段不重复定义。
         "singlefile_args": {},                             // SingleFile CLI 参数，如 {"--browser-wait-delay": 2000}。
         "toggles": {},                                     // 用户可切换的元素去除。{"id": {"selector": "...", "label": "...", "default": true}}。
         "scripts": [

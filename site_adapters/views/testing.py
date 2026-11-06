@@ -11,6 +11,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from bookmarks.services.snapshot_processor import SnapshotRejectedError
 from bookmarks.services.website_loader import (
     load_website_metadata_for_test,
     normalize_content_type,
@@ -53,6 +54,16 @@ def action(request):
     if act == 'test':
         try:
             return _handle_test(request)
+        except SnapshotRejectedError as exc:
+            # 拒绝是预期判定，不是抓取故障；原因由适配器 health.reason 定义，
+            # 面板只透传，代码里不另造文案（也就无需维护翻译）。
+            logger.info("Site adapter test: snapshot rejected by health check (%s): %s",
+                        exc.status, exc.reason)
+            detail = exc.reason or str(exc)
+            return JsonResponse({
+                'type': request.POST.get('test_type', 'test'),
+                'error': f'({exc.status}) {detail}',
+            })
         except Exception:
             # 不把异常文本（可能含本地路径/目标 URL/嵌入凭据）回显给前端
             logger.exception("Site adapter test failed")

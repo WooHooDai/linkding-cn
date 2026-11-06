@@ -16,6 +16,15 @@ from site_adapters.services.engine.script_runner import run_script, resolve_hook
 logger = logging.getLogger(__name__)
 
 
+class SnapshotRejectedError(singlefile.SingleFileError):
+    """The preflight health check rejected the snapshot before capture."""
+
+    def __init__(self, status: str, reason: str):
+        self.status = status
+        self.reason = reason
+        super().__init__(
+            f"snapshot rejected by preflight health check ({status}): {reason}"
+        )
 
 
 def _snapshot_format(config: dict | None) -> str:
@@ -259,6 +268,38 @@ def _verify_snapshot_cookie(url: str, filepath: str, config: dict) -> bool:
     return False
 
 
+def _reject_by_health(url: str, config: dict | None, username: str = '') -> None:
+    """Reuse the health section's verdict and reason before any browser starts.
+
+    Health checks already follow redirects, inspect content and apply the
+    adapter's ``reason`` text, so page signals stay in one place. A probe that
+    fails (or health being disabled / ok) must never block a snapshot.
+    """
+    if not (config or {}).get("precheck_health"):
+        return
+    # Lazy import: health_checker pulls in the ORM, which the snapshot engine
+    # does not otherwise need at module load time.
+    from bookmarks.models import (
+        HEALTH_STATUS_BLOCKED,
+        HEALTH_STATUS_DEAD,
+        HEALTH_STATUS_MISSING,
+    )
+    from bookmarks.services.health_checker import check_url
+
+    try:
+        result = check_url(url, username=username)
+    except Exception as exc:  # noqa: BLE001 - a failed probe must not block snapshots
+        logger.warning("preflight health check failed, continuing: %s", exc)
+        return
+
+    status = result.get("status")
+    if status not in {
+        HEALTH_STATUS_BLOCKED, HEALTH_STATUS_DEAD, HEALTH_STATUS_MISSING,
+    }:
+        return
+    raise SnapshotRejectedError(status, result.get("reason") or status)
+
+
 def create_snapshot(
     url: str,
     filepath: str,
@@ -268,6 +309,7 @@ def create_snapshot(
     config = get_snapshot_config(url, username=username)
     if config and content_type:
         config["_response_content_type"] = content_type
+    _reject_by_health(url, config, username)
     # Pre-flight: for auto-type cookie sites without cookies, acquire via browser first.
     try:
         cookie_config = config.get("cookie") if config else {}

@@ -339,6 +339,7 @@ data/site_adapters/
 | `set_styles` | `{"selector": {"prop": "value"}}`，支持 `!important` 与 CSS 自定义属性 |
 | `wait_elements` | 捕获前等待元素出现；`"|"` 表示 OR，条目间是 AND；超时降级执行 |
 | `wait_elements_timeout` | 等待超时（秒），默认 `min(timeout, 30)` |
+| `precheck_health` | `true` 时快照前复用 `health` 段的判定与 `reason`；`blocked` / `dead` / `missing` 即拒绝，`ok` / `skipped` / 探测失败都放行 |
 | `singlefile_args` | SingleFile CLI 参数，如 `{"--browser-wait-delay": 2000}` |
 | `toggles` | 用户可切换的保留/移除元素 |
 | `scripts` | 脚本钩子 |
@@ -356,6 +357,8 @@ data/site_adapters/
   "process_lazy_images": ["data-src", "data-original"]
 }
 ```
+
+`precheck_health` 为 true 时，`create_snapshot` 在启动任何浏览器之前调用一次 `check_url()`；判定规则与文案全部来自该域名的 `health` 段（`http_head_probe` + `content_check` + `reason`），页面特征只声明一次。`blocked` / `dead` / `missing` 即抛 `SnapshotRejectedError`（`SingleFileError` 子类），资产标记 `STATUS_FAILURE`、不写盘，已有的 `latest_snapshot` 不受影响，测试面板显示 health 的 `reason`。`ok`、`skipped`（health 被禁用）以及探测本身失败都放行，不会阻断快照。
 
 ### reader：阅读模式
 

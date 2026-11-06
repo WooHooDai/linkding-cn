@@ -1,6 +1,6 @@
 // ==========================================================================
 //  Site Adapters — Complete Field Reference
-//  Auto-generated from fields.py (single source of truth)  |  2026-10-26 22:57:21
+//  Auto-generated from fields.py (single source of truth)  |  2026-11-06 23:48:54
 //
 //  Re-generate: python scripts/generate-adapters-reference.py
 //  Guide:       docs/site-adapters.md
@@ -197,6 +197,7 @@
         "set_styles": {},                                  // Set inline styles on elements. Format: {"selector": {"prop": "value"}}. Supports !important and CSS custom properties (--var). ":root" selector targets documentElement.
         "wait_elements": [".notion-scroller"],             // CSS selectors to wait for before capture. Each entry is a selector; "|" separates OR alternatives. e.g. [".a | .b", ".c"] waits until (".a" OR ".b") AND ".c" are present. Non-matching selectors time out gracefully (capture proceeds with whatever is present).
         "wait_elements_timeout": 10,                       // Timeout (seconds) for wait_elements. When omitted, defaults to min(timeout, 30).
+        "precheck_health": true,                           // Run the domain's health check (http_head_probe, content_check and reason) before starting any browser. A blocked / dead / missing verdict rejects the snapshot and its reason is shown in the test panel; ok, skipped and probe failures let the snapshot proceed. Page signals are declared once in the health section, not repeated here.
         "singlefile_args": {},                             // SingleFile CLI arguments, e.g. {"--browser-wait-delay": 2000}.
         "toggles": {},                                     // User-toggleable element removal. {"toggle-id": {"selector": "...", "label": "...", "default": true}}.
         "scripts": [

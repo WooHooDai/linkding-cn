@@ -10,8 +10,10 @@ from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from bookmarks.models import User
+from bookmarks.services.snapshot_processor import SnapshotRejectedError
 from site_adapters.services.config import parse_jsonc
 from site_adapters.services.config.loader import _cache
+from site_adapters.views import testing
 
 
 class SiteAdaptersViewsTestCase(TestCase):
@@ -749,3 +751,20 @@ class SiteAdaptersViewsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(b"".join(response.streaming_content), b"test")
         self.assertEqual(mock_get.call_count, 2)
+
+    def test_test_action_reports_snapshot_rejection(self):
+        request = RequestFactory().post("/admin/site-adapters/action/", {
+            "action": "test",
+            "test_type": "snapshot",
+            "url": "https://example.com/item",
+        })
+        request.user = User.objects.get(username="site-adapter-user")
+        reason = "分享票据已失效，请在 App 重新复制链接"
+        rejected = SnapshotRejectedError("blocked", reason)
+
+        with mock.patch.object(testing, "_handle_test", side_effect=rejected):
+            payload = json.loads(testing.action(request).content)
+
+        self.assertEqual(payload["type"], "snapshot")
+        self.assertEqual(payload["error"], f"(blocked) {reason}")
+        self.assertNotIn("Test failed", payload["error"])

@@ -276,6 +276,12 @@ SNAPSHOT_FIELDS = {
         "zh": "wait_elements 的超时时间（秒）。省略时默认取 min(timeout, 30)。",
         "example": 10,
     },
+    "precheck_health": {
+        "type": "bool",
+        "en": "Run the domain's health check (http_head_probe, content_check and reason) before starting any browser. A blocked / dead / missing verdict rejects the snapshot and its reason is shown in the test panel; ok, skipped and probe failures let the snapshot proceed. Page signals are declared once in the health section, not repeated here.",
+        "zh": "在启动任何浏览器前先按该域名的 health 配置（http_head_probe + content_check + reason）做一次检查；blocked / dead / missing 即拒绝快照，并把 health 的 reason 作为拒绝原因显示在测试面板。ok、skipped 与探测失败都放行。页面特征只在 health 段声明一次，snapshot 段不重复定义。",
+        "example": True,
+    },
     "singlefile_args": {
         "type": "object",
         "en": 'SingleFile CLI arguments, e.g. {"--browser-wait-delay": 2000}.',

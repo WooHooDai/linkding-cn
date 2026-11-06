@@ -443,6 +443,7 @@ def _build_section_config(full_config: dict, section: str, base_dir: str, userna
         result['toggles'] = section_data.get('toggles', {})
         result['wait_elements'] = section_data.get('wait_elements')
         result['wait_elements_timeout'] = section_data.get('wait_elements_timeout')
+        result['precheck_health'] = section_data.get('precheck_health', False)
         result['remove_elements'], result['keep_elements'] = _apply_toggles(section_data, full_config, username)
 
     elif section == 'reader':
