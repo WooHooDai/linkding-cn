@@ -843,10 +843,9 @@ ul.bookmark-list.view-table .cell-tags .quick-edit-tags-container .form-autocomp
 /* ── 悬停操作栏：挂在操作列上，整行高、无边框圆角阴影、底色跟行 ── */
 ul.bookmark-list.view-table li[ld-bookmark-item] .actions {
   position: absolute;
-  /* 挂在操作列左缘，随列一起吸附。顶部对齐向下扩展：单行时与居中几乎重合，
-     折行变高时只向下溢出，不会向上探进吸顶表头被遮挡（第一行尤其明显） */
   right: 100%;
-  top: 0;
+  top: 50%;
+  transform: translateY(-50%);
   width: max-content;
   max-width: var(--ld-actions-max-w, 420px);
   /* 不做滚动/裁切：健康检查浮窗挂在面板内，overflow 会把它困在里面 */
@@ -864,6 +863,16 @@ ul.bookmark-list.view-table li[ld-bookmark-item] .actions {
   border: 1px solid var(--secondary-border-color);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+@supports (align-self: anchor-center) {
+  ul.bookmark-list.view-table li[ld-bookmark-item] .actions {
+    top: 0;
+    bottom: 0;
+    height: max-content;
+    transform: none;
+    align-self: safe center;
+  }
 }
 
 /* 显隐由行尾操作入口驱动（悬浮/点击），与「自动隐藏工具栏」偏好无关。
