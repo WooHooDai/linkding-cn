@@ -1638,6 +1638,102 @@ class BookmarkListTemplateTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertEqual(header.select_one(".group-count").get_text(strip=True), "3")
         self.assertIsNone(header.select_one(".group-more"))
 
+    def test_group_by_date_keeps_groups_contiguous_under_other_sorts(self):
+        # 分组是主序：按标题排序时同月条目仍聚成一段，月份只会出现一次，
+        # 组头计数等于该段条目数（组内再按标题升序）；两组条数相同 → 日期序兜底
+        now = timezone.now()
+        month_ago = now - datetime.timedelta(days=40)
+        self.setup_bookmark(title="a old", added=month_ago)
+        self.setup_bookmark(title="b old", added=month_ago)
+        self.setup_bookmark(title="a new", added=now)
+        self.setup_bookmark(title="b new", added=now)
+
+        html = self.render_template(url="/bookmarks?sort=title_asc")
+        soup = self.make_soup(html)
+
+        headers = soup.select("ul.bookmark-list > li.group-header")
+        keys = [h.get("data-group-key") for h in headers]
+        self.assertEqual(keys, ["today", timezone.localdate(month_ago).strftime("%Y-%m")])
+
+        for header in headers:
+            titles = []
+            for el in header.find_next_siblings():
+                if "group-header" in (el.get("class") or []):
+                    break
+                if el.has_attr("ld-bookmark-item"):
+                    titles.append(el.select_one(".title-link").get_text(strip=True))
+            count = int(header.select_one(".group-count").get_text(strip=True))
+            self.assertEqual(count, len(titles))
+            self.assertEqual(titles, sorted(titles))
+
+    def test_group_order_sorts_by_group_size_desc_when_filtered(self):
+        # 筛选之后组序按组内条数降序：更早的月份条数多就排在 today 之前
+        now = timezone.now()
+        month_ago = now - datetime.timedelta(days=40)
+        self.setup_bookmark(title="today", added=now, unread=True)
+        self.setup_bookmark(title="old a", added=month_ago, unread=True)
+        self.setup_bookmark(title="old b", added=month_ago, unread=True)
+
+        html = self.render_template(url="/bookmarks?unread=yes&sort=title_asc")
+        soup = self.make_soup(html)
+
+        keys = [
+            h.get("data-group-key")
+            for h in soup.select("ul.bookmark-list > li.group-header")
+        ]
+        self.assertEqual(keys, [timezone.localdate(month_ago).strftime("%Y-%m"), "today"])
+
+    def test_group_order_keeps_date_order_when_sorting_by_date(self):
+        # 即使有筛选，按添加时间排序时组序仍跟着时间走
+        now = timezone.now()
+        month_ago = now - datetime.timedelta(days=40)
+        self.setup_bookmark(title="today", added=now, unread=True)
+        self.setup_bookmark(title="old a", added=month_ago, unread=True)
+        self.setup_bookmark(title="old b", added=month_ago, unread=True)
+
+        html = self.render_template(url="/bookmarks?unread=yes")
+        soup = self.make_soup(html)
+
+        keys = [
+            h.get("data-group-key")
+            for h in soup.select("ul.bookmark-list > li.group-header")
+        ]
+        self.assertEqual(keys, ["today", timezone.localdate(month_ago).strftime("%Y-%m")])
+
+    def test_group_order_keeps_date_order_when_unfiltered(self):
+        # 无筛选（纯浏览）时即使排序不是日期，组序也按日期
+        now = timezone.now()
+        month_ago = now - datetime.timedelta(days=40)
+        self.setup_bookmark(title="today", added=now)
+        self.setup_bookmark(title="old a", added=month_ago)
+        self.setup_bookmark(title="old b", added=month_ago)
+
+        html = self.render_template(url="/bookmarks?sort=title_asc")
+        soup = self.make_soup(html)
+
+        keys = [
+            h.get("data-group-key")
+            for h in soup.select("ul.bookmark-list > li.group-header")
+        ]
+        self.assertEqual(keys, ["today", timezone.localdate(month_ago).strftime("%Y-%m")])
+
+    def test_group_order_keeps_future_dated_items_in_one_group(self):
+        # 未来日期会被 _bookmark_group_key 归入 this_week，SQL 分组区间必须与之一致，
+        # 否则同组被拆到两个排序位置上（出现重复组头）
+        now = timezone.now()
+        month_ago = now - datetime.timedelta(days=40)
+        self.setup_bookmark(title="week", added=now - datetime.timedelta(days=3))
+        self.setup_bookmark(title="future", added=now + datetime.timedelta(days=1))
+        self.setup_bookmark(title="old", added=month_ago)
+
+        soup = self.make_soup(self.render_template())
+        keys = [
+            h.get("data-group-key")
+            for h in soup.select("ul.bookmark-list > li.group-header")
+        ]
+        self.assertEqual(len(keys), len(set(keys)))
+        self.assertIn("this_week", keys)
+
     def test_group_key_computation(self):
         from bookmarks.views.contexts import _bookmark_group_key
 

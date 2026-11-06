@@ -731,18 +731,19 @@ def _base_bookmarks_query(
                 )
             )
 
+            descending = search.sort == BookmarkSearch.SORT_TITLE_DESC
             # For SQLite, if the ICU extension is loaded, use the custom collation
             # loaded into the connection. This results in an improved sort order for
             # unicode characters (umlauts, etc.)
+            # 方向写在排序项上，不用 order_by().reverse()：reverse() 翻转的是整个查询，
+            # 分组视图要在排序键之前插入分组键，不能被连带翻转。
             if settings.USE_SQLITE and settings.USE_SQLITE_ICU_EXTENSION:
-                order_field = Collate("effective_title", "ICU")
+                collation = Collate("effective_title", "ICU")
+                order_field = collation.desc() if descending else collation.asc()
             else:
-                order_field = "effective_title"
+                order_field = "-effective_title" if descending else "effective_title"
 
-            if search.sort == BookmarkSearch.SORT_TITLE_ASC:
-                query_set = query_set.order_by(order_field)
-            elif search.sort == BookmarkSearch.SORT_TITLE_DESC:
-                query_set = query_set.order_by(order_field).reverse()
+            query_set = query_set.order_by(order_field)
         elif search.sort == BookmarkSearch.SORT_ADDED_ASC:
             query_set = query_set.order_by("date_added")
         elif search.sort == BookmarkSearch.SORT_ADDED_DESC:

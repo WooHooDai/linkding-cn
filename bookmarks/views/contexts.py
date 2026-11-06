@@ -3,14 +3,15 @@ import calendar
 import json
 import re
 import urllib.parse
+from collections import Counter
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.db import models
-from django.db.models import Count
-from django.db.models.functions import TruncDate
+from django.db.models import Case, Count, Q, Subquery, When
+from django.db.models.functions import TruncDate, TruncMonth
 from django.http import Http404, QueryDict
 from django.urls import reverse
 from django.utils import timezone
@@ -118,6 +119,210 @@ def _bookmark_group_key(date_added) -> str:
     if d.year == today.year and d.month == today.month:
         return "this_month"
     return d.strftime("%Y-%m")
+
+
+_GROUP_SUB_KEYS = ("today", "yesterday", "this_week", "this_month")
+
+# 这些排序会给查询加聚合注解（并且 JOIN annotations），组计数不能直接在其上聚合
+_AGGREGATE_SORTS = (
+    BookmarkSearch.SORT_HIGHLIGHTS_ASC,
+    BookmarkSearch.SORT_HIGHLIGHTS_DESC,
+    BookmarkSearch.SORT_ANNOTATIONS_ASC,
+    BookmarkSearch.SORT_ANNOTATIONS_DESC,
+)
+
+
+def _bookmark_group_interval(key: str, today: date, tzinfo):
+    """分组键 → 本地时间区间 [start, end)，end 为 None 表示只有下界。
+
+    区间必须和 _bookmark_group_key 的判定逐条对齐，否则同一个组会被拆到两个
+    排序位置上。
+    """
+    monday = today - timedelta(days=today.weekday())
+
+    def at_midnight(day):
+        return datetime.combine(day, datetime.min.time(), tzinfo=tzinfo)
+
+    if key == "today":
+        return at_midnight(today), at_midnight(today + timedelta(days=1))
+    if key == "yesterday":
+        return at_midnight(today - timedelta(days=1)), at_midnight(today)
+    if key == "this_week":
+        # 周一及以后、且不属于今天/昨天的都算 this_week（含未来日期），故只有下界，
+        # 互斥靠 CASE 里先排 today / yesterday
+        return at_midnight(monday), None
+    if key == "this_month":
+        return at_midnight(today.replace(day=1)), at_midnight(monday)
+
+    year, month = (int(part) for part in key.split("-"))
+    next_year, next_month = (year + 1, 1) if month == 12 else (year, month + 1)
+    return at_midnight(date(year, month, 1)), at_midnight(
+        date(next_year, next_month, 1)
+    )
+
+
+def _bookmark_group_order_keys(search: BookmarkSearch, ordered_keys):
+    """分组键前置到排序键之前，组内再按所选排序。
+
+    - 按条数排（见 _group_order_by_size）：用「分组区间 → 组序号」的 CASE，序号与
+      ordered_keys 一一对应，组序因此只在一处定义。
+    - 按日期排且排序本身就是添加时间：原排序已经满足组序，不加键（保留索引路径）。
+    - 按日期排但排序是别的字段：补「月 + 组内秩」两个键（秩 0=today … 3=this_month、
+      4=更早的自然月），把同组聚成连续一段。
+    """
+    if _group_order_by_size(search):
+        whens = []
+        for position, key in enumerate(ordered_keys):
+            condition = _bookmark_group_condition(key)
+            if condition is not None:
+                whens.append(When(condition, then=position))
+        position_key = Case(
+            *whens, default=len(ordered_keys), output_field=models.IntegerField()
+        )
+        return [position_key.asc()]
+
+    if search.sort in (
+        BookmarkSearch.SORT_ADDED_ASC,
+        BookmarkSearch.SORT_ADDED_DESC,
+    ):
+        return []
+
+    return _bookmark_group_date_keys(search.sort == BookmarkSearch.SORT_ADDED_ASC)
+
+
+def _bookmark_group_condition(key: str):
+    """分组键 → Q 条件，认不出（区间为空）时返回 None。"""
+    today = timezone.localdate()
+    start, end = _bookmark_group_interval(key, today, timezone.get_current_timezone())
+    if end is not None and start >= end:
+        return None
+    condition = Q(date_added__gte=start)
+    if end is not None:
+        condition &= Q(date_added__lt=end)
+    return condition
+
+
+def _bookmark_group_date_keys(ascending: bool):
+    month = TruncMonth("date_added", tzinfo=timezone.get_current_timezone())
+    rank = _bookmark_group_rank()
+    if ascending:
+        return [month.asc(), rank.desc()]
+    return [month.desc(), rank.asc()]
+
+
+def _bookmark_group_sort_order(search: BookmarkSearch, group_counts):
+    """分组的先后顺序（唯一真相）：先按日期序排，再按条数稳定排序。
+
+    日期序默认新组在前、added_asc 时老组在前；按条数排时同数保留日期序。
+    """
+    ascending = search.sort == BookmarkSearch.SORT_ADDED_ASC
+    ordered = sorted(
+        group_counts, key=lambda key: _bookmark_group_date_order(key, ascending)
+    )
+    if _group_order_by_size(search):
+        ordered.sort(key=lambda key: -group_counts[key])
+    return ordered
+
+
+def _bookmark_group_date_order(key: str, ascending: bool):
+    """分组键在日期序中的位置，口径与 _bookmark_group_date_keys 一致。"""
+    if key in _GROUP_SUB_KEYS:
+        rank = _GROUP_SUB_KEYS.index(key)
+        return (1, -rank) if ascending else (0, rank)
+    year, month = (int(part) for part in key.split("-"))
+    month_index = year * 12 + month
+    return (0, month_index) if ascending else (1, -month_index)
+
+
+def _bookmark_group_counts(query_set, search: BookmarkSearch) -> Counter:
+    """各组在完整结果集里的条数。
+
+    在 SQL 里聚合，不把每行拉进 Python。清掉排序是因为 values()+annotate() 会把
+    order_by 的字段带进 GROUP BY；按高亮/批注数排序时查询还带聚合注解和
+    annotations 的 JOIN，直接聚合会重复计数，改走一层 id 子查询。
+    """
+    base = query_set.order_by()
+    if search.sort in _AGGREGATE_SORTS:
+        base = Bookmark.objects.filter(
+            id__in=Subquery(query_set.order_by().values("id"))
+        )
+
+    rows = (
+        base.annotate(
+            _group_month=TruncMonth(
+                "date_added", tzinfo=timezone.get_current_timezone()
+            ),
+            _group_rank=_bookmark_group_rank(),
+        )
+        .values("_group_month", "_group_rank")
+        .annotate(total=Count("id"))
+        .values_list("_group_month", "_group_rank", "total")
+    )
+    counts = Counter()
+    for month, rank, total in rows:
+        key = _GROUP_SUB_KEYS[rank] if rank < len(_GROUP_SUB_KEYS) else f"{month:%Y-%m}"
+        counts[key] += total
+    return counts
+
+
+def _bookmark_group_rank():
+    """分组键的秩：0=today … 3=this_month、4=更早的自然月（靠月份键区分）。"""
+    today = timezone.localdate()
+    tz = timezone.get_current_timezone()
+
+    def at_midnight(day):
+        return datetime.combine(day, datetime.min.time(), tzinfo=tz)
+
+    return Case(
+        When(date_added__gte=at_midnight(today), then=0),
+        When(date_added__gte=at_midnight(today - timedelta(days=1)), then=1),
+        When(
+            date_added__gte=at_midnight(today - timedelta(days=today.weekday())), then=2
+        ),
+        When(date_added__gte=at_midnight(today.replace(day=1)), then=3),
+        default=4,
+        output_field=models.IntegerField(),
+    )
+
+
+# 判定「结果被筛过」的参数（排序、分页、集内浏览不算）
+_GROUP_FILTER_KEYS = (
+    "q",
+    "shared",
+    "unread",
+    "tagged",
+    "date_filter_by",
+    "date_filter_start",
+    "date_filter_end",
+    "modified_since",
+    "added_since",
+    "deleted_since",
+    "html_snapshot",
+    "preview_image",
+    "favicon",
+    "highlight",
+    "annotation",
+    "health_status",
+)
+
+
+def _search_has_filters(search: BookmarkSearch) -> bool:
+    return any(
+        getattr(search, key) != BookmarkSearch.defaults[key]
+        for key in _GROUP_FILTER_KEYS
+    )
+
+
+def _group_order_by_size(search: BookmarkSearch) -> bool:
+    """组序按组内条数降序（把命中最多的组提到最前）。
+
+    只在结果被筛过、且排序不是按添加时间时启用：按添加时间排时列表本身就是时间序，
+    组序必须跟着时间走，否则组间与组内两条时间线会互相矛盾。
+    """
+    return _search_has_filters(search) and search.sort not in (
+        BookmarkSearch.SORT_ADDED_ASC,
+        BookmarkSearch.SORT_ADDED_DESC,
+    )
 
 
 from bookmarks.views import access
@@ -1442,6 +1647,18 @@ class BookmarkListContext:
         self.view = BOOKMARK_VIEWS[self.view_mode]
 
         query_set = request_context.get_bookmark_query_set(self.search)
+        # 分组优先于排序：组序由 _bookmark_group_sort_order 决定（筛过按条数降序，
+        # 否则按日期序），组内再按所选排序。组头计数、「第 x-y 条 / 共 N 条」都建立
+        # 在「同组连续」这个前提上。
+        self.group_by_date = user_profile.group_by_date
+        group_counts = Counter()
+        group_order = []
+        if self.group_by_date:
+            group_counts = _bookmark_group_counts(query_set, self.search)
+            group_order = _bookmark_group_sort_order(self.search, group_counts)
+            group_keys = _bookmark_group_order_keys(self.search, group_order)
+            if group_keys:
+                query_set = query_set.order_by(*group_keys, *query_set.query.order_by)
         page_number = request.GET.get("page")
         paginator = Paginator(query_set, user_profile.items_per_page)
         bookmarks_page = paginator.get_page(page_number)
@@ -1482,26 +1699,21 @@ class BookmarkListContext:
         ]
         # 表格视图下日期是列，分组头与它抢同一层语义 → 自动关闭
         # 日期分组在表格视图同样生效：组头行跨全行渲染
-        self.group_by_date = user_profile.group_by_date
-        # 组计数：总数统计自完整结果集（跨页），本页数量用于判断是否需要翻页引导
+        # 组计数：总数统计自完整结果集（跨页），本页数量用于判断是否需要翻页引导。
+        # 组起点由「组序 + 各组条数」累加得出，不必再扫一遍结果集。
         if self.group_by_date:
-            from collections import Counter
-
             page_counts = Counter(item.group_key for item in self.items)
             group_starts = {}
-            total_counts = Counter()
-            for idx, added in enumerate(query_set.values_list("date_added", flat=True)):
-                key = _bookmark_group_key(added)
-                total_counts[key] += 1
-                if key not in group_starts:
-                    # 该组第一条在完整结果集中的全局序号（1-based）
-                    group_starts[key] = idx + 1
+            position = 1
+            for key in group_order:
+                group_starts[key] = position
+                position += group_counts[key]
             # 本页第一条的全局序号；组首条之前的条目数即其在 items 中的下标
             page_start = bookmarks_page.start_index()
             seen_keys = set()
             for page_idx, item in enumerate(self.items):
                 key = item.group_key
-                item.group_total = total_counts[key]
+                item.group_total = group_counts[key]
                 item.group_page_count = page_counts[key]
                 if key not in seen_keys:
                     seen_keys.add(key)
