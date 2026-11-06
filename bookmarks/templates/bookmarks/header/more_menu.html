@@ -1,8 +1,8 @@
 {% load i18n %}
 {% comment %}
-窄屏「更多」菜单：随机按钮在窄屏常驻，批量编辑与布局没地方放，收进这里。
-菜单只常驻 DOM、由 .header-controls 的 has-random 决定显隐——抽屉里开关随机按钮后
-不用刷新就能在「窄屏三个按钮」与「随机 + 更多」之间切换。显示偏好仍统一在布局抽屉里。
+窄屏「更多」菜单：工具栏第二行收起或放不下时，批量编辑、随机、布局、侧边栏从这里进入。
+菜单常驻 DOM、由 .header-more 的显隐决定是否可见——抽屉里改偏好后不用刷新就能切换。
+显示偏好仍统一在布局抽屉里。
 {% endcomment %}
 <ld-dropdown class="header-more dropdown dropdown-right" data-header-more
              data-save-url="{% url 'linkding:settings.save' %}">
@@ -33,6 +33,15 @@
         </span>
       </button>
     {% endif %}
+    {% if menu_random %}
+      <button type="button" class="header-pref-row header-action-row header-menu-action"
+              data-menu-action="random">
+        <span class="header-pref-label">{% translate 'Random' %}</span>
+        <span class="header-action-btn" aria-hidden="true">
+          <svg width="20" height="20"><use href="#ld-icon-shuffle"></use></svg>
+        </span>
+      </button>
+    {% endif %}
     <button type="button" class="header-pref-row header-action-row header-menu-action"
             data-menu-action="layout">
       <span class="header-pref-label">{% translate 'Layout' %}</span>
@@ -46,5 +55,21 @@
         </svg>
       </span>
     </button>
+    {% if menu_sidebar %}
+      <button type="button" class="header-pref-row header-action-row header-menu-action"
+              data-menu-action="sidebar">
+        <span class="header-pref-label">{% translate 'Sidebar' %}</span>
+        <span class="header-action-btn" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <rect x="4" y="4" width="6" height="6" rx="1"/>
+            <rect x="4" y="14" width="6" height="6" rx="1"/>
+            <rect x="14" y="14" width="6" height="6" rx="1"/>
+            <circle cx="17" cy="7" r="3"/>
+          </svg>
+        </span>
+      </button>
+    {% endif %}
   </div>
 </ld-dropdown>

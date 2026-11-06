@@ -37,6 +37,7 @@ from bookmarks.middlewares import (
 from bookmarks.models import (
     Bookmark,
     BookmarkSearch,
+    BookmarkSearchForm,
     GlobalSettings,
     GlobalSettingsForm,
     UserProfile,
@@ -292,6 +293,7 @@ def index(request: HttpRequest):
         {
             "page_title": _("Bookmarks - Linkding"),
             "bookmark_list": bookmark_list,
+            "sort_choices": BookmarkSearchForm.SORT_CHOICES,
             "sidebar_summary": sidebar_summary,
             "bundles": bundles,
             "domains": domains,
@@ -367,6 +369,7 @@ def archived(request: HttpRequest):
         {
             "page_title": _("Archived bookmarks - Linkding"),
             "bookmark_list": bookmark_list,
+            "sort_choices": BookmarkSearchForm.SORT_CHOICES,
             "bundles": bundles,
             "domains": domains,
             "tag_cloud": tag_cloud,
@@ -416,6 +419,7 @@ def shared(request: HttpRequest):
         {
             "page_title": _("Shared bookmarks - Linkding"),
             "bookmark_list": bookmark_list,
+            "sort_choices": BookmarkSearchForm.SORT_CHOICES,
             "domains": domains,
             "tag_cloud": tag_cloud,
             "author_cloud": author_cloud,
@@ -470,6 +474,7 @@ def trashed(request: HttpRequest):
         {
             "page_title": _("Trash - Linkding"),
             "bookmark_list": bookmark_list,
+            "sort_choices": BookmarkSearchForm.SORT_CHOICES,
             "bundles": bundles,
             "domains": domains,
             "tag_cloud": tag_cloud,

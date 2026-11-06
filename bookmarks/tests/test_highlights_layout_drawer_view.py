@@ -57,23 +57,22 @@ class HighlightsLayoutDrawerViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMix
         self.assertIsNotNone(panel)
         self.assertFalse(panel.has_attr("hidden"))
 
-    def test_toolbar_flags_random_state_for_narrow_layout(self):
-        # 窄屏工具栏靠这个类在「随机 + 更多」与三个按钮平铺之间切换
+    def test_toolbar_splits_search_and_list_controls(self):
         soup = self.render()
-        toolbar = soup.select_one(".highlights-toolbar")
-        self.assertIsNotNone(toolbar)
-        self.assertTrue("has-random" in toolbar.get("class"))
-        actions = [
-            action.get("data-menu-action")
-            for action in soup.select(".highlights-toolbar .header-more-panel .header-menu-action")
-        ]
-        self.assertEqual(actions, ["bulk-edit", "layout"])
+        main = soup.select_one(".section-header.header-stack")
+        tools = main.select_one(".header-row-tools")
+        self.assertIsNotNone(tools)
 
-        self.user.profile.highlights_enable_random_button = False
-        self.user.profile.save()
-        soup = self.render()
-        toolbar = soup.select_one(".highlights-toolbar")
-        self.assertNotIn("has-random", toolbar.get("class"))
+        # 搜索 + 常驻操作在第一行
+        self.assertIsNotNone(main.select_one(".header-actions [data-hl-random]"))
+        self.assertIsNotNone(main.select_one("[data-tools-toggle]"))
+
+        # 排序 / 分组在第二行
+        self.assertIsNotNone(tools.select_one("[data-toolbar-nav='sort']"))
+        self.assertIsNotNone(tools.select_one("[data-toolbar-nav='group_by']"))
+
+        # 按钮全摆出来了，不再需要「更多」
+        self.assertIsNone(soup.select_one(".header-more"))
 
     def test_groups_order(self):
         drawer = self.drawer()

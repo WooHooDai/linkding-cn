@@ -15,20 +15,6 @@ class BookmarkHeaderMenuViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertEqual(response.status_code, 200)
         return self.make_soup(response.content.decode())
 
-    def test_more_menu_lists_only_actions(self):
-        soup = self.render_index()
-        panel = soup.select_one(".header-more .header-more-panel")
-        self.assertIsNotNone(panel)
-
-        # 窄屏下随机按钮常驻，批量编辑与布局收进「更多」
-        actions = panel.select(".header-menu-action")
-        self.assertEqual(
-            [action.get("data-menu-action") for action in actions],
-            ["bulk-edit", "layout"],
-        )
-        # 显示偏好搬到左侧「布局」抽屉，菜单里不再有第二份
-        self.assertIsNone(panel.select_one("[data-pref]"))
-
     def test_random_control_renders_both_modes_for_instant_switch(self):
         soup = self.render_index()
         self.assertIsNotNone(soup.select_one("form[data-random-control]:not([hidden])"))
@@ -85,7 +71,8 @@ class BookmarkHeaderMenuViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertTrue(self.user.profile.sticky_header_controls)
         self.assertFalse(self.user.profile.sticky_pagination)
 
-    def test_all_list_pages_render_header_menu(self):
+    def test_list_pages_share_the_same_toolbar(self):
+        # 四个列表页同一个骨架：标题独立、工具栏两行、按钮全部直接陈列
         for url_name in (
             "bookmarks.index",
             "bookmarks.archived",
@@ -95,29 +82,45 @@ class BookmarkHeaderMenuViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             response = self.client.get(reverse(f"linkding:{url_name}"))
             self.assertEqual(response.status_code, 200, url_name)
             soup = self.make_soup(response.content.decode())
+            self.assertIsNotNone(soup.select_one(".page-title"), url_name)
             self.assertIsNotNone(
-                soup.select_one(".header-more .header-more-panel"), url_name
+                soup.select_one(".section-header.header-stack .header-actions"), url_name
             )
+            self.assertIsNotNone(soup.select_one("[data-tools-toggle]"), url_name)
+            self.assertIsNone(soup.select_one(".header-more"), url_name)
 
-    def test_shared_menu_has_layout_but_no_bulk_action(self):
+    def test_shared_toolbar_has_no_bulk_or_group_controls(self):
+        # 分享页可能被匿名访问，批量与分组（写 profile）都不摆上来
         soup = self.make_soup(
             self.client.get(reverse("linkding:bookmarks.shared")).content.decode()
         )
-        actions = [a.get("data-menu-action") for a in soup.select(".header-menu-action")]
-        self.assertEqual(actions, ["layout"])
+        actions = soup.select_one(".section-header.header-stack .header-actions")
+        self.assertIsNotNone(actions)
+        self.assertIsNone(actions.select_one(".bulk-edit-active-toggle"))
+        self.assertIsNone(soup.select_one("[data-toolbar-pref='group_by_date']"))
+        self.assertIsNotNone(soup.select_one("[data-toolbar-nav='sort']"))
 
-    def test_header_controls_flag_random_state_for_narrow_layout(self):
-        # 窄屏 CSS 靠这个类决定「随机 + 更多」还是三个按钮平铺
+    def test_index_toolbar_splits_search_and_list_controls(self):
         soup = self.render_index()
-        controls = soup.select_one(".header-controls")
-        self.assertIsNotNone(controls)
-        self.assertTrue("has-random" in controls.get("class"))
-        self.assertIsNotNone(soup.select_one(".header-more"))
+        main = soup.select_one(".section-header")
+        tools = soup.select_one(".header-row-tools")
+        self.assertIsNotNone(tools)
 
-        self.user.profile.enable_random_button = False
-        self.user.profile.save()
-        soup = self.render_index()
-        controls = soup.select_one(".header-controls")
-        self.assertNotIn("has-random", controls.get("class"))
-        # 菜单常驻 DOM：抽屉里重新打开随机按钮时不用刷新就能回来
-        self.assertIsNotNone(soup.select_one(".header-more"))
+        # 搜索 + 常驻操作在第一行
+        self.assertIsNotNone(main.select_one("#bookmark-search-container"))
+        self.assertIsNotNone(main.select_one(".header-actions .bulk-edit-active-toggle"))
+        self.assertIsNotNone(main.select_one("[data-tools-toggle]"))
+
+        # 排序 / 分组 / 全部展开折叠在第二行
+        self.assertIsNotNone(tools.select_one("[data-toolbar-nav='sort']"))
+        self.assertIsNotNone(tools.select_one("[data-toolbar-pref='group_by_date']"))
+        self.assertIsNotNone(tools.select_one("[data-group-expand-all]"))
+        self.assertIsNotNone(tools.select_one("[data-group-collapse-all]"))
+        self.assertIsNone(tools.select_one(".group-toggle-all"))
+        self.assertIsNone(tools.select_one(".header-actions"))
+
+        # 第一行不再有可见的排序控件，但要留一个 hidden 把当前排序带过面板提交
+        self.assertIsNone(main.select_one("select[name='sort']") or soup.select_one(".section-header select[name='sort']"))
+        hidden_sort = main.select_one("input[name='sort']")
+        self.assertIsNotNone(hidden_sort)
+        self.assertEqual(hidden_sort.get("value"), "added_desc")

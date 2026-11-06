@@ -27,7 +27,8 @@ class BulkEdit extends Behavior {
     this.isStickyOn =
       (
         element.querySelector("[data-bulk-sticky-source]") ||
-        element.querySelector(".section-header")
+        // 高亮页没有 section-header，头部是 .highlights-sticky-header
+        element.querySelector(".section-header, .highlights-sticky-header")
       )?.dataset.stickyOn === "true";
     this.bulkEditBar = element.querySelector(".bulk-edit-bar");
     this.selection = Selection.from(this._loadState());

@@ -4719,3 +4719,25 @@ msgstr "没有高亮被修改。"
 
 #~ msgid "Ungrouped"
 #~ msgstr "不分组"
+
+msgid "No grouping"
+msgstr "不分组"
+
+msgid "By date"
+msgstr "按日期"
+
+msgid "List controls"
+msgstr "列表控件"
+
+msgctxt "group_option"
+msgid "Date"
+msgstr "日期"
+
+msgid "Sort and group"
+msgstr "排序与分组"
+
+msgid "More tools"
+msgstr "更多工具"
+
+msgid "(%(total)s highlights / %(notes)s annotations / %(bms)s bookmarks)"
+msgstr "(%(total)s条高亮 / %(notes)s条批注 / %(bms)s个书签)"

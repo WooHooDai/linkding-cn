@@ -129,6 +129,211 @@
   }
 }
 
+/* 列表工具栏：单层 flex，宽屏一行放下「标题 + 搜索 + 操作 + 开合」，第二行单独换行。
+   窄屏靠 .header-break 强制换行，让操作按钮掉到第二行与排序分组同排。 */
+.section-header.header-stack {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--unit-2);
+  /* 容器本身留白：控件尺寸不动，靠上下内边距把这条工具栏撑起来 */
+  padding-top: var(--unit-3);
+  padding-bottom: var(--unit-3);
+}
+
+/* 页面标题：独立于吸顶区，滚走之后工具栏才接管顶部 */
+.page-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--unit-2);
+  margin-bottom: var(--unit-2);
+}
+
+.page-title h1 {
+  font-size: var(--font-size-lg);
+  line-height: var(--unit-9);
+  margin: 0;
+}
+
+/* 计数 / 统计弱化：跟在标题后，不抢主标题的视觉重量 */
+.page-title #bookmark-list-total,
+.page-title-meta {
+  color: var(--tertiary-text-color);
+  font-weight: 400;
+  margin-left: var(--unit-1);
+}
+
+#bookmark-search-container {
+  order: 2;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+#bookmark-search-container {
+  order: 2;
+}
+
+/* 容器内只剩搜索框一层，撑满即可；旧页靠 max-width + margin-left:auto 贴右。
+   特异性要压过 .bookmarks-page .search-container（同为 0,2,0，只靠顺序不可靠）。 */
+.section-header.header-stack .search-container {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  margin-left: 0;
+}
+
+.header-stack .search-container input[type="search"] {
+  min-width: 0;
+}
+
+.header-actions {
+  order: 3;
+}
+
+.header-tools-toggle {
+  order: 4;
+}
+
+/* 只在窄屏参与布局的换行占位 */
+.header-break {
+  display: none;
+}
+
+/* 开合第二行：收起朝右，展开朝下 */
+.header-tools-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-size);
+  height: var(--control-size);
+  padding: 0;
+}
+
+.header-tools-toggle .ld-chevron {
+  margin-inline-end: 0;
+  transform: rotate(-90deg);
+  transition: transform 0.15s ease;
+}
+
+.header-tools-toggle[aria-expanded="true"] .ld-chevron {
+  transform: rotate(0deg);
+}
+
+/* 第二行：宽屏整行靠右，窄屏与操作按钮同排 */
+.header-row-tools {
+  order: 5;
+  flex: 1 1 100%;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--unit-2);
+}
+
+/* hidden 要显式写：行本身就是 display:flex，UA 的 [hidden] 压不住 */
+.header-row-tools[hidden] {
+  display: none;
+}
+
+/* 搜索行右端的常驻操作：批量 / 随机 / 布局 / 侧边栏 */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--unit-2);
+  flex: 0 0 auto;
+}
+
+/* 窄屏收第二行时这组也在第二行里，要一起走；宽屏时它属于第一行，不受影响。
+   用 class + 断点判断，视口跨断点时状态自然正确。 */
+@media (max-width: 600px) {
+  .tools-collapsed .header-actions {
+    display: none;
+  }
+  .tools-peek .header-actions {
+    display: flex;
+  }
+}
+
+/* 这一组统一成正方形，视觉上是一条按钮带 */
+.header-actions .btn,
+.header-tool-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--control-size);
+  height: var(--control-size);
+  padding: 0;
+}
+
+.header-tools-filters {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1 1 auto;
+  gap: var(--unit-2);
+  min-width: 0;
+}
+
+.header-tools-wide {
+  display: flex;
+  align-items: center;
+  gap: var(--unit-2);
+  min-width: 0;
+}
+
+/* 窄屏把排序、分组各压成一颗按钮，点开是原生选择列表 */
+.header-tools-narrow {
+  display: none;
+  align-items: center;
+  gap: var(--unit-1);
+}
+
+.header-tool-picker {
+  position: relative;
+  overflow: hidden;
+}
+
+.header-tool-picker-native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.header-tool-select {
+  width: auto;
+  max-width: 11em;
+  min-width: 0;
+  height: var(--control-size);
+}
+
+/* 图标 + 下拉：图标说明这一项是排序还是分组，省掉可见标签 */
+.header-tool-group {
+  flex: 0 1 auto;
+  max-width: 13em;
+  min-width: 0;
+}
+
+.header-tool-group .input-group-addon {
+  flex: none;
+  padding-inline: var(--unit-2);
+}
+
+.header-group-actions {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: var(--unit-1);
+}
+
+.header-group-actions[hidden] {
+  display: none;
+}
+
 @media (max-width: 600px) {
   .section-header:not(.no-wrap) {
     flex-wrap: wrap;
@@ -136,6 +341,57 @@
   .section-header .header-controls {
     flex: 1 1 100%;
     margin-top: var(--unit-2);
+  }
+
+  /* 窄屏行数更多，容器保持紧凑：上下各 8，行距收回 4 */
+  .section-header.header-stack {
+    padding-top: var(--unit-2);
+    padding-bottom: var(--unit-2);
+    gap: var(--unit-1);
+  }
+
+  /* 窄屏：标题独占，搜索 + 开合一行，操作 + 排序分组一行 */
+  #bookmark-search-container {
+    flex: 1 1 0;
+  }
+  .header-tools-toggle {
+    order: 3;
+  }
+  /* 光靠 flex 自然换行不够：搜索框 basis 为 0 时永远「放得下」，操作组会一起挤进同一行 */
+  .header-break {
+    display: block;
+    order: 4;
+    flex: 0 0 100%;
+    height: 0;
+  }
+  /* 第二行整组靠右：把外边距吃掉，操作按钮和排序分组一起贴向行尾 */
+  .header-actions {
+    order: 5;
+    margin-left: auto;
+  }
+  .header-row-tools {
+    order: 6;
+    flex: 0 1 auto;
+    justify-content: flex-start;
+  }
+  .header-tools-filters {
+    flex: 0 1 auto;
+    justify-content: flex-start;
+  }
+  .header-tools-wide {
+    display: none;
+  }
+  .header-tools-narrow {
+    display: inline-flex;
+  }
+  .header-tools-filters {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .header-tools-filters::-webkit-scrollbar {
+    display: none;
   }
 }
 

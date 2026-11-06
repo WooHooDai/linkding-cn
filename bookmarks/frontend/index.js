@@ -24,6 +24,7 @@ import "./components/health.js";
 import "./components/health-job-progress.js";
 import "./components/dropdown.js";
 import "./components/header-more.js";
+import "./components/list-toolbar.js";
 import "./components/layout-drawer.js";
 import "./components/bookmark-list.js";
 import "./components/favicon-contrast.js";

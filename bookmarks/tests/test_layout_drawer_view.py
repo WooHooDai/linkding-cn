@@ -44,8 +44,8 @@ class LayoutDrawerViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
                 button = soup.select_one("[data-layout-drawer-toggle]")
                 self.assertIsNotNone(button)
                 self.assertEqual(button.get("aria-controls"), "layout-drawer")
-                # 按钮挂在工具栏下（窄屏由 .header-controls 的 has-random 决定显隐）
-                self.assertIsNotNone(button.find_parent(class_="header-controls"))
+                # 按钮挂在工具栏里（书签页在第二行，归档/共享/回收站仍是旧的一行工具栏）
+                self.assertIsNotNone(button.find_parent(class_="header-actions"))
 
     def test_drawer_has_page_and_bookmark_tabs(self):
         drawer = self.drawer()
@@ -190,13 +190,6 @@ class LayoutDrawerViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         page = self.panel("page").get_text(" ", strip=True)
         self.assertIn("Group bookmarks by when they were added", page)
         self.assertIn("It shuffles the bookmark list, or opens a random bookmark.", page)
-
-    def test_more_menu_no_longer_carries_preferences(self):
-        soup = self.render()
-        panel = soup.select_one(".header-more .header-more-panel")
-        self.assertIsNotNone(panel)
-        self.assertIsNone(panel.select_one("[data-pref]"))
-        self.assertIsNone(panel.select_one(".header-menu-divider"))
 
     # --- 页面页 ---
 
@@ -465,6 +458,7 @@ class LayoutListPartialViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         # 局部刷新只该拿到列表本身，不能带页面骨架
         self.assertIsNone(soup.select_one("html"))
         self.assertIsNone(soup.select_one(".header-controls"))
+        self.assertIsNone(soup.select_one(".header-row-tools"))
         self.assertIsNone(soup.select_one("[data-layout-drawer]"))
         # 同一个 URL 有两种表示，别让缓存把片段发给整页导航
         self.assertIn("no-store", response.headers["Cache-Control"])

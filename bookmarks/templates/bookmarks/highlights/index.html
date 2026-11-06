@@ -21,14 +21,15 @@
 
   {# ── Header ── #}
   <main class="main col-2" aria-labelledby="main-heading">
-    <div class="crud-header">
-      <h1 id="main-heading">{% translate "Highlights & Annotations" %}</h1>
+    <div class="page-title">
+      <h1 id="main-heading">{% translate "Highlights & Annotations" %}<span class="page-title-meta">{% blocktranslate trimmed with total=summary.total_annotations notes=summary.total_notes bms=summary.total_bookmarks %}({{ total }} highlights / {{ notes }} annotations / {{ bms }} bookmarks){% endblocktranslate %}</span></h1>
     </div>
 
-    {# ── Toolbar: search + filter + bulk toggle + random ── #}
-    <div class="highlights-sticky-header" data-sticky-on="{{ sticky_header_controls|yesno:'true,false' }}">
-    <div class="highlights-toolbar{% if request.user_profile.highlights_enable_random_button %} has-random{% endif %}">
+    {# ── Toolbar：与书签页同一套骨架（section-header + 单层 flex） ── #}
+    <div class="section-header header-stack" data-sticky-on="{{ sticky_header_controls|yesno:'true,false' }}"
+         ld-list-toolbar>
       {# Search input + filter dropdown (merged, like bookmark list) #}
+      <div id="bookmark-search-container">
       <div class="search-container">
         <form method="get" action="{% url 'linkding:bookmarks.highlights' %}">
           <input type="hidden" name="colors" value="{{ colors_raw }}">
@@ -148,71 +149,121 @@
           </div>
         </ld-dropdown>
       </div>
+      </div>
 
-      {# Inline Sort by + Group by (visible when space allows) #}
-      <form class="highlights-inline-filters" method="get" action="{% url 'linkding:bookmarks.highlights' %}">
-        <input type="hidden" name="q" value="{{ search_q }}">
-        <input type="hidden" name="colors" value="{{ colors_raw }}">
-        <input type="hidden" name="note_filter" value="{{ note_filter }}">
-        <input type="hidden" name="date_filter_by" value="{{ date_filter_by }}">
-        <input type="hidden" name="date_filter_start" value="{{ date_filter_start }}">
-        <input type="hidden" name="date_filter_end" value="{{ date_filter_end }}">
-        <input type="hidden" name="bookmark_id" value="{{ bookmark_id }}">
-        <div class="highlights-inline-sort">
-          <label class="form-label text-assistive" for="inline-sort">{% translate "Sort by" %}</label>
-          <div class="input-group">
-            <span class="input-group-addon text-secondary">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 9l4 -4l4 4m-4 -4v14"/><path d="M21 15l-4 4l-4 -4m4 4v-14"/></svg>
-            </span>
-            <select id="inline-sort" name="sort" class="form-select" data-submit-on-change>
-              {% for value, label in sort_choices %}
-                <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-        <div class="highlights-inline-group">
-          <label class="form-label text-assistive" for="inline-group">{% translate "Group by" %}</label>
-          <div class="input-group">
-            <span class="input-group-addon text-secondary">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h6v6h-6z"/><path d="M14 4h6v6h-6z"/><path d="M4 14h6v6h-6z"/><path d="M14 14h6v6h-6z"/></svg>
-            </span>
-            <select id="inline-group" name="group_by" class="form-select" data-submit-on-change>
-              {% for value, label in group_choices %}
-                <option value="{{ value }}" {% if group_by == value %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-      </form>
-
-      {# Bulk edit toggle #}
-      {% include 'bookmarks/bulk_edit/toggle.html' %}
-
-      {# Random sort button #}
-      <a class="btn" title="{% translate 'Random sort' %}" data-hl-random
-         {% if not request.user_profile.highlights_enable_random_button %}hidden{% endif %}
-         href="{% url 'linkding:bookmarks.highlights' %}?{% if search_q %}q={{ search_q|urlencode }}&{% endif %}{% if colors_raw %}colors={{ colors_raw|urlencode }}&{% endif %}{% if note_filter %}note_filter={{ note_filter }}&{% endif %}sort=random{% if group_by != 'none' %}&group_by={{ group_by }}{% endif %}{% if date_filter_by %}&date_filter_by={{ date_filter_by }}{% endif %}{% if date_filter_start %}&date_filter_start={{ date_filter_start }}{% endif %}{% if date_filter_end %}&date_filter_end={{ date_filter_end }}{% endif %}{% if bookmark_id %}&bookmark_id={{ bookmark_id }}{% endif %}">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" stroke-width="2"
-             stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-          <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-          <path d="M18 4l3 3l-3 3"></path>
-          <path d="M18 20l3 -3l-3 -3"></path>
-          <path d="M3 7h3a5 5 0 0 1 5 5a5 5 0 0 1 -5 5h-3"></path>
-          <path d="M21 7h-3a5 5 0 0 0 -5 5a5 5 0 0 0 5 5h3"></path>
+      {# 列表级操作常驻：它们不跟第二行一起收起 #}
+      <div class="header-actions">
+        {% include 'bookmarks/bulk_edit/toggle.html' %}
+        <a class="btn" title="{% translate 'Random sort' %}" data-hl-random
+           {% if not request.user_profile.highlights_enable_random_button %}hidden{% endif %}
+           href="{% url 'linkding:bookmarks.highlights' %}?{% if search_q %}q={{ search_q|urlencode }}&{% endif %}{% if colors_raw %}colors={{ colors_raw|urlencode }}&{% endif %}{% if note_filter %}note_filter={{ note_filter }}&{% endif %}sort=random{% if group_by != 'none' %}&group_by={{ group_by }}{% endif %}{% if date_filter_by %}&date_filter_by={{ date_filter_by }}{% endif %}{% if date_filter_start %}&date_filter_start={{ date_filter_start }}{% endif %}{% if date_filter_end %}&date_filter_end={{ date_filter_end }}{% endif %}{% if bookmark_id %}&bookmark_id={{ bookmark_id }}{% endif %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" stroke-width="2"
+               stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+            <path d="M18 4l3 3l-3 3"></path>
+            <path d="M18 20l3 -3l-3 -3"></path>
+            <path d="M3 7h3a5 5 0 0 1 5 5a5 5 0 0 1 -5 5h-3"></path>
+            <path d="M21 7h-3a5 5 0 0 0 -5 5a5 5 0 0 0 5 5h3"></path>
+          </svg>
+        </a>
+        {% include 'bookmarks/header/layout_menu.html' %}
+        {% include 'bookmarks/sidebar/components/toggle_button.html' %}
+      </div>
+      <button type="button" class="btn header-tools-toggle" data-tools-toggle
+              aria-expanded="true" aria-controls="highlights-tools-row"
+              aria-label="{% translate 'More tools' %}" title="{% translate 'More tools' %}">
+        <svg class="ld-chevron" width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <polyline points="6 8 10 12 14 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-      </a>
-      {% include 'bookmarks/header/layout_menu.html' %}
-      {% include 'bookmarks/sidebar/components/toggle_button.html' %}
-      {% include 'bookmarks/header/more_menu.html' with show_bulk=True %}
-    </div>
+      </button>
+      {# 窄屏强制换行用的占位：把操作按钮推到下一行，与排序分组同排 #}
+      <div class="header-break" aria-hidden="true"></div>
 
-    {# ── Search summary ── #}
-    <p class="highlights-summary text-secondary text-small">
-      {% blocktranslate trimmed with total=summary.total_annotations notes=summary.total_notes bms=summary.total_bookmarks %}
-        {{ total }} highlights, {{ notes }} annotations, across {{ bms }} bookmarks
-      {% endblocktranslate %}
-    </p>
+      <div class="header-row-tools" id="highlights-tools-row" data-tools-row>
+      <div class="header-tools-filters">
+      <div class="header-tools-wide">
+        <div class="input-group header-tool-group">
+          <span class="input-group-addon text-secondary" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 9l4 -4l4 4m-4 -4v14"/><path d="M21 15l-4 4l-4 -4m4 4v-14"/></svg>
+          </span>
+          <select id="inline-sort" class="form-select header-tool-select" data-toolbar-nav="sort"
+                  title="{% translate 'Sort by' %}">
+            {% for value, label in sort_choices %}
+              <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="input-group header-tool-group">
+          <span class="input-group-addon text-secondary" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="4.5" cy="8" r="1.4" fill="currentColor" stroke="none"/><path d="M9.5 8h11"/><circle cx="4.5" cy="16" r="1.4" fill="currentColor" stroke="none"/><path d="M9.5 16h11"/></svg>
+          </span>
+          <select id="inline-group" class="form-select header-tool-select" data-toolbar-nav="group_by"
+                  title="{% translate 'Group by' %}">
+            {% for value, label in group_choices %}
+              <option value="{{ value }}" {% if group_by == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="header-tools-narrow">
+        <span class="btn header-tool-icon header-tool-picker" title="{% translate 'Sort by' %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+               stroke-linejoin="round" aria-hidden="true">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <path d="M3 9l4 -4l4 4m-4 -4v14"/><path d="M21 15l-4 4l-4 -4m4 4v-14"/>
+          </svg>
+          <select class="header-tool-picker-native" data-toolbar-nav="sort"
+                  aria-label="{% translate 'Sort by' %}">
+            {% for value, label in sort_choices %}
+              <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </span>
+
+        <span class="btn header-tool-icon header-tool-picker" title="{% translate 'Group by' %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+               stroke-linejoin="round" aria-hidden="true">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+            <circle cx="4.5" cy="8" r="1.4" fill="currentColor" stroke="none"/><path d="M9.5 8h11"/><circle cx="4.5" cy="16" r="1.4" fill="currentColor" stroke="none"/><path d="M9.5 16h11"/>
+          </svg>
+          <select class="header-tool-picker-native" data-toolbar-nav="group_by"
+                  aria-label="{% translate 'Group by' %}">
+            {% for value, label in group_choices %}
+              <option value="{{ value }}" {% if group_by == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </span>
+      </div>
+
+      {% if group_by != 'none' %}
+        <div class="header-group-actions">
+          <button type="button" class="btn header-tool-icon" data-hl-group-expand-all
+                  aria-label="{% translate 'Expand all' %}" title="{% translate 'Expand all' %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round" aria-hidden="true">
+              <path d="M7 6l5 5l5 -5"></path>
+              <path d="M7 12l5 5l5 -5"></path>
+            </svg>
+          </button>
+          <button type="button" class="btn header-tool-icon" data-hl-group-collapse-all
+                  aria-label="{% translate 'Collapse all' %}" title="{% translate 'Collapse all' %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round" aria-hidden="true">
+              <path d="M7 11l5 -5l5 5"></path>
+              <path d="M7 17l5 -5l5 5"></path>
+            </svg>
+          </button>
+        </div>
+      {% endif %}
+      </div>
+
+      </div>
     </div>
 
     {# ── Main form: bulk bar + list (single form so bulk checkboxes are submitted) ── #}
@@ -487,7 +538,7 @@
     };
   }
 
-  // 抽屉里的「分组折叠」按钮：还有展开的组就全折，否则全展开
+  // 抽屉里是单颗切换按钮（文案随状态变），工具栏是两颗图标按钮（靠置灰表达）
   function refreshGroupToggleAll() {
     var headers = groupParts().headers;
     if (!headers.length) return;
@@ -497,9 +548,36 @@
     document.querySelectorAll('[data-hl-group-toggle-all]').forEach(function(btn) {
       var label = anyExpanded ? btn.dataset.labelCollapse : btn.dataset.labelExpand;
       if (!label) return;
-      btn.textContent = label;
+      var text = btn.querySelector('.header-tool-btn-text') || btn;
+      text.textContent = label;
       btn.setAttribute('aria-label', label);
     });
+
+    var allExpanded = headers.every(function(h) {
+      return !h.classList.contains('collapsed');
+    });
+    var allCollapsed = headers.every(function(h) {
+      return h.classList.contains('collapsed');
+    });
+    document.querySelectorAll('[data-hl-group-expand-all]').forEach(function(btn) {
+      btn.disabled = allExpanded;
+    });
+    document.querySelectorAll('[data-hl-group-collapse-all]').forEach(function(btn) {
+      btn.disabled = allCollapsed;
+    });
+  }
+
+  function setAllHighlightGroups(collapsed) {
+    var parts = groupParts();
+    parts.headers.forEach(function(h) {
+      h.classList.toggle('collapsed', collapsed);
+    });
+    parts.lists.forEach(function(list) {
+      if (list && list.classList.contains('highlights-list')) {
+        list.classList.toggle('collapsed', collapsed);
+      }
+    });
+    refreshGroupToggleAll();
   }
 
   document.querySelectorAll('.highlight-group-toggle').forEach(function(btn) {
@@ -515,19 +593,22 @@
 
   document.querySelectorAll('[data-hl-group-toggle-all]').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      var parts = groupParts();
-      var collapseAll = parts.headers.some(function(h) {
+      var collapseAll = groupParts().headers.some(function(h) {
         return !h.classList.contains('collapsed');
       });
-      parts.headers.forEach(function(h) {
-        h.classList.toggle('collapsed', collapseAll);
-      });
-      parts.lists.forEach(function(list) {
-        if (list && list.classList.contains('highlights-list')) {
-          list.classList.toggle('collapsed', collapseAll);
-        }
-      });
-      refreshGroupToggleAll();
+      setAllHighlightGroups(collapseAll);
+    });
+  });
+
+  document.querySelectorAll('[data-hl-group-expand-all]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      setAllHighlightGroups(false);
+    });
+  });
+
+  document.querySelectorAll('[data-hl-group-collapse-all]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      setAllHighlightGroups(true);
     });
   });
 

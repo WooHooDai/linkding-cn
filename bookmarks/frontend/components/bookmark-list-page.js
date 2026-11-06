@@ -83,6 +83,29 @@ function refreshAllGroupsButton(headers) {
     // 抽屉里的按钮直接用文字表达当前动作
     if (btn.dataset.labelCollapse) btn.textContent = label;
   });
+
+  // 工具栏是两颗图标按钮，状态靠置灰表达
+  const allExpanded = headers.every(
+    (header) => !header.classList.contains("group-collapsed"),
+  );
+  const allCollapsed = headers.every((header) =>
+    header.classList.contains("group-collapsed"),
+  );
+  document
+    .querySelectorAll("[data-group-expand-all]")
+    .forEach((btn) => (btn.disabled = allExpanded));
+  document
+    .querySelectorAll("[data-group-collapse-all]")
+    .forEach((btn) => (btn.disabled = allCollapsed));
+}
+
+// 整批开合：逐组走同一个入口，记忆与按钮状态都留给 setGroupCollapsed/refresh
+function setAllGroups(headers, collapsed) {
+  headers.forEach((header) => setGroupCollapsed(header, collapsed));
+  saveCollapsedMap(headers);
+  // 无记录的组将遵循该全局默认
+  saveGroupDefaultCollapsed(collapsed);
+  refreshAllGroupsButton(headers);
 }
 
 function setGroupCollapsed(header, collapsed) {
@@ -109,17 +132,19 @@ class GroupCollapseBehavior extends Behavior {
     if (!this.headers.length) return;
 
     this.onClick = (event) => {
+      if (event.target.closest("[data-group-expand-all]")) {
+        setAllGroups(this.headers, false);
+        return;
+      }
+      if (event.target.closest("[data-group-collapse-all]")) {
+        setAllGroups(this.headers, true);
+        return;
+      }
       if (event.target.closest(".group-toggle-all")) {
         const collapseAll = this.headers.some(
           (header) => !header.classList.contains("group-collapsed"),
         );
-        this.headers.forEach((header) =>
-          setGroupCollapsed(header, collapseAll),
-        );
-        saveCollapsedMap(this.headers);
-        // 无记录的组将遵循该全局默认
-        saveGroupDefaultCollapsed(collapseAll);
-        refreshAllGroupsButton(this.headers);
+        setAllGroups(this.headers, collapseAll);
         return;
       }
       const toggle = event.target.closest(".group-toggle");

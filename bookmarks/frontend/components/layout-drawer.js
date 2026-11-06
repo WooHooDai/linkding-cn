@@ -4,6 +4,7 @@ import { getCSRFToken } from "../utils/csrf.js";
 import { gettext } from "../utils/i18n.js";
 import { showToast } from "./toast.js";
 import { applyToolbarAutoHide } from "./bookmark-list.js";
+import { refreshBookmarkList } from "../utils/list-refresh.js";
 import { panelsFitTogether, syncPanelSpace } from "../utils/panel-space.js";
 import {
   getSidebarScope,
@@ -27,8 +28,6 @@ const OPEN_KEY = "ld:layout-drawer:open";
 const MOBILE_QUERY = "(max-width: 840px)";
 // 连点多个开关时合并成一次片段请求
 const REFRESH_DELAY = 120;
-// 页面 URL + 这个头 = 只返回列表容器（服务端见 views/bookmarks.py）
-const LIST_PARTIAL_HEADER = "X-LD-List-Partial";
 const LEGACY_TABS = { view: "page", toolbar: "bookmark" };
 // 吸顶/吸底开关对应的容器：书签列表页与高亮页各一套
 const STICKY_SELECTORS = {
@@ -74,7 +73,6 @@ class LayoutDrawer extends Behavior {
     this.scroller = element.querySelector("[data-layout-scroll]");
     this.sortables = [];
     this.refreshTimer = null;
-    this.refreshSeq = 0;
     this.resetPage = false;
     this.scrollTimer = null;
     this.lastTrigger = null;
@@ -91,6 +89,7 @@ class LayoutDrawer extends Behavior {
     this.onPointerOver = this.onPointerOver.bind(this);
     this.onPointerOut = this.onPointerOut.bind(this);
     this.onSidebarModulesReordered = this.onSidebarModulesReordered.bind(this);
+    this.onPrefChangedOutside = this.onPrefChangedOutside.bind(this);
     this.closeHelpTimer = null;
     // 收起动画期间还要锁着页面滚动，等面板滑出去再解锁
     this.unlockTimer = null;
@@ -114,6 +113,7 @@ class LayoutDrawer extends Behavior {
       "sidebar-modules-reordered",
       this.onSidebarModulesReordered,
     );
+    document.removeEventListener("ld:pref-changed", this.onPrefChangedOutside);
     clearTimeout(this.closeHelpTimer);
     clearTimeout(this.unlockTimer);
     this.sortables.forEach((instance) => instance.destroy());
@@ -141,6 +141,8 @@ class LayoutDrawer extends Behavior {
       "sidebar-modules-reordered",
       this.onSidebarModulesReordered,
     );
+    // 列表工具栏第二行也能改同一份偏好，这里跟着回填
+    document.addEventListener("ld:pref-changed", this.onPrefChangedOutside);
 
     this.initSortables();
     this.restorePanels();
@@ -826,6 +828,17 @@ class LayoutDrawer extends Behavior {
     });
   }
 
+  // 列表工具栏改了同一份偏好：回填抽屉里的控件，别让它停在旧值
+  onPrefChangedOutside(event) {
+    const { field, value } = event.detail || {};
+    if (!field) return;
+    const input = this.element.querySelector(`[name="${CSS.escape(field)}"]`);
+    if (!input) return;
+    if (input.type === "checkbox") input.checked = Boolean(value);
+    else input.value = value;
+    this.syncConditionalRows();
+  }
+
   reloadKeepingDrawer() {
     try {
       sessionStorage.setItem(REOPEN_KEY, this.currentTab());
@@ -1056,48 +1069,9 @@ class LayoutDrawer extends Behavior {
   }
 
   async refreshList() {
-    // 高亮页没有列表容器（改完直接重载），没有就什么都不做
-    const container = document.getElementById("bookmark-list-container");
-    if (!container) return;
-
-    // 取页面自己的 URL，只换渲染形态：片段里的分页链接必须留在页面上
-    const url = new URL(window.location.href);
-    url.searchParams.delete("layout");
-    if (this.resetPage) {
-      url.searchParams.delete("page");
-      this.resetPage = false;
-      // 地址栏也要丢掉页号，否则下次刷新又回到越界页
-      window.history.replaceState({}, "", `${url.pathname}${url.search}`);
-    }
-
-    const seq = ++this.refreshSeq;
-    let html;
-    try {
-      const response = await fetch(url, {
-        headers: { [LIST_PARTIAL_HEADER]: "1" },
-        credentials: "same-origin",
-      });
-      if (!response.ok) return;
-      html = await response.text();
-    } catch (error) {
-      console.error(error);
-      return;
-    }
-
-    // 后发先至时丢弃旧响应，避免把列表刷回上一版偏好
-    if (seq !== this.refreshSeq) return;
-
-    const template = document.createElement("template");
-    template.innerHTML = html.trim();
-    const next = template.content.querySelector("#bookmark-list-container");
-    if (!next) return;
-
-    container.replaceWith(next);
-    document.dispatchEvent(new CustomEvent("bookmark-list-updated"));
-    // 表格列宽按替换时的可用宽度算，切换视图后要等布局稳定再算一次
-    requestAnimationFrame(() =>
-      window.dispatchEvent(new Event("resize")),
-    );
+    const resetPage = this.resetPage;
+    this.resetPage = false;
+    await refreshBookmarkList({ resetPage });
   }
 }
 

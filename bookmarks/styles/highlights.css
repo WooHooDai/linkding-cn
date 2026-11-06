@@ -10,52 +10,35 @@
   display: none;
 }
 
-.highlights-toolbar {
+/* 工具栏骨架与书签页共用；这里只补搜索框与筛选按钮拼成一体的细节 */
+.highlights-page .section-header .search-container {
   display: flex;
-  align-items: center;
-  /* 按钮间距统一走 gap：以前靠零散的 ml-2，侧边栏按钮没有那段外边距就贴住了上一个 */
-  gap: var(--unit-2);
-  margin-bottom: var(--unit-1);
-  flex-wrap: wrap;
+  position: relative;
 
-  /* Search container — search input + filter dropdown merged, like bookmark list */
-  .search-container {
-    flex: 1 1 0;
-    display: flex;
-    max-width: 300px;
-    position: relative;
-
-    & form {
-      width: 100%;
-    }
-
-    & .dropdown {
-      position: static;
-    }
-
-    & .menu {
-      left: 0;
-      right: 0;
-    }
-
-    & input[type="search"] {
-      height: var(--control-size);
-      -webkit-appearance: none;
-      border-top-right-radius: 0;
-      border-bottom-right-radius: 0;
-    }
-
-    & .dropdown-toggle {
-      border-top-left-radius: 0;
-      border-bottom-left-radius: 0;
-      margin-left: -1px;
-    }
+  & form {
+    width: 100%;
   }
 
-  @media (max-width: 600px) {
-    .search-container {
-      max-width: initial;
-    }
+  & .dropdown {
+    position: static;
+  }
+
+  & .menu {
+    left: 0;
+    right: 0;
+  }
+
+  & input[type="search"] {
+    height: var(--control-size);
+    -webkit-appearance: none;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  & .dropdown-toggle {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-left: -1px;
   }
 }
 
@@ -533,17 +516,6 @@
   }
 }
 
-/* ── Sticky header (toolbar + summary) ── */
-
-.highlights-sticky-header[data-sticky-on="true"] {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: var(--body-color);
-  padding-top: var(--unit-2);
-  margin-top: calc(-1 * var(--unit-2));
-}
-
 /* ── Sticky pagination ── */
 
 .highlights-pagination[data-sticky-on="true"] {
@@ -555,59 +527,7 @@
   border-top: 1px solid var(--secondary-border-color);
 }
 
-/* ── Toolbar container query for progressive hiding ── */
-
-.highlights-toolbar {
-  container-type: inline-size;
-}
-
-.highlights-inline-filters {
-  display: flex;
-  align-items: center;
-  gap: var(--unit-2);
-}
-
-/* Hide Group by first when space tightens */
-@container (max-width: 620px) {
-  .highlights-inline-group {
-    display: none;
-  }
-}
-
-/* Hide Sort by too when even tighter */
-@container (max-width: 460px) {
-  .highlights-inline-sort {
-    display: none;
-  }
-
-  /* 两项都收起了：整块一起隐藏，否则这个空 flex 项会吃两段 gap，多出 8px 空当 */
-  .highlights-inline-filters {
-    display: none;
-  }
-}
-
 @media (max-width: 600px) {
-  .highlights-toolbar {
-    flex-wrap: nowrap;
-
-    .search-container {
-      flex: 1;
-      max-width: none;
-      min-width: 0;
-    }
-
-  }
-
-  /* 与书签列表同一套窄屏取舍：随机按钮常驻，批量编辑与布局收进「更多」 */
-  .highlights-toolbar.has-random .bulk-edit-active-toggle,
-  .highlights-toolbar.has-random .header-layout-toggle {
-    display: none;
-  }
-
-  .highlights-toolbar.has-random .header-more {
-    display: inline-flex;
-  }
-
   .highlights-card-view {
     grid-template-columns: 1fr;
   }

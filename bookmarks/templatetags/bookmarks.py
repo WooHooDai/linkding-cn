@@ -14,7 +14,9 @@ register = template.Library()
 @register.inclusion_tag(
     "bookmarks/search.html", name="bookmark_search", takes_context=True
 )
-def bookmark_search(context, search: BookmarkSearch, mode: str = ""):
+def bookmark_search(
+    context, search: BookmarkSearch, mode: str = "", hide_sort: bool = False
+):
     search_form = BookmarkSearchForm(search, editable_fields=["q"])
 
     if mode == "shared":
@@ -91,6 +93,8 @@ def bookmark_search(context, search: BookmarkSearch, mode: str = ""):
         "search_form": search_form,
         "preferences_form": preferences_form,
         "mode": mode,
+        # 排序已提到列表工具栏第二行时，筛选面板里不再重复一份
+        "hide_sort": hide_sort,
         "date_filter_relative_value": date_filter_relative_value,
         "date_filter_relative_unit": date_filter_relative_unit,
         # 健康状态收敛为「不筛选 / 筛选」两态，筛选态才展开多选勾选框

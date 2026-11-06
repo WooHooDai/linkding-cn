@@ -10,17 +10,31 @@
 
     {# Bookmark list #}
     <main class="main col-2" aria-labelledby="main-heading">
-      <div class="section-header mb-0" data-sticky-on="{{ sticky_header_controls|yesno:'true,false' }}">
-        <h1 id="main-heading">{% translate "Shared bookmarks" %}</h1>
-        {# has-random：窄屏下随机按钮常驻，布局让位收进「更多」 #}
-        <div class="header-controls{% if request.user_profile.enable_random_button %} has-random{% endif %}">
-          {% bookmark_search bookmark_list.search mode='shared' %}
-          <div class="header-controls-wide">
-            {% random_sort bookmark_list.search %}
-          </div>
+      <div class="page-title">
+        <h1 id="main-heading">{% translate "Shared bookmarks" %}<span id="bookmark-list-total">({{ bookmark_list.bookmarks_total }})</span></h1>
+      </div>
+
+      <div class="section-header header-stack mb-0" data-sticky-on="{{ sticky_header_controls|yesno:'true,false' }}"
+           ld-list-toolbar data-save-url="{% url 'linkding:settings.save' %}">
+        <div id="bookmark-search-container">
+          {% bookmark_search bookmark_list.search mode='shared' hide_sort=True %}
+        </div>
+        <div class="header-actions">
+          {% random_sort bookmark_list.search %}
           {% include 'bookmarks/header/layout_menu.html' %}
           {% include 'bookmarks/sidebar/components/toggle_button.html' %}
-          {% include 'bookmarks/header/more_menu.html' with show_bulk=False %}
+        </div>
+        <button type="button" class="btn header-tools-toggle" data-tools-toggle
+                aria-expanded="true" aria-controls="bookmark-tools-row"
+                aria-label="{% translate 'More tools' %}" title="{% translate 'More tools' %}">
+          <svg class="ld-chevron" width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <polyline points="6 8 10 12 14 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="header-break" aria-hidden="true"></div>
+        <div class="header-row-tools" id="bookmark-tools-row" data-tools-row>
+          {# 访客没有 profile，分组开关写不进去，这里只留排序 #}
+          {% include 'bookmarks/header/toolbar_tools.html' with hide_group=True %}
         </div>
       </div>
 

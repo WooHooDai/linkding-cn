@@ -16,6 +16,11 @@
     grid-gap: var(--unit-9);
   }
 
+  /* 栅格项默认 min-width:auto，工具栏内容一宽就把整页撑出横向滚动 */
+  & main {
+    min-width: 0;
+  }
+
   /* 侧边栏关闭 */
   &.sidebar-closed {
     main {
@@ -258,8 +263,12 @@ body.sidebar-push
 }
 
 /* Bookmark area header controls */
+/* 容器本身就是 flex item：display:contents 会让里面的搜索框直接参与外层布局，
+   order / 换行都失控（标题按 100% 换行时搜索框仍留在原行） */
 .bookmarks-page #bookmark-search-container {
-  display: contents;
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .bookmarks-page .search-container {
@@ -363,7 +372,8 @@ body.sidebar-push
 }
 
 #bookmark-search-container {
-  flex: 1 1 auto;
+  /* basis 用 0：auto 会让输入框的 min-content 宽把整行撑出视口 */
+  flex: 1 1 0;
   min-width: 0;
 }
 
@@ -1318,8 +1328,13 @@ ul.bookmark-list {
    ld-highlights-bulk-edit（同一个组件的子类），属性名对不上。 */
 
 .bulk-edit-root {
-  /* 隐藏原本的头部控件 */
+  /* 隐藏原本的头部控件（归档/共享/回收站仍是单行工具栏） */
   &.active .header-controls {
+    display: none !important;
+  }
+
+  /* 列表页工具栏在批量编辑时整块让位（标题已在吸顶区之外） */
+  &.active .section-header.header-stack {
     display: none !important;
   }
 

@@ -13,20 +13,34 @@
 
     {# Bookmark list #}
     <main class="main col-2" aria-labelledby="main-heading">
-      <div class="section-header mb-0" data-sticky-on="{{ sticky_header_controls|yesno:'true,false' }}">
+      {# 标题不进吸顶区：滚动时只有工具栏跟上来 #}
+      <div class="page-title">
         <h1 id="main-heading">{% translate "Bookmarks" %}<span id="bookmark-list-total">({{ bookmark_list.bookmarks_total }})</span></h1>
-        {# has-random：窄屏下随机按钮常驻，批量编辑与布局让位收进「更多」 #}
-        <div class="header-controls{% if request.user_profile.enable_random_button %} has-random{% endif %}">
-          <div id="bookmark-search-container">
-            {% bookmark_search bookmark_list.search %}
-          </div>
-          <div class="header-controls-wide">
-            {% include 'bookmarks/bulk_edit/toggle.html' %}
-            {% random_sort bookmark_list.search %}
-          </div>
+      </div>
+
+      <div class="section-header header-stack mb-0" data-sticky-on="{{ sticky_header_controls|yesno:'true,false' }}"
+           ld-list-toolbar data-save-url="{% url 'linkding:settings.save' %}">
+        <div id="bookmark-search-container">
+          {% bookmark_search bookmark_list.search hide_sort=True %}
+        </div>
+        {# 列表级操作常驻：它们不跟第二行一起收起 #}
+        <div class="header-actions">
+          {% include 'bookmarks/bulk_edit/toggle.html' %}
+          {% random_sort bookmark_list.search %}
           {% include 'bookmarks/header/layout_menu.html' %}
           {% include 'bookmarks/sidebar/components/toggle_button.html' %}
-          {% include 'bookmarks/header/more_menu.html' with show_bulk=True %}
+        </div>
+        <button type="button" class="btn header-tools-toggle" data-tools-toggle
+                aria-expanded="true" aria-controls="bookmark-tools-row"
+                aria-label="{% translate 'More tools' %}" title="{% translate 'More tools' %}">
+          <svg class="ld-chevron" width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <polyline points="6 8 10 12 14 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        {# 窄屏强制换行用的占位：把操作按钮推到下一行，与排序分组同排 #}
+        <div class="header-break" aria-hidden="true"></div>
+        <div class="header-row-tools" id="bookmark-tools-row" data-tools-row>
+          {% include 'bookmarks/header/toolbar_tools.html' %}
         </div>
       </div>
 
