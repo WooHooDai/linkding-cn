@@ -357,6 +357,8 @@
     padding-left: calc(3px + var(--unit-2));
     margin-top: var(--unit-1);
     position: relative;
+    /* 按钮移出流后行高只剩文字高度，这里补回按钮原本撑起的高度 */
+    min-height: 24px;
   }
 
   .highlight-date {
@@ -391,24 +393,30 @@
     color: var(--tertiary-text-color);
   }
 
-  /* Action buttons — collapse to 0 width when hidden, expand on hover */
+  /* 操作按钮悬浮在 meta 行右端之上：不参与行内布局，
+     日期/作者/标题就挤不到它，窄屏也不会把它顶出条目右缘 */
   .highlight-actions {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    z-index: var(--zindex-0);
     display: flex;
     align-items: center;
-    gap: 0;
-    width: 0;
-    overflow: hidden;
+    gap: var(--unit-2);
+    padding: 0 var(--unit-1);
+    border: 1px solid var(--secondary-border-color);
+    border-radius: var(--border-radius);
+    background: var(--body-color);
+    box-shadow: var(--box-shadow-xs);
     opacity: 0;
-    flex-shrink: 0;
-    margin-left: auto;
+    pointer-events: none;
     transition: opacity 0.15s;
 
     .highlight-item:hover &,
-    .highlights-page.active & {
+    .highlights-page.active &,
+    .highlight-item:focus-within & {
       opacity: 1;
-      width: auto;
-      gap: var(--unit-2);
-      overflow: visible;
+      pointer-events: auto;
     }
   }
 }
