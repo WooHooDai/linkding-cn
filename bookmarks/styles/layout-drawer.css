@@ -44,6 +44,11 @@
   }
 }
 
+/* 恢复态（页面加载 / Turbo 翻页）直接就位，不演滑入 */
+.layout-drawer.ld-no-anim {
+  transition: none;
+}
+
 .layout-drawer-scrim {
   display: none;
   position: fixed;

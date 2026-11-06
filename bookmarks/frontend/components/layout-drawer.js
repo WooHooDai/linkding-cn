@@ -48,6 +48,15 @@ function isMobile() {
   return window.matchMedia(MOBILE_QUERY).matches;
 }
 
+// 抽屉是否该在页面加载后自动展开（Turbo 导航恢复时也要在首帧就摆好）
+export function isDrawerRememberedOpen() {
+  try {
+    return localStorage.getItem(OPEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 function readJSON(key, fallback) {
   try {
     return JSON.parse(localStorage.getItem(key)) ?? fallback;
@@ -141,7 +150,7 @@ class LayoutDrawer extends Behavior {
     // 深链：?layout=page / ?layout=bookmark（兼容旧的 view / toolbar）
     const requested = new URLSearchParams(window.location.search).get("layout");
     if (requested) {
-      this.open(LEGACY_TABS[requested] || requested);
+      this.open(LEGACY_TABS[requested] || requested, { animate: false });
       return;
     }
     // 刚从主题切换重载回来：恢复展开态
@@ -153,15 +162,11 @@ class LayoutDrawer extends Behavior {
       reopen = null;
     }
     if (reopen) {
-      this.open(LEGACY_TABS[reopen] || reopen);
+      this.open(LEGACY_TABS[reopen] || reopen, { animate: false });
       return;
     }
-    // 刷新后保持上次的开合状态
-    try {
-      if (localStorage.getItem(OPEN_KEY) === "1") this.open(null, { focus: false });
-    } catch {
-      // 忽略
-    }
+    // 刷新/翻页后保持上次的开合状态
+    if (isDrawerRememberedOpen()) this.open(null, { focus: false, animate: false });
   }
 
   // ---------- 开合 ----------
@@ -174,8 +179,14 @@ class LayoutDrawer extends Behavior {
     return document.querySelectorAll("[data-layout-drawer-toggle]");
   }
 
-  open(tab = null, { focus = true } = {}) {
+  open(tab = null, { focus = true, animate = true } = {}) {
     this.lastTrigger = document.activeElement;
+    // 恢复态由 turbo:before-render 预置，构造函数这层也要压掉滑动，
+    // 否则每次翻页面板都会从左侧重新滑进来
+    if (!animate) {
+      this.element.classList.add("ld-no-anim");
+      requestAnimationFrame(() => this.element.classList.remove("ld-no-anim"));
+    }
     this.element.classList.add("is-open");
     this.element.removeAttribute("inert");
     this.element.setAttribute("aria-hidden", "false");
@@ -1091,11 +1102,3 @@ class LayoutDrawer extends Behavior {
 }
 
 registerBehavior("data-layout-drawer", LayoutDrawer);
-
-// 抽屉是页面级浮层，缓存快照里不能带着展开态
-document.addEventListener("turbo:before-cache", () => {
-  document
-    .querySelectorAll(".layout-drawer.is-open")
-    .forEach((el) => el.classList.remove("is-open"));
-  document.body.classList.remove("layout-drawer-open");
-});

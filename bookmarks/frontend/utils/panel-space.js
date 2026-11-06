@@ -39,20 +39,16 @@ export function panelsFitTogether() {
 
 let lastSignature = null;
 
-export function syncPanelSpace() {
-  const body = document.body;
-  const page = document.querySelector(".bookmarks-page, .highlights-page");
-  const viewport = document.documentElement.clientWidth;
-  const contentWidth = naturalContentWidth(viewport);
-
+// 让位判据只依赖这几个量，抽出来才能给「还没插入的新 body」预先算一遍
+function panelSpaceState({ viewport, contentWidth, drawerOpen, sidebarOpen }) {
+  const mobile = isMobile();
   // 已让位占用的宽度（push）与两侧剩余留白
   let used = 0;
   const slackFor = () => Math.max(0, (viewport - used - contentWidth) / 2);
   let leftSlack = slackFor();
-  const drawerOpen = Boolean(document.querySelector(".layout-drawer.is-open"));
 
   let drawerPush = false;
-  if (drawerOpen && !isMobile()) {
+  if (drawerOpen && !mobile) {
     if (DRAWER_WIDTH + FIT_GAP <= leftSlack) {
       leftSlack -= DRAWER_WIDTH;
     } else if (viewport - used - DRAWER_WIDTH >= MIN_CONTENT_WIDTH) {
@@ -60,8 +56,46 @@ export function syncPanelSpace() {
       used += DRAWER_WIDTH;
     }
   }
-  body.classList.toggle("layout-drawer-push", drawerPush);
 
+  let sidebarPush = false;
+  if (sidebarOpen && !mobile) {
+    const rightSlack = slackFor();
+    if (SIDEBAR_WIDTH + FIT_GAP > rightSlack) {
+      sidebarPush = viewport - used - SIDEBAR_WIDTH >= MIN_CONTENT_WIDTH;
+    }
+  }
+
+  return { drawerPush, sidebarPush };
+}
+
+// 新页面首帧就按最终布局排版：Turbo 换 body 前对新 body 调一次，
+// 否则列表会先按全宽画一帧，再等侧边栏/抽屉恢复后重排。
+export function primePanelSpace(newBody, drawerOpen = false) {
+  const page = newBody.querySelector(".bookmarks-page, .highlights-page");
+  if (!page) return;
+
+  const viewport = document.documentElement.clientWidth;
+  const { drawerPush, sidebarPush } = panelSpaceState({
+    viewport,
+    contentWidth: naturalContentWidth(viewport),
+    drawerOpen,
+    // 常驻侧边栏本来就是网格列，只有浮层模式才需要让位
+    sidebarOpen:
+      page.dataset.sidebarDefault === "0" &&
+      page.classList.contains("sidebar-open"),
+  });
+
+  newBody.classList.toggle("layout-drawer-push", drawerPush);
+  newBody.classList.toggle("sidebar-push", sidebarPush);
+}
+
+export function syncPanelSpace() {
+  const body = document.body;
+  const page = document.querySelector(".bookmarks-page, .highlights-page");
+  const viewport = document.documentElement.clientWidth;
+  const contentWidth = naturalContentWidth(viewport);
+
+  const drawerOpen = Boolean(document.querySelector(".layout-drawer.is-open"));
   // 「常驻侧边栏」本来就是网格列，不走这套；只有按需打开的浮层模式需要判断。
   // 收起动画期间 sidebar-open 还没撤（面板还在屏幕上滑出），但让位要立刻还回去，
   // 所以在 closing 阶段也算「已收起」。
@@ -70,13 +104,15 @@ export function syncPanelSpace() {
       page.classList.contains("sidebar-open") &&
       !page.classList.contains("sidebar-closing"),
   );
-  let sidebarPush = false;
-  if (sidebarOpen && !isMobile()) {
-    const rightSlack = slackFor();
-    if (SIDEBAR_WIDTH + FIT_GAP > rightSlack) {
-      sidebarPush = viewport - used - SIDEBAR_WIDTH >= MIN_CONTENT_WIDTH;
-    }
-  }
+
+  const { drawerPush, sidebarPush } = panelSpaceState({
+    viewport,
+    contentWidth,
+    drawerOpen,
+    sidebarOpen,
+  });
+
+  body.classList.toggle("layout-drawer-push", drawerPush);
   body.classList.toggle("sidebar-push", sidebarPush);
 
   // 让位宽度变了（含 0.2s 过渡）后要重排表格列宽，否则表格按旧宽度算完就停在那儿
@@ -118,7 +154,5 @@ window.addEventListener("resize", scheduleResize);
 document.addEventListener("turbo:load", schedule);
 document.addEventListener("turbo:render", schedule);
 
-// 缓存快照里不能带着让位态，否则返回上一页时内容会被顶偏
-document.addEventListener("turbo:before-cache", () => {
-  document.body.classList.remove("layout-drawer-push", "sidebar-push");
-});
+// 缓存快照里可以带着让位态：恢复时由 primePanelSpace 按当下的开合状态重算，
+// 在旧页面上先抹掉反而会让内容在等新 HTML 的时候先塌一下。
