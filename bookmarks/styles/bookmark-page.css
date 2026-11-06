@@ -2345,10 +2345,11 @@ ul.bookmark-list .group-count {
   color: var(--primary-color);
 }
 
-/* 折叠态隐藏组内条目（JS 逐条切换）
-   特异性需覆盖 li[ld-bookmark-item] 及视图文件里的变体（最高 0,3,2） */
+/* 折叠态隐藏组内条目（JS 逐条切换）。
+   compact/table 视图的行骨架规则同为 0,3,2，且导入在本文件之后，同特异性下
+   会把 display 改回 flex/grid；折叠是状态而非布局，必须压过所有视图变体。 */
 ul.bookmark-list li[ld-bookmark-item].group-hidden {
-  display: none;
+  display: none !important;
 }
 
 /* 全部折叠/展开按钮：两种图标按整体折叠状态显隐，span 居中承载 svg */
