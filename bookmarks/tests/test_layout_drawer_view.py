@@ -439,16 +439,23 @@ class QuickTagsFragmentViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertEqual(response.status_code, 302)
 
 
-class LayoutListFragmentViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
+class LayoutListPartialViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
+    """局部刷新取页面自己的 URL，只换渲染形态（不另开只有列表的端点）。"""
+
+    HEADERS = {"X-LD-List-Partial": "1"}
+
     def setUp(self):
         self.user = self.get_or_create_test_user()
         self.client.force_login(self.user)
 
+    def get_partial(self, url_name="bookmarks.index", **params):
+        return self.client.get(
+            reverse(f"linkding:{url_name}"), params, headers=self.HEADERS
+        )
+
     def test_returns_only_the_list_container(self):
         self.setup_bookmark(title="first")
-        response = self.client.get(
-            reverse("linkding:bookmarks.list_fragment"), {"ctx": "active"}
-        )
+        response = self.get_partial()
         self.assertEqual(response.status_code, 200)
         soup = self.make_soup(response.content.decode())
 
@@ -459,15 +466,15 @@ class LayoutListFragmentViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.assertIsNone(soup.select_one("html"))
         self.assertIsNone(soup.select_one(".header-controls"))
         self.assertIsNone(soup.select_one("[data-layout-drawer]"))
+        # 同一个 URL 有两种表示，别让缓存把片段发给整页导航
+        self.assertIn("no-store", response.headers["Cache-Control"])
 
     def test_group_by_date_marks_container(self):
         self.setup_bookmark()
         self.user.profile.group_by_date = True
         self.user.profile.save()
 
-        response = self.client.get(
-            reverse("linkding:bookmarks.list_fragment"), {"ctx": "active"}
-        )
+        response = self.get_partial()
         soup = self.make_soup(response.content.decode())
         container = soup.select_one("#bookmark-list-container")
         self.assertTrue(container.has_attr("data-grouped"))
@@ -478,31 +485,44 @@ class LayoutListFragmentViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
         self.user.profile.items_per_page = 10
         self.user.profile.save()
 
-        response = self.client.get(
-            reverse("linkding:bookmarks.list_fragment"), {"ctx": "active"}
-        )
+        response = self.get_partial()
         soup = self.make_soup(response.content.decode())
         self.assertEqual(len(soup.select("li[ld-bookmark-item]")), 3)
 
-    def test_uses_the_requested_context(self):
+    def test_uses_the_requested_page(self):
         self.setup_bookmark(title="active one")
         self.setup_bookmark(title="archived one", is_archived=True)
 
-        response = self.client.get(
-            reverse("linkding:bookmarks.list_fragment"), {"ctx": "archived"}
-        )
+        response = self.get_partial("bookmarks.archived")
         soup = self.make_soup(response.content.decode())
         titles = [a.get_text(strip=True) for a in soup.select("li[ld-bookmark-item] a")]
         self.assertIn("archived one", titles)
         self.assertNotIn("active one", titles)
 
-    def test_rejects_unknown_context(self):
-        response = self.client.get(
-            reverse("linkding:bookmarks.list_fragment"), {"ctx": "nope"}
-        )
-        self.assertEqual(response.status_code, 400)
+    def test_pagination_links_stay_on_the_page(self):
+        # 回归：片段里的分页链接曾按 request.path 生成，指回一个只有列表的端点，
+        # 点下去整页导航就只剩列表了
+        self.setup_bookmark(title="first")
+        self.setup_bookmark(title="second")
+        self.user.profile.items_per_page = 1
+        self.user.profile.save()
+
+        response = self.get_partial(page=2)
+        soup = self.make_soup(response.content.decode())
+
+        hrefs = [a["href"] for a in soup.select(".pagination-list a[href]")]
+        self.assertTrue(hrefs)
+        for href in hrefs:
+            self.assertTrue(href.startswith("/bookmarks?"), href)
+            self.assertNotIn("fragment", href)
+
+    def test_plain_page_request_is_not_a_partial(self):
+        self.setup_bookmark()
+        response = self.client.get(reverse("linkding:bookmarks.index"))
+        soup = self.make_soup(response.content.decode())
+        self.assertIsNotNone(soup.select_one("[data-layout-drawer]"))
 
     def test_requires_login(self):
         self.client.logout()
-        response = self.client.get(reverse("linkding:bookmarks.list_fragment"))
+        response = self.get_partial()
         self.assertEqual(response.status_code, 302)

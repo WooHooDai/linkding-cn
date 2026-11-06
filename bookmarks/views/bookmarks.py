@@ -275,6 +275,8 @@ def index(request: HttpRequest):
     )
     create_bundle_query_string = _get_create_bundle_query_string(search)
     bookmark_list = contexts.ActiveBookmarkListContext(request, search)
+    if _is_list_partial_request(request):
+        return _render_list_partial(request, bookmark_list)
     sidebar_summary = contexts.SidebarUserSummaryContext(request, search)
     bundles = contexts.BundlesContext(request)
     domains = contexts.ActiveDomainsContext(request, search)
@@ -301,38 +303,30 @@ def index(request: HttpRequest):
     )
 
 
-# 布局抽屉保存后只换列表本身：按页面 ctx 选对应的列表上下文，
-# 不重算侧边栏/标签云，避免一次开关触发整页查询。
-_LIST_FRAGMENT_CONTEXTS = {
-    "active": contexts.ActiveBookmarkListContext,
-    "archived": contexts.ArchivedBookmarkListContext,
-    "shared": contexts.SharedBookmarkListContext,
-    "trash": contexts.TrashedBookmarkListContext,
-}
+# 布局抽屉改完偏好后只换列表：请求页面自己的 URL 并带上这个头，
+# 页面里只渲染列表容器。片段与页面共用同一个地址，片段内的链接才不会再指回一个
+# 只有列表的端点（分页器按 request.path 生成链接）。
+LIST_PARTIAL_HEADER = "X-LD-List-Partial"
 
 
-@login_required
-def list_fragment(request: HttpRequest):
-    ctx = request.GET.get("ctx", "active")
-    context_class = _LIST_FRAGMENT_CONTEXTS.get(ctx)
-    if context_class is None:
-        return HttpResponseBadRequest("Unknown context")
+def _is_list_partial_request(request: HttpRequest) -> bool:
+    return request.headers.get(LIST_PARTIAL_HEADER) == "1"
 
-    search = BookmarkSearch.from_request(
-        request, request.GET, request.user_profile.search_preferences
-    )
-    bookmark_list = context_class(request, search)
 
-    return render(
+def _render_list_partial(request: HttpRequest, bookmark_list):
+    response = render(
         request,
         "bookmarks/list/container.html",
         {
             "bookmark_list": bookmark_list,
-            "is_trash_page": ctx == "trash",
+            "is_trash_page": getattr(bookmark_list, "is_trash_page", False),
             "sticky_pagination": request.user_profile.sticky_pagination,
             "active_check_job": get_active_check_job(request.user),
         },
     )
+    # 同一个 URL 有两种表示，不能让缓存把片段发给整页导航
+    response["Cache-Control"] = "no-store"
+    return response
 
 
 @login_required
@@ -357,6 +351,8 @@ def archived(request: HttpRequest):
     )
     create_bundle_query_string = _get_create_bundle_query_string(search)
     bookmark_list = contexts.ArchivedBookmarkListContext(request, search)
+    if _is_list_partial_request(request):
+        return _render_list_partial(request, bookmark_list)
     bundles = contexts.BundlesContext(request)
     domains = contexts.ArchivedDomainsContext(request, search)
     tag_cloud = contexts.ArchivedTagCloudContext(request, search)
@@ -402,6 +398,8 @@ def shared(request: HttpRequest):
     )
     create_bundle_query_string = _get_create_bundle_query_string(search)
     bookmark_list = contexts.SharedBookmarkListContext(request, search)
+    if _is_list_partial_request(request):
+        return _render_list_partial(request, bookmark_list)
     domains = contexts.SharedDomainsContext(request, search)
     tag_cloud = contexts.SharedTagCloudContext(request, search)
     author_cloud = contexts.SharedAuthorCloudContext(request, search)
@@ -456,6 +454,8 @@ def trashed(request: HttpRequest):
     )
     create_bundle_query_string = _get_create_bundle_query_string(search)
     bookmark_list = contexts.TrashedBookmarkListContext(request, search)
+    if _is_list_partial_request(request):
+        return _render_list_partial(request, bookmark_list)
     bundles = contexts.BundlesContext(request)
     domains = contexts.TrashedDomainsContext(request, search)
     tag_cloud = contexts.TrashedTagCloudContext(request, search)

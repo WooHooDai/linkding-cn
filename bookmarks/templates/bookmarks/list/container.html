@@ -1,4 +1,7 @@
-{# 列表容器：页面首帧与布局抽屉的局部刷新共用，保证 data-grouped 等外层状态一起更新。 #}
+{% comment %}
+  列表容器：页面首帧与布局抽屉的局部刷新共用，保证 data-grouped 等外层状态一起更新。
+  局部刷新请求的是同一个页面 URL（带 X-LD-List-Partial 头），分页链接因此仍指向页面本身。
+{% endcomment %}
 <div id="bookmark-list-container"{% if bookmark_list.group_by_date %} data-grouped{% endif %}>
   {% include 'bookmarks/bookmark_list.html' %}
 </div>

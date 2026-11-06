@@ -27,6 +27,8 @@ const OPEN_KEY = "ld:layout-drawer:open";
 const MOBILE_QUERY = "(max-width: 840px)";
 // 连点多个开关时合并成一次片段请求
 const REFRESH_DELAY = 120;
+// 页面 URL + 这个头 = 只返回列表容器（服务端见 views/bookmarks.py）
+const LIST_PARTIAL_HEADER = "X-LD-List-Partial";
 const LEGACY_TABS = { view: "page", toolbar: "bookmark" };
 // 吸顶/吸底开关对应的容器：书签列表页与高亮页各一套
 const STICKY_SELECTORS = {
@@ -58,7 +60,6 @@ class LayoutDrawer extends Behavior {
   constructor(element) {
     super(element);
     this.url = element.dataset.saveUrl;
-    this.fragmentUrl = element.dataset.fragmentUrl;
     this.quickTagsUrl = element.dataset.quickTagsUrl;
     this.page = document.querySelector(".bookmarks-page, .highlights-page");
     this.scroller = element.querySelector("[data-layout-scroll]");
@@ -1044,31 +1045,25 @@ class LayoutDrawer extends Behavior {
   }
 
   async refreshList() {
-    // 高亮页没有列表片段通道（改完直接重载），没有 URL 就什么都不做
-    if (!this.fragmentUrl) return;
+    // 高亮页没有列表容器（改完直接重载），没有就什么都不做
     const container = document.getElementById("bookmark-list-container");
     if (!container) return;
 
-    const params = new URLSearchParams(window.location.search);
-    params.delete("layout");
+    // 取页面自己的 URL，只换渲染形态：片段里的分页链接必须留在页面上
+    const url = new URL(window.location.href);
+    url.searchParams.delete("layout");
     if (this.resetPage) {
-      params.delete("page");
+      url.searchParams.delete("page");
       this.resetPage = false;
       // 地址栏也要丢掉页号，否则下次刷新又回到越界页
-      const rest = params.toString();
-      window.history.replaceState(
-        {},
-        "",
-        `${window.location.pathname}${rest ? `?${rest}` : ""}`,
-      );
+      window.history.replaceState({}, "", `${url.pathname}${url.search}`);
     }
-    params.set("ctx", this.page?.dataset.ctx || "active");
 
     const seq = ++this.refreshSeq;
     let html;
     try {
-      const response = await fetch(`${this.fragmentUrl}?${params.toString()}`, {
-        headers: { "X-Requested-With": "XMLHttpRequest" },
+      const response = await fetch(url, {
+        headers: { [LIST_PARTIAL_HEADER]: "1" },
         credentials: "same-origin",
       });
       if (!response.ok) return;

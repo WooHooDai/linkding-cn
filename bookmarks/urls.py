@@ -14,11 +14,6 @@ urlpatterns = [
     # Bookmarks
     path("bookmarks", views.bookmarks.index, name="bookmarks.index"),
     path(
-        "bookmarks/list-fragment",
-        views.bookmarks.list_fragment,
-        name="bookmarks.list_fragment",
-    ),
-    path(
         "bookmarks/action", views.bookmarks.index_action, name="bookmarks.index.action"
     ),
     path("bookmarks/archived", views.bookmarks.archived, name="bookmarks.archived"),
