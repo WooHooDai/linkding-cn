@@ -37,15 +37,16 @@ class Dropdown extends HeadlessElement {
     if (!this.positionController) {
       const menu = this.querySelector(".menu");
       if (!this.toggle || !menu) return;
-      // 搜索偏好面板拿整个搜索行当锚点：宽度来源是它，左右也对齐到搜索框，
-      // 按行尾的按钮对齐会贴到右边去
+      // 搜索偏好面板的宽度来源是整个搜索行；面板宽度封顶后不能再按搜索框
+      // 左边缘展开，否则会离行尾的筛选按钮太远，改成与按钮右缘对齐
       const searchContainer = this.closest(".search-container");
       this.positionController = new PositionController({
         anchor: searchContainer || this.toggle,
         overlay: menu,
         placement:
-          !searchContainer &&
-          (this.classList.contains("dropdown-right") || this.closest("header"))
+          searchContainer ||
+          this.classList.contains("dropdown-right") ||
+          this.closest("header")
             ? "bottom-end"
             : "bottom-start",
         autoWidth:

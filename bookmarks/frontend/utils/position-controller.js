@@ -21,11 +21,12 @@ export class PositionController {
 
   enable() {
     this.overlay.style.position = "fixed";
-    // 面板最小宽度由 CSS 声明（--overlay-min-width），预算一次即可
-    const minWidth = parseFloat(
-      getComputedStyle(this.overlay).getPropertyValue("--overlay-min-width"),
-    );
+    // 面板宽度上下限由 CSS 声明（--overlay-min/max-width），预算一次即可
+    const style = getComputedStyle(this.overlay);
+    const minWidth = parseFloat(style.getPropertyValue("--overlay-min-width"));
+    const maxWidth = parseFloat(style.getPropertyValue("--overlay-max-width"));
     this.minWidth = Number.isFinite(minWidth) ? minWidth : 0;
+    this.maxWidth = Number.isFinite(maxWidth) ? maxWidth : Infinity;
     if (typeof this.overlay.showPopover === "function") {
       this.overlay.setAttribute("popover", "manual");
       if (!this.overlay.matches(":popover-open")) {
@@ -63,8 +64,8 @@ export class PositionController {
   updatePosition() {
     if (this.autoWidth) {
       const width = Math.max(
-        this.widthAnchor.offsetWidth,
-        this.minWidth || 0,
+        this.minWidth,
+        Math.min(this.widthAnchor.offsetWidth, this.maxWidth),
       );
       this.overlay.style.width = `${width}px`;
     }

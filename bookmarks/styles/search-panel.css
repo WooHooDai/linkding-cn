@@ -1,9 +1,10 @@
 /* 搜索偏好面板：label 与选项同行，三态筛选收敛为分段控件 */
 .search-container {
-  /* 面板比搜索框略宽：分段控件（Any / Yes / No）在搜索框宽度内会挤到换行。
-     宽度由 PositionController 的内联 width 决定，这里只能给最小值。 */
+  /* 搜索栏放宽后不能让面板一路跟随：label 与右侧固定宽控件会被拉开。
+     PositionController 按这两个变量夹取面板的内联 width。 */
   .menu.menu-panel {
     --overlay-min-width: 320px;
+    --overlay-max-width: 360px;
   }
 
   /* 窄屏时 theme 的 menu-panel 媒体查询接管定位（贴左右边、width:auto），
@@ -176,6 +177,7 @@
 
   .menu.menu-panel {
     --overlay-min-width: 340px;
+    --overlay-max-width: 400px;
   }
 
   .pref-row > .highlights-color-dots-filter {
