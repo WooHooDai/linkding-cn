@@ -223,6 +223,8 @@ class WebsiteMetadata:
     # 注意：author 放在 preview_image 之后，保持旧的 4 位置参数调用
     # WebsiteMetadata(url, title, description, preview_image) 语义不变
     author: str | None = None
+    # 钩子主动拒绝时给出的原因；不进入 to_dict()，由测试面板单独读取
+    error: str | None = None
 
     def __post_init__(self):
         # 在构造处归一：解析器、loader 脚本、before/after hook 都绕不过这里，
@@ -354,6 +356,7 @@ def _load_with_hooks(url: str, config: dict, scripts: list, username: str = '',
 
     # 2. Run replace hook or built-in engine
     has_replace = any(e.get('hook') == 'replace' for e in scripts)
+    hook_error = None
 
     if has_replace:
         for entry in scripts:
@@ -401,11 +404,16 @@ def _load_with_hooks(url: str, config: dict, scripts: list, username: str = '',
             if result is None:
                 return _empty_metadata(url)
             if isinstance(result, dict):
-                result['title'] = apply_rewrite(result.get('title'), config.get('rewrite_title'))
-                result['description'] = apply_rewrite(result.get('description'), config.get('rewrite_description'))
-                result['author'] = apply_rewrite(result.get('author'), config.get('rewrite_author'))
-                result['image'] = apply_rewrite(result.get('image'), config.get('rewrite_image'))
-                metadata = _normalize_metadata_result(url, result, source=script_path)
+                if result.get("error"):
+                    # Hook rejected the fetch with a user-facing reason.
+                    hook_error = str(result["error"])
+                    metadata = _empty_metadata(url)
+                else:
+                    result['title'] = apply_rewrite(result.get('title'), config.get('rewrite_title'))
+                    result['description'] = apply_rewrite(result.get('description'), config.get('rewrite_description'))
+                    result['author'] = apply_rewrite(result.get('author'), config.get('rewrite_author'))
+                    result['image'] = apply_rewrite(result.get('image'), config.get('rewrite_image'))
+                    metadata = _normalize_metadata_result(url, result, source=script_path)
             else:
                 return _empty_metadata(url)
             break  # Only one replace allowed
@@ -430,6 +438,7 @@ def _load_with_hooks(url: str, config: dict, scripts: list, username: str = '',
         'author': metadata.author,
         'image': metadata.preview_image,
         'url': metadata.url,
+        'error': hook_error,
     }
 
     for entry in scripts:
@@ -457,6 +466,7 @@ def _load_with_hooks(url: str, config: dict, scripts: list, username: str = '',
         description=result_dict.get('description'),
         author=result_dict.get('author'),
         preview_image=result_dict.get('image'),
+        error=result_dict.get('error'),
     )
 
 
@@ -1448,7 +1458,10 @@ def load_website_metadata_for_test(url: str, username: str = ''):
             for entry in config["scripts"]
             if entry.get("path")
         ]
-        return metadata, {"scripts": script_paths}, config
+        sources = {"scripts": script_paths}
+        if getattr(metadata, "error", None):
+            sources["error"] = metadata.error
+        return metadata, sources, config
 
     if config and config.get("script"):
         script_path = config["script"]

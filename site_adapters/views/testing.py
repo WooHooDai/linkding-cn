@@ -202,9 +202,17 @@ def _snapshot_credential_state(config: dict, username: str, hostname: str) -> di
     if not auth_req.get('cookie') and not auth_req.get('headers_active') and not auth_req.get('oauth2'):
         auth_req = get_auth_requirements_for_domain(hostname)
 
-    # Cookie
-    if auth_req.get('cookie'):
+    # Cookie：域未声明 auth 时引擎会隐式注入 manual cookie，面板同样要显示来源，
+    # 否则「凭据只在 apex 域声明一次」的配置会看起来像没有凭据。
+    implicit_cookie = None
+    if not auth_req.get('cookie'):
+        from site_adapters.services.auth.credentials import get_implicit_manual_cookie
+        implicit_cookie = get_implicit_manual_cookie(
+            hostname=hostname, section_scope=scope)
+    if auth_req.get('cookie') or implicit_cookie:
         best, _ = get_best_cookie(username=username, hostname=hostname, scope=scope)
+        if implicit_cookie:
+            best = implicit_cookie
         user_val, _ = get_user_cookie(username=username, hostname=hostname, scope=scope) if username else (None, '')
         shared_val, _ = get_shared_cookie(hostname=hostname, scope=scope)
         http_val = (config.get('headers', {}) or {}).get('Cookie') if config else None

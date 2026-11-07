@@ -93,6 +93,8 @@ def after(result: dict, url: str, config: dict) -> None:
         result["title"] = result["title"].replace(" - Suffix", "")
 ```
 
+metadata 的 `replace` / `before` 返回带 `error` 字段的 dict 时表示**主动放弃抓取并给出原因**：结果为兜底空元数据，测试面板把原因显示到 `metadata_error`（正式抓取行为不变）。与 snapshot 的拒绝契约一致，只是不会中断整条流水线。
+
 ### JavaScript metadata 钩子
 
 stdin 输入 JSON：`{ hook, url, config, html_path, result, output_path }`
@@ -164,6 +166,17 @@ def after(output_path: str, config: dict) -> None:
     """原地修改已保存的快照 HTML 文件。"""
     pass
 ```
+
+**主动拒绝并带上原因**：`before` / `replace` 返回带 `error` 字段的 dict 时，框架不写盘、不覆盖已有快照，抛 `SnapshotRejectedError(status, reason)`；管理页测试面板会显示 `(status) reason`。`status` 可省略（默认 `failed`），建议沿用健康状态词 `blocked` / `missing` / `dead` / `failed`。这与 `precheck_health` 的拒绝走同一条通道。
+
+```python
+def replace(url, config, output_path=None):
+    if not can_fetch(url):
+        return {"status": "missing", "error": "内容已删除或无权限查看"}
+    ...
+```
+
+不带 `error` 的 dict 仍按 `before` 的配置覆盖语义处理；返回 `None` 且未写出文件则仍报 `Replace hook did not produce a non-empty snapshot`。
 
 ### JavaScript snapshot 钩子 — SingleFile 浏览器模式
 

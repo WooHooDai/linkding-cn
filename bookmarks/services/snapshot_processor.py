@@ -17,13 +17,15 @@ logger = logging.getLogger(__name__)
 
 
 class SnapshotRejectedError(singlefile.SingleFileError):
-    """The preflight health check rejected the snapshot before capture."""
+    """The snapshot was rejected with a user-facing reason."""
 
-    def __init__(self, status: str, reason: str):
+    def __init__(self, status: str, reason: str,
+                 source: str = "preflight health check"):
         self.status = status
         self.reason = reason
+        self.source = source
         super().__init__(
-            f"snapshot rejected by preflight health check ({status}): {reason}"
+            f"snapshot rejected by {source} ({status}): {reason}"
         )
 
 
@@ -141,6 +143,12 @@ def _run_snapshot_with_hooks(url: str, filepath: str, config: dict, scripts: lis
             before_temp_paths.append(tmp.name)
             logger.debug("Before hook returned content, saved to: %s", before_content_path)
         elif isinstance(result, dict):
+            if result.get("error"):
+                raise SnapshotRejectedError(
+                    str(result.get("status") or "failed"),
+                    str(result["error"]),
+                    source="adapter hook",
+                )
             # Before hook returned config overrides (e.g. dynamic User-Agent).
             # Deep-merge into config so SingleFile picks up the changes.
             _apply_snapshot_before_result(url, config, result)
@@ -157,8 +165,18 @@ def _run_snapshot_with_hooks(url: str, filepath: str, config: dict, scripts: lis
                 script_path = entry_replace.get('path', '')
                 hook_timeout = resolve_hook_timeout(entry_replace, config)
                 logger.debug("Running snapshot replace hook: %s (timeout=%ds)", script_path, hook_timeout)
-                run_script(script_path, hook_name='replace', url=url,
-                           config=dict(config), output_path=filepath, timeout=hook_timeout)
+                hook_result = run_script(script_path, hook_name='replace', url=url,
+                                         config=dict(config), output_path=filepath,
+                                         timeout=hook_timeout)
+                # A replace hook may reject with a reason instead of leaving
+                # the output empty; surface it through the same channel as
+                # precheck_health so the admin panel can show it.
+                if isinstance(hook_result, dict) and hook_result.get("error"):
+                    raise SnapshotRejectedError(
+                        str(hook_result.get("status") or "failed"),
+                        str(hook_result["error"]),
+                        source="adapter hook",
+                    )
                 break  # Only one replace allowed
             # run_script only logs on failure; verify the replace hook actually
             # produced a non-empty file, matching the built-in engine validation.
