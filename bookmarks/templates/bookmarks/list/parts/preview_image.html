@@ -1,17 +1,17 @@
 {% load static %}
 {% if bookmark_list.show_preview_images %}
   {% if bookmark_item.preview_image_file %}
-    <img class="preview-image" src="{% static bookmark_item.preview_image_file %}" alt="" loading="lazy"/>
+    <img class="preview-image" src="{% static bookmark_item.preview_image_file %}" alt="" loading="lazy" onload="this.classList.add('loaded')" onerror="this.classList.add('error')"/>
   {% elif bookmark_item.preview_image_remote_url %}
     {% if bookmark_list.show_preview_image_placeholders %}
       <div class="preview-image-container">
         <div class="preview-image placeholder">
           <div class="img"/>
         </div>
-        <img class="preview-image" src="{{ bookmark_item.preview_image_remote_url }}" referrerpolicy="strict-origin-when-cross-origin" alt="" loading="lazy" onerror="this.style.display='none'"/>
+        <img class="preview-image" src="{{ bookmark_item.preview_image_remote_url }}" referrerpolicy="strict-origin-when-cross-origin" alt="" loading="lazy" onload="this.classList.add('loaded')" onerror="this.classList.add('error')"/>
       </div>
     {% else %}
-      <img class="preview-image" src="{{ bookmark_item.preview_image_remote_url }}" referrerpolicy="strict-origin-when-cross-origin" alt="" loading="lazy" onerror="this.style.display='none'"/>
+      <img class="preview-image" src="{{ bookmark_item.preview_image_remote_url }}" referrerpolicy="strict-origin-when-cross-origin" alt="" loading="lazy" onload="this.classList.add('loaded')" onerror="this.classList.add('error')"/>
     {% endif %}
   {% elif bookmark_list.show_preview_image_placeholders %}
     <div class="preview-image placeholder">

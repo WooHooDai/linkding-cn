@@ -47,6 +47,17 @@ li[ld-bookmark-item] {
     border: solid 1px var(--border-color);
     object-fit: cover;
 
+    /* 真实预览图加载完成前不显示，避免刷新时空带边框盒子闪现；由 onload/onerror 切换 loaded/error 类名 */
+    &:not(.placeholder) {
+      visibility: hidden;
+      &.loaded {
+        visibility: visible;
+      }
+      &.error {
+        display: none;
+      }
+    }
+
     &.placeholder {
       display: flex;
       align-items: center;
