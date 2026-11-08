@@ -80,6 +80,39 @@
     line-height: 1.4;
   }
 
+  .toast-action {
+    flex: 0 0 auto;
+    padding: var(--unit-1) var(--unit-2);
+    border: 0;
+    border-radius: var(--border-radius);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    font-weight: 500;
+    cursor: pointer;
+
+    /* 下划线只画在动作文案上，倒计时不算 */
+    .toast-action-label {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .toast-action-count {
+      text-decoration: none;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    &:focus-visible {
+      outline: var(--focus-outline);
+      outline-offset: 1px;
+    }
+  }
+
   .toast-close {
     flex: 0 0 auto;
     display: inline-flex;

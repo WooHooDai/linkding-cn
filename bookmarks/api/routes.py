@@ -158,6 +158,12 @@ class BookmarkViewSet(
         bookmarks.restore_bookmark(bookmark)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @action(methods=["post"], detail=True)
+    def remove(self, request, pk):
+        bookmark = self.get_object()
+        bookmark.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @action(methods=["get"], detail=False)
     def check(self, request: HttpRequest):
         url = request.GET.get("url")

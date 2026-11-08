@@ -72,6 +72,7 @@
                 {% else %}{% translate "Restore" %}{% endif %}
               </button>
               <button ld-confirm-button ld-confirm-danger ld-confirm-question="{% translate 'Permanently delete?' %}" type="submit" name="remove" value="{{ bookmark_item.id }}"
+                      data-action="remove"
                       class="btn btn-link btn-sm"
                       {% if bookmark_list.action_display_mode == "icon" %}title="{% translate 'Permanently delete' %}"{% endif %}>
                 {% if bookmark_list.action_display_mode == "icon" %}
@@ -81,6 +82,8 @@
             {% else %}
               <button ld-confirm-button ld-confirm-danger ld-confirm-question="{% translate 'Move to trash?' %}" type="submit" name="trash" value="{{ bookmark_item.id }}"
                       data-action="trash"
+                      ld-confirm-alt-label="{% translate 'Permanently delete' %}"
+                      ld-confirm-alt-action="remove"
                       class="btn btn-link btn-sm"
                       {% if bookmark_list.action_display_mode == "icon" %}title="{% translate 'Remove' %}"{% endif %}>
                 {% if bookmark_list.action_display_mode == "icon" %}

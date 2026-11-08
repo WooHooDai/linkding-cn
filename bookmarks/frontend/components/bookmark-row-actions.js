@@ -1,4 +1,5 @@
 import { handleBookmarkAction } from "../utils/bookmark-action.js";
+import { deleteWithUndo } from "../utils/bookmark-delete.js";
 import { gettext } from "./bookmark-row-editor.js";
 
 /** 状态动作的逆动作：回滚时用它把整行按钮恢复回去 */
@@ -31,10 +32,26 @@ export const bookmarkRowActions = {
           this._executeAction(button, button.dataset.action);
         });
       }
+
+      // 确认气泡里折叠的「彻底删除」：只对显式声明的按钮生效
+      const altAction = button.getAttribute("ld-confirm-alt-action");
+      if (altAction) {
+        button._onAltConfirm = () => this._executeAction(button, altAction);
+      }
     });
   },
 
   async _executeAction(button, action) {
+    // 删除走可撤销流程：行状态由它接管（淡出、保留节点、5s 窗口）
+    if (action === "trash" || action === "remove") {
+      deleteWithUndo({
+        bookmarkId: this.bookmarkId,
+        action,
+        element: this.element,
+      });
+      return;
+    }
+
     handleBookmarkAction({
       bookmarkId: this.bookmarkId,
       action,

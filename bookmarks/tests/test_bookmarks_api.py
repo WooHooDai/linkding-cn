@@ -1726,3 +1726,18 @@ class BookmarksApiTestCase(LinkdingApiTestCase, BookmarkFactoryMixin):
         self.post(url, expected_status_code=status.HTTP_204_NO_CONTENT)
         bookmark.refresh_from_db()
         self.assertTrue(bookmark.is_deleted)
+
+    def test_remove_bookmark(self):
+        self.authenticate()
+        bookmark = self.setup_bookmark()
+        url = reverse("linkding:bookmark-remove", args=[bookmark.id])
+        self.post(url, expected_status_code=status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Bookmark.objects.filter(id=bookmark.id).exists())
+
+    def test_remove_bookmark_permission(self):
+        self.authenticate()
+        other_user = self.setup_user()
+        bookmark = self.setup_bookmark(user=other_user)
+        url = reverse("linkding:bookmark-remove", args=[bookmark.id])
+        self.post(url, expected_status_code=status.HTTP_404_NOT_FOUND)
+        self.assertTrue(Bookmark.objects.filter(id=bookmark.id).exists())

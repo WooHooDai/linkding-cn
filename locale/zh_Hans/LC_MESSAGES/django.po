@@ -1052,7 +1052,7 @@ msgstr "移至回收站"
 
 #: bookmarks/templates/bookmarks/bulk_edit/bar.html:75
 msgid "Delete permanently"
-msgstr "永久删除"
+msgstr "彻底删除"
 
 #: bookmarks/templates/bookmarks/bulk_edit/bar.html:79
 #: bookmarks/templates/bookmarks/highlights/index.html:246
@@ -4741,3 +4741,4 @@ msgstr "更多工具"
 
 msgid "(%(total)s highlights / %(notes)s annotations / %(bms)s bookmarks)"
 msgstr "(%(total)s条高亮 / %(notes)s条批注 / %(bms)s个书签)"
+

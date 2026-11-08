@@ -351,12 +351,14 @@
                     class="detail-action-btn" type="submit" name="restore" value="{{ details.bookmark.id }}" data-action="restore" title="{% translate 'Restore' %}">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><use xlink:href="#ld-icon-restore"></use></svg>
             </button>
-            <button ld-confirm-button ld-confirm-danger ld-confirm-question="{% translate 'Permanently delete? This cannot be undone.' %}"
-                    class="detail-action-btn detail-action-delete" type="submit" name="remove" value="{{ details.bookmark.id }}" title="{% translate 'Permanently delete' %}">
+            <button ld-confirm-button ld-confirm-danger ld-confirm-question="{% translate 'Permanently delete?' %}"
+                    class="detail-action-btn detail-action-delete" type="submit" name="remove" value="{{ details.bookmark.id }}" data-action="remove" title="{% translate 'Permanently delete' %}">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><use xlink:href="#ld-icon-delete"></use></svg>
             </button>
           {% else %}
             <button ld-confirm-button ld-confirm-danger ld-confirm-question="{% translate 'Move to trash?' %}"
+                    ld-confirm-alt-label="{% translate 'Permanently delete' %}"
+                    ld-confirm-alt-action="remove"
                     class="detail-action-btn detail-action-delete" type="submit" name="trash" value="{{ details.bookmark.id }}" data-action="trash" title="{% translate 'Move to trash' %}">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><use xlink:href="#ld-icon-remove"></use></svg>
             </button>

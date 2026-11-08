@@ -1,5 +1,6 @@
 import { setAfterPageLoadFocusTarget } from "../utils/focus.js";
 import { handleBookmarkAction } from "../utils/bookmark-action.js";
+import { deleteWithUndo } from "../utils/bookmark-delete.js";
 import { getCSRFToken } from "../utils/csrf.js";
 import { Modal } from "./modal.js";
 import { attachHealthPopover } from "./health.js";
@@ -8,6 +9,18 @@ import { showToast } from "./toast.js";
 
 function gettext(s) {
   return window.gettext ? window.gettext(s) : s;
+}
+
+// 撤销删除后把详情弹窗重新拉起来：frame 仍在页面上，换 src 即重新加载
+function reopenDetailsModal(bookmarkId) {
+  const link = document.querySelector(
+    `li[data-bookmark-id="${bookmarkId}"] a.view-action`,
+  );
+  const url = link?.getAttribute("href");
+  const frame = document.getElementById("details-modal");
+  if (!url || !frame) return;
+  frame.removeAttribute("src");
+  frame.src = url;
 }
 
 class DetailsModal extends Modal {
@@ -174,11 +187,15 @@ class DetailsModal extends Modal {
       }
     });
 
-    // ---- trash / restore 按钮（API 局部处理） ----
+    // ---- trash / restore / remove 按钮（API 局部处理） ----
     this.querySelectorAll("button[data-action]").forEach((btn) => {
       const action = btn.dataset.action;
-      if (action === "trash" || action === "restore") {
-        btn._onConfirm = () => this._executeAction(btn.dataset.action);
+      if (action === "trash" || action === "restore" || action === "remove") {
+        btn._onConfirm = () => this._executeAction(action);
+      }
+      const altAction = btn.getAttribute("ld-confirm-alt-action");
+      if (altAction) {
+        btn._onAltConfirm = () => this._executeAction(altAction);
       }
     });
   }
@@ -364,9 +381,25 @@ class DetailsModal extends Modal {
     }
   }
 
-  // ---- trash / restore 操作 ----
+  // ---- trash / restore / remove 操作 ----
 
   async _executeAction(action) {
+    // 与工具栏一致：删除走可撤销流程，行由 bookmark-delete 接管
+    if (action === "trash" || action === "remove") {
+      const item = document.querySelector(
+        `li[data-bookmark-id="${this.bookmarkId}"]`,
+      );
+      deleteWithUndo({
+        bookmarkId: this.bookmarkId,
+        action,
+        element: item,
+        onUndo: () => reopenDetailsModal(this.bookmarkId),
+      });
+      this.clearInert();
+      this.remove();
+      return;
+    }
+
     handleBookmarkAction({
       bookmarkId: this.bookmarkId,
       action,

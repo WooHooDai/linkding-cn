@@ -9,8 +9,37 @@
  */
 import { getCSRFToken } from "./csrf.js";
 
+const FIELD_ACTIONS = ["share", "unshare", "mark_as_read", "mark_as_unread"];
+
+/**
+ * 只发请求，不碰 DOM。供需要自己控制行状态（如可撤销删除）的调用方复用。
+ * keepalive 用于页面即将卸载时的补发：请求不随文档销毁而取消。
+ */
+export async function sendBookmarkAction({
+  bookmarkId,
+  action,
+  keepalive = false,
+}) {
+  const isFieldAction = FIELD_ACTIONS.includes(action);
+  const response = await fetch(resolveUrl(bookmarkId, action), {
+    method: isFieldAction ? "PATCH" : "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": getCSRFToken(),
+    },
+    ...(isFieldAction ? { body: JSON.stringify(resolveBody(action)) } : {}),
+    keepalive,
+  });
+  if (!response.ok) {
+    const error = new Error(`${action} failed`);
+    error.status = response.status;
+    throw error;
+  }
+  return response;
+}
+
 export async function handleBookmarkAction({ bookmarkId, action, onOptimistic, onRollback }) {
-  const isFieldAction = ["share", "unshare", "mark_as_read", "mark_as_unread"].includes(action);
+  const isFieldAction = FIELD_ACTIONS.includes(action);
   const isStateToggle = ["archive", "unarchive"].includes(action);
   const isDestructive = ["trash", "restore", "remove"].includes(action);
 
@@ -31,15 +60,7 @@ export async function handleBookmarkAction({ bookmarkId, action, onOptimistic, o
   }
 
   try {
-    const r = await fetch(resolveUrl(bookmarkId, action), {
-      method: isFieldAction ? "PATCH" : "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": getCSRFToken(),
-      },
-      ...(isFieldAction ? { body: JSON.stringify(resolveBody(action)) } : {}),
-    });
-    if (!r.ok) throw new Error(`${action} failed`);
+    await sendBookmarkAction({ bookmarkId, action });
 
     // 成功：移除已淡出的元素
     if (isDestructive && item) {
@@ -116,7 +137,7 @@ function resolveBody(action) {
 
 // ---- 工具函数 ----
 
-function updateBookmarkCount(delta) {
+export function updateBookmarkCount(delta) {
   const countEl = document.getElementById("bookmark-list-total");
   if (!countEl) return;
   const match = countEl.textContent.match(/\((\d+)\)/);

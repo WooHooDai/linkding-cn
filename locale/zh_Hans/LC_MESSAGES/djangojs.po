@@ -1174,3 +1174,31 @@ msgstr "更改此高亮的颜色？"
 #, python-format
 msgid "Change the color of %(count)s highlights?"
 msgstr "更改 %(count)s 条高亮的颜色？"
+
+#: bookmarks/frontend/components/confirm-inline.js
+msgid "More options"
+msgstr "更多选项"
+
+#: bookmarks/frontend/components/toast.js
+msgid "(%(seconds)s)"
+msgstr "（%(seconds)s）"
+
+#: bookmarks/frontend/utils/bookmark-delete.js
+msgid "Undo"
+msgstr "撤销"
+
+#: bookmarks/frontend/utils/bookmark-delete.js
+msgid "Moved to trash"
+msgstr "已移到回收站"
+
+#: bookmarks/frontend/utils/bookmark-delete.js
+msgid "Deleted permanently"
+msgstr "已彻底删除"
+
+#: bookmarks/frontend/utils/bookmark-delete.js
+msgid "Could not delete the bookmark"
+msgstr "删除失败，书签已还原"
+
+#: bookmarks/frontend/utils/bookmark-delete.js
+msgid "Could not undo"
+msgstr "撤销失败，请到回收站手动恢复"

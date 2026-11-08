@@ -417,7 +417,74 @@ ld-confirm-popup {
 
   .confirm-popup-actions {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: var(--unit-2);
+  }
+
+  /* 危险项默认折叠，展开后单独一行，与确认键拉开一行间距 */
+  .confirm-popup-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    width: auto;
+    height: var(--control-size-sm);
+    padding: 0 var(--unit-1);
+    border: 0;
+    background: transparent;
+    color: var(--secondary-text-color);
+    cursor: pointer;
+    border-radius: var(--border-radius);
+
+    &:hover {
+      color: var(--text-color);
+      background: var(--body-color-contrast);
+    }
+
+    &:focus-visible {
+      outline: var(--focus-outline);
+      outline-offset: 1px;
+    }
+
+    /* 折叠态箭头朝右，展开后朝下 */
+    svg {
+      transform: rotate(-90deg);
+      transition: transform 0.15s ease;
+    }
+
+    &[aria-expanded="true"] svg {
+      transform: rotate(0deg);
+    }
+  }
+
+  /* 展开行铺满气泡宽度：宽度与上面的按钮行一致，两行才是对称的 */
+  .confirm-popup-alt {
+    display: flex;
+    width: 100%;
+
+    &[hidden] {
+      display: none;
+    }
+
+    .btn {
+      width: 100%;
+    }
+
+    /* 不可恢复的动作要实心红，不能和普通危险按钮一样只有描边。
+       hover 的底色必须在 :hover 里重新声明一次：主题的
+       .btn.btn-error:hover 把它改成浅色底，只靠上面的低优先级声明压不住 */
+    .btn-error {
+      --btn-bg-color: var(--error-color);
+      --btn-border-color: var(--error-color);
+      --btn-text-color: var(--contrast-text-color);
+      --btn-hover-bg-color: var(--error-color-highlight);
+
+      &:hover {
+        --btn-hover-bg-color: var(--error-color-highlight);
+        --btn-text-color: var(--contrast-text-color);
+      }
+    }
   }
 }
 
