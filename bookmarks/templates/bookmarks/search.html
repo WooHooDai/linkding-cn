@@ -12,7 +12,16 @@
       shared="{{ search.shared }}"
       unread="{{ search.unread }}"
     ></ld-search-autocomplete>
-    <input type="submit" value="{% translate 'Search' %}" class="d-none">
+    {# 候选列表点选后不必回到键盘：鼠标直接点输入框右端的回车按钮提交 #}
+    <button type="submit" class="btn search-submit"
+            aria-label="{% translate 'Search' %}" title="{% translate 'Search' %}">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" stroke-width="2"
+           stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+        <path d="M19 5v5a4 4 0 0 1 -4 4h-11"></path>
+        <path d="M8 10l-4 4l4 4"></path>
+      </svg>
+    </button>
     {% for hidden_field in search_form.hidden_fields %}
       {{ hidden_field }}
     {% endfor %}

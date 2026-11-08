@@ -277,9 +277,16 @@ body.sidebar-push
   max-width: 300px;
   margin-left: auto;
   position: relative;
+  /* 回车按钮的显隐看这一层：侧栏开合、工具栏按钮增减都会改宽度，
+     用视口断点判断会算错 */
+  container-type: inline-size;
 
   & form {
     width: 100%;
+    /* 回车按钮浮在输入框里，相对 form 定位 */
+    position: relative;
+    /* 右侧给按钮让出的宽度 = 右缩进 + 按钮宽，文字与它的间距由输入框自身的内边距给 */
+    --search-submit-space: calc(var(--unit-1) + var(--unit-6));
   }
 
   @media (max-width: 600px) {
@@ -309,6 +316,8 @@ body.sidebar-push
         height: 100%;
         margin: 0;
         border: none;
+        /* 文字不钻到右端的回车按钮下面 */
+        padding-right: calc(var(--control-padding-x) + var(--search-submit-space));
       }
     }
   }
@@ -331,6 +340,53 @@ body.sidebar-push
     border-bottom-left-radius: 0;
     box-shadow: none;
     outline-offset: calc(var(--focus-outline-offset) * -1);
+  }
+
+  /* 回车按钮贴在输入框右端：无边框、不占布局，只是给右手省一次回车 */
+  & .search-submit {
+    position: absolute;
+    top: 50%;
+    right: var(--unit-1);
+    transform: translateY(-50%);
+    align-items: center;
+    width: var(--unit-6);
+    height: var(--unit-6);
+    padding: 0;
+    border: none;
+    border-radius: var(--border-radius);
+    background: transparent;
+    box-shadow: none;
+    color: var(--secondary-text-color);
+
+    &:hover {
+      background: color-mix(in srgb, var(--text-color) 8%, transparent);
+      color: var(--text-color);
+    }
+
+    &:focus-visible {
+      outline: var(--focus-outline);
+      outline-offset: calc(var(--focus-outline-offset) * -1);
+    }
+  }
+
+  /* 空输入框没有可提交的内容：按钮不出现，右侧也不留位 */
+  & form:has(input:placeholder-shown) {
+    --search-submit-space: 0px;
+
+    & .search-submit {
+      display: none;
+    }
+  }
+
+  /* 搜索栏连 280px 都不到时就不显示按钮，右侧也不再留它的位置 */
+  @container (max-width: 279px) {
+    & form {
+      --search-submit-space: 0px;
+    }
+
+    & .search-submit {
+      display: none;
+    }
   }
 
   /* Search option menu styles */
