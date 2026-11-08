@@ -34,14 +34,14 @@
                 <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-highlight"></use></svg>
               {% else %}{% translate "Highlights" %}{% endif %}
             </a>
-          {% elif action.key == "edit" and bookmark_item.is_editable and not bookmark_list.is_trash_page %}
+          {% elif action.key == "edit" and bookmark_item.is_editable %}
             <a href="{% url 'linkding:bookmarks.edit' bookmark_item.id %}?return_url={{ bookmark_list.return_url|urlencode }}" class="edit-action"
               {% if bookmark_list.action_display_mode == "icon" %}title="{% translate 'Edit' %}"{% endif %}>
               {% if bookmark_list.action_display_mode == "icon" %}
                 <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-edit"></use></svg>
               {% else %}{% translate "Edit" %}{% endif %}
             </a>
-          {% elif action.key == "archive" and bookmark_item.is_editable and not bookmark_list.is_trash_page %}
+          {% elif action.key == "archive" and bookmark_item.is_editable %}
             {% if bookmark_item.is_archived %}
               <button ld-confirm-button ld-confirm-question="{% translate 'Unarchive bookmark?' %}" type="submit" name="unarchive" value="{{ bookmark_item.id }}"
                       data-action="unarchive"
@@ -61,16 +61,17 @@
                 {% else %}{% translate "Archive" %}{% endif %}
               </button>
             {% endif %}
+          {% elif action.key == "restore" and bookmark_item.is_editable %}
+            <button ld-confirm-button ld-confirm-question="{% translate 'Restore bookmark?' %}" type="submit" name="restore" value="{{ bookmark_item.id }}"
+                    data-action="restore"
+                    class="btn btn-link btn-sm"
+                    {% if bookmark_list.action_display_mode == "icon" %}title="{% translate 'Restore' %}"{% endif %}>
+              {% if bookmark_list.action_display_mode == "icon" %}
+                <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-restore"></use></svg>
+              {% else %}{% translate "Restore" %}{% endif %}
+            </button>
           {% elif action.key == "remove" and bookmark_item.is_editable %}
             {% if bookmark_list.is_trash_page %}
-              <button ld-confirm-button ld-confirm-question="{% translate 'Restore bookmark?' %}" type="submit" name="restore" value="{{ bookmark_item.id }}"
-                      data-action="restore"
-                      class="btn btn-link btn-sm"
-                      {% if bookmark_list.action_display_mode == "icon" %}title="{% translate 'Restore' %}"{% endif %}>
-                {% if bookmark_list.action_display_mode == "icon" %}
-                  <svg class="action-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"><use xlink:href="#ld-icon-restore"></use></svg>
-                {% else %}{% translate "Restore" %}{% endif %}
-              </button>
               <button ld-confirm-button ld-confirm-danger ld-confirm-question="{% translate 'Permanently delete?' %}" type="submit" name="remove" value="{{ bookmark_item.id }}"
                       data-action="remove"
                       class="btn btn-link btn-sm"

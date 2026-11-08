@@ -1178,6 +1178,7 @@ class UserProfile(models.Model):
     ACTION_EDIT = "edit"
     ACTION_ARCHIVE = "archive"
     ACTION_REMOVE = "remove"
+    ACTION_RESTORE = "restore"
     ACTION_KEYS = [
         ACTION_READ,
         ACTION_VIEW,
@@ -1186,6 +1187,25 @@ class UserProfile(models.Model):
         ACTION_ARCHIVE,
         ACTION_REMOVE,
     ]
+    # 回收站与书签列表各自独立配置：回收站多一个「恢复」，没有「移到回收站」
+    TRASH_ACTION_KEYS = [
+        ACTION_EDIT,
+        ACTION_VIEW,
+        ACTION_READ,
+        ACTION_ARCHIVE,
+        ACTION_RESTORE,
+        ACTION_REMOVE,
+        ACTION_HIGHLIGHT,
+    ]
+    TRASH_ACTION_DEFAULTS = {
+        ACTION_EDIT: True,
+        ACTION_VIEW: True,
+        ACTION_READ: False,
+        ACTION_ARCHIVE: False,
+        ACTION_RESTORE: True,
+        ACTION_REMOVE: True,
+        ACTION_HIGHLIGHT: False,
+    }
     ACTION_LABELS = {
         ACTION_READ: pgettext_lazy("bookmark_action", "Read"),
         ACTION_VIEW: _("View"),
@@ -1193,6 +1213,15 @@ class UserProfile(models.Model):
         ACTION_EDIT: _("Edit"),
         ACTION_ARCHIVE: _("Archive"),
         ACTION_REMOVE: _("Remove"),
+    }
+    TRASH_ACTION_LABELS = {
+        ACTION_EDIT: _("Edit"),
+        ACTION_VIEW: _("View"),
+        ACTION_READ: pgettext_lazy("bookmark_action", "Read"),
+        ACTION_ARCHIVE: _("Archive"),
+        ACTION_RESTORE: _("Restore"),
+        ACTION_REMOVE: _("Permanently delete"),
+        ACTION_HIGHLIGHT: _("Highlights"),
     }
     ACTION_ICONS = {
         ACTION_READ: "ld-icon-unread",
@@ -1350,6 +1379,7 @@ class UserProfile(models.Model):
     display_remove_bookmark_action = models.BooleanField(default=True, null=False)
     display_read_bookmark_action = models.BooleanField(default=True, null=False)
     bookmark_actions = models.JSONField(default=list, blank=True, null=False)
+    trash_bookmark_actions = models.JSONField(default=list, blank=True, null=False)
     bookmark_statuses = models.JSONField(default=list, blank=True, null=False)
     bookmark_quick_edits = models.JSONField(default=list, blank=True, null=False)
     bookmark_action_display_mode = models.CharField(
@@ -1948,6 +1978,56 @@ class UserProfile(models.Model):
             for item in self.get_bookmark_actions()
         ]
 
+    @classmethod
+    def default_trash_bookmark_actions(cls) -> list[dict]:
+        return [
+            {"key": key, "enabled": cls.TRASH_ACTION_DEFAULTS[key]}
+            for key in cls.TRASH_ACTION_KEYS
+        ]
+
+    @classmethod
+    def normalize_trash_bookmark_actions(cls, actions: list | None) -> list[dict]:
+        if not isinstance(actions, list) or len(actions) == 0:
+            return cls.default_trash_bookmark_actions()
+
+        normalized = []
+        seen = set()
+        for item in actions:
+            if not isinstance(item, dict):
+                continue
+            key = item.get("key")
+            if key not in cls.TRASH_ACTION_DEFAULTS or key in seen:
+                continue
+            normalized.append(
+                {
+                    "key": key,
+                    "enabled": bool(
+                        item.get("enabled", cls.TRASH_ACTION_DEFAULTS[key])
+                    ),
+                }
+            )
+            seen.add(key)
+
+        for key in cls.TRASH_ACTION_KEYS:
+            if key not in seen:
+                normalized.append(
+                    {"key": key, "enabled": cls.TRASH_ACTION_DEFAULTS[key]}
+                )
+
+        return normalized
+
+    def get_trash_bookmark_actions(self) -> list[dict]:
+        return self.normalize_trash_bookmark_actions(self.trash_bookmark_actions)
+
+    def get_trash_bookmark_action_items(self) -> list[dict]:
+        return [
+            {
+                **item,
+                "label": self.TRASH_ACTION_LABELS[item["key"]],
+            }
+            for item in self.get_trash_bookmark_actions()
+        ]
+
     @property
     def health_max_age(self) -> int:
         """健康状态有效期（天）：优先用户自定义，缺省用全局默认。"""
@@ -2126,6 +2206,7 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
     sidebar_modules = forms.CharField()
     highlights_sidebar_modules = forms.CharField()
     bookmark_actions = forms.CharField()
+    trash_bookmark_actions = forms.CharField(required=False)
     bookmark_statuses = forms.CharField()
     bookmark_quick_edits = forms.CharField()
     bookmark_quick_tags = forms.CharField(required=False)
@@ -2247,6 +2328,9 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
             )
             self.fields["bookmark_actions"].initial = json.dumps(
                 self.instance.get_bookmark_actions()
+            )
+            self.fields["trash_bookmark_actions"].initial = json.dumps(
+                self.instance.get_trash_bookmark_actions()
             )
             self.fields["bookmark_statuses"].initial = json.dumps(
                 self.instance.get_bookmark_statuses()
@@ -2384,6 +2468,19 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
 
         return UserProfile.normalize_bookmark_actions(parsed_value)
 
+    def clean_trash_bookmark_actions(self):
+        raw_value = self.cleaned_data.get("trash_bookmark_actions")
+        if not raw_value:
+            return UserProfile.default_trash_bookmark_actions()
+        try:
+            parsed_value = json.loads(raw_value)
+        except (TypeError, ValueError):
+            raise forms.ValidationError(
+                _("Invalid bookmark actions configuration.")
+            ) from None
+
+        return UserProfile.normalize_trash_bookmark_actions(parsed_value)
+
     @property
     def bookmark_status_items(self) -> list[dict]:
         if self.is_bound:
@@ -2511,6 +2608,7 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
                 setattr(profile, field_name, action["enabled"])
 
         profile.bookmark_statuses = self.cleaned_data["bookmark_statuses"]
+        profile.trash_bookmark_actions = self.cleaned_data["trash_bookmark_actions"]
         profile.bookmark_quick_edits = self.cleaned_data["bookmark_quick_edits"]
         profile.bookmark_quick_tags = self.cleaned_data.get("bookmark_quick_tags", [])
 

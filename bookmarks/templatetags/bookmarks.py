@@ -182,3 +182,26 @@ def random_sort(context, search):
     }
     profile = getattr(request, "user_profile", None)
     return {"search": search, "filtered_params": filtered_params, "profile": profile}
+
+
+@register.simple_tag(takes_context=True)
+def bookmark_action_config(context):
+    """
+    抽屉里的「书签动作」列表：回收站用自己那份配置（字段与顺序都独立），
+    其余页面用书签页的那份。
+    """
+    request = context.get("request")
+    profile = getattr(request, "user_profile", None)
+    if profile is None:
+        return {"field": "bookmark_actions", "items": []}
+
+    match = getattr(request, "resolver_match", None)
+    if match and match.url_name == "bookmarks.trashed":
+        return {
+            "field": "trash_bookmark_actions",
+            "items": profile.get_trash_bookmark_action_items(),
+        }
+    return {
+        "field": "bookmark_actions",
+        "items": profile.get_bookmark_action_items(),
+    }

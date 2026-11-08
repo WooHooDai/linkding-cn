@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n bookmarks %}
 {% comment %}
 书签页：内容 → 行为 → 工具栏。工具栏里的模块关掉后，对应设置项一起收起；说明收进 info 图标。
 每个分组标题就是折叠开关（默认展开，状态记在 localStorage）。
@@ -307,8 +307,9 @@
           </div>
         </div>
       </div>
-      <ul class="ld-module-list" data-drawer-list="bookmark_actions">
-        {% for item in request.user_profile.get_bookmark_action_items %}
+      {% bookmark_action_config as action_config %}
+      <ul class="ld-module-list" data-drawer-list="{{ action_config.field }}">
+        {% for item in action_config.items %}
           <li class="ld-module-item" data-item-key="{{ item.key }}">
             <button type="button" class="ld-module-handle"
                     aria-label="{% translate 'Drag to reorder' %}" tabindex="-1">

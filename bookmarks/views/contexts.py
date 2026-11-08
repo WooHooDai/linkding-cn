@@ -1777,14 +1777,7 @@ class BookmarkListContext:
                         self.request, asc_key if column["key"] == "title" else desc_key
                     )
         self.show_url = user_profile.display_url
-        self.action_list = [
-            {
-                "key": item["key"],
-                "enabled": item["enabled"],
-                "label": user_profile.ACTION_LABELS[item["key"]],
-            }
-            for item in user_profile.get_bookmark_actions()
-        ]
+        self.action_list = self.build_action_list(user_profile)
         self.action_display_mode = user_profile.bookmark_action_display_mode
         self.status_display_mode = user_profile.bookmark_status_display_mode
         self.quick_edit_display_mode = user_profile.bookmark_quick_edit_display_mode
@@ -1902,6 +1895,16 @@ class BookmarkListContext:
         self.toolbar_auto_hide = user_profile.bookmark_toolbar_auto_hide
         self.is_preview = False
         self.snapshot_feature_enabled = settings.LD_ENABLE_SNAPSHOTS
+
+    def build_action_list(self, user_profile) -> list[dict]:
+        return [
+            {
+                "key": item["key"],
+                "enabled": item["enabled"],
+                "label": user_profile.ACTION_LABELS[item["key"]],
+            }
+            for item in user_profile.get_bookmark_actions()
+        ]
 
     @staticmethod
     def generate_return_url(search: BookmarkSearch, base_url: str, page: int = None):
@@ -2935,6 +2938,17 @@ class TrashedBookmarkListContext(BookmarkListContext):
     def __init__(self, request: HttpRequest, search: BookmarkSearch):
         super().__init__(request, search)
         self.is_trash_page = True
+
+    # 回收站有自己的一套动作（多「恢复」、少「移到回收站」）与独立开关
+    def build_action_list(self, user_profile) -> list[dict]:
+        return [
+            {
+                "key": item["key"],
+                "enabled": item["enabled"],
+                "label": user_profile.TRASH_ACTION_LABELS[item["key"]],
+            }
+            for item in user_profile.get_trash_bookmark_actions()
+        ]
 
 
 class TrashedTagCloudContext(TagCloudContext):
