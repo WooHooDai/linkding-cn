@@ -189,11 +189,11 @@ class HighlightAuthorViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
     def meta_sequence(self, item):
         meta = item.select_one(".highlight-meta")
         elements = meta.select(
-            ".highlight-date, .highlight-author, .highlight-author-sep, .highlight-bookmark-title"
+            ".highlight-date, .highlight-author, .highlight-meta-sep, .highlight-bookmark-title"
         )
         return [element.get("class")[0] for element in elements]
 
-    def test_item_shows_author_between_date_and_title(self):
+    def test_item_shows_date_then_author_then_title(self):
         self.setup_highlight(author="鲁迅", title="朝花夕拾")
 
         item = self.render().select_one(".highlight-item")
@@ -201,8 +201,9 @@ class HighlightAuthorViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
             self.meta_sequence(item),
             [
                 "highlight-date",
+                "highlight-meta-sep",
                 "highlight-author",
-                "highlight-author-sep",
+                "highlight-meta-sep",
                 "highlight-bookmark-title",
             ],
         )
@@ -221,10 +222,11 @@ class HighlightAuthorViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
 
         item = self.render().select_one(".highlight-item")
         self.assertIsNone(item.select_one(".highlight-author"))
-        self.assertIsNone(item.select_one(".highlight-author-sep"))
+        # 没有作者时只剩日期与标题之间的那一根分隔符
+        self.assertEqual(len(item.select(".highlight-meta-sep")), 1)
         self.assertEqual(
             self.meta_sequence(item),
-            ["highlight-date", "highlight-bookmark-title"],
+            ["highlight-date", "highlight-meta-sep", "highlight-bookmark-title"],
         )
 
     # --- 分组依据：作者 ---
@@ -252,7 +254,7 @@ class HighlightAuthorViewTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
 
         item = self.render(group_by="author").select_one(".highlight-item")
         self.assertIsNone(item.select_one(".highlight-author"))
-        self.assertIsNone(item.select_one(".highlight-author-sep"))
+        self.assertEqual(len(item.select(".highlight-meta-sep")), 1)
         self.assertIsNotNone(item.select_one(".highlight-bookmark-title"))
 
     def test_group_by_author_groups_highlights_without_author(self):

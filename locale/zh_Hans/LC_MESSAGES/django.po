@@ -4796,3 +4796,6 @@ msgstr "更多工具"
 msgid "(%(total)s highlights / %(notes)s annotations / %(bms)s bookmarks)"
 msgstr "(%(total)s条高亮 / %(notes)s条批注 / %(bms)s个书签)"
 
+msgid "Click to add a note"
+msgstr "点击添加批注"
+

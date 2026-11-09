@@ -45,5 +45,6 @@
 @import "bundles.css";
 @import "tags.css";
 @import "highlights.css";
+@import "highlight-item.css";
 @import "update-checker.css";
 @import "health.css";

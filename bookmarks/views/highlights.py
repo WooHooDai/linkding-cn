@@ -27,7 +27,7 @@ from bookmarks.services.annotations import (
     set_annotation_color,
 )
 from bookmarks.type_defs import HttpRequest
-from bookmarks.views import turbo
+from bookmarks.views import contexts, turbo
 from bookmarks.views.contexts import (
     HighlightAuthorCloudContext,
     HighlightDomainsContext,
@@ -413,7 +413,39 @@ def _query_annotations(request, search: HighlightSearch, group_by="none", sort=N
     )
 
 
+def _details_context(request):
+    """书签详情弹窗的上下文。
+
+    复用书签列表的实现，但把「关闭」和「编辑后返回」都指回高亮页——
+    默认值指向书签列表，从高亮页打开会让用户莫名跳走。
+    """
+    details = contexts.get_details_context(
+        request, contexts.ActiveBookmarkDetailsContext
+    )
+    if not details:
+        return None
+
+    params = request.GET.copy()
+    params.pop("details", None)
+    query = utils.clean_query_params(params)
+    base = reverse("linkding:bookmarks.highlights")
+    close_url = f"{base}?{query}" if query else base
+    details.close_url = close_url
+    separator = "&" if query else "?"
+    details.edit_return_url = f"{close_url}{separator}details={details.bookmark.id}"
+    return details
+
+
 def _render_list(request, search: HighlightSearch, prefs=None, page_size=PAGE_SIZE):
+    details = _details_context(request)
+    # Turbo frame 请求只要弹窗本身，跳过列表与侧栏的整串查询
+    if turbo.is_frame(request, "details-modal"):
+        return render(
+            request,
+            "bookmarks/updates/details-modal-frame.html",
+            {"details": details},
+        )
+
     annotations = _query_annotations(request, search, group_by=search.group_by)
 
     paginator = Paginator(annotations, page_size)
@@ -498,6 +530,7 @@ def _render_list(request, search: HighlightSearch, prefs=None, page_size=PAGE_SI
         "color_labels": COLOR_LABELS,
         "query_string": search.query_string,
         "has_modified_filters": search.has_modifications_vs_prefs(prefs),
+        "details": details,
         # Sidebar
         "domains": domains,
         "tag_cloud": tag_cloud,

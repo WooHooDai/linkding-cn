@@ -128,7 +128,7 @@
                   {% endfor %}
                 </select>
               </div>
-              <div id="date-filter-fields" class="form-group" style="display: {% if date_filter_by %}block{% else %}none{% endif %}">
+              <div id="date-filter-fields" class="form-group hl-filter-fields"{% if not date_filter_by %} hidden{% endif %}>
                 <div class="form-group pref-row">
                   <label for="date-filter-start" class="form-label">{% translate "Start date" %}</label>
                   <input type="date" id="date-filter-start" name="date_filter_start" class="form-input input-sm" value="{{ date_filter_start }}">
@@ -295,8 +295,7 @@
                 <i class="form-icon"></i>
               </label>
               {% if group_by == 'color' and color_key %}
-                <span class="highlight-group-color-bar"
-                      style="background-color: {% if color_key == 'yellow' %}rgba(255,235,0,0.7){% elif color_key == 'green' %}rgba(0,200,83,0.7){% elif color_key == 'blue' %}rgba(66,165,245,0.7){% elif color_key == 'pink' %}rgba(236,64,122,0.7){% else %}var(--primary-color){% endif %};"></span>
+                <span class="highlight-group-color-bar" data-color="{{ color_key }}"></span>
               {% endif %}
               <h3>
                 {% if bookmark_id %}
@@ -323,41 +322,62 @@
 
           <ul class="highlights-list" role="list">
             {% for ann in group_annotations %}
-              <li class="highlight-item" data-annotation-id="{{ ann.id }}">
+              <li class="highlight-item" data-annotation-id="{{ ann.id }}" data-color="{{ ann.color }}">
                 {# Checkbox (hidden until bulk mode) #}
                 <label class="form-checkbox bulk-edit-checkbox">
                   <input type="checkbox" name="annotation_id" value="{{ ann.id }}">
                   <i class="form-icon"></i>
                 </label>
 
-                {# Content #}
                 <div class="highlight-content">
-                  {# Text row: color bar + highlighted text #}
-                  <div class="highlight-text-row">
-                    <div class="highlight-color-bar"
-                         style="background-color: {% if ann.color == 'yellow' %}rgba(255,235,0,0.35){% elif ann.color == 'green' %}rgba(0,200,83,0.3){% elif ann.color == 'blue' %}rgba(66,165,245,0.3){% elif ann.color == 'pink' %}rgba(236,64,122,0.3){% else %}color-mix(in srgb, var(--primary-color) 35%, transparent){% endif %};"></div>
-                    <div class="highlight-text">{{ ann.selected_text }}</div>
+                  <blockquote class="highlight-quote">
+                    <p class="highlight-quote-text" data-quote-text>{{ ann.selected_text }}</p>
+                  </blockquote>
+
+                  <div class="highlight-note" data-note{% if not ann.note_content %} data-note-empty{% endif %}>
+                    <textarea class="highlight-note-input" data-note-input rows="1"
+                              data-annotation-id="{{ ann.id }}"
+                              placeholder="{% translate 'Click to add a note' %}"
+                              {% if not ann.note_content %}hidden{% endif %}>{{ ann.note_content }}</textarea>
                   </div>
 
-                  {# Inline-editable note #}
-                  <textarea class="highlight-note-textarea"
-                            placeholder="{% translate 'Please enter note' %}"
-                            rows="1"
-                            data-annotation-id="{{ ann.id }}"
-                            {% if not ann.note_content %}data-empty{% endif %}>{{ ann.note_content }}</textarea>
-
-                  {# Actions row: date + author + title + action buttons #}
+                  {# 出处：日期 ｜ 作者 · 标题 #}
                   <div class="highlight-meta">
-                    <span class="highlight-date">{{ ann.date_created|date:"Y/m/d H:i" }}</span>
+                    <span class="highlight-meta-text">
+                      <time class="highlight-date" datetime="{{ ann.date_created|date:'c' }}">{{ ann.date_created|date:"Y/m/d H:i" }}</time>
                     {% if group_by != 'bookmark' %}
+                      <span class="highlight-meta-sep" aria-hidden="true">｜</span>
                       {# 分组为「作者」时组标题已经写着作者名，条目里不再重复 #}
                       {% if group_by != 'author' and ann.bookmark.author %}
-                        <a class="highlight-author" href="?{% add_author_to_query ann.bookmark.author %}" title="{% translate 'Author' %}">{{ ann.bookmark.author }}</a>
-                        <span class="highlight-author-sep" aria-hidden="true">·</span>
+                        <a class="highlight-author" href="?{% add_author_to_query ann.bookmark.author %}"
+                           title="{% translate 'Author' %}">{{ ann.bookmark.author }}</a>
+                        <span class="highlight-meta-sep" aria-hidden="true">·</span>
                       {% endif %}
-                      <a class="highlight-bookmark-title" data-turbo="false" href="{% url 'linkding:bookmarks.read' ann.bookmark_id %}?from=highlights" title="{{ ann.bookmark.resolved_title }}">{{ ann.bookmark.resolved_title }}</a>
+                      <a class="highlight-bookmark-title" data-turbo="false"
+                         href="{% url 'linkding:bookmarks.read' ann.bookmark_id %}?from=highlights"
+                         title="{{ ann.bookmark.resolved_title }}">{{ ann.bookmark.resolved_title }}</a>
                     {% endif %}
+                    </span>
+
+                  {# 操作入口与浮层放在文本容器之外：文本要限两行并裁切，浮层不能被一起裁掉 #}
+                  <button type="button" class="highlight-actions-toggle" data-actions-toggle
+                          aria-expanded="false" aria-label="{% translate 'More actions' %}"
+                          title="{% translate 'More actions' %}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <circle cx="12" cy="5" r="1.7"/>
+                      <circle cx="12" cy="12" r="1.7"/>
+                      <circle cx="12" cy="19" r="1.7"/>
+                    </svg>
+                  </button>
+
                     <span class="highlight-actions">
+                      {# href 必须是绝对路径：只给 ?details= 这类相对地址时 Turbo 不会接管，点击会退化成整页导航，重载后就回到顶部了 #}
+                      <a class="highlight-action-btn" title="{% translate 'View' %}"
+                         href="{% url 'linkding:bookmarks.highlights' %}{% querystring details=ann.bookmark_id %}"
+                         data-turbo-action="replace" data-turbo-frame="details-modal">
+                        <svg width="16" height="16"><use href="#ld-icon-view"></use></svg>
+                      </a>
+
                       {# 跳转到原文 #}
                       {% if ann.article_asset %}
                         <a class="highlight-action-btn" title="{% translate 'Locate in article' %}"
@@ -371,7 +391,7 @@
                         </span>
                       {% endif %}
 
-                      {# 编辑批注文本框 #}
+                      {# 编辑批注 #}
                       <button type="button" class="highlight-action-btn" title="{% translate 'Edit note' %}"
                               data-toggle-note>
                         <svg width="16" height="16"><use href="#ld-icon-highlight"></use></svg>
@@ -466,66 +486,90 @@
     }
   });
 
-  // --- Note auto-save on blur ---
-  document.querySelectorAll('.highlight-note-textarea').forEach(function(ta) {
-    var timer = null;
-    ta.addEventListener('input', function() {
-      ta.style.height = 'auto';
-      ta.style.height = ta.scrollHeight + 'px';
+  // --- 批注：裸文本框，有内容时就像正文，空的时候不占版面 ---
+  var noteSaveTimers = new WeakMap();
+
+  function autoGrow(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
+
+  function saveNote(input) {
+    var csrfMeta = document.querySelector('meta[name="csrfmiddlewaretoken"]');
+    var csrf = csrfMeta ? [csrfMeta.content, csrfMeta.content] : document.cookie.match(/ld_csrftoken=([^;]+)/);
+    var formData = new FormData();
+    formData.append('action', 'update_note');
+    formData.append('annotation_id', input.dataset.annotationId);
+    formData.append('note_content', input.value);
+    if (csrf) formData.append('csrfmiddlewaretoken', csrf[1]);
+    fetch(window.location.href, {
+      method: 'POST',
+      body: formData,
+      headers: {'X-Requested-With': 'XMLHttpRequest'},
+      redirect: 'manual',
     });
-    ta.addEventListener('focus', function() {
-      ta.removeAttribute('data-empty');
-      ta.classList.add('note-visible');
+  }
+
+  document.querySelectorAll('[data-note-input]').forEach(function(input) {
+    var note = input.closest('[data-note]');
+    if (!note) return;
+    autoGrow(input);
+    input.addEventListener('input', function() {
+      autoGrow(input);
     });
-    ta.addEventListener('blur', function() {
-      if (!ta.value.trim()) {
-        ta.setAttribute('data-empty', '');
-        ta.classList.remove('note-visible');
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        input.blur();
       }
-      clearTimeout(timer);
-      timer = setTimeout(function() {
-        var annId = ta.dataset.annotationId;
-        var csrfMeta = document.querySelector('meta[name="csrfmiddlewaretoken"]');
-        var csrf = csrfMeta ? [csrfMeta.content, csrfMeta.content] : document.cookie.match(/ld_csrftoken=([^;]+)/);
-        var formData = new FormData();
-        formData.append('action', 'update_note');
-        formData.append('annotation_id', annId);
-        formData.append('note_content', ta.value);
-        if (csrf) formData.append('csrfmiddlewaretoken', csrf[1]);
-        fetch(window.location.href, {
-          method: 'POST',
-          body: formData,
-          headers: {'X-Requested-With': 'XMLHttpRequest'},
-          redirect: 'manual',
-        });
-      }, 300);
     });
-    // Init height (only if visible)
-    if (!ta.hasAttribute('data-empty')) {
-      ta.style.height = 'auto';
-      ta.style.height = ta.scrollHeight + 'px';
-    }
+    input.addEventListener('blur', function() {
+      // 清空后退回无批注形态：整块收起，只留工具栏里的入口；
+      // 有内容则常显，不能继续挂着 hover 才出现的隐藏状态
+      if (input.value.trim()) {
+        input.hidden = false;
+        note.removeAttribute('data-note-empty');
+      } else {
+        input.hidden = true;
+        note.setAttribute('data-note-empty', '');
+      }
+      clearTimeout(noteSaveTimers.get(input));
+      noteSaveTimers.set(input, setTimeout(function() {
+        saveNote(input);
+      }, 300));
+    });
   });
 
-  // --- Toggle note textarea via button or item click ---
-  function toggleNoteTextarea(item) {
-    var ta = item.querySelector('.highlight-note-textarea');
-    if (!ta) return;
-    if (ta.hasAttribute('data-empty')) {
-      ta.removeAttribute('data-empty');
-    }
-    ta.classList.add('note-visible');
-    ta.style.height = 'auto';
-    ta.style.height = ta.scrollHeight + 'px';
-    ta.focus();
-    ta.selectionStart = ta.selectionEnd = ta.value.length;
+  function openNote(item) {
+    var note = item.querySelector('[data-note]');
+    var input = item.querySelector('[data-note-input]');
+    if (!note || !input) return;
+    note.removeAttribute('data-note-empty');
+    input.hidden = false;
+    autoGrow(input);
+    input.focus();
+    input.selectionStart = input.selectionEnd = input.value.length;
   }
 
   document.querySelectorAll('[data-toggle-note]').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
       var item = btn.closest('.highlight-item');
-      if (item) toggleNoteTextarea(item);
+      if (item) openNote(item);
+    });
+  });
+
+  // 点条目本身也进编辑：拖选文字时不抢，批量选择模式下也不抢
+  document.querySelectorAll('.highlight-item').forEach(function(item) {
+    item.addEventListener('click', function(e) {
+      if (e.target.closest('a, button, textarea, input, label')) return;
+      var selection = window.getSelection();
+      if (selection && !selection.isCollapsed) return;
+      if (item.closest('.highlights-page.active')) return;
+      var input = item.querySelector('[data-note-input]');
+      // 正在写时点空白是「想出去」，别再把人拉回来
+      if (input && !input.hidden && document.activeElement === input) return;
+      openNote(item);
     });
   });
 
@@ -614,11 +658,36 @@
 
   refreshGroupToggleAll();
 
-  // --- Inline filter auto-submit ---
-  document.querySelectorAll('[data-submit-on-change]').forEach(function(el) {
-    el.addEventListener('change', function() {
-      el.closest('form').submit();
+  // --- 窄屏操作栏：三点按钮开合，点别处或另一条时收起 ---
+  function closeActionPanels(except) {
+    document.querySelectorAll('.highlight-actions.is-open').forEach(function(panel) {
+      if (panel === except) return;
+      panel.classList.remove('is-open');
+      var item = panel.closest('.highlight-item');
+      var toggle = item && item.querySelector('[data-actions-toggle]');
+      if (toggle) toggle.setAttribute('aria-expanded', 'false');
     });
+  }
+
+  document.querySelectorAll('[data-actions-toggle]').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var item = btn.closest('.highlight-item');
+      var panel = item && item.querySelector('.highlight-actions');
+      if (!panel) return;
+      var open = !panel.classList.contains('is-open');
+      closeActionPanels(panel);
+      panel.classList.toggle('is-open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  });
+
+  // 面板内点击要靠 document 上的目标判断来放过，不能在面板上 stopPropagation：
+  // 那会把事件拦在 Turbo 的链接拦截器之前，点「查看」变成整页导航
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('[data-actions-toggle]')) return;
+    if (e.target.closest('.highlight-actions')) return;
+    closeActionPanels(null);
   });
 
   // --- Color picker toggle ---
@@ -667,8 +736,8 @@
   document.querySelectorAll('[data-copy-annotation]').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var item = btn.closest('.highlight-item');
-      var text = item.querySelector('.highlight-text').textContent.trim();
-      var note = item.querySelector('.highlight-note-textarea').value.trim();
+      var text = item.querySelector('[data-quote-text]').textContent.trim();
+      var note = item.querySelector('[data-note-input]').value.trim();
       var copy = linkding.renderByAction(ITEM_FORMAT, text, note, COPY_DEFAULT_ACTION);
       navigator.clipboard.writeText(copy).then(function() {
         btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M5 12l5 5l10 -10"></path></svg>';
@@ -737,11 +806,18 @@
   if (dateFilterInputs.length && dateFilterFields) {
     dateFilterInputs.forEach(function(input) {
       input.addEventListener('change', function() {
-        dateFilterFields.style.display = input.value ? 'block' : 'none';
+        dateFilterFields.hidden = !input.value;
       });
     });
   }
 
 })();
 </script>
+{% endblock %}
+
+{% block overlays %}
+  {# 条目里的「查看」把书签详情弹窗就地拉起来，列表和滚动位置都保留 #}
+  <turbo-frame id="details-modal" target="_top">
+    {% if details %}{% include 'bookmarks/details/modal.html' %}{% endif %}
+  </turbo-frame>
 {% endblock %}

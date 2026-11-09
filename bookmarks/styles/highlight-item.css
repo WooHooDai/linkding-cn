@@ -1,0 +1,400 @@
+/* 高亮条目：原文是色块，批注是旁注，出处是脚注。
+   三者靠形状、字号、缩进区分，不靠灰度差——同一层级的浅灰文字
+   在长列表里会被读成连续的一段。 */
+
+.highlights-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--unit-5);
+  list-style: none;
+  margin: 0;
+  padding: var(--unit-2) 0 var(--unit-4);
+}
+
+.highlights-list.collapsed {
+  display: none;
+}
+
+.highlight-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--unit-2);
+}
+
+/* 两层竖线：外层粗线标条目颜色、贯穿整条；内层细线只框住原文，
+   贴着粗线放，读起来是「这条」与「这段话」两级，而不是两根并排的边框。 */
+.highlight-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--unit-2);
+  padding-left: var(--unit-1);
+  border-left: 4px solid var(--primary-color);
+}
+
+.highlight-item[data-color="yellow"] {
+  border-left-color: var(--hl-yellow-dot);
+}
+
+.highlight-item[data-color="green"] {
+  border-left-color: var(--hl-green-dot);
+}
+
+.highlight-item[data-color="blue"] {
+  border-left-color: var(--hl-blue-dot);
+}
+
+.highlight-item[data-color="pink"] {
+  border-left-color: var(--hl-pink-dot);
+}
+
+.highlight-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── 原文：被摘录的素材，字号与颜色都让位给批注 ── */
+
+.highlight-quote {
+  margin: 0;
+  /* 清掉全局 blockquote 的上下内距，原文只保留左侧标记 */
+  padding: 0 0 0 var(--unit-2);
+  border-left: 2px solid var(--primary-color);
+}
+
+.highlight-item[data-color="yellow"] .highlight-quote {
+  border-left-color: var(--hl-yellow-dot);
+}
+
+.highlight-item[data-color="green"] .highlight-quote {
+  border-left-color: var(--hl-green-dot);
+}
+
+.highlight-item[data-color="blue"] .highlight-quote {
+  border-left-color: var(--hl-blue-dot);
+}
+
+.highlight-item[data-color="pink"] .highlight-quote {
+  border-left-color: var(--hl-pink-dot);
+}
+
+.highlight-quote-text {
+  margin: 0;
+  font-size: var(--font-size);
+  line-height: 1.6;
+  color: var(--secondary-text-color);
+  white-space: pre-wrap;
+  word-break: break-word;
+  /* 与批注同一口径：六行以内随内容，超出就地滚动 */
+  max-height: calc(1.6em * 6);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+/* ── 批注：自己的话，字号与颜色都比原文更实 ── */
+
+.highlight-note {
+  margin-top: var(--unit-2);
+  /* 与 meta 同一左缘，对齐原文文字而不是细线 */
+  padding-left: calc(2px + var(--unit-1));
+
+  /* 没有批注时不占版面，点击条目或操作栏的笔按钮才唤出 */
+  &[data-note-empty] {
+    display: none;
+  }
+}
+
+/* 与书签页的内联编辑同一套：透明、无边框，看着就是文字，点进去直接改 */
+.highlight-note-input {
+  width: 100%;
+  /* 空批注被唤出时 height 还是 0，用一个行高兜住 */
+  min-height: 1.5em;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-sizing: border-box;
+  font-family: var(--base-font-family);
+  font-size: var(--font-size-lg);
+  line-height: 1.5;
+  color: var(--text-color);
+  outline: none;
+  resize: none;
+  /* 超过六行就地滚动，不把一条高亮撑成一屏 */
+  max-height: calc(1.5em * 6);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+
+  &::placeholder {
+    color: var(--tertiary-text-color);
+    font-style: italic;
+  }
+
+  &:hover,
+  &:focus {
+    scrollbar-color: var(--secondary-border-color) transparent;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+/* ── 出处：脚注层，与正文同一左缘 ──
+   文本自己按行内流排：日期、作者、标题顺次填满一行，写不下才折到第二行。
+   限高只作用在文本容器上，操作入口因此在第一行就能定位，不会跟着换行往下跑。 */
+
+.highlight-meta {
+  /* 首行行盒高度：按钮按它居中，而不是按整个 meta（两行时会跑偏） */
+  --hl-meta-line: calc(var(--font-size-sm) * 1.6);
+
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  margin-top: var(--unit-2);
+  /* 对齐原文文字左缘：外层 4px 粗线 + 4px 内距 + 2px 细线 + 8px 内距 */
+  padding-left: calc(2px + var(--unit-1));
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.highlight-meta-text {
+  flex: 1;
+  min-width: 0;
+  /* 宽屏只有一行，超出省略 */
+  max-height: 1.6em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.highlight-date {
+  color: var(--tertiary-text-color);
+  white-space: nowrap;
+}
+
+/* 元信息分隔符：读起来像「2026/11/02 ｜ 鲁迅 · 朝花夕拾」 */
+.highlight-meta-sep {
+  color: var(--tertiary-text-color);
+}
+
+.highlight-author {
+  color: var(--tertiary-text-color);
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--primary-text-color);
+    text-decoration: underline;
+  }
+}
+
+.highlight-bookmark-title {
+  color: var(--tertiary-text-color);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--primary-text-color);
+    text-decoration: underline;
+  }
+}
+
+/* 浮层：不占流内宽度，标题和作者可以用满整行；hover 时盖在 meta 首行右端之上 */
+.highlight-actions {
+  position: absolute;
+  right: 0;
+  top: calc((var(--hl-meta-line) - 26px) / 2);
+  z-index: var(--zindex-0);
+  display: flex;
+  align-items: center;
+  gap: var(--unit-1);
+  padding: 0 var(--unit-1);
+  border: 1px solid var(--secondary-border-color);
+  border-radius: var(--border-radius);
+  background: var(--body-color);
+  box-shadow: var(--box-shadow-xs);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+
+  .highlight-item:hover &,
+  .highlight-item:focus-within &,
+  .highlights-page.active & {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* 窄屏入口：默认藏起来，窄屏才顶替 hover；钉在 meta 首行右端并与之垂直居中 */
+.highlight-actions-toggle {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc((var(--hl-meta-line) - 24px) / 2);
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--border-radius);
+  background: none;
+  color: var(--icon-color);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--body-color-contrast);
+    color: var(--text-color);
+  }
+}
+
+@media (max-width: 600px), (hover: none) {
+  /* 触屏和窄屏都没有 hover 提示可滚，滚动条常显 */
+  .highlight-note-input,
+  .highlight-quote-text {
+    scrollbar-color: var(--secondary-border-color) transparent;
+  }
+
+  .highlight-note-input::-webkit-scrollbar,
+  .highlight-quote-text::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .highlight-note-input::-webkit-scrollbar-thumb,
+  .highlight-quote-text::-webkit-scrollbar-thumb {
+    background: var(--secondary-border-color);
+    border-radius: 2px;
+  }
+}
+
+.highlight-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--border-radius);
+  background: none;
+  color: var(--icon-color);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+
+  &:hover {
+    background: var(--body-color-contrast);
+    color: var(--text-color);
+    text-decoration: none;
+  }
+
+  &.disabled {
+    opacity: 0.3;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  &.delete:hover {
+    color: var(--error-color);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* ── 改色：色点触发，弹层向上展开 ── */
+
+.highlight-color-picker-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.highlight-color-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.highlight-color-popup {
+  display: none;
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  left: auto;
+  z-index: var(--zindex-3);
+  padding: var(--unit-1);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: var(--body-color);
+  box-shadow: var(--box-shadow);
+  white-space: nowrap;
+
+  &.open {
+    display: flex;
+    gap: var(--unit-1);
+  }
+}
+
+.highlight-color-option {
+  position: relative;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 0.86;
+  }
+
+  &.selected::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(1.1rem * 0.45);
+    height: calc(1.1rem * 0.25);
+    border: 2px solid #fff;
+    border-top: none;
+    border-right: none;
+    box-sizing: border-box;
+    transform: translate(-50%, -65%) rotate(-45deg);
+  }
+}
+
+@media (max-width: 600px) {
+  /* 行内流自然折行：先把第一行写满，写不下才折到第二行；整行最多两行 */
+  .highlight-meta-text {
+    max-height: calc(1.6em * 2);
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  /* 触屏没有 hover 可等，改由三点按钮开合 */
+  .highlight-actions-toggle {
+    display: inline-flex;
+  }
+
+  .highlight-actions {
+    display: none;
+  }
+
+  .highlight-actions.is-open {
+    display: flex;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}

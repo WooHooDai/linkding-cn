@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════
-   Highlights & Notes management page
-   Style aligned with reader sidebar annotation tab
+   高亮页骨架：工具栏、筛选条、分组、分页、侧栏模块
+   条目内部的排版在 highlight-item.css
    ═══════════════════════════════════════════════════ */
 
 /* ── Toolbar ── */
@@ -40,6 +40,11 @@
     border-bottom-left-radius: 0;
     margin-left: -1px;
   }
+}
+
+/* Spectre 给 .form-group 定了 display，光靠 [hidden] 盖不住 */
+.hl-filter-fields[hidden] {
+  display: none;
 }
 
 /* ── Filter dropdown menu ── */
@@ -117,7 +122,7 @@
   filter: drop-shadow(0 0 1px rgba(0,0,0,0.5));
 }
 
-/* "All" dot: conic-gradient multi-color拼色 */
+/* "All" dot: conic-gradient 拼色 */
 .color-dot-filter.all-colors {
   background: conic-gradient(
     var(--hl-yellow-dot) 0% 20%,
@@ -151,37 +156,28 @@
   margin-right: var(--unit-2);
 }
 
-/* ── Search summary ── */
-
-.highlights-summary {
-  padding-left: 2px;
-  padding-bottom: var(--unit-2);
-  margin-bottom: 0px !important;
-  font-size: var(--font-size-sm);
-  color: var(--secondary-text-color);
-  border-bottom: 1px solid var(--secondary-border-color);
-}
-
-/* ── Group header ── */
+/* ── Group header ──
+   分组用「块」表达层级：底色横幅比一根横线更难被条目本身淹没。 */
 
 .highlight-group-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--unit-2);
-  margin-top: var(--unit-4);
-  margin-bottom: var(--unit-1);
-  padding-bottom: var(--unit-1);
-  border-bottom: 1px solid var(--secondary-border-color);
+  margin-top: var(--unit-7);
+  margin-bottom: var(--unit-3);
+  padding: var(--unit-2) var(--unit-3);
+  border-radius: var(--border-radius);
+  background: var(--body-color-contrast);
 
   &:first-child {
     margin-top: 0;
   }
 
   h3 {
-    font-size: var(--font-size-sm);
-    font-weight: 600;
     margin: 0;
     overflow: hidden;
+    font-size: var(--font-size);
+    font-weight: 500;
     text-overflow: ellipsis;
     white-space: nowrap;
 
@@ -200,18 +196,24 @@
     justify-content: center;
     width: 20px;
     height: 20px;
+    margin-left: auto;
+    padding: 0;
     border: none;
+    border-radius: var(--border-radius);
     background: none;
     color: var(--icon-color);
     cursor: pointer;
-    border-radius: var(--border-radius);
-    padding: 0;
-    margin-left: auto;
-    transition: transform 0.15s;
     flex-shrink: 0;
+    transition: transform 0.15s;
+
+    &:hover {
+      background: var(--body-color);
+      color: var(--text-color);
+    }
   }
 
   .highlight-group-count {
+    flex: none;
     font-size: var(--font-size-sm);
     color: var(--tertiary-text-color);
     white-space: nowrap;
@@ -222,328 +224,48 @@
     flex: none;
     max-width: 10em;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
     font-size: var(--font-size-sm);
     font-weight: 400;
     color: var(--secondary-text-color);
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .highlight-group-sep {
     flex: none;
     margin-inline: calc(-1 * var(--unit-1));
     font-size: var(--font-size-sm);
-    font-weight: 400;
     color: var(--tertiary-text-color);
   }
 
   .highlight-group-color-bar {
-    width: 4px;
+    width: 3px;
+    min-height: 1em;
     align-self: stretch;
     border-radius: 2px;
+    background: var(--primary-color);
     flex-shrink: 0;
-    min-height: 1em;
+
+    &[data-color="yellow"] {
+      background: var(--hl-yellow-dot);
+    }
+
+    &[data-color="green"] {
+      background: var(--hl-green-dot);
+    }
+
+    &[data-color="blue"] {
+      background: var(--hl-blue-dot);
+    }
+
+    &[data-color="pink"] {
+      background: var(--hl-pink-dot);
+    }
   }
-}
-
-/* ── Highlight list ── */
-
-.highlights-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.highlights-list.collapsed {
-  display: none;
 }
 
 .highlight-group-header.collapsed .highlight-group-toggle {
   transform: rotate(-90deg);
-}
-
-/* ── Single highlight item ──
-   Aligned with reader sidebar .annotation-item style:
-   - text: font-size-sm, secondary-text-color
-   - note: 0.75rem, input-text-color
-   - actions: font-size-sm, below content with indent */
-
-.highlight-item {
-  position: relative;
-  display: flex;
-  gap: var(--unit-2);
-  padding: var(--unit-2) var(--unit-3) var(--unit-1);
-  border-bottom: 1px solid var(--secondary-border-color);
-  margin-top: 0px;
-  transition: background 0.15s;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:hover {
-    background: var(--body-color-contrast);
-  }
-
-  /* Color bar — matches reader: width 3px, stretch, rounded */
-  .highlight-color-bar {
-    width: 3px;
-    border-radius: 2px;
-    flex-shrink: 0;
-    align-self: stretch;
-    min-height: 1em;
-  }
-
-  /* Content area */
-  .highlight-content {
-    flex: 1;
-    min-width: 0;
-  }
-
-  /* Bookmark title (in meta row, after date) */
-  .highlight-bookmark-title {
-    font-size: var(--font-size-sm);
-    color: var(--tertiary-text-color);
-    text-decoration: none;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex: 1;
-    min-width: 0;
-
-    &:hover {
-      color: var(--primary-color);
-      text-decoration: underline;
-    }
-  }
-
-  /* Highlighted text */
-  .highlight-text {
-    flex: 1;
-    font-size: 16px;
-    color: var(--secondary-text-color);
-    line-height: 1.5;
-    word-break: break-word;
-    min-width: 0;
-  }
-
-  /* Text row: color bar + text */
-  .highlight-text-row {
-    display: flex;
-    gap: var(--unit-2);
-    align-items: flex-start;
-  }
-
-  /* Note textarea */
-  .highlight-note-textarea {
-    margin-top: var(--unit-1);
-    padding-left: calc(3px + var(--unit-2));
-    width: 100%;
-    font-size: 16px;
-    color: var(--input-text-color, var(--text-color));
-    background: var(--input-bg-color, var(--body-color));
-    border: 1px solid transparent;
-    border-radius: var(--border-radius);
-    box-sizing: border-box;
-    font-family: var(--base-font-family);
-    line-height: 1.5;
-    overflow: hidden;
-    resize: none;
-    outline: none;
-
-    &::placeholder {
-      color: var(--tertiary-text-color);
-      font-style: italic;
-    }
-
-    &:focus {
-      border-color: var(--input-border-color, var(--border-color));
-      background: var(--input-bg-color, var(--body-color));
-    }
-
-    /* Empty note: hidden by default, shown via .note-visible class */
-    &[data-empty] {
-      display: none;
-    }
-
-    &[data-empty].note-visible {
-      display: block;
-    }
-  }
-
-  /* Actions row — matches reader .annotation-actions */
-  .highlight-meta {
-    display: flex;
-    align-items: center;
-    gap: var(--unit-2);
-    padding-left: calc(3px + var(--unit-2));
-    margin-top: var(--unit-1);
-    position: relative;
-    /* 按钮移出流后行高只剩文字高度，这里补回按钮原本撑起的高度 */
-    min-height: 24px;
-  }
-
-  .highlight-date {
-    font-size: var(--font-size-sm);
-    color: var(--secondary-text-color);
-    white-space: nowrap;
-  }
-
-  /* 作者（日期之后、标题之前）：弱化文字，最长 10em 省略；点击进入 author 搜索 */
-  .highlight-author {
-    flex: none;
-    display: inline-block;
-    max-width: 10em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: var(--font-size-sm);
-    color: var(--secondary-text-color);
-    text-decoration: none;
-
-    &:hover {
-      color: var(--primary-color);
-      text-decoration: underline;
-    }
-  }
-
-  /* 作者与标题之间的间隔点：吃掉两侧 gap 的一半，读起来像「鲁迅 · 朝花夕拾」 */
-  .highlight-author-sep {
-    flex: none;
-    margin-inline: calc(-1 * var(--unit-1));
-    font-size: var(--font-size-sm);
-    color: var(--tertiary-text-color);
-  }
-
-  /* 操作按钮悬浮在 meta 行右端之上：不参与行内布局，
-     日期/作者/标题就挤不到它，窄屏也不会把它顶出条目右缘 */
-  .highlight-actions {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    z-index: var(--zindex-0);
-    display: flex;
-    align-items: center;
-    gap: var(--unit-2);
-    padding: 0 var(--unit-1);
-    border: 1px solid var(--secondary-border-color);
-    border-radius: var(--border-radius);
-    background: var(--body-color);
-    box-shadow: var(--box-shadow-xs);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.15s;
-
-    .highlight-item:hover &,
-    .highlights-page.active &,
-    .highlight-item:focus-within & {
-      opacity: 1;
-      pointer-events: auto;
-    }
-  }
-}
-
-/* ── Action buttons ── */
-
-.highlight-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: none;
-  color: var(--icon-color);
-  cursor: pointer;
-  border-radius: var(--border-radius);
-  padding: 0;
-  text-decoration: none;
-  transition: color 0.15s;
-
-  &:hover {
-    color: var(--text-color);
-    text-decoration: none;
-  }
-
-  &.disabled {
-    opacity: 0.3;
-    cursor: default;
-    pointer-events: none;
-  }
-
-  &.delete:hover {
-    color: var(--error-color);
-  }
-
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-}
-
-/* Color picker — aligned with reader sidebar .annotation-color-wrap / .color-picker-* */
-.highlight-color-picker-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.highlight-color-dot {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.highlight-color-popup {
-  display: none;
-  position: absolute;
-  bottom: calc(100% + 4px);
-  right: 0;
-  left: auto;
-  background: var(--body-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  box-shadow: var(--box-shadow);
-  padding: var(--unit-1);
-  z-index: var(--zindex-3);
-  white-space: nowrap;
-
-  &.open {
-    display: flex;
-    gap: var(--unit-1);
-  }
-}
-
-.highlight-color-option {
-  position: relative;
-  width: 1.1rem;
-  height: 1.1rem;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: opacity 0.15s;
-
-  &:hover {
-    opacity: 0.86;
-  }
-
-  &.selected::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: calc(1.1rem * 0.45);
-    height: calc(1.1rem * 0.25);
-    border: 2px solid #fff;
-    border-top: none;
-    border-right: none;
-    transform: translate(-50%, -65%) rotate(-45deg);
-    box-sizing: border-box;
-  }
 }
 
 /* ── Sticky pagination ── */
@@ -555,12 +277,6 @@
   background: var(--body-color);
   padding: var(--unit-h) 0;
   border-top: 1px solid var(--secondary-border-color);
-}
-
-@media (max-width: 600px) {
-  .highlights-card-view {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* ── Sidebar: Colors module ── */
@@ -625,7 +341,6 @@
 }
 
 .sidebar-color-count {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--secondary-text-color);
 }
-
