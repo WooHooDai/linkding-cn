@@ -381,9 +381,12 @@ li[ld-bookmark-item] {
   }
 
   & .tags {
-    & a,
+    & a {
+      color: var(--tag-color);
+    }
+    & a:hover,
     & a:visited:hover {
-      color: var(--alternative-color);
+      color: var(--text-color);
     }
     & a::before {
       content: "#";

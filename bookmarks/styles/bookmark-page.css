@@ -6,7 +6,7 @@
   --bookmark-actions-color: var(--secondary-text-color);
   --bookmark-actions-hover-color: var(--text-color);
   --bookmark-actions-weight: 400;
-  --bulk-actions-bg-color: var(--gray-50);
+  --bulk-actions-bg-color: var(--body-color-contrast);
 }
 
 /* Bookmark page grid */
@@ -825,7 +825,7 @@ button.btn-link.quick-tag-btn.active:focus {
   & .unselected-tags {
     & a,
     & a:visited:hover {
-      color: var(--alternative-color);
+      color: var(--tag-color);
     }
   }
 
@@ -962,14 +962,14 @@ button.btn-link.quick-tag-btn.active:focus {
 }
 
 .tag-tree-link {
-  color: var(--alternative-color);
+  color: var(--tag-color);
   text-decoration: none;
   display: flex;
   align-items: baseline;
   gap: var(--unit-1);
 
   &:hover {
-    color: var(--alternative-color-dark);
+    color: var(--text-color);
     text-decoration: none;
   }
 }

@@ -115,7 +115,7 @@ ul.bookmark-list.view-compact .compact-tag {
   max-width: 6em;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--gray-400);
+  color: var(--secondary-text-color);
   text-decoration: none;
 }
 

@@ -1791,7 +1791,7 @@ html.reader-mode {
 
   .info-tag {
     font-size: 14px;
-    color: var(--alternative-color);
+    color: var(--tag-color);
   }
 
   .info-tag::before {

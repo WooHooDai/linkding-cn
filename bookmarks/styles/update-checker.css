@@ -67,7 +67,7 @@
   }
 
   .ld-update-modal-date {
-    color: var(--gray-500);
+    color: var(--tertiary-text-color);
     font-size: var(--font-size-sm);
     white-space: nowrap;
   }

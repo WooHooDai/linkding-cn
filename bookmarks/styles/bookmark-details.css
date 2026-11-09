@@ -33,7 +33,11 @@
   }
 
   & .tags a {
-    color: var(--alternative-color);
+    color: var(--tag-color);
+  }
+
+  & .tags a:hover {
+    color: var(--text-color);
   }
 
   & .tags a::before {
@@ -312,7 +316,7 @@
 
 .info-tag {
   font-size: 14px;
-  color: var(--alternative-color);
+  color: var(--tag-color);
 }
 
 .info-placeholder {

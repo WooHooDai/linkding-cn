@@ -591,3 +591,10 @@ ld-confirm-popup {
     width: 100%;
   }
 }
+
+/* 开关圆钮：vendored 样式只设置了 background，没有阴影。轨道与圆钮同处
+   浅色区时（浅色皮肤的关闭态）两者会糊成一片，这里统一补一层投影。
+   深色界面下黑色投影本就偏弱，轨道通常比圆钮暗，可接受。 */
+.form-switch .form-icon::before {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16), 0 0 1px rgba(0, 0, 0, 0.1);
+}
