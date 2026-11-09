@@ -29,10 +29,24 @@ function submitTarget(form, submitter) {
   form.requestSubmit(owner || undefined);
 }
 
+/**
+ * 列表三个视图的行内动作栏都是「悬停才显形」：确认弹窗一出现，指针就离开行、动作栏收起，
+ * 按钮（弹窗的锚点）随之不占位。弹窗存活期间把所在行钉住，关闭时只撤掉自己加的那次。
+ */
+function pinRow(button) {
+  const item = button?.closest("li[ld-bookmark-item]");
+  if (!item || item.classList.contains("toolbar-visible")) return null;
+  item.classList.add("toolbar-visible");
+  return item;
+}
+
 function updatePopupPosition() {
   if (!activePopup || !activePopup._button) return;
   const button = activePopup._button;
   const rect = button.getBoundingClientRect();
+  // 锚点此刻不占位（行被收起或移除）时量到的全是 0：贴过去等于把弹窗扔到视口角落。
+  // 保持原位，等锚点回来再算。
+  if (!rect.width && !rect.height) return;
   const popupWidth = activePopup.offsetWidth;
   const popupHeight = activePopup.offsetHeight;
 
@@ -83,6 +97,8 @@ document.addEventListener("turbo:before-cache", dismissActive);
 class ConfirmPopup extends HTMLElement {
   connectedCallback() {
     dismissActive();
+    // 上一个弹窗关掉时可能把自己钉住的行放了，轮到本弹窗再钉一次
+    this._pinnedRow = this._pinnedRow || pinRow(this._button);
 
     const button = this._button;
     const question =
@@ -205,6 +221,8 @@ class ConfirmPopup extends HTMLElement {
 
   close() {
     this.remove();
+    this._pinnedRow?.classList.remove("toolbar-visible");
+    this._pinnedRow = null;
     if (activePopup === this) {
       activePopup = null;
     }
