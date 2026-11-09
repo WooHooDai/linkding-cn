@@ -13,7 +13,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import prefetch_related_objects
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse, translate_url
 from django.utils import timezone
@@ -390,6 +390,101 @@ def _build_profile_quick_form_data(profile, request_post) -> dict:
             form_data[field_name] = value
 
     return form_data
+
+
+def skin_css(request: HttpRequest, skin_id: str):
+    """输出皮肤文件。内置皮肤在 static 下，用户皮肤在 data/skins 下，
+    统一从这里取，模板不必区分来源。"""
+    from bookmarks.skins import default_skin_css, skin_path
+
+    if skin_id == "default":
+        css = default_skin_css()
+        if css is None:
+            raise Http404()
+        return HttpResponse(css, content_type="text/css")
+
+    path = skin_path(skin_id)
+    if not path:
+        raise Http404()
+    response = HttpResponse(path.read_bytes(), content_type="text/css")
+    response["Cache-Control"] = "public, max-age=300"
+    return response
+
+
+@login_required
+def skin_delete(request: HttpRequest):
+    """删除用户导入的皮肤；内置皮肤不可删。"""
+    from bookmarks.skins import skin_path, user_skin_dir
+
+    target_url = reverse("linkding:settings.general")
+
+    if request.method != "POST":
+        return HttpResponseRedirect(target_url)
+
+    skin_id = (request.POST.get("skin_id") or "").strip()
+    path = skin_path(skin_id)
+    if not path or path.parent != user_skin_dir():
+        messages.error(request, _("Only imported skins can be deleted."))
+        return HttpResponseRedirect(target_url)
+
+    path.unlink()
+
+    profile = request.user.profile
+    if profile.skin == skin_id:
+        profile.skin = ""
+        profile.save(update_fields=["skin"])
+
+    messages.success(request, _("Skin deleted."))
+    return HttpResponseRedirect(target_url)
+
+
+@login_required
+def skin_import(request: HttpRequest):
+    """导入用户皮肤：校验 @skin 元数据后写入 data/skins/。"""
+    from bookmarks.skins import (
+        MAX_SKIN_BYTES,
+        SKIN_ID_RE,
+        builtin_skin_dir,
+        parse_meta,
+        user_skin_dir,
+    )
+
+    target_url = reverse("linkding:settings.general")
+
+    def fail(message):
+        messages.error(request, message)
+        return HttpResponseRedirect(target_url)
+
+    if request.method != "POST":
+        return fail(_("Skin import expects a file upload."))
+
+    upload = request.FILES.get("skin_file")
+    if not upload:
+        return fail(_("Choose a CSS file to import."))
+    if upload.size > MAX_SKIN_BYTES:
+        return fail(_("Skin files must be smaller than 256 KB."))
+
+    try:
+        css = upload.read().decode("utf-8")
+    except UnicodeDecodeError:
+        return fail(_("Skin files must be UTF-8 encoded."))
+
+    meta = parse_meta(css)
+    skin_id = str(meta.get("id") or "").strip()
+    if not SKIN_ID_RE.match(skin_id):
+        return fail(_("The file needs an @skin block with a lowercase id."))
+    if skin_id == "default":
+        return fail(_("This id is reserved for the built-in skin."))
+    # 内置皮肤优先，导入文件不得占用它们的 id
+    if any(path.stem == skin_id for path in builtin_skin_dir().glob("*.css")):
+        return fail(_("A built-in skin already uses this id."))
+
+    target = user_skin_dir()
+    target.mkdir(parents=True, exist_ok=True)
+    (target / f"{skin_id}.css").write_text(css, encoding="utf-8")
+
+    messages.success(request, _("Skin imported."))
+    return HttpResponseRedirect(target_url)
 
 
 def _save_highlights_group_by(request: HttpRequest, profile) -> JsonResponse:

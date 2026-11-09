@@ -89,7 +89,7 @@
             <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-subform" data-settings-save-mode="instant" data-settings-reload-after-save="true">
               {% csrf_token %}
               <input type="hidden" name="form_id" value="profile_quick">
-              <input type="hidden" name="form_fields" value="theme">
+              <input type="hidden" name="form_fields" value="theme,skin">
               <div class="settings-row">
                 <div class="settings-copy">
                   <label id="settings-theme-label" class="settings-label">{% translate "Theme" %}</label>
@@ -108,7 +108,109 @@
                   </div>
                 </div>
               </div>
+              <div class="settings-row settings-row-stack">
+                <div class="settings-skin-header">
+                  <div class="settings-label-row">
+                    <span id="settings-skin-label" class="settings-label">{% translate "Skin" %}</span>
+                    <span class="settings-help" data-settings-help data-settings-help-open="false">
+                      <button type="button" class="settings-help-button" data-settings-help-button
+                              aria-label="{% translate 'More info' %}" aria-expanded="false">
+                        <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-info"></use></svg>
+                      </button>
+                      <span class="settings-help-popover" role="tooltip"><span class="form-input-hint">{% translate "Each skin ships with a light and a dark variant; the theme setting decides which one is used." %}</span></span>
+                    </span>
+                  </div>
+                  <div class="settings-skin-header-actions">
+                    <label for="skin-file-input" class="btn btn-primary">{% translate "Import" %}</label>
+                    <button type="button" class="settings-panel-toggle" id="skin-toggle"
+                            aria-controls="skin-grid" aria-expanded="true"
+                            aria-label="{% translate 'Collapse' %}"
+                            data-label-expand="{% translate 'Expand' %}"
+                            data-label-collapse="{% translate 'Collapse' %}">
+                      <span class="text-assistive" id="skin-toggle-label">{% translate "Collapse" %}</span>
+                      <svg width="16" height="16" aria-hidden="true"><use href="#ld-icon-chevron-right"></use></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="settings-control">
+                  <div class="settings-skin-grid" id="skin-grid" role="radiogroup" aria-labelledby="settings-skin-label">
+                    {% for skin in request.available_skins %}
+                      <div class="settings-skin-option" title="{{ skin.name }}">
+                        <label class="settings-skin-select">
+                          <input type="radio" name="skin" value="{{ skin.id }}"
+                                 {% if request.user_profile.skin == skin.id %}checked{% endif %}>
+                          <span class="settings-skin-swatch" aria-hidden="true">
+                            {% for color in skin.preview %}<i style="background-color: {{ color }}"></i>{% endfor %}
+                          </span>
+                          <span class="settings-skin-name">{{ skin.name }}</span>
+                        </label>
+                        <div class="settings-skin-option-actions">
+                          <a href="{% url 'linkding:skins.file' skin.id|default:'default' %}"
+                             download="{{ skin.id|default:'default' }}.css">{% translate "Export" %}</a>
+                          {% if skin.user %}
+                            <button type="submit" form="skin-delete-{{ skin.id }}"
+                                    ld-confirm-button ld-confirm-danger
+                                    ld-confirm-question="{% translate 'Delete this skin?' %}">{% translate "Delete" %}</button>
+                          {% endif %}
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
             </form>
+
+            {# 导入与删除的表单必须挂在皮肤表单之外：HTML 不允许 form 嵌套， #}
+            {# 卡片内的按钮用 form 属性关联回这里。 #}
+            <form id="skin-import-form" action="{% url 'linkding:settings.skin_import' %}" method="post"
+                  enctype="multipart/form-data" hidden>
+              {% csrf_token %}
+              <input type="file" name="skin_file" id="skin-file-input" accept=".css" required
+                     onchange="this.form.requestSubmit()">
+            </form>
+            {% for skin in request.available_skins %}
+              {% if skin.user %}
+                <form id="skin-delete-{{ skin.id }}" action="{% url 'linkding:settings.skin_delete' %}"
+                      method="post" hidden>
+                  {% csrf_token %}
+                  <input type="hidden" name="skin_id" value="{{ skin.id }}">
+                </form>
+              {% endif %}
+            {% endfor %}
+
+            <script>
+              (function () {
+                var KEY = "ld:settings:skins-collapsed";
+                var grid = document.getElementById("skin-grid");
+                var toggle = document.getElementById("skin-toggle");
+                var label = document.getElementById("skin-toggle-label");
+                if (!grid || !toggle) return;
+
+                function apply(collapsed) {
+                  grid.hidden = collapsed;
+                  var text = collapsed
+                    ? toggle.dataset.labelExpand
+                    : toggle.dataset.labelCollapse;
+                  if (label) label.textContent = text;
+                  toggle.setAttribute("aria-expanded", String(!collapsed));
+                  toggle.setAttribute("aria-label", text);
+                }
+
+                var collapsed = false;
+                try {
+                  collapsed = localStorage.getItem(KEY) === "1";
+                } catch (e) {}
+                apply(collapsed);
+
+                toggle.addEventListener("click", function () {
+                  var next = !grid.hidden;
+                  try {
+                    localStorage.setItem(KEY, next ? "1" : "0");
+                  } catch (e) {}
+                  apply(next);
+                });
+              })();
+            </script>
 
             <form action="{% url 'linkding:settings.save' %}" method="post" class="settings-subform settings-long-form" data-settings-save-mode="explicit" data-settings-draft-form>
               {% csrf_token %}

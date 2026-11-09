@@ -118,6 +118,21 @@ urlpatterns = [
     path("settings/general", views.settings.general, name="settings.general"),
     path("settings/save", views.settings.save, name="settings.save"),
     path(
+        "settings/skins/import",
+        views.settings.skin_import,
+        name="settings.skin_import",
+    ),
+    path(
+        "settings/skins/delete",
+        views.settings.skin_delete,
+        name="settings.skin_delete",
+    ),
+    path(
+        "skin/<str:skin_id>.css",
+        views.settings.skin_css,
+        name="skins.file",
+    ),
+    path(
         "settings/quick-tags",
         views.settings.quick_tags_fragment,
         name="settings.quick_tags_fragment",

@@ -7,6 +7,7 @@ from django.db import connections
 from django.utils import translation
 
 from bookmarks.models import GlobalSettings, UserProfile
+from bookmarks.skins import skin_ids, skins
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,25 @@ PREF_COOKIE_TAG_GROUPING = "ld_tag_grouping"
 PREF_COOKIE_AUTHOR_GROUPING = "ld_author_grouping"
 PREF_COOKIE_AUTHOR_SORT = "ld_author_sort"
 PREF_COOKIE_AUTHOR_MODE = "ld_author_mode"
+
+
+PREF_COOKIE_SKIN = "ld_skin"
+SKIN_PARAM = "skin"
+SKIN_COOKIE_MAX_AGE = 365 * 24 * 3600
+
+
+def _resolve_skin(request) -> str:
+    """返回空串表示内置默认皮肤。
+
+    ?skin= 是临时预览，不写入偏好；登录用户只认 UserProfile.skin，
+    cookie 仅用于匿名访客，避免两套来源互相覆盖。
+    """
+    requested = request.GET.get(SKIN_PARAM)
+    if requested is not None:
+        return requested if requested in skin_ids() else ""
+    if request.user.is_authenticated:
+        return request.user_profile.skin or ""
+    return request.COOKIES.get(PREF_COOKIE_SKIN, "")
 
 
 def _build_anonymous_profile(request) -> UserProfile:
@@ -108,7 +128,24 @@ class LinkdingMiddleware:
             else:
                 request.user_profile = _build_anonymous_profile(request)
 
+        request.skin = _resolve_skin(request)
+        request.available_skins = skins()
+        # 模板据此决定是否显示「删除」——内置皮肤不可删
+        owner = next((s for s in request.available_skins if s["id"] == request.skin), None)
+        request.skin_is_user = bool(owner and owner.get("user"))
+
         response = self.get_response(request)
+
+        if SKIN_PARAM in request.GET and not request.user.is_authenticated:
+            if request.skin:
+                response.set_cookie(
+                    PREF_COOKIE_SKIN,
+                    request.skin,
+                    max_age=SKIN_COOKIE_MAX_AGE,
+                    samesite="Lax",
+                )
+            else:
+                response.delete_cookie(PREF_COOKIE_SKIN)
 
         return response
 

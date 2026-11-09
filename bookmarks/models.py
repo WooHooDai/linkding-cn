@@ -1297,6 +1297,8 @@ class UserProfile(models.Model):
     theme = models.CharField(
         max_length=10, choices=THEME_CHOICES, blank=False, default=THEME_AUTO
     )
+    # 皮肤 id，空串表示内置默认皮肤。可选值来自磁盘上的皮肤文件，不做 choices 约束
+    skin = models.CharField(max_length=64, blank=True, default="")
     bookmark_date_display = models.CharField(
         max_length=10,
         choices=BOOKMARK_DATE_DISPLAY_CHOICES,
@@ -2138,6 +2140,7 @@ class UserProfileForm(forms.ModelForm):
         model = UserProfile
         fields = [
             "theme",
+            "skin",
             "bookmark_date_display",
             "bookmark_date_route",
             "bookmark_description_display",
@@ -2203,6 +2206,9 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
     show_highlights_sidebar = forms.BooleanField(required=False)
     enable_web_archive = forms.BooleanField(required=False)
     sharing_mode = forms.ChoiceField(choices=SHARING_MODE_CHOICES)
+    # 可选皮肤来自磁盘，随目录变化，不能用静态 choices 约束；
+    # 白名单校验放在 clean_skin 里，无效值统一归一到默认皮肤
+    skin = forms.CharField(required=False)
     sidebar_modules = forms.CharField()
     highlights_sidebar_modules = forms.CharField()
     bookmark_actions = forms.CharField()
@@ -2213,6 +2219,16 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
     bookmark_toolbar_modules = forms.CharField()
 
     bookmark_table_columns = forms.JSONField(required=False)
+
+    def clean_skin(self):
+        """皮肤文件被移除后遗留的旧 id 归一到默认皮肤。
+
+        直接拒绝会报 invalid_choice，导致任何单字段保存整体失败。
+        """
+        from bookmarks.skins import skin_ids
+
+        value = (self.cleaned_data.get("skin") or "").strip()
+        return value if value in skin_ids() else ""
 
     def clean_bookmark_table_columns(self):
         value = self.cleaned_data.get("bookmark_table_columns")
@@ -2265,6 +2281,7 @@ class UserProfileQuickSettingsForm(forms.ModelForm):
         model = UserProfile
         fields = [
             "theme",
+            "skin",
             "bookmark_date_display",
             "bookmark_date_route",
             "bookmark_description_display",

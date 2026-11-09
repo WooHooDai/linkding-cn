@@ -78,3 +78,19 @@
     </div>
   </div>
 </div>
+
+<div class="ld-row">
+  <div class="ld-row-text">
+    <span class="ld-row-label">{% translate "Skin" %}</span>
+  </div>
+  <div class="ld-row-control">
+    <select name="skin" class="form-select input-sm ld-control-select"
+            data-pref="skin" data-pref-apply="reload"
+            aria-label="{% translate 'Skin' %}">
+      {% for skin in request.available_skins %}
+        <option value="{{ skin.id }}"
+                {% if request.user_profile.skin == skin.id %}selected{% endif %}>{{ skin.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>

@@ -273,6 +273,60 @@ msgstr "粉色"
 msgid "Theme"
 msgstr "主题"
 
+msgid "Skin"
+msgstr "皮肤"
+
+msgid "Changes colors only, layout stays the same."
+msgstr "只改变配色，布局保持不变。"
+
+msgid "More skins"
+msgstr "更多皮肤"
+
+msgid "Import a CSS file whose header contains an @skin block. Imported skins are stored in your data directory."
+msgstr "导入带 @skin 头注释的 CSS 文件；导入的皮肤保存在数据目录中。"
+
+msgid "Import"
+msgstr "导入"
+
+msgid "Skin imported."
+msgstr "皮肤已导入。"
+
+msgid "Export"
+msgstr "导出"
+
+msgid "Skin deleted."
+msgstr "皮肤已删除。"
+
+msgid "Only imported skins can be deleted."
+msgstr "只能删除导入的皮肤。"
+
+msgid "Each skin ships with a light and a dark variant; the theme setting decides which one is used."
+msgstr "每套皮肤包含浅色、深色两种配色，实际生效配色由主题控制。"
+
+msgid "Skin import expects a file upload."
+msgstr "皮肤导入需要上传文件。"
+
+msgid "Choose a CSS file to import."
+msgstr "请选择要导入的 CSS 文件。"
+
+msgid "Skin files must be smaller than 256 KB."
+msgstr "皮肤文件不能超过 256 KB。"
+
+msgid "Skin files must be UTF-8 encoded."
+msgstr "皮肤文件必须是 UTF-8 编码。"
+
+msgid "The file needs an @skin block with a lowercase id."
+msgstr "文件需要在头注释中提供小写字母组成的 @skin id。"
+
+msgid "A built-in skin already uses this id."
+msgstr "内置皮肤已使用该 id。"
+
+msgid "This id is reserved for the built-in skin."
+msgstr "该 id 为内置皮肤保留。"
+
+msgid "Delete this skin?"
+msgstr "删除这套皮肤？"
+
 #: bookmarks/models.py:408 bookmarks/templates/bundles/form.html:75
 msgid "Show bookmark count"
 msgstr "显示书签数"

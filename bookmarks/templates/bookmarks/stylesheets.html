@@ -17,9 +17,7 @@
 </script>
 <link href="{% static 'theme.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css" data-role="skin"/>
 {% if request.skin %}
-  {% with skin_path="skins/"|add:request.skin|add:".css" %}
-    <link href="{% static skin_path %}?v={{ app_version }}" rel="stylesheet" type="text/css" data-role="skin"/>
-  {% endwith %}
+  <link href="{% url 'linkding:skins.file' request.skin %}?v={{ app_version }}" rel="stylesheet" type="text/css" data-role="skin"/>
 {% endif %}
 {% if request.user_profile.theme == 'light' %}
   <meta name="theme-color" content="#5856e0">

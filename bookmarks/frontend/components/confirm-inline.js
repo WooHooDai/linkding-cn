@@ -12,6 +12,23 @@ function dismissActive() {
   }
 }
 
+/**
+ * 按钮可以用 form 属性关联到表外的表单（皮肤导入/删除就是这样，避免 form 嵌套），
+ * closest() 只会找到祖先，那种按钮会被误认成提交外层表单。
+ */
+function resolveForm(button) {
+  const id = button.getAttribute("form");
+  const linked = id ? button.ownerDocument.getElementById(id) : null;
+  return linked || button.closest("form");
+}
+
+function submitTarget(form, submitter) {
+  if (!form) return;
+  // requestSubmit 要求 submitter 的 form owner 就是目标表单，跨表关联的按钮不满足，只能无参提交
+  const owner = submitter && submitter.form === form ? submitter : null;
+  form.requestSubmit(owner || undefined);
+}
+
 function updatePopupPosition() {
   if (!activePopup || !activePopup._button) return;
   const button = activePopup._button;
@@ -28,12 +45,12 @@ function updatePopupPosition() {
   const preferUp = rect.top + rect.height / 2 > window.innerHeight / 2;
   let top;
   if (preferUp) {
-    top = rect.top - popupHeight - 6;
-    if (top < 8) top = rect.bottom + 6;
+    top = rect.top - popupHeight - 14;
+    if (top < 8) top = rect.bottom + 14;
   } else {
-    top = rect.bottom + 6;
+    top = rect.bottom + 14;
     if (top + popupHeight > window.innerHeight - 8) {
-      top = rect.top - popupHeight - 6;
+      top = rect.top - popupHeight - 14;
     }
   }
 
@@ -123,12 +140,12 @@ class ConfirmPopup extends HTMLElement {
     const preferUp = rect.top + rect.height / 2 > window.innerHeight / 2;
     let top;
     if (preferUp) {
-      top = rect.top - popupHeight - 6;
-      if (top < 8) top = rect.bottom + 6;
+      top = rect.top - popupHeight - 14;
+      if (top < 8) top = rect.bottom + 14;
     } else {
-      top = rect.bottom + 6;
+      top = rect.bottom + 14;
       if (top + popupHeight > window.innerHeight - 8) {
-        top = rect.top - popupHeight - 6;
+        top = rect.top - popupHeight - 14;
       }
     }
 
@@ -152,10 +169,7 @@ class ConfirmPopup extends HTMLElement {
       if (this._onConfirm) {
         this._onConfirm();
       } else {
-        const form = button.closest("form");
-        if (form) {
-          form.requestSubmit(button);
-        }
+        submitTarget(resolveForm(button), button);
       }
       dismissActive();
     });
@@ -176,11 +190,11 @@ class ConfirmPopup extends HTMLElement {
       if (this._onAltConfirm) {
         this._onAltConfirm();
       } else {
-        const form = button.closest("form");
+        const form = resolveForm(button);
         const submitter = altAction
           ? form?.querySelector(`[name="${altAction}"]`)
           : null;
-        if (submitter) form.requestSubmit(submitter);
+        submitTarget(form, submitter);
       }
       dismissActive();
     });

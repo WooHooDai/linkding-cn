@@ -274,6 +274,126 @@
     display: none;
   }
 
+  /* 皮肤选择：标题行右侧放导入与折叠，卡片内自带导出与删除 */
+  .settings-skin-header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: var(--unit-3);
+  }
+
+  .settings-skin-header-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--unit-2);
+
+    & label.btn {
+      cursor: pointer;
+    }
+  }
+
+  .settings-skin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: var(--unit-2);
+    width: 100%;
+
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  /* 折叠后网格不渲染，包它的控件行仍占一档行间距和高度，下面会多空一截 */
+  .settings-row-stack:has(.settings-skin-grid[hidden]) > .settings-control {
+    display: none;
+  }
+
+  .settings-skin-option {
+    display: flex;
+    flex-direction: column;
+    gap: var(--unit-1);
+    padding: var(--unit-2);
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    background: var(--body-color);
+
+    &:hover {
+      border-color: var(--secondary-text-color);
+    }
+
+    &:has(input:checked) {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 1px var(--primary-color);
+    }
+
+    &:has(input:focus-visible) {
+      outline: var(--focus-outline);
+      outline-offset: var(--focus-outline-offset);
+    }
+  }
+
+  .settings-skin-select {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--unit-1);
+    cursor: pointer;
+
+    & input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  .settings-skin-swatch {
+    display: flex;
+    height: 26px;
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+
+    & i {
+      flex: 1 1 0;
+    }
+  }
+
+  .settings-skin-name {
+    font-size: var(--font-size-sm);
+    color: var(--text-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .settings-skin-option-actions {
+    display: flex;
+    gap: var(--unit-2);
+    font-size: 11px;
+    line-height: 1;
+
+    & a,
+    & button {
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--secondary-text-color);
+      font: inherit;
+      text-decoration: none;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--text-color);
+        text-decoration: underline;
+      }
+    }
+
+    & form {
+      margin: 0;
+    }
+  }
+
   .settings-row {
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--settings-control-column-width);
@@ -291,6 +411,12 @@
 
     &.settings-row-top {
       align-items: center;
+    }
+
+    &.settings-row-stack {
+      grid-template-columns: minmax(0, 1fr);
+      align-items: start;
+      gap: var(--unit-2);
     }
 
     &.is-disabled {
