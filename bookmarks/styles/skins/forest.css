@@ -1,0 +1,230 @@
+/* @skin
+{
+    "id": "forest",
+    "name": "Forest",
+    "author": "woohoodai",
+    "version": "1.0.0",
+    "preview": [
+        "#eef4f8",
+        "#0f766e",
+        "#0d1b1e"
+    ],
+    "description": "林间晨雾"
+}
+*/
+
+/*
+- 底色：冷调青灰 #eef4f8，与 teal 主色同色相，绿不至于泛黄；深色是同一色相压到 #0d1b1e。
+- 文字：#0f2a33 对比 13.5:1；辅助文字提到 4.8:1 以上，小字在冷底上不飘。
+- 层级：明度差加细描边；只留极轻投影，不用大范围柔和阴影。
+*/
+
+html[data-theme="light"] {
+  --body-color: #eef4f8;
+  --body-color-contrast: #e3ecf2;
+
+  --text-color: #0f2a33;
+  --secondary-text-color: #3a5f6b;
+  --tertiary-text-color: #50707c;
+  --contrast-text-color: #eef4f8;
+  --primary-text-color: #0f766e;
+
+  --link-color: #0f766e;
+  --secondary-link-color: color-mix(in srgb, #0f766e 80%, transparent);
+  --icon-color: #3a5f6b;
+
+  --border-color: #cfdde5;
+  --secondary-border-color: #dfe9ef;
+
+  --tag-color: #7c5a1e;
+
+  /* 高亮色 */
+  --hl-yellow: rgba(214, 158, 0, 0.42);
+
+  /* 青灰阶 */
+  --gray-50: #f4f8fa;
+  --gray-100: #eef4f8;
+  --gray-200: #e3ecf2;
+  --gray-300: #cfdde5;
+  --gray-400: #a9c0ca;
+  --gray-500: #7d99a4;
+  --gray-600: #5b7885;
+  --gray-700: #3a5f6b;
+  --gray-800: #1d4550;
+  --gray-900: #0f2a33;
+
+  --primary-color: #0f766e;
+  --primary-color-highlight: #0b5d57;
+  --primary-color-shade: color-mix(in srgb, #0f766e 10%, transparent);
+
+  --alternative-color: #7c5a1e;
+  --alternative-color-dark: #63471a;
+
+  --success-color: #3f7d4e;
+  --success-color-highlight: #2f6340;
+  --success-color-shade: color-mix(in srgb, #3f7d4e 10%, transparent);
+
+  --warning-color: #8a6a20;
+  --warning-color-highlight: #6f5419;
+  --warning-color-shade: color-mix(in srgb, #8a6a20 10%, transparent);
+
+  --error-color: #a63d3d;
+  --error-color-highlight: #85302f;
+  --error-color-shade: color-mix(in srgb, #a63d3d 10%, transparent);
+
+  --focus-outline: 2px solid #0f766e;
+
+  --box-shadow-xs: 0 1px 2px rgba(15, 42, 51, 0.06);
+  --box-shadow: 0 1px 3px rgba(15, 42, 51, 0.08);
+  --box-shadow-lg: 0 10px 15px -3px rgba(15, 42, 51, 0.12);
+
+  /* 半透明层 */
+  --contrast-5: color-mix(in srgb, #0f2a33 5%, transparent);
+  --contrast-10: color-mix(in srgb, #0f2a33 10%, transparent);
+  --contrast-20: color-mix(in srgb, #0f2a33 20%, transparent);
+  --contrast-30: color-mix(in srgb, #0f2a33 30%, transparent);
+  --contrast-40: color-mix(in srgb, #0f2a33 40%, transparent);
+  --contrast-50: color-mix(in srgb, #0f2a33 50%, transparent);
+  --contrast-60: color-mix(in srgb, #0f2a33 60%, transparent);
+  --contrast-70: color-mix(in srgb, #0f2a33 70%, transparent);
+  --contrast-80: color-mix(in srgb, #0f2a33 80%, transparent);
+  --contrast-90: color-mix(in srgb, #0f2a33 90%, transparent);
+
+  /* 组件层 */
+  --btn-bg-color: #f4f8fa;
+  --btn-hover-bg-color: #e3ecf2;
+  --btn-border-color: #cfdde5;
+  --btn-text-color: #0f2a33;
+  --btn-box-shadow: 0 1px 2px rgba(15, 42, 51, 0.06);
+  --btn-primary-bg-color: #0f766e;
+  --btn-primary-hover-bg-color: #0b5d57;
+  --btn-primary-text-color: #eef4f8;
+  --btn-link-text-color: #0f766e;
+
+  --input-bg-color: #f4f8fa;
+  --input-border-color: #cfdde5;
+  --input-box-shadow: none;
+
+  --checkbox-bg-color: #f4f8fa;
+  --checkbox-border-color: #cfdde5;
+  --checkbox-checked-bg-color: #0f766e;
+  --checkbox-icon-color: #eef4f8;
+
+  --switch-bg-color: #cfdde5;
+  --switch-border-color: #b9cbd5;
+  --switch-toggle-color: #ffffff;
+
+  /* 浮层 */
+  --modal-overlay-bg-color: rgba(15, 42, 51, 0.28);
+  --modal-container-bg-color: #eef4f8;
+  --modal-container-border-color: #cfdde5;
+  --menu-bg-color: #eef4f8;
+  --menu-border-color: #cfdde5;
+  --menu-item-hover-bg-color: #e3ecf2;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --body-color: #0d1b1e;
+  --body-color-contrast: #14262a;
+
+  --text-color: #d7e6eb;
+  --secondary-text-color: #a3bcc4;
+  --tertiary-text-color: #75929b;
+  --contrast-text-color: #0d1b1e;
+  --primary-text-color: #5eead4;
+
+  --link-color: #5eead4;
+  --secondary-link-color: color-mix(in srgb, #5eead4 80%, transparent);
+  --icon-color: #a3bcc4;
+
+  --border-color: #24383d;
+  --secondary-border-color: #1a2c30;
+
+  --tag-color: #d4a95e;
+
+  /* 高亮色 */
+  --hl-yellow: rgba(212, 169, 94, 0.28);
+
+  /* 青灰阶 */
+  --gray-50: #d7e6eb;
+  --gray-100: #b9cfd6;
+  --gray-200: #a3bcc4;
+  --gray-300: #8aa6ae;
+  --gray-400: #75929b;
+  --gray-500: #557179;
+  --gray-600: #3a545c;
+  --gray-700: #24383d;
+  --gray-800: #14262a;
+  --gray-900: #0d1b1e;
+
+  --primary-color: #14b8a6;
+  --primary-color-highlight: #2dd4bf;
+  --primary-color-shade: color-mix(in srgb, #14b8a6 20%, transparent);
+
+  --alternative-color: #d4a95e;
+  --alternative-color-dark: #e5c489;
+
+  --success-color: #7fc49a;
+  --success-color-highlight: #9ad6b0;
+  --success-color-shade: color-mix(in srgb, #7fc49a 18%, transparent);
+
+  --warning-color: #d4ad5e;
+  --warning-color-highlight: #e5c489;
+  --warning-color-shade: color-mix(in srgb, #d4ad5e 18%, transparent);
+
+  --error-color: #d97b6c;
+  --error-color-highlight: #e69a8e;
+  --error-color-shade: color-mix(in srgb, #d97b6c 18%, transparent);
+
+  --focus-outline: 2px solid #5eead4;
+
+  --box-shadow-xs: none;
+  --box-shadow: none;
+  --box-shadow-lg: none;
+
+  /* 半透明层 */
+  --contrast-5: rgba(215, 230, 235, 0.05);
+  --contrast-10: rgba(215, 230, 235, 0.1);
+  --contrast-20: rgba(215, 230, 235, 0.18);
+  --contrast-30: rgba(215, 230, 235, 0.26);
+  --contrast-40: rgba(215, 230, 235, 0.34);
+  --contrast-50: rgba(215, 230, 235, 0.42);
+  --contrast-60: rgba(215, 230, 235, 0.5);
+  --contrast-70: rgba(215, 230, 235, 0.6);
+  --contrast-80: rgba(215, 230, 235, 0.7);
+  --contrast-90: rgba(215, 230, 235, 0.82);
+
+  /* 组件层 */
+  --btn-bg-color: #14262a;
+  --btn-hover-bg-color: #1c3136;
+  --btn-border-color: #24383d;
+  --btn-text-color: #d7e6eb;
+  --btn-box-shadow: none;
+  --btn-primary-bg-color: #14b8a6;
+  --btn-primary-hover-bg-color: #2dd4bf;
+  --btn-primary-text-color: #0d1b1e;
+  --btn-link-text-color: #5eead4;
+
+  --input-bg-color: #14262a;
+  --input-border-color: #24383d;
+  --input-box-shadow: none;
+
+  --checkbox-bg-color: #14262a;
+  --checkbox-border-color: #24383d;
+  --checkbox-checked-bg-color: #14b8a6;
+  --checkbox-icon-color: #0d1b1e;
+
+  --switch-bg-color: #1a2c30;
+  --switch-border-color: #24383d;
+  --switch-toggle-color: #d7e6eb;
+
+  /* 浮层 */
+  --modal-overlay-bg-color: rgba(5, 12, 14, 0.72);
+  --modal-container-bg-color: #14262a;
+  --modal-container-border-color: #24383d;
+  --menu-bg-color: #14262a;
+  --menu-border-color: #24383d;
+  --menu-item-hover-bg-color: #1c3136;
+}

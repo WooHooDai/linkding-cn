@@ -193,6 +193,7 @@ typings/
 /bookmarks/static/theme-*.css*
 /bookmarks/static/theme.css*
 /bookmarks/static/skins/
+/bookmarks/static/skin-default-export.css*
 # esbuild bundled defuddle (built from defuddle_entry.js)
 /bookmarks/services/vendor/defuddle.js
 # Collected static files for deployment

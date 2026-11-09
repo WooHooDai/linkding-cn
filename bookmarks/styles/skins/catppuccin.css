@@ -1,0 +1,175 @@
+/* @skin
+{
+    "id": "catppuccin",
+    "name": "Catppuccin",
+    "author": "Catppuccin",
+    "version": "1.8.0",
+    "url": "https://catppuccin.com/palette/",
+    "preview": [
+        "#eff1f5",
+        "#1e66f5",
+        "#1e1e2e"
+    ],
+    "description": "Catppuccin，色值使用官方提供的 Latte（浅色）、Mocha（深色）"
+}
+*/
+
+html[data-theme="light"] {
+  --body-color: #eff1f5;
+  --body-color-contrast: #e6e9ef;
+
+  --text-color: #4c4f69;
+  --secondary-text-color: #5c5f77;
+  --tertiary-text-color: #6c6f85;
+  --contrast-text-color: #eff1f5;
+  --primary-text-color: #1e66f5;
+
+  --link-color: #1e66f5;
+  --secondary-link-color: color-mix(in srgb, #1e66f5 80%, transparent);
+  --icon-color: #8c8fa1;
+
+  --border-color: #bcc0cc;
+  --secondary-border-color: #ccd0da;
+
+  --tag-color: #179299;
+
+  /* 高亮色 */
+  --hl-yellow: rgba(223, 142, 29, 0.35);
+
+  /* 中性阶 */
+  --gray-50: #eff1f5;
+  --gray-100: #e6e9ef;
+  --gray-200: #dce0e8;
+  --gray-300: #ccd0da;
+  --gray-400: #bcc0cc;
+  --gray-500: #acb0be;
+  --gray-600: #9ca0b0;
+  --gray-700: #8c8fa1;
+  --gray-800: #7c7f93;
+  --gray-900: #4c4f69;
+
+  --primary-color: #1e66f5;
+  --primary-color-highlight: color-mix(in srgb, #1e66f5 88%, #000000);
+  --primary-color-shade: color-mix(in srgb, #1e66f5 14%, transparent);
+
+  --alternative-color: #179299;
+  --alternative-color-dark: color-mix(in srgb, #179299 80%, #000000);
+
+  --success-color: #40a02b;
+  --success-color-highlight: color-mix(in srgb, #40a02b 88%, #000000);
+  --success-color-shade: color-mix(in srgb, #40a02b 14%, transparent);
+
+  --warning-color: #df8e1d;
+  --warning-color-highlight: color-mix(in srgb, #df8e1d 88%, #000000);
+  --warning-color-shade: color-mix(in srgb, #df8e1d 14%, transparent);
+
+  --error-color: #d20f39;
+  --error-color-highlight: color-mix(in srgb, #d20f39 88%, #000000);
+  --error-color-shade: color-mix(in srgb, #d20f39 14%, transparent);
+
+  --focus-outline: 2px solid #1e66f5;
+
+  --box-shadow-xs: 0 1px 2px rgba(76, 79, 105, 0.06);
+  --box-shadow: 0 1px 3px rgba(76, 79, 105, 0.08);
+  --box-shadow-lg: 0 10px 15px -3px rgba(76, 79, 105, 0.1);
+
+  /* 半透明层 */
+  --contrast-5: color-mix(in srgb, #4c4f69 5%, transparent);
+  --contrast-10: color-mix(in srgb, #4c4f69 10%, transparent);
+  --contrast-20: color-mix(in srgb, #4c4f69 20%, transparent);
+  --contrast-30: color-mix(in srgb, #4c4f69 30%, transparent);
+  --contrast-40: color-mix(in srgb, #4c4f69 40%, transparent);
+  --contrast-50: color-mix(in srgb, #4c4f69 50%, transparent);
+  --contrast-60: color-mix(in srgb, #4c4f69 60%, transparent);
+  --contrast-70: color-mix(in srgb, #4c4f69 70%, transparent);
+  --contrast-80: color-mix(in srgb, #4c4f69 80%, transparent);
+  --contrast-90: color-mix(in srgb, #4c4f69 90%, transparent);
+
+  /* 浮层 */
+  --modal-overlay-bg-color: color-mix(in srgb, #dce0e8 65%, transparent);
+  --modal-container-bg-color: #eff1f5;
+  --modal-container-border-color: #bcc0cc;
+  --menu-bg-color: #eff1f5;
+  --menu-border-color: #bcc0cc;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --body-color: #1e1e2e;
+  --body-color-contrast: #181825;
+
+  --text-color: #cdd6f4;
+  --secondary-text-color: #bac2de;
+  --tertiary-text-color: #a6adc8;
+  --contrast-text-color: #1e1e2e;
+  --primary-text-color: #89b4fa;
+
+  --link-color: #89b4fa;
+  --secondary-link-color: color-mix(in srgb, #89b4fa 80%, transparent);
+  --icon-color: #7f849c;
+
+  --border-color: #45475a;
+  --secondary-border-color: #313244;
+
+  --tag-color: #94e2d5;
+
+  /* 高亮色 */
+  --hl-yellow: rgba(249, 226, 175, 0.28);
+
+  /* 中性阶 */
+  --gray-50: #cdd6f4;
+  --gray-100: #bac2de;
+  --gray-200: #a6adc8;
+  --gray-300: #9399b2;
+  --gray-400: #7f849c;
+  --gray-500: #6c7086;
+  --gray-600: #585b70;
+  --gray-700: #45475a;
+  --gray-800: #313244;
+  --gray-900: #1e1e2e;
+
+  --primary-color: #89b4fa;
+  --primary-color-highlight: color-mix(in srgb, #89b4fa 88%, #ffffff);
+  --primary-color-shade: color-mix(in srgb, #89b4fa 14%, transparent);
+
+  --alternative-color: #94e2d5;
+  --alternative-color-dark: color-mix(in srgb, #94e2d5 80%, #ffffff);
+
+  --success-color: #a6e3a1;
+  --success-color-highlight: color-mix(in srgb, #a6e3a1 88%, #ffffff);
+  --success-color-shade: color-mix(in srgb, #a6e3a1 14%, transparent);
+
+  --warning-color: #f9e2af;
+  --warning-color-highlight: color-mix(in srgb, #f9e2af 88%, #ffffff);
+  --warning-color-shade: color-mix(in srgb, #f9e2af 14%, transparent);
+
+  --error-color: #f38ba8;
+  --error-color-highlight: color-mix(in srgb, #f38ba8 88%, #ffffff);
+  --error-color-shade: color-mix(in srgb, #f38ba8 14%, transparent);
+
+  --focus-outline: 2px solid #89b4fa;
+
+  --box-shadow-xs: none;
+  --box-shadow: none;
+  --box-shadow-lg: none;
+
+  /* 半透明层 */
+  --contrast-5: color-mix(in srgb, #cdd6f4 5%, transparent);
+  --contrast-10: color-mix(in srgb, #cdd6f4 10%, transparent);
+  --contrast-20: color-mix(in srgb, #cdd6f4 20%, transparent);
+  --contrast-30: color-mix(in srgb, #cdd6f4 30%, transparent);
+  --contrast-40: color-mix(in srgb, #cdd6f4 40%, transparent);
+  --contrast-50: color-mix(in srgb, #cdd6f4 50%, transparent);
+  --contrast-60: color-mix(in srgb, #cdd6f4 60%, transparent);
+  --contrast-70: color-mix(in srgb, #cdd6f4 70%, transparent);
+  --contrast-80: color-mix(in srgb, #cdd6f4 80%, transparent);
+  --contrast-90: color-mix(in srgb, #cdd6f4 90%, transparent);
+
+  /* 浮层 */
+  --modal-overlay-bg-color: color-mix(in srgb, #11111b 65%, transparent);
+  --modal-container-bg-color: #1e1e2e;
+  --modal-container-border-color: #45475a;
+  --menu-bg-color: #1e1e2e;
+  --menu-border-color: #45475a;
+}

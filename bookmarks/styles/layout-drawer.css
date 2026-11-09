@@ -145,11 +145,12 @@
     color: var(--text-color);
   }
 
-  /* 选中的页签用主题色，灰底容易被当成普通按钮 */
+  /* 选中的页签用主题色，灰底容易被当成普通按钮；
+     文字取「主色上的文字」而不是写死白，浅色主题的主色可能是白 */
   &.is-active {
     background: var(--primary-color);
     border-color: var(--primary-color);
-    color: #fff;
+    color: var(--contrast-text-color);
     font-weight: 500;
   }
 }

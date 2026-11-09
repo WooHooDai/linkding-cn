@@ -1,0 +1,313 @@
+/* @skin
+{
+    "id": "ink",
+    "name": "Ink",
+    "author": "woohoodai",
+    "version": "1.0.0",
+    "preview": [
+        "#ffffff",
+        "#0000cc",
+        "#000000"
+    ],
+    "description": "高对比黑白"
+}
+*/
+
+/*
+- 纯黑/纯白底，正文与控件对比度均在 7:1 以上，用于强光环境或视力辅助。
+- 不用半透明与投影：层级只靠描边和字重，避免灰阶把对比拉回去。
+- 强调色也收成纯黑/纯白：链接、按钮、分页器不留彩色，靠下划线与描边区分。
+*/
+
+html[data-theme="light"] {
+  --body-color: #ffffff;
+  --body-color-contrast: #f2f2f2;
+
+  --text-color: #000000;
+  --secondary-text-color: #1a1a1a;
+  --tertiary-text-color: #333333;
+  --contrast-text-color: #ffffff;
+  --primary-text-color: #000000;
+
+  --link-color: #000000;
+  --secondary-link-color: #000000;
+  --icon-color: #000000;
+
+  --border-color: #000000;
+  --secondary-border-color: #666666;
+
+  /* 标签：纯中性文字，弱于标题 */
+  --tag-color: var(--secondary-text-color);
+
+  --primary-color: #000000;
+  --primary-color-highlight: #333333;
+  --primary-color-shade: rgba(0, 0, 0, 0.08);
+
+  --alternative-color: #005500;
+  --alternative-color-dark: #003d00;
+
+  --success-color: #005500;
+  --success-color-highlight: #007700;
+  --success-color-shade: rgba(0, 85, 0, 0.1);
+
+  --warning-color: #7a4d00;
+  --warning-color-highlight: #996200;
+  --warning-color-shade: rgba(122, 77, 0, 0.1);
+
+  --error-color: #b30000;
+  --error-color-highlight: #d40000;
+  --error-color-shade: rgba(179, 0, 0, 0.1);
+
+  --focus-outline: 3px solid #000000;
+
+  --box-shadow-xs: none;
+  --box-shadow: none;
+  --box-shadow-lg: none;
+
+  /* 组件层：纯黑描边，无阴影 */
+  --btn-bg-color: #ffffff;
+  --btn-hover-bg-color: #f2f2f2;
+  --btn-border-color: #000000;
+  --btn-text-color: #000000;
+  --btn-icon-color: #000000;
+  --btn-box-shadow: none;
+  --btn-primary-bg-color: #000000;
+  --btn-primary-hover-bg-color: #333333;
+  --btn-primary-text-color: #ffffff;
+  --btn-error-bg-color: #b30000;
+  --btn-error-hover-bg-color: #8f0000;
+  --btn-error-text-color: #ffffff;
+  --btn-link-text-color: #000000;
+  --btn-link-hover-text-color: #333333;
+
+  --input-bg-color: #ffffff;
+  --input-border-color: #000000;
+  --input-text-color: #000000;
+  --input-hint-color: #333333;
+  --input-placeholder-color: #666666;
+  --input-disabled-bg-color: #f2f2f2;
+  --input-box-shadow: none;
+
+  --checkbox-bg-color: #ffffff;
+  --checkbox-border-color: #000000;
+  --checkbox-checked-bg-color: #000000;
+  --checkbox-icon-color: #ffffff;
+
+  --switch-bg-color: #ffffff;
+  --switch-border-color: #000000;
+  --switch-toggle-color: #000000;
+
+  /* 浮层 */
+  --modal-container-bg-color: #ffffff;
+  --modal-container-border-color: #000000;
+  --menu-bg-color: #ffffff;
+  --menu-border-color: #000000;
+  --menu-item-hover-bg-color: #f2f2f2;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --body-color: #000000;
+  --body-color-contrast: #1a1a1a;
+
+  --text-color: #ffffff;
+  --secondary-text-color: #e6e6e6;
+  --tertiary-text-color: #cccccc;
+  --contrast-text-color: #000000;
+  --primary-text-color: #ffffff;
+
+  --link-color: #ffffff;
+  --secondary-link-color: #ffffff;
+  --icon-color: #ffffff;
+
+  --border-color: #ffffff;
+  --secondary-border-color: #999999;
+
+  /* 标签：纯中性文字，弱于标题 */
+  --tag-color: var(--secondary-text-color);
+
+  --primary-color: #ffffff;
+  --primary-color-highlight: #cccccc;
+  --primary-color-shade: rgba(255, 255, 255, 0.22);
+
+  --alternative-color: #66ff99;
+  --alternative-color-dark: #99ffbb;
+
+  --success-color: #66ff99;
+  --success-color-highlight: #99ffbb;
+  --success-color-shade: rgba(102, 255, 153, 0.15);
+
+  --warning-color: #ffcc66;
+  --warning-color-highlight: #ffdd99;
+  --warning-color-shade: rgba(255, 204, 102, 0.15);
+
+  --error-color: #ff8080;
+  --error-color-highlight: #ffadad;
+  --error-color-shade: rgba(255, 128, 128, 0.15);
+
+  --focus-outline: 3px solid #ffffff;
+
+  --box-shadow-xs: none;
+  --box-shadow: none;
+  --box-shadow-lg: none;
+
+  /* 半透明层 */
+  --contrast-5: rgba(255, 255, 255, 0.08);
+  --contrast-10: rgba(255, 255, 255, 0.14);
+  --contrast-20: rgba(255, 255, 255, 0.22);
+  --contrast-30: rgba(255, 255, 255, 0.32);
+  --contrast-40: rgba(255, 255, 255, 0.42);
+  --contrast-50: rgba(255, 255, 255, 0.52);
+  --contrast-60: rgba(255, 255, 255, 0.62);
+  --contrast-70: rgba(255, 255, 255, 0.72);
+  --contrast-80: rgba(255, 255, 255, 0.82);
+  --contrast-90: rgba(255, 255, 255, 0.92);
+
+  /* 组件层：纯白描边，无阴影 */
+  --btn-bg-color: #000000;
+  --btn-hover-bg-color: #1a1a1a;
+  --btn-border-color: #ffffff;
+  --btn-text-color: #ffffff;
+  --btn-icon-color: #ffffff;
+  --btn-box-shadow: none;
+  --btn-primary-bg-color: #ffffff;
+  --btn-primary-hover-bg-color: #cccccc;
+  --btn-primary-text-color: #000000;
+  --btn-error-bg-color: #ff8080;
+  --btn-error-hover-bg-color: #ffadad;
+  --btn-error-text-color: #000000;
+  --btn-link-text-color: #ffffff;
+  --btn-link-hover-text-color: #cccccc;
+
+  --input-bg-color: #000000;
+  --input-border-color: #ffffff;
+  --input-text-color: #ffffff;
+  --input-hint-color: #cccccc;
+  --input-placeholder-color: #999999;
+  --input-disabled-bg-color: #1a1a1a;
+  --input-box-shadow: none;
+
+  --checkbox-bg-color: #000000;
+  --checkbox-border-color: #ffffff;
+  --checkbox-checked-bg-color: #ffffff;
+  --checkbox-icon-color: #000000;
+
+  --switch-bg-color: #000000;
+  --switch-border-color: #ffffff;
+  --switch-toggle-color: #ffffff;
+
+  /* 浮层 */
+  --modal-overlay-bg-color: rgba(0, 0, 0, 0.8);
+  --modal-container-bg-color: #000000;
+  --modal-container-border-color: #ffffff;
+  --menu-bg-color: #000000;
+  --menu-border-color: #ffffff;
+  --menu-item-hover-bg-color: #1a1a1a;
+}
+
+/* 强调色收成黑白后，链接与正文同色，靠下划线区分。
+   日期与描述内链接排除：前者另有规则，后者一屏几十条，全下划线会糊成一片 */
+html[data-theme="light"] a:not(.btn):not(.app-link):not(.page-nav):not(.tag):not(.date-link):not(.description a),
+html[data-theme="dark"] a:not(.btn):not(.app-link):not(.page-nav):not(.tag):not(.date-link):not(.description a) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* 日期一律用正文的黑/白，有无快照只差一条下划线。
+   表格视图的基础规则是 ul.bookmark-list.view-table .cell-date a.date-link-exists（0,4,2），
+   .cell-date 不带 ul.bookmark-list 前缀压不住，日期会留着 --success-color 的绿 */
+html[data-theme="light"] .actions .date-link,
+html[data-theme="light"] ul.bookmark-list.view-table .cell-date .date-link,
+html[data-theme="dark"] .actions .date-link,
+html[data-theme="dark"] ul.bookmark-list.view-table .cell-date .date-link {
+  color: var(--text-color);
+}
+
+html[data-theme="light"] .actions .date-link-exists,
+html[data-theme="light"] ul.bookmark-list.view-table .cell-date a.date-link-exists,
+html[data-theme="dark"] .actions .date-link-exists,
+html[data-theme="dark"] ul.bookmark-list.view-table .cell-date a.date-link-exists {
+  color: var(--text-color);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* 分页器在默认皮肤里只有文字，高对比下补描边，否则与普通文本无异 */
+html[data-theme="light"] .pagination-container .page-nav:not(.disabled) {
+  border: 1px solid #000000;
+}
+
+html[data-theme="dark"] .pagination-container .page-nav:not(.disabled) {
+  border: 1px solid #ffffff;
+}
+
+/* 分段控件：黑白主题没有色相可用，选中项靠明度翻转（反色块）区分 */
+html[data-theme="light"] .settings-page,
+html[data-theme="light"] .search-container {
+  --settings-segment-active-bg: #000000;
+  --settings-segment-active-border: #000000;
+  --settings-segment-active-color: #ffffff;
+  --settings-segment-track-border: #000000;
+  --pref-segment-active-bg: #000000;
+  --pref-segment-track-border: #000000;
+}
+
+html[data-theme="dark"] .settings-page,
+html[data-theme="dark"] .search-container {
+  --settings-segment-active-bg: #ffffff;
+  --settings-segment-active-border: #ffffff;
+  --settings-segment-active-color: #000000;
+  --settings-segment-track-border: #ffffff;
+  --pref-segment-active-bg: #ffffff;
+  --pref-segment-track-border: #ffffff;
+}
+
+/* 搜索面板的选中文字写死成 --text-color，变量管不到，只能直接压 */
+html[data-theme="light"] .pref-segment-option input:checked + span {
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .pref-segment-option input:checked + span {
+  color: #000000;
+}
+
+/* 开关：槽与点必须反向。设置页把槽混成一层灰、点写死成 body-color，
+   浅色下就是白点压浅灰；checked 又换另一套底色，单靠变量管不住，直接给属性 */
+html[data-theme="light"] .form-switch .form-icon {
+  background: #f2f2f2;
+  border-color: #000000;
+}
+
+html[data-theme="light"] .form-switch .form-icon::before {
+  background: #000000;
+}
+
+html[data-theme="light"] .form-switch input:checked + .form-icon {
+  background: #000000;
+  border-color: #000000;
+}
+
+html[data-theme="light"] .form-switch input:checked + .form-icon::before {
+  background: #ffffff;
+}
+
+html[data-theme="dark"] .form-switch .form-icon {
+  background: #1a1a1a;
+  border-color: #ffffff;
+}
+
+html[data-theme="dark"] .form-switch .form-icon::before {
+  background: #ffffff;
+}
+
+html[data-theme="dark"] .form-switch input:checked + .form-icon {
+  background: #ffffff;
+  border-color: #ffffff;
+}
+
+html[data-theme="dark"] .form-switch input:checked + .form-icon::before {
+  background: #000000;
+}

@@ -27,12 +27,22 @@ DEFAULT_SKIN = {
     "preview": ["#ffffff", "#5a54dc", "#374151"],
 }
 
+# 默认皮肤没有单独的皮肤文件，导出件由 build-skins.js 在构建期合并产出
+DEFAULT_SKIN_EXPORT = "skin-default-export.css"
+
 # 目录 mtime 变化即重建，避免每次请求都读文件
 _cache = {"stamp": None, "items": ()}
 
 
+def _builtin_static_dir() -> Path:
+    """内置静态产物根。发布镜像删掉了 bookmarks/static，只剩 collectstatic
+    收好的 STATIC_ROOT。"""
+    source = Path(settings.BASE_DIR, "bookmarks", "static")
+    return source if source.is_dir() else Path(settings.STATIC_ROOT)
+
+
 def builtin_skin_dir() -> Path:
-    return Path(settings.BASE_DIR, "bookmarks", "static", "skins")
+    return _builtin_static_dir() / "skins"
 
 
 def user_skin_dir() -> Path:
@@ -120,27 +130,10 @@ def skin_path(skin_id: str) -> Path | None:
 
 
 def default_skin_css() -> str | None:
-    """默认皮肤没有单独的产物文件，导出时把明暗两份源码合并成一份。
-
-    default-light / default-dark 是构建 theme.css 的源料，不落在 static 下，
-    所以这里读源码目录。
-    """
-    source = Path(settings.BASE_DIR, "bookmarks", "styles", "skins")
-    light = source / "default-light.css"
-    dark = source / "default-dark.css"
-    if not (light.is_file() and dark.is_file()):
-        return None
-
-    light_css = light.read_text(encoding="utf-8").replace(
-        ":root", 'html[data-theme="light"]', 1
-    )
-    return (
-        "/* @skin\n"
-        '{ "id": "default", "name": "Default", "author": "linkding",\n'
-        '  "version": "1.0.0", "preview": ["#ffffff", "#5a54dc", "#374151"] }\n'
-        "   默认主题的导出版本，由明暗两份源码合并而成。 */\n\n"
-        f"{light_css.strip()}\n\n{dark.read_text(encoding='utf-8').strip()}\n"
-    )
+    """默认皮肤的导出版本。明暗两份源码怎么合并成带 @skin 头的一份，是
+    build-skins.js 的事，这里只读它落下的产物。"""
+    export = _builtin_static_dir() / DEFAULT_SKIN_EXPORT
+    return export.read_text(encoding="utf-8") if export.is_file() else None
 
 
 def skin_choices() -> list[tuple[str, str]]:

@@ -1,0 +1,218 @@
+/* @skin
+{
+    "id": "paper",
+    "name": "Paper",
+    "author": "linkding-cn",
+    "version": "1.0.0",
+    "preview": [
+        "#faf8f4",
+        "#8b5e3c",
+        "#211f1c"
+    ],
+    "description": "纸感主题"
+}
+*/
+
+/* 
+- 底色：
+  - 带暖，饱和度 28%、明度 96%，适合长期阅读。
+  - 叠加 SVG 噪声做纤维纹理，增加纸感。
+- 文字：暖黑 #342e23 对比 12.5:1，靠暖调统一画面
+- 层级：层级来自明度差与细描边，而非 box-shadow，如卡片比页面更亮（纸叠纸）。
+*/
+
+html[data-theme="light"] {
+  --body-color: #faf8f4;
+  --body-color-contrast: #f2eee5;
+
+  --text-color: #342e23;
+  --secondary-text-color: #675f51;
+  --tertiary-text-color: #8a8172;
+  --contrast-text-color: #f8f6f2;
+  --primary-text-color: #8b5e3c;
+
+  --link-color: #8b5e3c;
+  --secondary-link-color: color-mix(in srgb, #8b5e3c 80%, transparent);
+  --icon-color: #675f51;
+
+  --border-color: #ddd6c8;
+  --secondary-border-color: #e8e2d7;
+
+  --tag-color: #2f7a5c;
+
+  /* 高亮色 */
+  --hl-yellow: rgba(214, 158, 0, 0.42);
+
+  /* 暖灰阶 */
+  --gray-50: #faf8f4;
+  --gray-100: #f2eee5;
+  --gray-200: #e8e2d7;
+  --gray-300: #ddd6c8;
+  --gray-400: #c2b9a6;
+  --gray-500: #a39884;
+  --gray-600: #7c7362;
+  --gray-700: #675f51;
+  --gray-800: #423c31;
+  --gray-900: #342e23;
+
+  --primary-color: #8b5e3c;
+  --primary-color-highlight: #74492e;
+  --primary-color-shade: color-mix(in srgb, #8b5e3c 10%, transparent);
+
+  --alternative-color: #2f7a5c;
+  --alternative-color-dark: #3a4d41;
+
+  --success-color: #3a8a6e;
+  --success-color-highlight: #2f7358;
+  --success-color-shade: color-mix(in srgb, #4a6b3e 10%, transparent);
+
+  --warning-color: #8a6a20;
+  --warning-color-highlight: #715618;
+  --warning-color-shade: color-mix(in srgb, #8a6a20 10%, transparent);
+
+  --error-color: #9c3b2e;
+  --error-color-highlight: #813025;
+  --error-color-shade: color-mix(in srgb, #9c3b2e 10%, transparent);
+
+  --focus-outline: 2px solid #8b5e3c;
+
+  /* 层级明度 */
+  --box-shadow-xs: none;
+  --box-shadow: none;
+  --box-shadow-lg: none;
+
+  --btn-bg-color: #faf8f4;
+  --btn-hover-bg-color: #f2eee5;
+  --btn-border-color: #e4e0d8;
+  --btn-text-color: #342e23;
+  --btn-box-shadow: none;
+  --btn-primary-bg-color: #8b5e3c;
+  --btn-primary-hover-bg-color: #74492e;
+  --btn-primary-text-color: #fdfcfa;
+  --btn-link-text-color: #8b5e3c;
+  --input-bg-color: #faf8f4;
+  --input-border-color: #e4e0d8;
+  --input-box-shadow: none;
+
+  --modal-container-bg-color: #faf8f4;
+  --modal-container-border-color: #e4e0d8;
+  --menu-bg-color: #faf8f4;
+  --menu-border-color: #e4e0d8;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --body-color: #211f1c;
+  --body-color-contrast: #2c2926;
+
+  --text-color: #e8e2d6;
+  --secondary-text-color: #b5ac9c;
+  --tertiary-text-color: #857c6e;
+  --contrast-text-color: #211f1c;
+  --primary-text-color: #c89b6e;
+
+  --link-color: #c89b6e;
+  --secondary-link-color: color-mix(in srgb, #c89b6e 80%, transparent);
+  --icon-color: #b5ac9c;
+
+  --border-color: #443e35;
+  --secondary-border-color: #332f2a;
+
+  --tag-color: #7fc49a;
+
+  --contrast-5: rgba(232, 226, 214, 0.05);
+  --contrast-10: rgba(232, 226, 214, 0.1);
+  --contrast-20: rgba(232, 226, 214, 0.18);
+  --contrast-30: rgba(232, 226, 214, 0.26);
+  --contrast-40: rgba(232, 226, 214, 0.34);
+  --contrast-50: rgba(232, 226, 214, 0.42);
+  --contrast-60: rgba(232, 226, 214, 0.5);
+  --contrast-70: rgba(232, 226, 214, 0.6);
+  --contrast-80: rgba(232, 226, 214, 0.7);
+  --contrast-90: rgba(232, 226, 214, 0.82);
+
+  /* 暖灰阶 */
+  --gray-50: #e8e2d6;
+  --gray-100: #c9c0b0;
+  --gray-200: #b5ac9c;
+  --gray-300: #9a9080;
+  --gray-400: #857c6e;
+  --gray-500: #675f51;
+  --gray-600: #443e35;
+  --gray-700: #332f2a;
+  --gray-800: #2c2926;
+  --gray-900: #211f1c;
+
+  --primary-color: #c89b6e;
+  --primary-color-highlight: #d9b189;
+  --primary-color-shade: color-mix(in srgb, #c89b6e 18%, transparent);
+
+  --alternative-color: #7fc49a;
+  --alternative-color-dark: #a8bda4;
+
+  --success-color: #8fb87a;
+  --success-color-highlight: #a4c792;
+  --success-color-shade: color-mix(in srgb, #8fb87a 18%, transparent);
+
+  --warning-color: #d4ad5e;
+  --warning-color-highlight: #e0bf7c;
+  --warning-color-shade: color-mix(in srgb, #d4ad5e 18%, transparent);
+
+  --error-color: #d97b6c;
+  --error-color-highlight: #e3968a;
+  --error-color-shade: color-mix(in srgb, #d97b6c 18%, transparent);
+
+  --focus-outline: 2px solid #c89b6e;
+
+  --box-shadow-xs: none;
+  --box-shadow: none;
+  --box-shadow-lg: none;
+
+  --btn-bg-color: #2c2926;
+  --btn-hover-bg-color: #383430;
+  --btn-border-color: #443e35;
+  --btn-text-color: #e8e2d6;
+  --btn-box-shadow: none;
+  --btn-primary-bg-color: #c89b6e;
+  --btn-primary-hover-bg-color: #d9b189;
+  --btn-primary-text-color: #211f1c;
+  --btn-link-text-color: #c89b6e;
+  --input-bg-color: #2c2926;
+  --input-border-color: #443e35;
+  --input-box-shadow: none;
+
+  --modal-overlay-bg-color: rgba(24, 21, 18, 0.72);
+  --modal-container-bg-color: #2c2926;
+  --modal-container-border-color: #443e35;
+  --menu-bg-color: #2c2926;
+  --menu-border-color: #443e35;
+}
+
+/* 纤维纹理 */
+html[data-theme="light"] body {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23grain)' opacity='0.055'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 180px 180px;
+}
+
+html[data-theme="dark"] body {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23grain)' opacity='0.03'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 180px 180px;
+}
+
+
+/* 有快照日期 */
+html[data-theme="light"] .date-link-exists,
+html[data-theme="dark"] .date-link-exists {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* 无快照日期 */
+html[data-theme="light"] .date-link:not(.date-link-exists),
+html[data-theme="dark"] .date-link:not(.date-link-exists) {
+  color: var(--tertiary-text-color);
+}
