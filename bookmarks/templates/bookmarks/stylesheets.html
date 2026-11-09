@@ -1,0 +1,34 @@
+{% load static %}
+{# 样式表唯一装配点：明暗属性 → 结构层 → 皮肤 → 自定义 CSS；属性先写，避免深色首屏闪白 #}
+<script>
+  (function () {
+    var root = document.documentElement;
+    var mode = "{{ request.user_profile.theme }}";
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    function apply() {
+      var resolved = mode === "light" || mode === "dark" ? mode : (mq.matches ? "dark" : "light");
+      root.setAttribute("data-theme", resolved);
+    }
+    apply();
+    if (mode !== "light" && mode !== "dark") {
+      mq.addEventListener("change", apply);
+    }
+  })();
+</script>
+<link href="{% static 'theme.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css" data-role="skin"/>
+{% if request.skin %}
+  {% with skin_path="skins/"|add:request.skin|add:".css" %}
+    <link href="{% static skin_path %}?v={{ app_version }}" rel="stylesheet" type="text/css" data-role="skin"/>
+  {% endwith %}
+{% endif %}
+{% if request.user_profile.theme == 'light' %}
+  <meta name="theme-color" content="#5856e0">
+{% elif request.user_profile.theme == 'dark' %}
+  <meta name="theme-color" content="#161822">
+{% else %}
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161822">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#5856e0">
+{% endif %}
+{% if request.user_profile.custom_css %}
+  <link href="{% url 'linkding:custom_css' %}?hash={{ request.user_profile.custom_css_hash }}" rel="stylesheet" type="text/css" data-role="custom-css"/>
+{% endif %}

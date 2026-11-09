@@ -18,25 +18,7 @@
   <meta name="author" content="Sascha Ißbrücker">
   <meta name="csrfmiddlewaretoken" content="{{ csrf_token }}">
   <title>{{ page_title|default:default_page_title }}</title>
-  {# Include specific theme variant based on user profile setting #}
-  {% if request.user_profile.theme == 'light' %}
-    <link href="{% static 'theme-light.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css"/>
-    <meta name="theme-color" content="#5856e0">
-  {% elif request.user_profile.theme == 'dark' %}
-    <link href="{% static 'theme-dark.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css"/>
-    <meta name="theme-color" content="#161822">
-  {% else %}
-    {# Use auto theme as fallback #}
-    <link href="{% static 'theme-dark.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css"
-          media="(prefers-color-scheme: dark)"/>
-    <link href="{% static 'theme-light.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css"
-          media="(prefers-color-scheme: light)"/>
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161822">
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#5856e0">
-  {% endif %}
-  {% if request.user_profile.custom_css %}
-    <link href="{% url 'linkding:custom_css' %}?hash={{ request.user_profile.custom_css_hash }}" rel="stylesheet" type="text/css"/>
-  {% endif %}
+  {% include 'bookmarks/stylesheets.html' %}
   <meta name="turbo-cache-control" content="no-preview">
   {% if not request.global_settings.enable_link_prefetch %}
     <meta name="turbo-prefetch" content="false">

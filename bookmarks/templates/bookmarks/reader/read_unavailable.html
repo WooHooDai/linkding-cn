@@ -8,24 +8,7 @@
   <meta name="csrfmiddlewaretoken" content="{{ csrf_token }}">
   <title>{% translate "Reader view" %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimal-ui">
-  {% if request.user_profile.theme == 'light' %}
-    <link href="{% static 'theme-light.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css"/>
-    <meta name="theme-color" content="#5856e0">
-  {% elif request.user_profile.theme == 'dark' %}
-    <link href="{% static 'theme-dark.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css"/>
-    <meta name="theme-color" content="#161822">
-  {% else %}
-    <link href="{% static 'theme-dark.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css"
-          media="(prefers-color-scheme: dark)"/>
-    <link href="{% static 'theme-light.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css"
-          media="(prefers-color-scheme: light)"/>
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#161822">
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#5856e0">
-  {% endif %}
-  <link href="{% static 'layout.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css"/>
-  {% if request.user_profile.custom_css %}
-    <link href="{% url 'linkding:custom_css' %}?hash={{ request.user_profile.custom_css_hash }}" rel="stylesheet" type="text/css"/>
-  {% endif %}
+  {% include 'bookmarks/stylesheets.html' %}
 
 </head>
 <body>

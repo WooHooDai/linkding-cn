@@ -11,6 +11,7 @@ COPY bookmarks/styles ./bookmarks/styles
 COPY bookmarks/services/vendor/defuddle_entry.js ./bookmarks/services/vendor/defuddle_entry.js
 COPY site_adapters/frontend ./site_adapters/frontend
 COPY site_adapters/styles ./site_adapters/styles
+COPY scripts/build-skins.js ./scripts/build-skins.js
 RUN NODE_ENV=production POSTCSS_DISABLE_CACHE=true npm run build
 
 # Native binaries and runtime packages always use the target architecture.

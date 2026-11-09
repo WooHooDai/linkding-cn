@@ -370,7 +370,7 @@ export class ReaderSidebar extends LitElement {
               <span class="color-picker-popup" @mousedown=${(e) => e.stopPropagation()}>
                 ${Object.entries(HIGHLIGHT_COLORS).map(([name, cfg]) => html`
                   <span class="color-picker-option ${name === ann.color ? "selected" : ""}"
-                    style="background-color: ${cfg.bg.includes("color-mix(") ? cfg.bg : cfg.bg.replace(/[\d.]+\)$/, "0.8)")}"
+                    style="background-color: ${cfg.dot}"
                     @click=${(e) => { e.stopPropagation(); this._handleAnnColor(ann.id, name); }}></span>
                 `)}
               </span>

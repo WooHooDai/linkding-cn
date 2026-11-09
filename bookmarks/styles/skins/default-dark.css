@@ -1,6 +1,11 @@
-@import "theme-light.css";
+/* 默认皮肤 · 深色
+   在浅色之上覆盖，未覆盖的 token 沿用浅色值。
+   用 html[data-theme] 提高一级特异性，以便压过 vendored Spectre 在 :root
+   上的组件 token 默认值（它在本文件之后加载）。 */
 
-:root {
+html[data-theme="dark"] {
+  color-scheme: dark;
+
   /* Color palette */
   --contrast-5: hsla(241, 65%, 85%, 0.06);
   --contrast-10: hsla(241, 60%, 80%, 0.14);
@@ -58,9 +63,8 @@
   --box-shadow-xs: none;
   --box-shadow: none;
   --box-shadow-lg: none;
-}
 
-:root {
+  /* Form controls */
   --input-bg-color: var(--contrast-5);
   --input-disabled-bg-color: var(--contrast-30);
   --input-text-color: var(--text-color);
@@ -78,9 +82,8 @@
   --switch-bg-color: var(--contrast-10);
   --switch-border-color: var(--border-color);
   --switch-toggle-color: var(--text-color);
-}
 
-:root {
+  /* Buttons */
   --btn-bg-color: var(--contrast-5);
   --btn-hover-bg-color: var(--contrast-20);
   --btn-border-color: var(--border-color);
@@ -103,17 +106,15 @@
 
   --btn-link-text-color: var(--link-color);
   --btn-link-hover-text-color: var(--link-color);
-}
 
-:root {
+  /* Modal */
   --modal-overlay-bg-color: hsla(229, 21%, 16%, 0.55);
   --modal-container-bg-color: hsl(241, 20%, 20%);
   --modal-container-border-color: var(--contrast-30);
   --modal-border-radius: var(--border-radius-lg);
   --modal-box-shadow: none;
-}
 
-:root {
+  /* Menu */
   --menu-bg-color: hsl(241, 20%, 20%);
   --menu-border-color: var(--contrast-30);
   --menu-border-radius: var(--border-radius);
@@ -122,16 +123,14 @@
   --menu-item-hover-color: var(--text-color);
   --menu-item-bg-color: transparent;
   --menu-item-hover-bg-color: var(--contrast-20);
-}
 
-:root {
+  /* Tabs */
   --tab-color: var(--text-color);
   --tab-hover-color: var(--primary-text-color);
   --tab-active-color: var(--primary-text-color);
   --tab-highlight-color: var(--primary-text-color);
-}
 
-:root {
+  /* Bookmarks */
   --bookmark-title-color: var(--primary-text-color);
   --bookmark-title-weight: 500;
   --bookmark-description-color: var(--text-color);
@@ -140,11 +139,4 @@
   --bookmark-actions-hover-color: var(--text-color);
   --bookmark-actions-weight: 400;
   --bulk-actions-bg-color: var(--contrast-5);
-}
-
-/* Try to force dark color scheme for all native elements (e.g. upload button
-in file inputs, native select dropdown). For the select dropdown some browsers
-ignore this and use whatever users have configured in their system settings. */
-:root {
-  color-scheme: dark;
 }

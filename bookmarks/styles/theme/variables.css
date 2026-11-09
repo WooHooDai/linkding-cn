@@ -1,52 +1,6 @@
 :root {
-  /* Color palette */
-  --gray-50: rgb(249, 250, 251);
-  --gray-100: rgb(243, 244, 246);
-  --gray-200: rgb(229, 231, 235);
-  --gray-300: rgb(209, 213, 219);
-  --gray-400: rgb(156, 163, 175);
-  --gray-500: rgb(107, 114, 128);
-  --gray-600: rgb(75, 85, 99);
-  --gray-700: rgb(55, 65, 81);
-  --gray-800: rgb(31, 41, 55);
-  --gray-900: rgb(17, 24, 39);
-
-  --primary-color: hsl(241, 63%, 59%);
-  --primary-color-highlight: hsl(241, 63%, 64%);
-  --primary-color-shade: hsl(241, 63%, 59%, 0.075);
-
-  --alternative-color: hsl(179, 94%, 29%);
-  --alternative-color-dark: hsl(179, 94%, 22%);
-
-  --success-color: hsl(120, 100%, 25%);
-  --success-color-highlight: hsl(142, 76%, 40%);
-  --success-color-shade: hsla(142, 76%, 36%, 0.1);
-
-  --warning-color: hsl(38, 92%, 50%);
-  --warning-color-highlight: hsl(38, 92%, 55%);
-  --warning-color-shade: hsla(38, 92%, 50%, 0.1);
-
-  --error-color: hsl(0, 72%, 51%);
-  --error-color-highlight: hsl(0, 72%, 60%);
-  --error-color-shade: hsla(0, 72%, 51%, 0.1);
-
-  /* Core colors */
-  --text-color: var(--gray-700);
-  --secondary-text-color: var(--gray-500);
-  --tertiary-text-color: var(--gray-500);
-  --contrast-text-color: #fff;
-  --primary-text-color: hsl(241, 63%, 55%);
-
-  --link-color: var(--primary-text-color);
-  --secondary-link-color: hsla(241, 63%, 54%, 0.8);
-
-  --icon-color: var(--gray-500);
-
-  --border-color: var(--gray-300);
-  --secondary-border-color: var(--gray-200);
-
-  --body-color: #fff;
-  --body-color-contrast: var(--gray-100);
+  /* 设计变量拆成两处：颜色 token 在 skins/ 下（皮肤可替换），
+     尺寸、字体、断点、层级与皮肤无关，留在本文件。 */
 
   /* Fonts */
   --base-font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI",
@@ -138,14 +92,4 @@
   --zindex-2: 200;
   --zindex-3: 300;
   --zindex-4: 400;
-
-  /* Focus */
-  --focus-outline: 2px solid var(--primary-color);
-  --focus-outline-offset: 2px;
-
-  /* Shadows */
-  --box-shadow-xs: rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;
-  --box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --box-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
-    0 4px 6px -4px rgb(0 0 0 / 0.1);
 }

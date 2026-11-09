@@ -453,8 +453,7 @@ def run_in_container(args):
     )
     for asset in (
         "bundle.js",
-        "theme-light.css",
-        "theme-dark.css",
+        "theme.css",
         "site-adapters.js",
         "adapters.js",
         "site-adapters.css",

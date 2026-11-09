@@ -1,5 +1,15 @@
 /* ── Bookmark health check ─────────────────────────────────────────────── */
 
+/* health 状态色：与语义色（--success/--error/--warning）刻意分开，
+   这里的绿更柔和，用于小圆点、徽章等高频出现的元素。
+   皮肤若要统一色系，可在皮肤文件中覆盖这四个 token。 */
+:root {
+  --health-ok-color: rgb(46, 158, 91);
+  --health-error-color: rgb(214, 69, 69);
+  --health-warn-color: rgb(201, 154, 46);
+  --health-muted-color: rgb(139, 147, 161);
+}
+
 /* 低调状态指示（列表工具栏与详情弹窗共用）：小圆点 + 文字，不抢视觉 */
 .health-status {
   position: relative;
@@ -7,7 +17,7 @@
   align-items: center;
   gap: 0.3rem;
   white-space: nowrap;
-  color: var(--body-text-color, #333);
+  color: var(--text-color);
   cursor: pointer;
 }
 
@@ -22,36 +32,29 @@
 }
 
 .health-dot--ok {
-  --health-color: #2e9e5b;
+  --health-color: var(--health-ok-color);
 }
 
 .health-dot--dead {
-  --health-color: #d64545;
+  --health-color: var(--health-error-color);
 }
 
 .health-dot--failed {
-  --health-color: var(--warning-color, #f5a623);
+  --health-color: var(--warning-color);
 }
 
 .health-dot--blocked {
-  --health-color: var(--warning-color, #f5a623);
+  --health-color: var(--warning-color);
 }
 
 .health-dot--missing {
-  --health-color: #d64545;
+  --health-color: var(--health-error-color);
 }
 
 .health-dot--unknown {
   --health-color: transparent;
   background: transparent;
-  border: 1.5px solid var(--body-border-color, #8b93a1);
-}
-
-/* 过期（stale）：超过有效期，灰色空心弱化显示，视觉近似未检查 */
-.health-dot--unknown {
-  --health-color: transparent;
-  background: transparent;
-  border: 1.5px solid var(--body-border-color, #8b93a1);
+  border: 1.5px solid var(--health-muted-color);
 }
 
 /* 图标模式（status_display_mode = icon）：f7:status 风格——圆环 + 中间
@@ -68,7 +71,7 @@
 .health-status.health-icon-mode .health-ring {
   width: 16px;
   height: 16px;
-  color: var(--body-text-color, #666);
+  color: var(--secondary-text-color);
 }
 
 .health-status.health-icon-mode .health-dot {
@@ -85,12 +88,12 @@
 
 .health-status.health-icon-mode .health-dot--unknown {
   background: transparent;
-  border: 1px solid var(--body-border-color, #8b93a1);
+  border: 1px solid var(--health-muted-color);
 }
 
 .health-text {
   font-size: var(--font-size-sm, 12px);
-  color: var(--body-text-color, #666);
+  color: var(--secondary-text-color);
 }
 
 /* 悬浮/点击详情弹层 */
@@ -103,8 +106,8 @@
   max-width: 20rem;
   padding: 0.5rem 0.65rem;
   border-radius: 8px;
-  background: var(--body-bg, #fff);
-  border: 1px solid var(--body-border-color, #e3e6ec);
+  background: var(--body-color);
+  border: 1px solid var(--secondary-border-color);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   font-size: var(--font-size-sm, 12px);
   line-height: 1.5;
@@ -189,13 +192,13 @@
   padding: 0;
   border: none;
   background: none;
-  color: var(--body-text-color, #777);
+  color: var(--secondary-text-color);
   cursor: pointer;
   line-height: 1;
 }
 
 .health-popover-refresh:hover {
-  color: var(--body-text-color, #333);
+  color: var(--text-color);
 }
 
 .health-popover-refresh:disabled {
@@ -205,23 +208,23 @@
 
 .health-popover-reason,
 .health-popover-row-http {
-  color: var(--body-text-color, #777);
+  color: var(--secondary-text-color);
 }
 
 .health-popover-checked {
   margin-top: 0.15rem;
-  color: var(--body-text-color, #777);
+  color: var(--secondary-text-color);
 }
 
 .health-popover-divider {
   height: 1px;
-  background: var(--body-border-color, #e3e6ec);
+  background: var(--secondary-border-color);
   margin: 0.2rem 0;
 }
 
 .health-popover-section-title,
 .health-popover-row-status {
-  color: var(--body-text-color, #777);
+  color: var(--secondary-text-color);
 }
 
 /* 筛选面板健康状态复选框：文字不加粗，和其他筛选项一致 */
@@ -269,12 +272,12 @@ ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions
   padding: 0;
   border: none;
   background: none;
-  color: var(--body-text-color, #666);
+  color: var(--secondary-text-color);
   cursor: pointer;
 }
 
 .detail-health-chip .detail-health-check:hover {
-  color: var(--body-text-color, #333);
+  color: var(--text-color);
 }
 
 .detail-health-chip .detail-health-check:disabled {
@@ -296,31 +299,31 @@ ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions
 }
 
 .health-badge--ok {
-  background: #2e9e5b;
+  background: var(--health-ok-color);
 }
 
 .health-badge--dead {
-  background: #d64545;
+  background: var(--health-error-color);
 }
 
 .health-badge--failed {
-  background: #c99a2e;
+  background: var(--health-warn-color);
 }
 
 .health-badge--blocked {
-  background: #c99a2e;
+  background: var(--health-warn-color);
 }
 
 .health-badge--missing {
-  background: #d64545;
+  background: var(--health-error-color);
 }
 
 .health-badge--unknown {
-  background: #8b93a1;
+  background: var(--health-muted-color);
 }
 
 .health-badge--stale {
-  background: #8b93a1;
+  background: var(--health-muted-color);
 }
 
 /* 检查页 */
@@ -335,8 +338,8 @@ ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: var(--body-bg, #fff);
-  border: 1px solid var(--body-border-color, #e3e6ec);
+  background: var(--body-color);
+  border: 1px solid var(--secondary-border-color);
   border-radius: 8px;
   padding: 0.3rem 0.7rem;
 }
@@ -346,7 +349,7 @@ ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions
 }
 
 .checks-summary-label {
-  color: var(--body-text-color, #333);
+  color: var(--text-color);
 }
 
 .checks-start {
@@ -390,7 +393,7 @@ ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions
 .checks-progress-label,
 .checks-progress-state {
   font-size: var(--font-size-sm, 12px);
-  color: var(--body-text-color, #333);
+  color: var(--text-color);
   min-width: 5rem;
 }
 
@@ -505,7 +508,7 @@ ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions
 
 .health-job-capsule-state {
   font-weight: 600;
-  color: var(--warning-color, #f5a623);
+  color: var(--warning-color);
   white-space: nowrap;
 }
 
@@ -553,13 +556,13 @@ ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions
   color: var(--text-color, #333);
 }
 .health-job-capsule-btn[data-health-job-cancel]:hover {
-  background: var(--error-color, #d64545);
+  background: var(--error-color, var(--health-error-color));
   color: #fff;
 }
 
 /* 暂停态：按钮图标由 JS 切换为 Resume，Paused 标记独立显示 */
 .health-job-capsule.is-paused .health-job-capsule-state {
-  color: var(--warning-color, #f5a623);
+  color: var(--warning-color);
 }
 
 .health-job-capsule.is-finishing {
@@ -622,5 +625,5 @@ ul.bookmark-list.toolbar-auto-hide li[ld-bookmark-item].toolbar-visible .actions
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #2e9e5b;
+  background: var(--health-ok-color);
 }

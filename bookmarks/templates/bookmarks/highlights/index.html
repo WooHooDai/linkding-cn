@@ -381,12 +381,12 @@
                       <span class="highlight-color-picker-wrap">
                         <button type="button" class="highlight-action-btn" title="{% translate 'Change color' %}"
                                 data-color-picker-toggle>
-                          <span class="highlight-color-dot" style="background-color: {% if ann.color == 'yellow' %}rgba(255,235,0,0.7){% elif ann.color == 'green' %}rgba(0,200,83,0.7){% elif ann.color == 'blue' %}rgba(66,165,245,0.7){% elif ann.color == 'pink' %}rgba(236,64,122,0.7){% else %}var(--primary-color){% endif %};"></span>
+                          <span class="highlight-color-dot" data-color="{{ ann.color }}"></span>
                         </button>
                         <span class="highlight-color-popup" data-color-popup>
                           {% for color_key, color_label in color_choices %}
                             <span class="highlight-color-option {% if ann.color == color_key %}selected{% endif %}"
-                                  style="background-color: {% if color_key == 'yellow' %}rgba(255,235,0,0.7){% elif color_key == 'green' %}rgba(0,200,83,0.7){% elif color_key == 'blue' %}rgba(66,165,245,0.7){% elif color_key == 'pink' %}rgba(236,64,122,0.7){% else %}var(--primary-color){% endif %};"
+                                  data-color="{{ color_key }}"
                                   data-annotation-id="{{ ann.id }}"
                                   data-new-color="{{ color_key }}"></span>
                           {% endfor %}

@@ -191,6 +191,8 @@ typings/
 /site_adapters/static/adapters.js*
 # CSS compilation output
 /bookmarks/static/theme-*.css*
+/bookmarks/static/theme.css*
+/bookmarks/static/skins/
 # esbuild bundled defuddle (built from defuddle_entry.js)
 /bookmarks/services/vendor/defuddle.js
 # Collected static files for deployment

@@ -38,6 +38,7 @@
 /bookmarks/static/reader.js*
 /bookmarks/static/reader-pending.js*
 /bookmarks/static/reader-unavailable.js*
-/bookmarks/static/theme-*.css*
+/bookmarks/static/*.css*
+/bookmarks/static/skins
 /bookmarks/services/vendor/defuddle.js
 /site_adapters/static

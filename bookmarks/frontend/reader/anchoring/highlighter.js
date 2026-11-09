@@ -35,15 +35,34 @@ function joinPath(baseUrl, path) {
 
 /**
  * Highlight color definitions.
- * Each color maps to a CSS custom property and a label.
+ * 每个色号给出两种不透明度：bg 用于正文标记，dot 用于小面积色点。
+ * 这是「内容色」而非界面配色，取值与 styles/highlight-colors.css 的
+ * --hl-* 保持一致；::highlight() 里必须写字面量，故此处不使用 var()。
  */
 export const HIGHLIGHT_COLORS = {
-  yellow: { bg: "rgba(255, 235, 0, 0.35)", label: gettext("Yellow") },
-  green: { bg: "rgba(0, 200, 83, 0.3)", label: gettext("Green") },
-  blue: { bg: "rgba(66, 165, 245, 0.3)", label: gettext("Blue") },
-  pink: { bg: "rgba(236, 64, 122, 0.3)", label: gettext("Pink") },
+  yellow: {
+    bg: "rgba(255, 235, 0, 0.35)",
+    dot: "rgba(255, 235, 0, 0.8)",
+    label: gettext("Yellow"),
+  },
+  green: {
+    bg: "rgba(0, 200, 83, 0.3)",
+    dot: "rgba(0, 200, 83, 0.8)",
+    label: gettext("Green"),
+  },
+  blue: {
+    bg: "rgba(66, 165, 245, 0.3)",
+    dot: "rgba(66, 165, 245, 0.8)",
+    label: gettext("Blue"),
+  },
+  pink: {
+    bg: "rgba(236, 64, 122, 0.3)",
+    dot: "rgba(236, 64, 122, 0.8)",
+    label: gettext("Pink"),
+  },
   primary: {
     bg: "color-mix(in srgb, var(--primary-color) 35%, transparent)",
+    dot: "color-mix(in srgb, var(--primary-color) 80%, transparent)",
     label: gettext("Theme"),
   },
 };

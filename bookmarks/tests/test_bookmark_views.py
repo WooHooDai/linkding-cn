@@ -137,7 +137,7 @@ class BookmarkViewsRegistryTest(TestCase, BookmarkFactoryMixin, HtmlTestMixin):
 
     def test_view_static_files_are_registered(self):
         theme = os.path.join(
-            settings.BASE_DIR, "bookmarks", "styles", "theme-light.css"
+            settings.BASE_DIR, "bookmarks", "styles", "theme.css"
         )
         index = os.path.join(settings.BASE_DIR, "bookmarks", "frontend", "index.js")
         with open(theme) as f:

@@ -45,6 +45,28 @@
 /* ── Filter dropdown menu ── */
 /* .menu-panel base styles are in theme/menus.css */
 
+/* 色号到颜色的映射只在这里定义，模板仅输出 data-color。
+   取值见 highlight-colors.css，与 reader 的 HIGHLIGHT_COLORS 对应。 */
+:is(.highlight-color-dot, .highlight-color-option) {
+  background-color: var(--primary-color);
+}
+
+:is(.highlight-color-dot, .highlight-color-option)[data-color="yellow"] {
+  background-color: var(--hl-yellow-dot);
+}
+
+:is(.highlight-color-dot, .highlight-color-option)[data-color="green"] {
+  background-color: var(--hl-green-dot);
+}
+
+:is(.highlight-color-dot, .highlight-color-option)[data-color="blue"] {
+  background-color: var(--hl-blue-dot);
+}
+
+:is(.highlight-color-dot, .highlight-color-option)[data-color="pink"] {
+  background-color: var(--hl-pink-dot);
+}
+
 .highlights-color-dots-filter {
   display: flex;
   align-items: center;
@@ -98,10 +120,10 @@
 /* "All" dot: conic-gradient multi-color拼色 */
 .color-dot-filter.all-colors {
   background: conic-gradient(
-    rgba(255,235,0,0.85) 0% 20%,
-    rgba(0,200,83,0.85) 20% 40%,
-    rgba(66,165,245,0.85) 40% 60%,
-    rgba(236,64,122,0.85) 60% 80%,
+    var(--hl-yellow-dot) 0% 20%,
+    var(--hl-green-dot) 20% 40%,
+    var(--hl-blue-dot) 40% 60%,
+    var(--hl-pink-dot) 60% 80%,
     var(--primary-color) 80% 100%
   );
 }
@@ -594,10 +616,10 @@
 /* "All" dot: conic-gradient */
 .sidebar-color-circle.all-colors {
   background: conic-gradient(
-    rgba(255,235,0,0.85) 0% 20%,
-    rgba(0,200,83,0.85) 20% 40%,
-    rgba(66,165,245,0.85) 40% 60%,
-    rgba(236,64,122,0.85) 60% 80%,
+    var(--hl-yellow-dot) 0% 20%,
+    var(--hl-green-dot) 20% 40%,
+    var(--hl-blue-dot) 40% 60%,
+    var(--hl-pink-dot) 60% 80%,
     var(--primary-color) 80% 100%
   );
 }

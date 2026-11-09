@@ -1,4 +1,7 @@
 @import "theme/variables.css";
+@import "highlight-colors.css";
+@import "skins/default-light.css";
+@import "skins/default-dark.css";
 @import "theme/_normalize.css";
 @import "theme/base.css";
 @import "theme/typography.css";

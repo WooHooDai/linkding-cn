@@ -499,12 +499,6 @@ function setAnnotationToolbarModeDataset(mode) {
   document.documentElement.dataset.annotationToolbarMode = mode;
 }
 
-function toSolidColor(bg) {
-  if (typeof bg !== "string") return bg;
-  if (bg.includes("color-mix(")) return bg;
-  return bg.replace("0.35", "0.8").replace("0.3", "0.8");
-}
-
 function getReaderScrollContainer(contentEl) {
   return (
     contentEl.closest("#reader-content") ||
@@ -1751,7 +1745,7 @@ function createHighlightPopup({ compact }) {
       "aria-label",
       interpolate(gettext("Highlight with %(color)s"), { color: colorLabel }),
     );
-    btn.style.setProperty("--ld-annotation-color", toSolidColor(cfg.bg));
+    btn.style.setProperty("--ld-annotation-color", cfg.dot);
     colorGroup.appendChild(btn);
   }
   colorCard.appendChild(colorGroup);

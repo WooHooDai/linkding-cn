@@ -8,16 +8,7 @@
   <meta name="csrfmiddlewaretoken" content="{{ csrf_token }}">
   <title>{% translate "Reader view" %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimal-ui">
-  {% if request.user_profile.theme == 'light' %}
-    <link href="{% static 'theme-light.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css"/>
-  {% elif request.user_profile.theme == 'dark' %}
-    <link href="{% static 'theme-dark.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css"/>
-  {% else %}
-    <link href="{% static 'theme-dark.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css"
-          media="(prefers-color-scheme: dark)"/>
-    <link href="{% static 'theme-light.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css"
-          media="(prefers-color-scheme: light)"/>
-  {% endif %}
+  {% include 'bookmarks/stylesheets.html' %}
 </head>
 <body>
 <div class="loading-container">
