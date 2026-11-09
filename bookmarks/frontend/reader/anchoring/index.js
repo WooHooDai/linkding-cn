@@ -200,3 +200,29 @@ export function anchorSelector(root, selector, options = {}) {
   }
   throw new Error(`Unsupported selector type: ${selector.type}`);
 }
+
+/**
+ * Rightmost text rect on the last line of a Range.
+ *
+ * A collapsed range at an Element boundary (drag selections often end as
+ * "parent element + child index") resolves to the container's top-left, so it
+ * cannot be used to anchor floating UI. Zero-sized rects come from empty lines
+ * or split text nodes and have to be skipped as well.
+ *
+ * @param {Range} range
+ * @returns {DOMRect}
+ */
+export function lastVisibleClientRect(range) {
+  let last = null;
+  for (const rect of range.getClientRects()) {
+    if (rect.width <= 0 || rect.height <= 0) continue;
+    if (
+      !last ||
+      rect.bottom > last.bottom + 2 ||
+      (Math.abs(rect.bottom - last.bottom) <= 2 && rect.right > last.right)
+    ) {
+      last = rect;
+    }
+  }
+  return last || range.getBoundingClientRect();
+}

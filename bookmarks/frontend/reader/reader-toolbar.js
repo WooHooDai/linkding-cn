@@ -1,7 +1,13 @@
 import { LitElement, html } from "lit";
 import { READER_ICONS } from "./reader-icons";
 import { gettext } from "../utils/i18n.js";
-import { loadReaderSettings, saveReaderSettings, setReaderTheme } from "./reader-settings.js";
+import {
+  loadReaderSettings,
+  saveReaderSettings,
+  setReaderTheme,
+  setReaderSkin,
+} from "./reader-settings.js";
+import { parseJsonScriptValue } from "./reader-api.js";
 import { getCSRFToken } from "../utils/csrf.js";
 
 async function syncReaderSettingsToServer(partial) {
@@ -256,7 +262,6 @@ export class ReaderToolbar extends LitElement {
     _settingsOpen: { type: Boolean, state: true },
     _settings: { type: Object, state: true },
     _fontMenuOpen: { type: Boolean, state: true },
-    _themeNeedsReload: { type: Boolean, state: true },
   };
 
   constructor() {
@@ -269,7 +274,6 @@ export class ReaderToolbar extends LitElement {
     this.isEditable = true;
     this._settingsOpen = false;
     this._fontMenuOpen = false;
-    this._themeNeedsReload = false;
     this._settings = {};
   }
 
@@ -579,7 +583,10 @@ export class ReaderToolbar extends LitElement {
     const currentFont = this._getFontOption(this._settings.font);
     const currentFontLabel = currentFont?.label || gettext("System Default");
 
-    const currentTheme = loadReaderSettings().theme || "auto";
+    const readerSettings = loadReaderSettings();
+    const currentTheme = readerSettings.theme || "auto";
+    const currentSkin = readerSettings.skin ?? "global";
+    const skins = parseJsonScriptValue("reader-skins", []);
 
     return html`
       <div
@@ -591,18 +598,24 @@ export class ReaderToolbar extends LitElement {
           <div class="settings-label">${gettext("Theme")}</div>
           <div class="settings-select-wrap">
             <select class="settings-select" .value=${currentTheme}
-              @change=${(e) => { setReaderTheme(e.target.value); this._themeNeedsReload = e.target.value === "auto"; }}>
+              @change=${(e) => setReaderTheme(e.target.value)}>
               <option value="auto">${gettext("Follow Global")}</option>
               <option value="light">${gettext("Light")}</option>
               <option value="dark">${gettext("Dark")}</option>
             </select>
           </div>
-          ${this._themeNeedsReload ? html`
-            <div class="settings-hint">
-              ${gettext("Reload to apply")}
-              <button class="btn btn-sm btn-primary" @click=${() => window.location.reload()}>${gettext("Reload")}</button>
-            </div>
-          ` : ""}
+        </div>
+        <div class="settings-section">
+          <div class="settings-label">${gettext("Skin")}</div>
+          <div class="settings-select-wrap">
+            <select class="settings-select" .value=${currentSkin}
+              @change=${(e) => setReaderSkin(e.target.value)}>
+              <option value="global">${gettext("Follow Global")}</option>
+              ${skins.map(
+                (skin) => html`<option value=${skin.id}>${skin.name}</option>`
+              )}
+            </select>
+          </div>
         </div>
         <div class="settings-section">
           <div class="settings-label">${gettext("Font")}</div>

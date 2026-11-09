@@ -1,12 +1,16 @@
 import { Highlighter, HIGHLIGHT_COLORS } from "./anchoring/highlighter";
-import { TextQuoteAnchor } from "./anchoring/index";
+import {
+  TextQuoteAnchor,
+  lastVisibleClientRect,
+} from "./anchoring/index";
 import { READER_ICONS } from "./reader-icons";
 import { gettext, ngettext, interpolate } from "../utils/i18n.js";
 import "../components/confirm-inline.js";
 import "../components/tag-autocomplete.js";
+import { showToast } from "../components/toast.js";
 import "./reader-toolbar.js";
 import "./reader-sidebar.js";
-import { loadReaderSettings } from "./reader-settings.js";
+import { loadReaderSettings, applyReaderSkin } from "./reader-settings.js";
 import {
   DEFAULT_ITEM_FORMAT,
   DEFAULT_SEPARATOR,
@@ -27,34 +31,72 @@ import {
   getScrollMetrics,
 } from "./reading-progress.js";
 
-// --- Highlight copy format config cache ---
-let _cachedItemFormat = null;
-let _cachedSeparator = null;
-let _cachedCopyAction = "both";
-let _copyConfigFetched = false;
+// 阅读页的皮肤覆盖在正文渲染前套用，避免先闪一下全局皮肤
+const initialReaderSettings = loadReaderSettings();
+if (initialReaderSettings.skin != null) {
+  applyReaderSkin(initialReaderSettings.skin);
+}
 
-async function getCopyConfig(apiBase) {
-  if (_copyConfigFetched) return {
-    itemFormat: _cachedItemFormat || DEFAULT_ITEM_FORMAT,
-    separator: _cachedSeparator || DEFAULT_SEPARATOR,
-    action: _cachedCopyAction,
-  };
-  _copyConfigFetched = true;
+// --- Highlight copy format config cache ---
+// 复制必须在点击的同一个任务里写剪贴板（Safari/Firefox 校验用户手势），
+// 所以配置在打开阅读页时就预热好，点击路径只读同步缓存。
+const DEFAULT_COPY_CONFIG = {
+  itemFormat: DEFAULT_ITEM_FORMAT,
+  separator: DEFAULT_SEPARATOR,
+  action: "both",
+};
+let _copyConfig = null;
+
+async function warmCopyConfig(apiBase) {
+  if (_copyConfig) return _copyConfig;
+  const base = normalizeBaseUrl(apiBase);
   try {
-    const resp = await fetch(`${apiBase}/user/profile/`);
+    const resp = await fetch(`${base}user/profile/`);
     if (resp.ok) {
       const data = await resp.json();
       const fmt = data.highlight_copy_format || {};
-      if (fmt.item_format) _cachedItemFormat = fmt.item_format;
-      if (fmt.separator) _cachedSeparator = fmt.separator;
-      if (data.highlight_copy_default_action) _cachedCopyAction = data.highlight_copy_default_action;
+      _copyConfig = {
+        itemFormat: fmt.item_format || DEFAULT_ITEM_FORMAT,
+        separator: fmt.separator || DEFAULT_SEPARATOR,
+        action: data.highlight_copy_default_action || "both",
+      };
     }
-  } catch { /* silent */ }
-  return {
-    itemFormat: _cachedItemFormat || DEFAULT_ITEM_FORMAT,
-    separator: _cachedSeparator || DEFAULT_SEPARATOR,
-    action: _cachedCopyAction,
-  };
+  } catch { /* 用默认格式 */ }
+  return _copyConfig;
+}
+
+function getCopyConfig() {
+  return _copyConfig || DEFAULT_COPY_CONFIG;
+}
+
+/**
+ * Copy text, falling back to the legacy selection trick for insecure contexts.
+ */
+async function copyTextToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  }
+}
+
+/**
+ * 复制结果统一走项目 toast：成功/失败都要有可见反馈。
+ */
+function notifyCopyResult(ok) {
+  showToast(ok ? gettext("Copied!") : gettext("Copy failed"), {
+    tone: ok ? "success" : "error",
+    duration: 1500,
+  });
 }
 
 const HIGHLIGHT_COLOR_LABELS = {
@@ -665,20 +707,9 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
           (item) => String(item.id) === String(id),
         );
       if (ann) {
-        const config = await getCopyConfig(apiBase);
+        const config = getCopyConfig();
         const text = renderByAction(config.itemFormat, ann.selected_text, ann.note_content || "", config.action);
-        try {
-          await navigator.clipboard.writeText(text);
-        } catch {
-          const ta = document.createElement("textarea");
-          ta.value = text;
-          ta.style.position = "fixed";
-          ta.style.opacity = "0";
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand("copy");
-          document.body.removeChild(ta);
-        }
+        copyTextToClipboard(text).then(notifyCopyResult);
       }
     } else if (action === "edit-note") {
       const unresolvedAnn = (sidebar.annotations || []).find(
@@ -772,6 +803,7 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
 
   const state = {
     pendingRange: null,
+    pendingText: "",
     pendingAnnotation: null,
     anchorRect: null,
     anchorClientX: null,
@@ -795,6 +827,7 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
     dockedEditingSession: false,
     lastToolbarControlPointerDownTs: -1,
     lastToolbarInteractionTs: -1,
+    selectionSettleTimer: null,
     pendingColor: null,
     saveStatus: "idle",
     saveStatusClearTimer: null,
@@ -821,9 +854,9 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
 
   function setPopupMode(isEdit) {
     popup.dataset.mode = isEdit ? "edit" : "new";
+    // 删除只对已存在的高亮有意义；复制对选中文字始终可用。
     popup._deleteBtn.hidden = !isEdit;
-    popup._actionGroup.hidden = !isEdit;
-    popup._actionCard.hidden = !isEdit;
+    popup._deleteWrap.hidden = !isEdit;
     popup._deleteConfirm.hidden = true;
   }
 
@@ -872,6 +905,29 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
 
   function getNoteText() {
     return popup._noteInput.value.trim();
+  }
+
+  // 复制沿用设置里的高亮复制格式；还没落库的选中内容也能先复制走。
+  // 点击时浏览器会收起选区，pendingRange 可能已被清掉，所以优先用打开弹窗时记下的原文。
+  function copyCurrentSelection() {
+    const highlightText =
+      state.pendingAnnotation?.selected_text ||
+      state.pendingText ||
+      (state.pendingRange ? state.pendingRange.toString() : "");
+    // 输入框里的是最新内容（打开已有高亮时已用原文批注回填）
+    const noteText = getNoteText() || state.pendingAnnotation?.note_content || "";
+    if (!highlightText && !noteText) return;
+    const config = getCopyConfig();
+    let text = renderByAction(
+      config.itemFormat,
+      highlightText,
+      noteText,
+      config.action,
+    );
+    // 复制格式只引用批注、而此刻只有选中文字时，退回到纯文本，别静默失败
+    if (!text && highlightText) text = highlightText;
+    if (!text) return;
+    copyTextToClipboard(text).then(notifyCopyResult);
   }
 
   async function resizeNoteInput() {
@@ -956,6 +1012,7 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
 
   function closePopup() {
     if (!state.isOpen) return;
+    cancelSelectionSettle();
     state.isOpen = false;
     popup.dataset.open = "false";
     popup.setAttribute("aria-hidden", "true");
@@ -1025,23 +1082,11 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
     }
   }
 
-  function getLastSelectionRect(range) {
-    const rects = range.getClientRects();
-    return rects.length > 0
-      ? rects[rects.length - 1]
-      : range.getBoundingClientRect();
-  }
-
+  // 锚点取选区末行最靠右的文字矩形。不能用 collapse(false) 的矩形：拖到段尾
+  // 或跨段落时浏览器常把终点记成「父元素 + 子节点索引」，折叠后得到的是容器
+  // 左上角的零尺寸矩形，草稿态工具栏会被定位到页面左上角。
   function getSelectionEndRect(range) {
-    try {
-      const endRange = range.cloneRange();
-      endRange.collapse(false);
-      const rects = endRange.getClientRects();
-      if (rects.length > 0) return rects[0];
-      return endRange.getBoundingClientRect();
-    } catch {
-      return getLastSelectionRect(range);
-    }
+    return lastVisibleClientRect(range);
   }
 
   function updateAnchorRectFromPendingRange() {
@@ -1083,8 +1128,10 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
   }
 
   function showToolbarForSelection(range, anchorClientX = null) {
+    cancelSelectionSettle();
     state.contextToken += 1;
     state.pendingRange = range.cloneRange();
+    state.pendingText = state.pendingRange.toString();
     state.pendingAnnotation = null;
     state.anchorRect = getSelectionEndRect(range);
     state.anchorClientX = Number.isFinite(anchorClientX) ? anchorClientX : null;
@@ -1106,8 +1153,10 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
   }
 
   function showToolbarForAnnotation(ann, anchorClientX = null) {
+    cancelSelectionSettle();
     state.contextToken += 1;
     state.pendingRange = null;
+    state.pendingText = "";
     state.pendingAnnotation = ann;
     state.anchorClientX = Number.isFinite(anchorClientX) ? anchorClientX : null;
     state.pendingColor = ann.color || null;
@@ -1317,21 +1366,51 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
     positionPopup(popup, state.anchorRect, state.anchorClientX);
   }
 
+  void warmCopyConfig(apiBase);
   loadAnnotations(highlighter, apiBase, bookmarkId, assetId, sidebar);
 
   // --- Text selection ---
+  // 选择手势没结束（拖选、拖选择柄、Shift+方向键扩展）就不弹工具栏：
+  // 每次 selectionchange 只重置计时，选择静止一小段时间后才认为完成。
+  const SELECTION_SETTLE_MS = 240;
+
+  function cancelSelectionSettle() {
+    if (state.selectionSettleTimer === null) return;
+    clearTimeout(state.selectionSettleTimer);
+    state.selectionSettleTimer = null;
+  }
+
+  function scheduleToolbarForSelection(range, anchorClientX = null) {
+    cancelSelectionSettle();
+    state.selectionSettleTimer = setTimeout(() => {
+      state.selectionSettleTimer = null;
+      if (state.isPersisting || state.isOpeningFromHighlightClick) return;
+      if (state.mouseSelecting) return;
+      const live = getCurrentSelectionRange();
+      if (!live || !isSameRange(live, range)) return;
+      if (state.isOpen && state.pendingRange && isSameRange(state.pendingRange, live)) {
+        return;
+      }
+      showToolbarForSelection(live, anchorClientX);
+    }, SELECTION_SETTLE_MS);
+  }
+
   document.addEventListener("selectionchange", () => {
     if (performance.now() < state.suppressSelectionChangeUntil) return;
     if (state.isRestoringSelection) return;
     if (state.isOpeningFromHighlightClick) return;
     const range = getCurrentSelectionRange();
     if (!range) {
+      cancelSelectionSettle();
       if (restorePendingSelectionIfNeeded()) {
         schedulePopupReflow();
         return;
       }
+      // 新建选区的工具栏不该因为选区被收起而消失：桌面浏览器（Firefox 尤其）
+      // 常在拖选结束后再补一次 collapsed selectionchange，触控设备也会在
+      // 抬手时清掉选区。取消交由别处的 pointerdown / Escape 处理，pendingRange
+      // 要留着给复制和高亮用。
       if (
-        preferMobileToolbar &&
         state.pendingRange &&
         state.isOpen &&
         !state.pendingAnnotation &&
@@ -1354,18 +1433,22 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
 
     if (state.isPersisting) return;
     if (state.mouseSelecting) return;
+    if (state.isOpen && state.pendingRange && isSameRange(state.pendingRange, range)) {
+      return;
+    }
     setMode("selection_ready");
     const canReusePointerX =
       Number.isFinite(state.lastSelectionPointerX) &&
       performance.now() - state.lastSelectionPointerTs < 420;
     const anchorX = canReusePointerX ? state.lastSelectionPointerX : null;
-    showToolbarForSelection(range, anchorX);
+    scheduleToolbarForSelection(range, anchorX);
   });
 
   document.addEventListener("mousedown", (e) => {
     if (e.button !== 0) return;
     if (!contentEl.contains(e.target)) return;
     if (isPopupTarget(e.target)) return;
+    cancelSelectionSettle();
     state.mouseSelecting = true;
     state.mouseSelectStartX = e.clientX;
     state.mouseSelectStartY = e.clientY;
@@ -1395,6 +1478,7 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
     if (state.isPersisting || state.isOpeningFromHighlightClick) return;
     const range = getCurrentSelectionRange();
     if (!range) return;
+    cancelSelectionSettle();
     setMode("selection_ready");
     showToolbarForSelection(range, e.clientX);
   });
@@ -1465,7 +1549,7 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
     e.stopPropagation();
     if (!preferMobileToolbar || !isDockedTopLayout()) return;
     const toolbarControl = e.target.closest(
-      "[data-color], [data-action='delete'], [data-action='delete-confirm'], [data-action='delete-cancel']",
+      "[data-color], [data-action='copy'], [data-action='delete'], [data-action='delete-confirm'], [data-action='delete-cancel']",
     );
     if (!toolbarControl) return;
     state.lastToolbarControlPointerDownTs = performance.now();
@@ -1505,6 +1589,13 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
     if (deleteConfirm) {
       popup._deleteConfirm.hidden = true;
       await handleDelete();
+      return;
+    }
+
+    const copyBtn = e.target.closest("[data-action='copy']");
+    if (copyBtn) {
+      popup._deleteConfirm.hidden = true;
+      copyCurrentSelection();
       return;
     }
 
@@ -1600,6 +1691,8 @@ function initHighlighter(contentEl, bookmarkId, assetId, sidebar, apiBase) {
   // Close on outside pointer interaction.
   document.addEventListener("pointerdown", async (e) => {
     if (!state.isOpen) return;
+    // 展示瞬间跟着手势来的合成 pointerdown 不算「点别处取消」
+    if (performance.now() - state.openedAt < 320) return;
     if (performance.now() - state.lastToolbarInteractionTs < 320) return;
     if (!isPopupTarget(e.target)) {
       if (preferMobileToolbar && isDockedTopLayout()) {
@@ -1704,6 +1797,9 @@ async function loadAnnotations(
 
 /**
  * Create the unified highlight popup element.
+ *
+ * 两行一卡片：第一行操作区（高亮色 / 复制 / 删除），第二行批注输入常驻。
+ * 视觉沿用书签工具栏——扁平图标按钮 + 细分隔线，不再给每组套独立胶囊。
  */
 function createHighlightPopup({ compact }) {
   const popup = document.createElement("div");
@@ -1723,11 +1819,12 @@ function createHighlightPopup({ compact }) {
   popup.setAttribute("aria-label", gettext("Highlight actions"));
   popup.setAttribute("aria-hidden", "true");
 
+  const card = document.createElement("div");
+  card.className = "ld-annotation-card";
+
   const toolbar = document.createElement("div");
   toolbar.className = "ld-annotation-toolbar-row";
 
-  const colorCard = document.createElement("div");
-  colorCard.className = "ld-annotation-card ld-annotation-card-colors";
   const colorGroup = document.createElement("div");
   colorGroup.className = "ld-annotation-color-group";
 
@@ -1748,14 +1845,28 @@ function createHighlightPopup({ compact }) {
     btn.style.setProperty("--ld-annotation-color", cfg.dot);
     colorGroup.appendChild(btn);
   }
-  colorCard.appendChild(colorGroup);
-  toolbar.appendChild(colorCard);
+  toolbar.appendChild(colorGroup);
 
-  const actionCard = document.createElement("div");
-  actionCard.className = "ld-annotation-card ld-annotation-card-actions";
+  const sep = document.createElement("span");
+  sep.className = "ld-annotation-row-sep";
+  sep.setAttribute("aria-hidden", "true");
+  toolbar.appendChild(sep);
+
   const actions = document.createElement("div");
   actions.className = "ld-annotation-action-group";
-  actions.hidden = true;
+
+  const copyBtn = document.createElement("button");
+  copyBtn.type = "button";
+  copyBtn.className = "ld-annotation-action-btn ld-annotation-action-copy";
+  copyBtn.title = gettext("Copy highlight");
+  copyBtn.setAttribute("aria-label", gettext("Copy highlight"));
+  copyBtn.dataset.action = "copy";
+  copyBtn.innerHTML = READER_ICONS.copy;
+  actions.appendChild(copyBtn);
+
+  const deleteWrap = document.createElement("span");
+  deleteWrap.className = "annotation-delete-wrap";
+  deleteWrap.hidden = true;
 
   const deleteBtn = document.createElement("button");
   deleteBtn.type = "button";
@@ -1765,10 +1876,6 @@ function createHighlightPopup({ compact }) {
   deleteBtn.dataset.action = "delete";
   deleteBtn.innerHTML = READER_ICONS.delete;
   deleteBtn.hidden = true;
-  actions.appendChild(deleteBtn);
-
-  const deleteWrap = document.createElement("span");
-  deleteWrap.className = "annotation-delete-wrap";
   deleteWrap.appendChild(deleteBtn);
 
   const deleteConfirm = document.createElement("span");
@@ -1784,13 +1891,11 @@ function createHighlightPopup({ compact }) {
   deleteWrap.appendChild(deleteConfirm);
   actions.appendChild(deleteWrap);
 
-  actionCard.appendChild(actions);
-  toolbar.appendChild(actionCard);
-
-  popup.appendChild(toolbar);
+  toolbar.appendChild(actions);
+  card.appendChild(toolbar);
 
   const noteArea = document.createElement("div");
-  noteArea.className = "ld-annotation-card ld-annotation-note-area";
+  noteArea.className = "ld-annotation-note-area";
 
   const noteMeta = document.createElement("div");
   noteMeta.className = "ld-annotation-note-meta";
@@ -1807,13 +1912,13 @@ function createHighlightPopup({ compact }) {
   noteInput.rows = 1;
   noteInput.setAttribute("aria-label", gettext("Annotation note"));
   noteArea.appendChild(noteInput);
-  popup.appendChild(noteArea);
+  card.appendChild(noteArea);
+  popup.appendChild(card);
 
   // Store references
   popup._deleteBtn = deleteBtn;
+  popup._deleteWrap = deleteWrap;
   popup._deleteConfirm = deleteConfirm;
-  popup._actionCard = actionCard;
-  popup._actionGroup = actions;
   popup._noteArea = noteArea;
   popup._noteInput = noteInput;
   popup._saveStatus = saveStatus;
@@ -1845,37 +1950,43 @@ function getAnnotationRect(ann, contentEl) {
  * Position popup below a rect, keeping it within the viewport.
  */
 function positionPopup(popup, rect, anchorClientX = null) {
+  if (!rect) return;
   popup.style.visibility = "hidden";
   popup.hidden = false;
+  // 窄屏样式给 fixed 浮层同时留了 left/right，交给 JS 定位时只保留一侧，
+  // 免得三个值互相约束导致宽度被拉成整屏。
+  popup.style.right = "auto";
   popup.style.left = "0px";
   popup.style.top = "0px";
+  try {
+    const gap = 6;
+    const popupWidth = popup.offsetWidth;
+    const popupHeight = popup.offsetHeight;
+    const margin = popup.classList.contains("ld-annotation-toolbar-mobile")
+      ? 8
+      : 10;
 
-  const gap = 6;
-  const popupWidth = popup.offsetWidth;
-  const popupHeight = popup.offsetHeight;
-  const margin = popup.classList.contains("ld-annotation-toolbar-mobile")
-    ? 8
-    : 10;
+    const preferredX = Number.isFinite(anchorClientX)
+      ? anchorClientX
+      : rect.right - popupWidth * 0.25;
+    let left = preferredX - popupWidth * 0.5;
+    left = Math.max(
+      margin,
+      Math.min(left, window.innerWidth - popupWidth - margin),
+    );
 
-  const preferredX = Number.isFinite(anchorClientX)
-    ? anchorClientX
-    : rect.right - popupWidth * 0.25;
-  let left = preferredX - popupWidth * 0.5;
-  left = Math.max(
-    margin,
-    Math.min(left, window.innerWidth - popupWidth - margin),
-  );
+    let top = rect.bottom + gap;
 
-  let top = rect.bottom + gap;
+    if (top + popupHeight > window.innerHeight - margin) {
+      top = rect.top - popupHeight - gap;
+    }
+    if (top < margin) top = margin;
 
-  if (top + popupHeight > window.innerHeight - margin) {
-    top = rect.top - popupHeight - gap;
+    popup.style.left = `${left}px`;
+    popup.style.top = `${top}px`;
+  } finally {
+    popup.style.visibility = "";
   }
-  if (top < margin) top = margin;
-
-  popup.style.left = `${left}px`;
-  popup.style.top = `${top}px`;
-  popup.style.visibility = "";
 }
 
 async function measureLineHeightPx(input) {

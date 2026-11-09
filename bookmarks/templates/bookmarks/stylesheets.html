@@ -15,7 +15,7 @@
     }
   })();
 </script>
-<link href="{% static 'theme.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css" data-role="skin"/>
+<link href="{% static 'theme.css' %}?v={{ app_version }}" rel="stylesheet" type="text/css" data-role="theme"/>
 {% if request.skin %}
   <link href="{% url 'linkding:skins.file' request.skin %}?v={{ app_version }}" rel="stylesheet" type="text/css" data-role="skin"/>
 {% endif %}

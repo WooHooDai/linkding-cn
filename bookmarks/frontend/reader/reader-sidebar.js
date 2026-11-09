@@ -4,7 +4,6 @@ import { HIGHLIGHT_COLORS } from "./anchoring/highlighter";
 import { READER_ICONS } from "./reader-icons";
 import { gettext, ngettext, interpolate } from "../utils/i18n.js";
 import { loadReaderSettings, saveReaderSettings } from "./reader-settings.js";
-import { showToast } from "../components/toast.js";
 import { getCSRFToken } from "../utils/csrf.js";
 
 function normalizeBaseUrl(baseUrl) {
@@ -198,7 +197,8 @@ export class ReaderSidebar extends LitElement {
 
   _reloadAssets() { this.dispatchEvent(new CustomEvent("reload-assets", { bubbles: true, composed: true, detail: { bookmarkId: this.bookmarkData?.id } })); }
   _emitAnn(id, action, extra = {}) { this.dispatchEvent(new CustomEvent("annotation-action", { bubbles: true, composed: true, detail: { id, action, ...extra } })); }
-  _handleAnnCopy(annId) { this._emitAnn(annId, "copy"); showToast(gettext("Copied"), { tone: "success", duration: 1500 }); }
+  // 复制结果由 reader.js 写剪贴板后统一提示，避免这里提前报成功
+  _handleAnnCopy(annId) { this._emitAnn(annId, "copy"); }
   /** 显示确认弹窗（追加到 body，fixed 定位） */
   _showPopup(btn, onConfirm) {
     document.querySelectorAll(".reader-confirm-popup").forEach(el => el.remove());

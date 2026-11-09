@@ -1,6 +1,6 @@
 {% load i18n static %}
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE|default:'en' }}" class="reader-mode" data-api-base-url="{{ api_base_url }}/">
+<html lang="{{ LANGUAGE_CODE|default:'en' }}" class="reader-mode" data-api-base-url="{{ api_base_url }}/" data-theme-mode="{{ request.user_profile.theme }}">
 <head>
   <meta charset="UTF-8">
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="48x48">
@@ -46,6 +46,8 @@
 {{ api_base_url|default:"/api/"|json_script:"reader-api-base-url" }}
 {{ assets_base_url|default:"/assets"|json_script:"reader-assets-base-url" }}
 {{ bookmarks_index_url|default:"/bookmarks"|json_script:"reader-bookmarks-index-url" }}
+{{ request.available_skins|json_script:"reader-skins" }}
+{{ request.skin|default:""|json_script:"reader-global-skin" }}
 <script src="{% url 'javascript-catalog' %}"></script>
 <script src="{% static 'reader.js' %}?v={{ app_version }}{% if reader_preview_data %}&preview=1{% endif %}" type="application/javascript"></script>
 <script type="application/javascript">

@@ -15,6 +15,7 @@ import {
   TextQuoteAnchor,
   TextPositionAnchor,
   describeRange,
+  lastVisibleClientRect,
 } from "./index";
 import { gettext } from "../../utils/i18n.js";
 import { getCSRFToken } from "../../utils/csrf.js";
@@ -98,9 +99,15 @@ export class Highlighter {
     this._useCSSHighlight = supportsCSSHighlight();
     this._changeCallbacks = [];
     this._draftRange = null;
+    this._noteMarkerFrame = null;
     this._baseHighlightCSS = `::highlight(${DRAFT_HIGHLIGHT_ID}) { background-color: var(--ld-draft-highlight-bg, ${HIGHLIGHT_COLORS.yellow.bg}); }`;
 
     if (this._useCSSHighlight) this._ensureDynamicStyleEl();
+
+    // 圆点是按文字矩形定位的绝对定位元素，排版变了就得重新量一次
+    this._onLayoutChange = () => this.scheduleNoteMarkers();
+    window.addEventListener("resize", this._onLayoutChange, { passive: true });
+    document.addEventListener("reader-settings-changed", this._onLayoutChange);
   }
 
   _ensureDynamicStyleEl() {
@@ -133,21 +140,51 @@ export class Highlighter {
       .forEach((node) => node.remove());
   }
 
-  _insertNoteMarkerAtRangeEnd(range, annotationId) {
-    if (!range) return false;
-    try {
-      const endRange = range.cloneRange();
-      endRange.collapse(false);
-      const marker = document.createElement("span");
-      marker.className = NOTE_DOT_MARKER_CLASS;
-      marker.dataset.annotationId = String(annotationId);
-      marker.setAttribute("aria-hidden", "true");
-      marker.setAttribute("contenteditable", "false");
-      endRange.insertNode(marker);
-      return true;
-    } catch {
-      return false;
+  scheduleNoteMarkers() {
+    if (this._noteMarkerFrame !== null) return;
+    this._noteMarkerFrame = requestAnimationFrame(() => {
+      this._noteMarkerFrame = null;
+      if (this.root.isConnected) this.repositionNoteMarkers();
+    });
+  }
+
+  /**
+   * 给带批注的高亮画右上角圆点。
+   *
+   * 圆点挂在正文容器开头、绝对定位，不插进文字流：跨段落、段尾选区、
+   * 代码块换行都不会让它自成一行，也不会切碎文本节点影响后续锚定。
+   */
+  repositionNoteMarkers() {
+    this._clearNoteMarkers();
+    if (!this.root.isConnected) return;
+
+    const rootRect = this.root.getBoundingClientRect();
+    const originX = rootRect.left + this.root.clientLeft;
+    const originY = rootRect.top + this.root.clientTop;
+    const fragment = document.createDocumentFragment();
+
+    for (const [, ann] of this.annotations) {
+      if (!this._hasNoteContent(ann)) continue;
+      let range;
+      try {
+        range = this.resolveAnnotationRange(ann);
+      } catch {
+        continue;
+      }
+      const rect = lastVisibleClientRect(range);
+      if (!rect) continue;
+
+      const dot = document.createElement("span");
+      dot.className = NOTE_DOT_MARKER_CLASS;
+      dot.dataset.annotationId = String(ann.id);
+      dot.setAttribute("aria-hidden", "true");
+      dot.style.left = `${rect.right - originX}px`;
+      dot.style.top = `${rect.top - originY}px`;
+      fragment.appendChild(dot);
     }
+
+    // 插在开头，免得抢占 `#article-content > :last-child` 的样式
+    this.root.prepend(fragment);
   }
 
   /**
@@ -271,6 +308,7 @@ export class Highlighter {
     for (const [, ann] of this.annotations) {
       this._renderAnnotation(ann);
     }
+    this.repositionNoteMarkers();
   }
 
   /**
@@ -289,10 +327,6 @@ export class Highlighter {
         CSS.highlights.set(`ld-hl-${ann.id}`, highlight);
       } else {
         this._wrapRangeWithSpan(range, ann);
-      }
-
-      if (this._hasNoteContent(ann)) {
-        this._insertNoteMarkerAtRangeEnd(range, ann.id);
       }
 
       return true;
@@ -482,6 +516,7 @@ export class Highlighter {
       const ann = await response.json();
       this.annotations.set(String(ann.id), ann);
       this._renderAnnotation(ann);
+      this.repositionNoteMarkers();
       this._notifyChange();
       return ann;
     } catch (err) {

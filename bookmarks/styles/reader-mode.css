@@ -1,14 +1,9 @@
 html.reader-mode {
   --reader-toolbar-height: 48px;
   --reader-sidebar-width: 340px;
-  --reader-anno-toolbar-height: var(--unit-10);
-  --reader-anno-toolbar-radius: calc(var(--border-radius-lg) + var(--unit-1));
-  --reader-anno-toolbar-padding-y: 0px;
-  --reader-anno-toolbar-padding-x: var(--unit-3);
-  --reader-anno-toolbar-gap: var(--unit-2);
-  --reader-anno-action-size: var(--unit-10);
-  --reader-anno-action-card-w: calc(var(--reader-anno-action-size) + 2px);
-  --reader-anno-color-dot-size: var(--unit-6);
+  --reader-anno-toolbar-height: var(--unit-9);
+  --reader-anno-action-size: var(--unit-8);
+  --reader-anno-color-dot-size: var(--unit-5);
   --reader-anno-note-width: min(320px, calc(100vw - var(--unit-8)));
   --reader-anno-note-min-h: var(--reader-anno-toolbar-height);
   --reader-anno-safe-inset: max(var(--unit-3), env(safe-area-inset-bottom, 0px));
@@ -470,16 +465,6 @@ html.reader-mode {
     font-weight: 500;
   }
 
-  .settings-hint {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: var(--unit-2);
-    margin-top: var(--unit-2);
-    font-size: var(--font-size-sm);
-    color: var(--secondary-text-color);
-  }
-
   .settings-slider-header {
     display: flex;
     align-items: baseline;
@@ -713,24 +698,17 @@ html.reader-mode {
     outline-offset: var(--focus-outline-offset);
   }
 
+  /* ---- Toast ---- */
+  /* 顶部居中浮层会压住阅读页顶栏，整体让到工具栏下方 */
+  .toast-stack {
+    top: calc(var(--reader-toolbar-height) + var(--unit-4));
+  }
+
   /* ---- Annotation Toolbar ---- */
+  /* 视觉沿用书签工具栏：扁平图标按钮 + 细分隔线，不再给每组套独立胶囊；
+     一张卡片两行——上行是操作区，下行是常驻的批注输入。 */
 
   .ld-annotation-toolbar {
-    --ld-anno-row-wrap: wrap;
-    --ld-anno-row-overflow: visible;
-    --ld-anno-colors-grow: 0;
-    --ld-anno-colors-shrink: 0;
-    --ld-anno-colors-basis: auto;
-    --ld-anno-colors-max-width: none;
-    --ld-anno-colors-overflow-x: visible;
-    --ld-anno-colors-overflow-y: visible;
-    --ld-anno-colors-scrollbar-width: auto;
-    --ld-anno-colors-ms-overflow-style: auto;
-    --ld-anno-colors-margin-right: 0;
-    --ld-anno-color-group-wrap: nowrap;
-    --ld-anno-color-group-width: 100%;
-    --ld-anno-color-group-min-width: 0;
-    --ld-anno-note-margin-top: var(--unit-1);
     --ld-anno-confirm-top: auto;
     --ld-anno-confirm-bottom: 100%;
     --ld-anno-confirm-right: 0;
@@ -742,7 +720,7 @@ html.reader-mode {
     position: fixed;
     z-index: calc(var(--zindex-4) + 1);
     width: fit-content;
-    min-width: min(300px, calc(100vw - var(--unit-6)));
+    min-width: min(280px, calc(100vw - var(--unit-6)));
     max-width: min(var(--reader-anno-note-width), calc(100vw - var(--unit-6)));
     background: transparent;
     border: none;
@@ -766,69 +744,58 @@ html.reader-mode {
     pointer-events: none;
   }
 
-  .ld-annotation-toolbar-row {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    flex-wrap: var(--ld-anno-row-wrap);
-    gap: var(--reader-anno-toolbar-gap);
-    overflow: var(--ld-anno-row-overflow);
-  }
-
   .ld-annotation-card {
+    display: flex;
+    flex-direction: column;
     background: var(--body-color);
     border: 1px solid var(--border-color);
-    border-radius: var(--reader-anno-toolbar-radius);
-    box-shadow: none;
+    border-radius: var(--border-radius-lg);
   }
 
-  .ld-annotation-card-colors {
-    padding: 0 var(--reader-anno-toolbar-padding-x);
-    flex-grow: var(--ld-anno-colors-grow);
-    flex-shrink: var(--ld-anno-colors-shrink);
-    flex-basis: var(--ld-anno-colors-basis);
-    min-width: 0;
-    max-width: var(--ld-anno-colors-max-width);
-    overflow-x: var(--ld-anno-colors-overflow-x);
-    overflow-y: var(--ld-anno-colors-overflow-y);
-    scrollbar-width: var(--ld-anno-colors-scrollbar-width);
-    -ms-overflow-style: var(--ld-anno-colors-ms-overflow-style);
-    margin-right: var(--ld-anno-colors-margin-right);
-  }
-
-  .ld-annotation-card-actions {
-    padding: 0;
-    margin-left: auto;
-    background: var(--body-color);
-    border: 1px solid var(--border-color);
-    border-radius: 999px;
-    box-shadow: none;
-    width: var(--reader-anno-action-card-w);
-    flex: 0 0 var(--reader-anno-action-card-w);
-  }
-
-  .ld-annotation-color-group,
-  .ld-annotation-action-group {
+  .ld-annotation-toolbar-row {
     display: flex;
     align-items: center;
     gap: var(--unit-1);
     min-height: var(--reader-anno-toolbar-height);
-    width: 100%;
-    justify-content: center;
+    padding: 0 var(--unit-2) 0 var(--unit-1);
+  }
+
+  .ld-annotation-row-sep {
+    flex: 0 0 auto;
+    width: 1px;
+    height: var(--unit-5);
+    margin: 0 var(--unit-1) 0 auto;
+    background: var(--border-color);
   }
 
   .ld-annotation-color-group {
-    flex-wrap: var(--ld-anno-color-group-wrap);
-    width: var(--ld-anno-color-group-width);
-    min-width: var(--ld-anno-color-group-min-width);
+    display: flex;
+    align-items: center;
+    gap: var(--unit-1);
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .ld-annotation-color-group::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ld-annotation-action-group {
+    display: flex;
+    align-items: center;
+    gap: var(--unit-1);
   }
 
   .ld-annotation-color-btn {
     appearance: none;
     border: none;
+    position: relative;
+    flex: 0 0 auto;
     width: var(--reader-anno-action-size);
     height: var(--reader-anno-action-size);
-    border-radius: 999px;
+    border-radius: var(--border-radius);
     background: transparent;
     display: inline-flex;
     align-items: center;
@@ -836,7 +803,6 @@ html.reader-mode {
     padding: 0;
     color: var(--icon-color);
     cursor: pointer;
-    transition: opacity 0.15s, background 0.15s;
   }
 
   .ld-annotation-color-btn::before {
@@ -845,34 +811,33 @@ html.reader-mode {
     height: var(--reader-anno-color-dot-size);
     border-radius: 50%;
     background: var(--ld-annotation-color);
+    transition: transform 0.15s ease;
   }
 
-  .ld-annotation-color-btn:hover {
-    opacity: 0.86;
-  }
-
-  .ld-annotation-color-btn[data-active="true"] {
-    opacity: 1;
+  /* 悬浮只放大色点，不铺底色 */
+  .ld-annotation-color-btn:hover::before {
+    transform: scale(1.12);
   }
 
   .ld-annotation-color-btn[data-active="true"]::after {
     content: "";
     position: absolute;
-    width: calc(var(--reader-anno-color-dot-size) * 0.45);
-    height: calc(var(--reader-anno-color-dot-size) * 0.25);
+    width: 8px;
+    height: 4px;
     border: 2px solid #fff;
     border-top: none;
     border-right: none;
-    transform: translateY(-1px) rotate(-45deg);
     box-sizing: border-box;
+    transform: translateY(-1px) rotate(-45deg);
   }
 
   .ld-annotation-action-btn {
     appearance: none;
-    border: 1px solid transparent;
+    border: none;
+    flex: 0 0 auto;
     width: var(--reader-anno-action-size);
     height: var(--reader-anno-action-size);
-    border-radius: 999px;
+    border-radius: var(--border-radius);
     background: transparent;
     color: var(--icon-color);
     display: inline-flex;
@@ -880,43 +845,36 @@ html.reader-mode {
     justify-content: center;
     padding: 0;
     cursor: pointer;
-    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    transition: color 0.15s;
   }
 
-  .ld-annotation-action-group:empty,
-  .ld-annotation-action-group[hidden] {
-    display: none;
-  }
-
-  .ld-annotation-action-btn:not(.ld-annotation-action-delete):hover {
-    background: var(--body-color-contrast);
-    border-color: color-mix(in srgb, var(--primary-color) 35%, var(--border-color));
-    color: var(--text-color);
+  /* 自定义 display 会盖掉 hidden 属性，删除按钮的显隐得显式兜住 */
+  .ld-annotation-action-btn[hidden],
+  .annotation-delete-wrap[hidden] {
+    display: none !important;
   }
 
   .ld-annotation-action-btn svg {
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
     stroke-width: 1.2;
   }
 
-  .ld-annotation-action-delete {
-    color: var(--error-color);
+  .ld-annotation-action-btn:hover {
+    color: var(--text-color);
   }
 
+  .ld-annotation-action-delete,
   .ld-annotation-action-delete:hover {
-    border-color: transparent;
-    background: transparent;
     color: var(--error-color);
   }
 
   .ld-annotation-note-area {
     display: flex;
     align-items: center;
-    margin-top: var(--ld-anno-note-margin-top);
     width: 100%;
     min-height: var(--reader-anno-note-min-h);
-    margin-right: var(--reader-anno-toolbar-padding-x);
+    border-top: 1px solid var(--border-color);
     position: relative;
   }
 
@@ -963,7 +921,7 @@ html.reader-mode {
     min-height: calc(1.5em + var(--unit-2));
     max-height: 10lh;
     margin: 0;
-    padding: var(--unit-1) var(--unit-3);
+    padding: var(--unit-2) var(--unit-3);
     font-size: 0.75rem;
     line-height: 1.5;
     color: var(--input-text-color, var(--text-color));
@@ -1008,12 +966,7 @@ html.reader-mode {
     font-style: italic;
   }
 
-  .ld-annotation-note-input:focus {
-    border-color: transparent !important;
-    outline: none !important;
-    box-shadow: none !important;
-  }
-
+  .ld-annotation-note-input:focus,
   .ld-annotation-note-input:focus-visible {
     border-color: transparent !important;
     outline: none !important;
@@ -1023,7 +976,7 @@ html.reader-mode {
   .ld-annotation-color-btn:focus-visible,
   .ld-annotation-action-btn:focus-visible {
     outline: var(--focus-outline);
-    outline-offset: 1px;
+    outline-offset: -1px;
   }
 
   .ld-annotation-toolbar-mobile {
@@ -1035,27 +988,9 @@ html.reader-mode {
   }
 
   .ld-annotation-toolbar-mobile[data-layout="docked-top"] {
-    --ld-anno-row-wrap: nowrap;
-    --ld-anno-colors-grow: 0;
-    --ld-anno-colors-shrink: 1;
-    --ld-anno-colors-basis: auto;
-    --ld-anno-colors-max-width: clamp(
-      0px,
-      calc(100% - var(--reader-anno-action-card-w) - var(--reader-anno-toolbar-gap)),
-      100%
-    );
-    --ld-anno-colors-overflow-x: auto;
-    --ld-anno-colors-overflow-y: hidden;
-    --ld-anno-colors-scrollbar-width: none;
-    --ld-anno-colors-ms-overflow-style: none;
-    --ld-anno-color-group-width: max-content;
-    --ld-anno-color-group-min-width: max-content;
-    --ld-anno-note-margin-top: var(--unit-2);
+    /* 吸到阅读页顶栏下方时，删除确认弹层改朝下展开 */
     --ld-anno-confirm-top: 100%;
     --ld-anno-confirm-bottom: auto;
-    --ld-anno-confirm-right: 0;
-    --ld-anno-confirm-left: auto;
-    --ld-anno-confirm-transform: none;
     --ld-anno-confirm-margin-top: var(--unit-1);
     --ld-anno-confirm-margin-bottom: 0;
     --ld-anno-confirm-z: calc(var(--zindex-4) + 5);
@@ -1065,15 +1000,10 @@ html.reader-mode {
     ) !important;
     left: var(--reader-anno-safe-inset-side) !important;
     right: var(--reader-anno-safe-inset-side) !important;
-    width: auto;
-    max-width: none;
+    /* 吸顶时左右都有 inset，靠 auto 外边距居中；宽度仍按内容收缩 */
+    width: fit-content;
+    margin-inline: auto;
     z-index: calc(var(--zindex-4) + 3);
-  }
-
-  .ld-annotation-toolbar-mobile[data-layout="docked-top"] .ld-annotation-card-colors::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-    display: none;
   }
 
   .reader-annotation-takeover #article-content {
@@ -2127,25 +2057,22 @@ html.reader-mode {
   .ld-highlight[data-color="pink"] { background-color: rgba(236, 64, 122, 0.3); }
   .ld-highlight[data-color="primary"] { background-color: color-mix(in srgb, var(--primary-color) 35%, transparent); }
 
-  .ld-highlight-note-marker {
+  /* 批注圆点按选区末行的文字矩形绝对定位，挂在正文容器开头、不进文字流 */
+  #article-content {
     position: relative;
-    display: inline-block;
-    width: 0;
-    height: 0;
-    pointer-events: none;
-    user-select: none;
-    -webkit-user-select: none;
-    vertical-align: top;
   }
 
-  .ld-highlight-note-marker::after {
-    content: "";
+  .ld-highlight-note-marker {
     position: absolute;
-    right: -0.28em;
+    z-index: 1;
     width: 0.25em;
     height: 0.25em;
     border-radius: 50%;
     background-color: var(--primary-color);
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+    transform: translate(0.1em, -0.22em);
   }
 
   /* ---- Responsive ---- */
@@ -2194,10 +2121,10 @@ html.reader-mode {
     }
 
     .ld-annotation-toolbar {
-      max-width: none;
-      width: auto;
+      /* 窄屏不再拉满：宽度按内容收缩，上限沿用桌面那条 max-width；
+         横向定位只留 left 兜底，实际位置由 positionPopup 写内联 left */
+      width: fit-content;
       left: var(--reader-anno-safe-inset-side);
-      right: var(--reader-anno-safe-inset-side);
     }
   }
 
