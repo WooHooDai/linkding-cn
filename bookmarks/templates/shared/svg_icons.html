@@ -1,5 +1,19 @@
 {# SVG sprite — single source of truth shared by layout.html and read.html #}
 <div style="display:none">
+  {# 应用图标：圆与双链分别吃 --logo-mark-bg / --logo-mark-fg，皮肤可整体换色。
+     presentation 属性里 var() 不生效，只能写内联 style。 #}
+  <svg xmlns="http://www.w3.org/2000/svg">
+    <symbol id="ld-icon-app-logo" viewBox="0 0 512 512">
+      <circle cx="255.0164" cy="254.9236" r="224.78528"
+              style="fill: var(--logo-mark-bg, #5856e0)"/>
+      <g fill="none" stroke-width="31.25" style="stroke: var(--logo-mark-fg, #fff)">
+        <path d="m1244.39 1293.95v199.64s-.81 67.89 74.9 68.88c75.98.99 74.88-68.88 74.88-68.88v-199.64"
+              transform="matrix(.70710678 .70710678 -.70710678 .70710678 284.139117 -1684.198509)"/>
+        <path d="m1244.39 1293.95v199.64s-.81 67.89 74.9 68.88c75.98.99 74.88-68.88 74.88-68.88v-199.64"
+              transform="matrix(-.70957074 -.70463421 .70463421 -.70957074 235.113139 2195.434643)"/>
+      </g>
+    </symbol>
+  </svg>
   <svg xmlns="http://www.w3.org/2000/svg">
     <symbol id="ld-icon-unread" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
             stroke-linecap="round" stroke-linejoin="round">

@@ -55,6 +55,10 @@
   /* 标签：纯文字，用第二强调色，与主色（链接）区分开 */
   --tag-color: var(--alternative-color);
 
+  /* 应用图标：圆底与双链，皮肤可整体换色 */
+  --logo-mark-bg: #5856e0;
+  --logo-mark-fg: #ffffff;
+
   /* Focus */
   --focus-outline: 2px solid var(--primary-color);
   --focus-outline-offset: 2px;

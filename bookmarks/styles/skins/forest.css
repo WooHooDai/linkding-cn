@@ -38,6 +38,10 @@ html[data-theme="light"] {
 
   --tag-color: #7c5a1e;
 
+  /* 应用图标 */
+  --logo-mark-bg: #0f766e;
+  --logo-mark-fg: #eef4f8;
+
   /* 高亮色 */
   --hl-yellow: rgba(214, 158, 0, 0.42);
 
@@ -144,6 +148,10 @@ html[data-theme="dark"] {
 
   --tag-color: #d4a95e;
 
+  /* 应用图标 */
+  --logo-mark-bg: #14b8a6;
+  --logo-mark-fg: #0d1b1e;
+
   /* 高亮色 */
   --hl-yellow: rgba(212, 169, 94, 0.28);
 
@@ -228,3 +236,11 @@ html[data-theme="dark"] {
   --menu-border-color: #24383d;
   --menu-item-hover-bg-color: #1c3136;
 }
+
+/* 品牌名跟着图标取色：深色的 --link-color #5eead4 比图标亮一档，并排时像两种颜色 */
+html[data-theme="light"] .app-name,
+html[data-theme="dark"] .app-name {
+  color: var(--logo-mark-bg);
+}
+
+

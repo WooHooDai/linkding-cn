@@ -39,6 +39,10 @@ html[data-theme="light"] {
   /* 标签：纯中性文字，弱于标题 */
   --tag-color: var(--secondary-text-color);
 
+  /* 应用图标：黑白反转，深色模式下圆底转白 */
+  --logo-mark-bg: #000000;
+  --logo-mark-fg: #ffffff;
+
   --primary-color: #000000;
   --primary-color-highlight: #333333;
   --primary-color-shade: rgba(0, 0, 0, 0.08);
@@ -126,6 +130,10 @@ html[data-theme="dark"] {
 
   /* 标签：纯中性文字，弱于标题 */
   --tag-color: var(--secondary-text-color);
+
+  /* 应用图标：黑白反转，深色模式下圆底转白 */
+  --logo-mark-bg: #ffffff;
+  --logo-mark-fg: #000000;
 
   --primary-color: #ffffff;
   --primary-color-highlight: #cccccc;

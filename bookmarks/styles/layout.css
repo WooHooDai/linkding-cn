@@ -31,6 +31,8 @@ header {
   }
 
   .app-logo {
+    display: block;
+    flex: none;
     width: 28px;
     height: 28px;
   }

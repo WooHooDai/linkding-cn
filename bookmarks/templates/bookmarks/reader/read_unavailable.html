@@ -12,10 +12,11 @@
 
 </head>
 <body>
+{% include 'shared/svg_icons.html' %}
 <header class="container">
   <div class="d-flex justify-between">
     <a href="{% url 'linkding:root' %}" class="app-link d-flex align-center">
-      <img class="app-logo" src="{% static 'logo.png' %}" alt="{% translate 'Application logo' %}">
+      <svg class="app-logo" role="img" aria-label="{% translate 'Application logo' %}"><use href="#ld-icon-app-logo"></use></svg>
       <span class="app-name">LINKDING</span>
     </a>
     <nav>

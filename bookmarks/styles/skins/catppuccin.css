@@ -33,6 +33,10 @@ html[data-theme="light"] {
 
   --tag-color: #179299;
 
+  /* 应用图标 */
+  --logo-mark-bg: #1e66f5;
+  --logo-mark-fg: #eff1f5;
+
   /* 高亮色 */
   --hl-yellow: rgba(223, 142, 29, 0.35);
 
@@ -113,6 +117,10 @@ html[data-theme="dark"] {
   --secondary-border-color: #313244;
 
   --tag-color: #94e2d5;
+
+  /* 应用图标 */
+  --logo-mark-bg: #89b4fa;
+  --logo-mark-fg: #1e1e2e;
 
   /* 高亮色 */
   --hl-yellow: rgba(249, 226, 175, 0.28);
