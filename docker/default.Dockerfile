@@ -45,11 +45,15 @@ RUN --mount=type=cache,id=uv-debian-${TARGETARCH},target=/root/.cache/uv \
 FROM build-deps AS compile-icu
 ARG SQLITE_RELEASE_YEAR=2023
 ARG SQLITE_RELEASE=3430000
-RUN wget -q https://www.sqlite.org/${SQLITE_RELEASE_YEAR}/sqlite-amalgamation-${SQLITE_RELEASE}.zip && \
+# sqlite.org 会丢弃突发请求：多架构并行构建时同址并发下载常被拒绝，重试以免整次发布失败。
+RUN curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 15 \
+        -o sqlite-amalgamation-${SQLITE_RELEASE}.zip \
+        https://www.sqlite.org/${SQLITE_RELEASE_YEAR}/sqlite-amalgamation-${SQLITE_RELEASE}.zip && \
     unzip -q sqlite-amalgamation-${SQLITE_RELEASE}.zip && \
     cp sqlite-amalgamation-${SQLITE_RELEASE}/sqlite3.h ./sqlite3.h && \
     cp sqlite-amalgamation-${SQLITE_RELEASE}/sqlite3ext.h ./sqlite3ext.h && \
-    wget -q 'https://www.sqlite.org/src/raw/ext/icu/icu.c?name=91c021c7e3e8bbba286960810fa303295c622e323567b2e6def4ce58e4466e60' -O icu.c && \
+    curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 15 \
+        -o icu.c 'https://www.sqlite.org/src/raw/ext/icu/icu.c?name=91c021c7e3e8bbba286960810fa303295c622e323567b2e6def4ce58e4466e60' && \
     gcc -fPIC -shared icu.c $(pkg-config --libs --cflags icu-uc icu-io) -o libicu.so
 
 FROM build-deps AS app-build

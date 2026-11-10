@@ -27,7 +27,7 @@ RUN if [ -n "$APK_MIRROR" ]; then \
         sed -i "s|dl-cdn.alpinelinux.org|$APK_MIRROR|g" /etc/apk/repositories; \
     fi
 RUN apk add --no-cache alpine-sdk linux-headers libpq-dev pkgconf icu-dev sqlite-dev \
-    libffi-dev openssl-dev rust cargo git gettext wget unzip
+    libffi-dev openssl-dev rust cargo git gettext curl unzip
 COPY --from=ghcr.io/astral-sh/uv:0.8.13@sha256:4de5495181a281bc744845b9579acf7b221d6791f99bcc211b9ec13f417c2853 /uv /usr/local/bin/uv
 WORKDIR /etc/linkding
 COPY pyproject.toml uv.lock ./
@@ -37,11 +37,15 @@ RUN --mount=type=cache,id=uv-alpine-${TARGETARCH},target=/root/.cache/uv \
 FROM build-deps AS compile-icu
 ARG SQLITE_RELEASE_YEAR=2023
 ARG SQLITE_RELEASE=3430000
-RUN wget -q https://www.sqlite.org/${SQLITE_RELEASE_YEAR}/sqlite-amalgamation-${SQLITE_RELEASE}.zip && \
+# sqlite.org 会丢弃突发请求：多架构并行构建时同址并发下载常被拒绝，重试以免整次发布失败。
+RUN curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 15 \
+        -o sqlite-amalgamation-${SQLITE_RELEASE}.zip \
+        https://www.sqlite.org/${SQLITE_RELEASE_YEAR}/sqlite-amalgamation-${SQLITE_RELEASE}.zip && \
     unzip -q sqlite-amalgamation-${SQLITE_RELEASE}.zip && \
     cp sqlite-amalgamation-${SQLITE_RELEASE}/sqlite3.h ./sqlite3.h && \
     cp sqlite-amalgamation-${SQLITE_RELEASE}/sqlite3ext.h ./sqlite3ext.h && \
-    wget -q 'https://www.sqlite.org/src/raw/ext/icu/icu.c?name=91c021c7e3e8bbba286960810fa303295c622e323567b2e6def4ce58e4466e60' -O icu.c && \
+    curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 15 \
+        -o icu.c 'https://www.sqlite.org/src/raw/ext/icu/icu.c?name=91c021c7e3e8bbba286960810fa303295c622e323567b2e6def4ce58e4466e60' && \
     gcc -fPIC -shared icu.c $(pkg-config --libs --cflags icu-uc icu-io) -o libicu.so
 
 FROM build-deps AS app-build
